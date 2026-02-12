@@ -1,16 +1,21 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
+import { Button } from '~/components/ui/button'
+import { Crown } from 'lucide-react'
 
 export const Route = createFileRoute('/_app/')({
-  component: Dashboard,
+  component: Home,
 })
 
-function Dashboard() {
+function Home() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-      <p className="mt-1 text-muted-foreground">
-        Select or create a realm to get started.
-      </p>
+    <div className="flex flex-1 flex-col items-center justify-center py-12">
+      <Crown className="size-12 text-muted-foreground/50" />
+      <h1 className="mt-4 text-3xl font-bold tracking-tight">Realm Keeper</h1>
+      <p className="mt-2 text-muted-foreground">Local-first sandbox world manager for GMs</p>
+      <Button className="mt-6" size="lg" asChild>
+        <Link to="/realms">Get Started</Link>
+      </Button>
     </div>
   )
 }
