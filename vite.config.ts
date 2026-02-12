@@ -4,7 +4,6 @@ import tsConfigPaths from 'vite-tsconfig-paths'
 import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
-import { nitro } from 'nitro/vite'
 
 export default defineConfig({
   server: {
@@ -22,7 +21,6 @@ export default defineConfig({
       },
     }),
     viteReact(),
-    nitro(),
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],

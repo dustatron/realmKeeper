@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 import {
   HeadContent,
+  Link,
   Outlet,
   Scripts,
   createRootRoute,
@@ -37,6 +38,7 @@ export const Route = createRootRoute({
   }),
   component: RootComponent,
   shellComponent: RootShell,
+  notFoundComponent: NotFound,
 })
 
 function RootShell({ children }: { children: React.ReactNode }) {
@@ -60,5 +62,17 @@ function RootComponent() {
         <Outlet />
       </TooltipProvider>
     </ContainerProvider>
+  )
+}
+
+function NotFound() {
+  return (
+    <div className="flex min-h-svh flex-col items-center justify-center gap-4">
+      <h1 className="text-4xl font-bold">404</h1>
+      <p className="text-muted-foreground">Page not found</p>
+      <Link to="/" className="text-primary underline">
+        Go home
+      </Link>
+    </div>
   )
 }

@@ -50,7 +50,7 @@ export function NavGroup({ group }: { group: NavGroup }) {
                           asChild
                           isActive={location.pathname === sub.url}
                         >
-                          <Link to={sub.url}>
+                          <Link to={sub.url as '/'}>
                             <span>{sub.title}</span>
                           </Link>
                         </SidebarMenuSubButton>
@@ -67,7 +67,7 @@ export function NavGroup({ group }: { group: NavGroup }) {
                 isActive={location.pathname === item.url}
                 tooltip={item.title}
               >
-                <Link to={item.url}>
+                <Link to={item.url as '/'}>
                   <item.icon />
                   <span>{item.title}</span>
                 </Link>
