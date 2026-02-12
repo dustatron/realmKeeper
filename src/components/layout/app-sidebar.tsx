@@ -8,10 +8,11 @@ import {
 import { NavGroup } from './nav-group'
 import { RealmSwitcher } from './realm-switcher'
 import { getSidebarData } from './sidebar-data'
+import { useUIStore } from '~/ui/stores/uiStore'
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
-  // TODO: get activeRealmId from Zustand store
-  const { navGroups } = getSidebarData(undefined)
+  const activeRealmId = useUIStore((state) => state.activeRealmId)
+  const { navGroups } = getSidebarData(activeRealmId ?? undefined)
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" {...props}>

@@ -1,8 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
+import {
+  getAllSystemSets,
+  getSystemTablesBySetId,
+  isSystemSetId,
+} from '@domain/data/system-tables'
 
 export function useTableSets() {
-  return useLiveQuery(() => db.tableSets.toArray()) ?? []
+  const dbSets = useLiveQuery(() => db.tableSets.toArray()) ?? []
+  return [...getAllSystemSets(), ...dbSets]
 }
 
 export function useTableSet(id: string | null) {
@@ -13,10 +19,15 @@ export function useTableSet(id: string | null) {
 }
 
 export function useTablesInSet(setId: string | null) {
-  return useLiveQuery(
-    () => (setId ? db.tableDefs.where('setId').equals(setId).toArray() : []),
+  const dbTables = useLiveQuery(
+    () => (setId && !isSystemSetId(setId) ? db.tableDefs.where('setId').equals(setId).toArray() : []),
     [setId]
   ) ?? []
+
+  if (setId && isSystemSetId(setId)) {
+    return getSystemTablesBySetId(setId)
+  }
+  return dbTables
 }
 
 export function useRollHistory(realmId: string | null, limit = 20) {

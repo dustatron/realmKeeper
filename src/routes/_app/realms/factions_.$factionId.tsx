@@ -1,0 +1,395 @@
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { useState } from 'react'
+import { useUIStore } from '~/ui/stores/uiStore'
+import { useFaction, useFactions } from '~/ui/hooks/useFactions'
+import { useNPCsByFaction } from '~/ui/hooks/useNPCs'
+import { useRegions } from '~/ui/hooks/useRegions'
+import { useRealmPOIs } from '~/ui/hooks/usePOIs'
+import { useRelationships } from '~/ui/hooks/useRelationships'
+import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
+import { useSystemConfig } from '~/ui/hooks/useSystemConfigs'
+import { useContainer } from '~/ui/hooks/useContainer'
+import { executeUpdateFaction } from '@application/use-cases/UpdateFaction'
+import { executeDeleteFaction } from '@application/use-cases/DeleteFaction'
+import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
+import { PageHeader } from '~/components/shared/PageHeader'
+import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
+import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
+import { Badge } from '~/components/ui/badge'
+import { Button } from '~/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
+import { ArrowLeft, Trash2, Pencil, Crown, CheckCircle2, Circle, Dices, Users, Handshake } from 'lucide-react'
+import { FACTION_STATUSES } from '@shared/constants'
+import { deriveStatus } from '@domain/value-objects/RelationshipScore'
+
+export const Route = createFileRoute('/_app/realms/factions_/$factionId')({
+  component: FactionDetailPage,
+})
+
+const STATUS_COLORS: Record<string, string> = {
+  active: 'bg-green-600',
+  dormant: 'bg-yellow-600',
+  disbanded: 'bg-orange-600',
+  destroyed: 'bg-red-600',
+}
+
+function FactionDetailPage() {
+  const { factionId } = Route.useParams()
+  const activeRealmId = useUIStore((s) => s.activeRealmId)
+  const realm = useActiveRealm()
+  const systemConfig = useSystemConfig(realm?.systemId ?? null)
+  const container = useContainer()
+  const faction = useFaction(factionId)
+  const agentNpcs = useNPCsByFaction(factionId)
+  const allFactions = useFactions(activeRealmId)
+  const regions = useRegions(activeRealmId)
+  const realmPOIs = useRealmPOIs(activeRealmId)
+  const factionRelationships = useRelationships([factionId])
+
+  const [showDelete, setShowDelete] = useState(false)
+  const [isAddingAgent, setIsAddingAgent] = useState(false)
+
+  const handleDelete = async () => {
+    await executeDeleteFaction(factionId, { factionRepo: container.factionRepo })
+    window.history.back()
+  }
+
+  const handleToggleGoal = async (goalId: string) => {
+    if (!faction) return
+    const updatedGoals = faction.agendaGoals.map((g) =>
+      g.id === goalId ? { ...g, completed: !g.completed } : g
+    )
+    await executeUpdateFaction(
+      { ...faction, agendaGoals: updatedGoals },
+      { factionRepo: container.factionRepo }
+    )
+  }
+
+  const handleAddAgent = async () => {
+    if (!faction || !activeRealmId || !systemConfig) return
+    setIsAddingAgent(true)
+    try {
+      const npc = await executeGenerateNPC(
+        { realmId: activeRealmId, systemConfig, factionId: faction.id },
+        { tableRepo: container.tableRepo }
+      )
+      await container.npcRepo.create(npc)
+      await executeUpdateFaction(
+        { ...faction, agentNpcIds: [...faction.agentNpcIds, npc.id] },
+        { factionRepo: container.factionRepo }
+      )
+    } finally {
+      setIsAddingAgent(false)
+    }
+  }
+
+  if (faction === undefined) {
+    return <div className="py-8 text-center text-muted-foreground">Loading...</div>
+  }
+
+  if (faction === null) {
+    return <div className="py-8 text-center text-muted-foreground">Faction not found.</div>
+  }
+
+  const f = faction
+  const immediateGoals = f.agendaGoals.filter((g) => g.timeframe === 'immediate')
+  const longTermGoals = f.agendaGoals.filter((g) => g.timeframe === 'long-term')
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
+            {f.isParty && <Crown className="size-6 text-amber-500" />}
+            {f.name}
+          </span>
+        }
+        actionsLeft={
+          !f.isParty ? (
+            <Button size="sm" variant="destructive" onClick={() => setShowDelete(true)}>
+              <Trash2 className="mr-2 size-4" />
+              Delete
+            </Button>
+          ) : undefined
+        }
+        actions={
+          <div className="flex items-center gap-2">
+            <Link to="/realms/factions">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="mr-2 size-4" />
+                Back
+              </Button>
+            </Link>
+            <Link to="/realms/factions/$factionId/edit" params={{ factionId }}>
+              <Button size="sm">
+                <Pencil className="mr-2 size-4" />
+                Edit
+              </Button>
+            </Link>
+          </div>
+        }
+      />
+
+      <div className="space-y-4">
+        {/* Overview — one card for identity + resources */}
+        <Card>
+          <CardContent className="pt-5 space-y-4">
+            {/* Top row: Type + Status + Traits inline */}
+            <div className="flex flex-wrap items-center gap-2">
+              {f.type && <Badge variant="outline" className="text-xs">{f.type}</Badge>}
+              <Select
+                value={f.status}
+                onValueChange={async (v) => {
+                  await executeUpdateFaction(
+                    { ...f, status: v as typeof f.status },
+                    { factionRepo: container.factionRepo }
+                  )
+                }}
+              >
+                <SelectTrigger className="w-auto h-7 px-2 border-0 gap-1">
+                  <Badge className={STATUS_COLORS[f.status] ?? 'bg-gray-600'}>
+                    {f.status.charAt(0).toUpperCase() + f.status.slice(1)}
+                  </Badge>
+                </SelectTrigger>
+                <SelectContent>
+                  {FACTION_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s.charAt(0).toUpperCase() + s.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {f.traits.map((trait) => (
+                <Badge key={trait} variant="secondary">{trait}</Badge>
+              ))}
+            </div>
+
+            {/* Location row */}
+            {(f.regionId || f.headquartersPoiId) && (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                {(() => {
+                  const region = regions.find((r) => r.id === f.regionId)
+                  return region ? (
+                    <span className="text-muted-foreground">Region: <span className="text-foreground font-medium">{region.name}</span></span>
+                  ) : null
+                })()}
+                {(() => {
+                  const hqPoi = realmPOIs.find((p) => p.id === f.headquartersPoiId)
+                  return hqPoi ? (
+                    <span className="text-muted-foreground">HQ: <span className="text-foreground font-medium">{hqPoi.name}</span></span>
+                  ) : null
+                })()}
+              </div>
+            )}
+
+            {/* Description */}
+            {f.description && (
+              <p className="text-sm whitespace-pre-wrap text-muted-foreground">{f.description}</p>
+            )}
+
+            {/* Advantages + Obstacles side by side */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-500 mb-2">Advantages ({(f.advantages ?? []).length})</h4>
+                {(f.advantages ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">None</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {f.advantages.map((a) => (
+                      <li key={a.id} className="text-sm flex items-center gap-2">
+                        <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        {a.description}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-red-500 mb-2">Obstacles ({(f.obstacles ?? []).length})</h4>
+                {(f.obstacles ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">None</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {f.obstacles.map((o) => (
+                      <li key={o.id} className="text-sm flex items-center gap-2">
+                        <span className="size-1.5 rounded-full bg-red-500 shrink-0" />
+                        {o.description}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Agenda */}
+        {f.agendaGoals.length > 0 && (
+          <>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Agenda</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Immediate */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-amber-500">
+                    Immediate ({immediateGoals.filter((g) => g.completed).length}/{immediateGoals.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-1">
+                  {immediateGoals.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No immediate goals.</p>
+                  ) : (
+                    immediateGoals.map((g, idx) => (
+                      <div
+                        key={g.id}
+                        className="flex items-center gap-2 py-1.5 px-1 rounded cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => handleToggleGoal(g.id)}
+                      >
+                        <span className="text-xs font-mono text-muted-foreground w-4 shrink-0">{idx + 1}.</span>
+                        {g.completed
+                          ? <CheckCircle2 className="size-4 text-green-500 shrink-0" />
+                          : <Circle className="size-4 text-muted-foreground shrink-0" />}
+                        <span className={`text-sm ${g.completed ? 'text-muted-foreground line-through' : ''}`}>
+                          {g.description}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Long-Term */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-blue-500">
+                    Long-Term ({longTermGoals.filter((g) => g.completed).length}/{longTermGoals.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-1">
+                  {longTermGoals.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No long-term goals.</p>
+                  ) : (
+                    longTermGoals.map((g, idx) => (
+                      <div
+                        key={g.id}
+                        className="flex items-center gap-2 py-1.5 px-1 rounded cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => handleToggleGoal(g.id)}
+                      >
+                        <span className="text-xs font-mono text-muted-foreground w-4 shrink-0">{idx + 1}.</span>
+                        {g.completed
+                          ? <CheckCircle2 className="size-4 text-green-500 shrink-0" />
+                          : <Circle className="size-4 text-muted-foreground shrink-0" />}
+                        <span className={`text-sm ${g.completed ? 'text-muted-foreground line-through' : ''}`}>
+                          {g.description}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
+
+        {/* Relationships + Agents side by side on larger screens */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Relationships */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Handshake className="size-4" />
+                Relationships
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {factionRelationships.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No relationships.</p>
+              ) : (
+                <div className="space-y-1">
+                  {factionRelationships.map((rel) => {
+                    const targetFaction = allFactions.find((f) => f.id === rel.targetId)
+                    const statusLabel = deriveStatus(rel.score)
+                    return (
+                      <div key={rel.id} className="flex items-center justify-between py-1">
+                        <Link
+                          to="/realms/factions/$factionId"
+                          params={{ factionId: rel.targetId }}
+                          className="text-sm text-primary hover:underline font-medium"
+                        >
+                          {targetFaction?.name ?? 'Unknown'}
+                        </Link>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-mono font-semibold">
+                            {rel.score > 0 ? `+${rel.score}` : rel.score}
+                          </span>
+                          <Badge variant={rel.score > 0 ? 'secondary' : rel.score < 0 ? 'destructive' : 'outline'} className="text-xs w-16 justify-center">
+                            {statusLabel}
+                          </Badge>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Agent NPCs */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="size-4" />
+                Agents ({agentNpcs.length})
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7"
+                onClick={handleAddAgent}
+                disabled={isAddingAgent || !systemConfig}
+              >
+                <Dices className="mr-1.5 size-3.5" />
+                {isAddingAgent ? '...' : 'Add'}
+              </Button>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {agentNpcs.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No agents.</p>
+              ) : (
+                <div className="space-y-1">
+                  {agentNpcs.map((npc) => (
+                    <div key={npc.id} className="flex items-center justify-between py-1">
+                      <Link
+                        to="/realms/npcs/$npcId"
+                        params={{ npcId: npc.id }}
+                        className="text-sm text-primary hover:underline font-medium"
+                      >
+                        {npc.name}
+                      </Link>
+                      <div className="flex items-center gap-1">
+                        {npc.traits.slice(0, 2).map((trait) => (
+                          <Badge key={trait} variant="secondary" className="text-xs">{trait}</Badge>
+                        ))}
+                        {!npc.isAlive && <Badge variant="destructive" className="text-xs">Dead</Badge>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={showDelete}
+        onOpenChange={setShowDelete}
+        title="Delete Faction"
+        description="Are you sure you want to delete this faction? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={handleDelete}
+      />
+    </div>
+  )
+}

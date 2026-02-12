@@ -51,8 +51,12 @@ export async function executeImportRealm(
       id: remap(f.id),
       realmId,
       agentNpcIds: f.agentNpcIds.map((id: string) => remap(id)),
-      agendaGoals: f.agendaGoals.map((g) => ({ ...g, id: remap(g.id) })),
+      agendaGoals: f.agendaGoals.map((g) => ({ ...g, id: remap(g.id), timeframe: g.timeframe ?? 'long-term' })),
       advantages: f.advantages.map((a) => ({ ...a, id: remap(a.id) })),
+      obstacles: (f.obstacles ?? []).map((o: { id: string; description: string }) => ({ ...o, id: remap(o.id) })),
+      regionId: f.regionId ? remap(f.regionId) : null,
+      headquartersPoiId: f.headquartersPoiId ? remap(f.headquartersPoiId) : null,
+      sortOrder: f.sortOrder ?? 0,
     })
   }
 
@@ -64,6 +68,7 @@ export async function executeImportRealm(
       realmId,
       factionId: n.factionId ? remap(n.factionId) : null,
       regionId: n.regionId ? remap(n.regionId) : null,
+      location: n.location ?? '',
     })
   }
 

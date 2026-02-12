@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc:*)",
+      "Bash(ls:*)",
+      "Bash(xargs:*)",
+      "Bash(pnpm run build:*)",
+      "WebSearch",
+      "WebFetch(domain:cairnrpg.com)",
+      "Bash(npx tsc:*)",
+      "Bash(pnpm build:*)",
+      "Bash(python3:*)",
+      "Bash(pnpm add:*)",
+      "mcp__chrome-devtools__list_pages",
+      "mcp__chrome-devtools__navigate_page",
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__take_snapshot",
+      "mcp__chrome-devtools__click"
+    ]
+  }
+}

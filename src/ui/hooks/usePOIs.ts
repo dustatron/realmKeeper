@@ -14,3 +14,16 @@ export function usePOI(id: string | null) {
     [id]
   )
 }
+
+export function useRealmPOIs(realmId: string | null) {
+  return useLiveQuery(
+    async () => {
+      if (!realmId) return []
+      const regions = await db.regions.where('realmId').equals(realmId).toArray()
+      const regionIds = regions.map((r) => r.id)
+      if (regionIds.length === 0) return []
+      return db.pois.where('regionId').anyOf(regionIds).toArray()
+    },
+    [realmId]
+  ) ?? []
+}

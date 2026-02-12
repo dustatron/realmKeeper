@@ -3,7 +3,10 @@ import { db } from '@infrastructure/dexie/db'
 
 export function useFactions(realmId: string | null) {
   return useLiveQuery(
-    () => (realmId ? db.factions.where('realmId').equals(realmId).toArray() : []),
+    () => realmId
+      ? db.factions.where('realmId').equals(realmId).toArray()
+          .then((factions) => factions.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)))
+      : [],
     [realmId]
   ) ?? []
 }

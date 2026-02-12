@@ -6,6 +6,7 @@ export interface NPC {
   name: string
   factionId: string | null
   regionId: string | null
+  location: string
   description: string
   traits: string[]
   motivation: string

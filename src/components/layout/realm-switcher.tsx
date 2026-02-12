@@ -13,12 +13,33 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '~/components/ui/sidebar'
+import { useRealms } from '~/ui/hooks/useRealms'
+import { useSystemConfigs } from '~/ui/hooks/useSystemConfigs'
+import { useUIStore } from '~/ui/stores/uiStore'
+import { useNavigate } from '@tanstack/react-router'
 
 export function RealmSwitcher() {
   const { isMobile } = useSidebar()
+  const navigate = useNavigate()
+  const realms = useRealms()
+  const systemConfigs = useSystemConfigs()
+  const activeRealmId = useUIStore((state) => state.activeRealmId)
+  const setActiveRealmId = useUIStore((state) => state.setActiveRealmId)
 
-  // TODO: wire to Dexie live query for realms + Zustand activeRealmId
-  const activeRealm = { name: 'No Realm', system: 'Create one to begin' }
+  const activeRealm = realms.find((r) => r.id === activeRealmId)
+  const activeSystem = systemConfigs.find((s) => s.id === activeRealm?.systemId)
+
+  const displayName = activeRealm?.name ?? 'No Realm'
+  const displaySystem = activeSystem?.name ?? activeRealm?.systemId ?? 'Create one to begin'
+
+  const handleRealmClick = (realmId: string) => {
+    setActiveRealmId(realmId)
+    navigate({ to: '/realms' })
+  }
+
+  const handleNewRealm = () => {
+    navigate({ to: '/realms' })
+  }
 
   return (
     <SidebarMenu>
@@ -34,9 +55,9 @@ export function RealmSwitcher() {
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">
-                  {activeRealm.name}
+                  {displayName}
                 </span>
-                <span className="truncate text-xs">{activeRealm.system}</span>
+                <span className="truncate text-xs">{displaySystem}</span>
               </div>
               <ChevronsUpDown className="ml-auto" />
             </SidebarMenuButton>
@@ -50,9 +71,28 @@ export function RealmSwitcher() {
             <DropdownMenuLabel className="text-xs text-muted-foreground">
               Realms
             </DropdownMenuLabel>
-            {/* TODO: map over realms from Dexie */}
+            {realms.map((realm) => {
+              const system = systemConfigs.find((s) => s.id === realm.systemId)
+              return (
+                <DropdownMenuItem
+                  key={realm.id}
+                  className="gap-2 p-2"
+                  onClick={() => handleRealmClick(realm.id)}
+                >
+                  <div className="bg-sidebar-primary text-sidebar-primary-foreground flex size-6 items-center justify-center rounded-md">
+                    <Crown className="size-3" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{realm.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {system?.name ?? realm.systemId}
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+              )
+            })}
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 p-2">
+            <DropdownMenuItem className="gap-2 p-2" onClick={handleNewRealm}>
               <div className="flex size-6 items-center justify-center rounded-md border bg-background">
                 <Plus className="size-4" />
               </div>

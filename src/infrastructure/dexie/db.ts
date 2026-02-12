@@ -12,6 +12,7 @@ import type { WorldEvent } from '@domain/entities/WorldEvent'
 import type { WeatherHistory } from '@domain/entities/WeatherHistory'
 import type { TableSet, TableDef } from '@domain/entities/TableDef'
 import type { RollHistory } from '@domain/entities/RollHistory'
+import { seedDatabase } from './seed'
 
 const db = new Dexie('RealmKeeperDB') as Dexie & {
   systemConfigs: EntityTable<SystemConfig, 'id'>
@@ -30,7 +31,7 @@ const db = new Dexie('RealmKeeperDB') as Dexie & {
   rollHistory: EntityTable<RollHistory, 'id'>
 }
 
-db.version(1).stores({
+const stores = {
   systemConfigs: 'id',
   realms: 'id, systemId',
   regions: 'id, realmId',
@@ -45,6 +46,28 @@ db.version(1).stores({
   tableSets: 'id, source, systemId',
   tableDefs: 'id, setId, *tags, systemId',
   rollHistory: 'id, realmId, tableId, timestamp',
+}
+
+db.version(1).stores(stores)
+
+db.version(2).stores(stores).upgrade((tx) => {
+  seedDatabase(tx)
+})
+
+// v3: System tables now served from code — clean old seeded data from DB
+db.version(3).stores(stores).upgrade(async (tx) => {
+  const defs = await tx.table('tableDefs').toArray()
+  const sysDefIds = defs.filter((d: TableDef) => d.systemId).map((d: TableDef) => d.id)
+  if (sysDefIds.length > 0) await tx.table('tableDefs').bulkDelete(sysDefIds)
+
+  const sets = await tx.table('tableSets').toArray()
+  const sysSetIds = sets.filter((s: TableSet) => s.systemId).map((s: TableSet) => s.id)
+  if (sysSetIds.length > 0) await tx.table('tableSets').bulkDelete(sysSetIds)
+})
+
+// Seed system configs on first DB creation
+db.on('populate', (tx) => {
+  seedDatabase(tx)
 })
 
 export { db }

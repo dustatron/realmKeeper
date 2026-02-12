@@ -11,33 +11,31 @@ import {
 } from 'lucide-react'
 import type { NavGroup } from './types'
 
-export function getSidebarData(realmId?: string): { navGroups: NavGroup[] } {
-  const base = realmId ? `/realms/${realmId}` : '/realms'
-
+export function getSidebarData(_realmId?: string): { navGroups: NavGroup[] } {
   return {
     navGroups: [
       {
         title: 'Overview',
         items: [
-          { title: 'Dashboard', url: base, icon: LayoutDashboard },
-          { title: 'Calendar', url: `${base}/calendar`, icon: Scroll },
+          { title: 'Dashboard', url: '/realms', icon: LayoutDashboard },
+          { title: 'Calendar', url: '/realms/calendar', icon: Scroll },
         ],
       },
       {
         title: 'World',
         items: [
-          { title: 'Factions', url: `${base}/factions`, icon: Swords },
-          { title: 'NPCs', url: `${base}/npcs`, icon: Users },
-          { title: 'Regions', url: `${base}/regions`, icon: Map },
-          { title: 'POIs', url: `${base}/pois`, icon: Compass },
-          { title: 'Paths', url: `${base}/paths`, icon: Route },
+          { title: 'Factions', url: '/realms/factions', icon: Swords },
+          { title: 'NPCs', url: '/realms/npcs', icon: Users },
+          { title: 'Regions', url: '/realms/regions', icon: Map },
+          { title: 'POIs', url: '/realms/pois', icon: Compass },
+          { title: 'Paths', url: '/realms/paths', icon: Route },
         ],
       },
       {
         title: 'Tools',
         items: [
-          { title: 'Tables', url: `${base}/tables`, icon: TableProperties },
-          { title: 'Notes', url: `${base}/notes`, icon: NotebookPen },
+          { title: 'Tables', url: '/realms/tables', icon: TableProperties },
+          { title: 'Notes', url: '/realms/notes', icon: NotebookPen },
         ],
       },
     ],

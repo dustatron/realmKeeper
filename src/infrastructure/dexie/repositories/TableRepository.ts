@@ -1,34 +1,52 @@
 import { db } from '@infrastructure/dexie/db'
 import type { ITableRepository } from '@application/ports/ITableRepository'
 import type { TableDef, TableSet } from '@domain/entities/TableDef'
+import {
+  getSystemTableById,
+  getSystemTablesBySystemId,
+  getSystemTablesByTag,
+  getSystemTablesBySetId,
+  getAllSystemSets,
+  getSystemSetById,
+  isSystemSetId,
+} from '@domain/data/system-tables'
 
 export class TableRepository implements ITableRepository {
   async getTableById(id: string): Promise<TableDef | undefined> {
-    return db.tableDefs.get(id)
+    return getSystemTableById(id) ?? db.tableDefs.get(id)
   }
 
   async getTablesBySetId(setId: string): Promise<TableDef[]> {
+    if (isSystemSetId(setId)) return getSystemTablesBySetId(setId)
     return db.tableDefs.where('setId').equals(setId).toArray()
   }
 
   async getTablesByTag(tag: string): Promise<TableDef[]> {
-    return db.tableDefs.where('tags').equals(tag).toArray()
+    const systemTables = getSystemTablesByTag(tag)
+    const dbTables = await db.tableDefs.where('tags').equals(tag).toArray()
+    return [...systemTables, ...dbTables]
   }
 
   async getTablesBySystemId(systemId: string | null): Promise<TableDef[]> {
     if (systemId === null) {
       return db.tableDefs.where('systemId').equals('').toArray()
     }
-    return db.tableDefs.where('systemId').equals(systemId).toArray()
+    const systemTables = getSystemTablesBySystemId(systemId)
+    const dbTables = await db.tableDefs.where('systemId').equals(systemId).toArray()
+    return [...systemTables, ...dbTables]
   }
 
   async getSetById(id: string): Promise<TableSet | undefined> {
-    return db.tableSets.get(id)
+    return getSystemSetById(id) ?? db.tableSets.get(id)
   }
 
   async getAllSets(): Promise<TableSet[]> {
-    return db.tableSets.toArray()
+    const systemSets = getAllSystemSets()
+    const dbSets = await db.tableSets.toArray()
+    return [...systemSets, ...dbSets]
   }
+
+  // Write methods — only affect DB (custom tables)
 
   async createTable(table: TableDef): Promise<void> {
     await db.tableDefs.put(table)
