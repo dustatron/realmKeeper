@@ -1,0 +1,12 @@
+node_modules
+dist
+.output
+.vinxi
+.nitro
+*.local
+.env
+.env.*
+!.env.example
+.DS_Store
+*.tsbuildinfo
+routeTree.gen.ts
