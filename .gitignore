@@ -10,3 +10,5 @@ dist
 .DS_Store
 *.tsbuildinfo
 routeTree.gen.ts
+.tanstack
+package-lock.json
