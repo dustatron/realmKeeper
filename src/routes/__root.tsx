@@ -6,6 +6,7 @@ import {
   createRootRoute,
 } from '@tanstack/react-router'
 import { TooltipProvider } from '~/components/ui/tooltip'
+import { ContainerProvider } from '~/ui/hooks/useContainer'
 import * as React from 'react'
 import appCss from '~/styles/app.css?url'
 
@@ -54,8 +55,10 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   return (
-    <TooltipProvider>
-      <Outlet />
-    </TooltipProvider>
+    <ContainerProvider>
+      <TooltipProvider>
+        <Outlet />
+      </TooltipProvider>
+    </ContainerProvider>
   )
 }
