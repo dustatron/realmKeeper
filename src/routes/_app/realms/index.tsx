@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from '~/components/ui/select'
 import { Textarea } from '~/components/ui/textarea'
-import { LayoutDashboard, Plus, Trash2, Download, Upload, Crown } from 'lucide-react'
+import { LayoutDashboard, Plus, Trash2, Download, Upload, Crown, Pencil } from 'lucide-react'
 // useRealms replaced by direct useLiveQuery to detect loading vs empty
 import { useSystemConfigs } from '~/ui/hooks/useSystemConfigs'
 import { useContainer } from '~/ui/hooks/useContainer'
@@ -70,8 +70,12 @@ function RealmsPage() {
   const [createSystem, setCreateSystem] = useState('')
   const [createDesc, setCreateDesc] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [editTarget, setEditTarget] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editDesc, setEditDesc] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
 
   const handleCreateRealm = async () => {
     if (!createName.trim() || !createSystem) return
@@ -184,6 +188,35 @@ function RealmsPage() {
   const handleRealmClick = (realmId: string) => {
     setActiveRealmId(realmId)
     navigate({ to: '/realms' })
+  }
+
+  const openEditRealm = (realmId: string) => {
+    const realm = realms.find((r) => r.id === realmId)
+    if (!realm) return
+    setEditTarget(realmId)
+    setEditName(realm.name)
+    setEditDesc(realm.description)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editTarget || !editName.trim()) return
+    const realm = realms.find((r) => r.id === editTarget)
+    if (!realm) return
+
+    setIsSavingEdit(true)
+    try {
+      await container.realmRepo.update({
+        ...realm,
+        name: editName.trim(),
+        description: editDesc.trim(),
+        updatedAt: Date.now(),
+      })
+      setEditTarget(null)
+    } catch (error) {
+      console.error('Failed to update realm:', error)
+    } finally {
+      setIsSavingEdit(false)
+    }
   }
 
   // Show dashboard when a realm is active and confirmed to exist
@@ -353,6 +386,17 @@ function RealmsPage() {
                   variant="outline"
                   onClick={(e) => {
                     e.stopPropagation()
+                    openEditRealm(realm.id)
+                  }}
+                >
+                  <Pencil className="mr-2 size-3" />
+                  Edit
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation()
                     handleExportRealm(realm.id)
                   }}
                 >
@@ -430,6 +474,46 @@ function RealmsPage() {
               disabled={!createName.trim() || !createSystem || isCreating}
             >
               {isCreating ? 'Creating...' : 'Create Realm'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editTarget !== null} onOpenChange={(open) => !open && setEditTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Realm</DialogTitle>
+            <DialogDescription>Update your realm's details.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-realm-name">Name</Label>
+              <Input
+                id="edit-realm-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                disabled={isSavingEdit}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-realm-desc">Description</Label>
+              <Textarea
+                id="edit-realm-desc"
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+                disabled={isSavingEdit}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTarget(null)} disabled={isSavingEdit}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={!editName.trim() || isSavingEdit}
+            >
+              {isSavingEdit ? 'Saving...' : 'Save'}
             </Button>
           </DialogFooter>
         </DialogContent>

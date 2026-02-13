@@ -18,8 +18,8 @@ const WEATHER_TABLES: Record<Season, string[]> = {
   winter: ['Clear and frigid', 'Light snow', 'Freezing rain', 'Bitter cold', 'Heavy snow', 'Blizzard'],
 }
 
-// Extreme conditions are rolls of 5 or 6 (index 4, 5)
-const EXTREME_THRESHOLD = 5
+// Extreme conditions are a roll of 6 only (~17%)
+const EXTREME_THRESHOLD = 6
 
 // Catastrophic upgrades for each season (when extreme happens twice)
 const CATASTROPHIC_CONDITIONS: Record<Season, string> = {

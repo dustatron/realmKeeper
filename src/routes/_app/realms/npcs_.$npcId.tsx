@@ -1,14 +1,20 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { useState } from 'react'
 import { useNPC } from '~/ui/hooks/useNPCs'
-import { useFaction } from '~/ui/hooks/useFactions'
-import { useRegion } from '~/ui/hooks/useRegions'
+import { useFaction, useFactions } from '~/ui/hooks/useFactions'
+import { useRegion, useRegions } from '~/ui/hooks/useRegions'
 import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
 import { useSystemConfig } from '~/ui/hooks/useSystemConfigs'
+import { useUIStore } from '~/ui/stores/uiStore'
+import { useContainer } from '~/ui/hooks/useContainer'
+import { executeUpdateNPC } from '@application/use-cases/UpdateNPC'
+import { NPCEditSheet } from '~/components/shared/NPCEditSheet'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { ArrowLeft, Heart, Shield, Skull, Swords, Package, Sparkles, Handshake, Pencil, MapPin } from 'lucide-react'
+import type { NPC } from '@domain/entities/NPC'
 import type { Faction } from '@domain/entities/Faction'
 
 export const Route = createFileRoute('/_app/realms/npcs_/$npcId')({
@@ -24,11 +30,23 @@ const STATUS_COLORS: Record<string, string> = {
 
 function NPCDetailPage() {
   const { npcId } = Route.useParams()
+  const activeRealmId = useUIStore((s) => s.activeRealmId)
   const npc = useNPC(npcId)
   const realm = useActiveRealm()
   const systemConfig = useSystemConfig(realm?.systemId ?? null)
   const faction = useFaction(npc?.factionId ?? null)
   const region = useRegion(npc?.regionId ?? null)
+  const factions = useFactions(activeRealmId)
+  const regions = useRegions(activeRealmId)
+  const container = useContainer()
+
+  const [editingNPC, setEditingNPC] = useState<NPC | null>(null)
+
+  const handleSaveNPC = async () => {
+    if (!editingNPC) return
+    await executeUpdateNPC(editingNPC, { npcRepo: container.npcRepo })
+    setEditingNPC(null)
+  }
 
   if (npc === undefined) {
     return <div className="py-8 text-center text-muted-foreground">Loading...</div>
@@ -60,12 +78,10 @@ function NPCDetailPage() {
                 Back
               </Button>
             </Link>
-            <Link to="/realms/npcs">
-              <Button size="sm">
-                <Pencil className="mr-2 size-4" />
-                Edit
-              </Button>
-            </Link>
+            <Button size="sm" onClick={() => setEditingNPC({ ...npc })}>
+              <Pencil className="mr-2 size-4" />
+              Edit
+            </Button>
           </div>
         }
       />
@@ -295,6 +311,19 @@ function NPCDetailPage() {
           </Card>
         )}
       </div>
+
+      {editingNPC && systemConfig && (
+        <NPCEditSheet
+          npc={editingNPC}
+          systemConfig={systemConfig}
+          factions={factions}
+          regions={regions}
+          open={!!editingNPC}
+          onOpenChange={(open) => { if (!open) setEditingNPC(null) }}
+          onSave={handleSaveNPC}
+          onChange={setEditingNPC}
+        />
+      )}
     </div>
   )
 }

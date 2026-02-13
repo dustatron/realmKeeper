@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useRegions } from '~/ui/hooks/useRegions'
-import { usePOIs } from '~/ui/hooks/usePOIs'
+import { usePOIs, useRealmPOIs } from '~/ui/hooks/usePOIs'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { executeCreatePOI } from '@application/use-cases/CreatePOI'
 import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
@@ -30,6 +30,7 @@ import {
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from '~/components/ui/card'
@@ -54,10 +55,10 @@ export const Route = createFileRoute('/_app/realms/pois')({
 function POIsPage() {
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const regions = useRegions(activeRealmId)
-  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(
-    regions[0]?.id ?? null
-  )
-  const pois = usePOIs(selectedRegionId)
+  const [selectedRegionId, setSelectedRegionId] = useState<string>('all')
+  const poisByRegion = usePOIs(selectedRegionId === 'all' ? null : selectedRegionId)
+  const allPois = useRealmPOIs(activeRealmId)
+  const pois = selectedRegionId === 'all' ? allPois : poisByRegion
   const container = useContainer()
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -70,7 +71,7 @@ function POIsPage() {
     name: '',
     description: '',
     type: 'settlement' as PoiType,
-    regionId: selectedRegionId ?? '',
+    regionId: '',
     tags: [] as string[],
   })
 
@@ -82,11 +83,6 @@ function POIsPage() {
     regionId: '',
     tags: [] as string[],
   })
-
-  // Update selected region when regions load
-  if (regions.length > 0 && !selectedRegionId) {
-    setSelectedRegionId(regions[0].id)
-  }
 
   const handleCreate = async () => {
     if (!createForm.name.trim()) return
@@ -105,7 +101,7 @@ function POIsPage() {
       name: '',
       description: '',
       type: 'settlement',
-      regionId: selectedRegionId ?? '',
+      regionId: '',
       tags: [],
     })
   }
@@ -135,11 +131,12 @@ function POIsPage() {
   }
 
   const openCreateDialog = () => {
+    const defaultRegion = selectedRegionId !== 'all' ? selectedRegionId : (regions[0]?.id ?? '')
     setCreateForm({
       name: '',
       description: '',
       type: 'settlement',
-      regionId: selectedRegionId ?? '',
+      regionId: defaultRegion,
       tags: [],
     })
     setCreateDialogOpen(true)
@@ -212,13 +209,14 @@ function POIsPage() {
       <div className="flex items-center gap-2">
         <Label htmlFor="region-select">Region:</Label>
         <Select
-          value={selectedRegionId ?? undefined}
+          value={selectedRegionId}
           onValueChange={(value) => setSelectedRegionId(value)}
         >
           <SelectTrigger id="region-select" className="w-64">
-            <SelectValue placeholder="Select a region" />
+            <SelectValue placeholder="All Regions" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="all">All Regions</SelectItem>
             {regions.map((region) => (
               <SelectItem key={region.id} value={region.id}>
                 {region.name}
@@ -233,7 +231,7 @@ function POIsPage() {
         <EmptyState
           icon={Compass}
           title="No POIs yet"
-          description="Add points of interest to this region"
+          description="Add points of interest to your realm"
           action={
             <Button onClick={openCreateDialog}>
               <Plus className="mr-2 size-4" />
@@ -251,7 +249,15 @@ function POIsPage() {
             >
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
-                  <CardTitle>{poi.name}</CardTitle>
+                  <div>
+                    <CardTitle>{poi.name}</CardTitle>
+                    {selectedRegionId === 'all' && (() => {
+                      const r = regions.find((reg) => reg.id === poi.regionId)
+                      return r ? (
+                        <CardDescription className="mt-0.5 text-xs">{r.name}</CardDescription>
+                      ) : null
+                    })()}
+                  </div>
                   <Badge variant={getPoiTypeColor(poi.type)}>{poi.type}</Badge>
                 </div>
               </CardHeader>

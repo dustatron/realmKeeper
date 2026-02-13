@@ -1,4 +1,4 @@
-import { ChevronsUpDown, Crown, Plus } from 'lucide-react'
+import { ChevronsUpDown, Crown, Plus, Settings2 } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +38,12 @@ export function RealmSwitcher() {
   }
 
   const handleNewRealm = () => {
+    setActiveRealmId(null)
+    navigate({ to: '/realms' })
+  }
+
+  const handleManageRealms = () => {
+    setActiveRealmId(null)
     navigate({ to: '/realms' })
   }
 
@@ -92,6 +98,14 @@ export function RealmSwitcher() {
               )
             })}
             <DropdownMenuSeparator />
+            <DropdownMenuItem className="gap-2 p-2" onClick={handleManageRealms}>
+              <div className="flex size-6 items-center justify-center rounded-md border bg-background">
+                <Settings2 className="size-4" />
+              </div>
+              <div className="font-medium text-muted-foreground">
+                Manage Realms
+              </div>
+            </DropdownMenuItem>
             <DropdownMenuItem className="gap-2 p-2" onClick={handleNewRealm}>
               <div className="flex size-6 items-center justify-center rounded-md border bg-background">
                 <Plus className="size-4" />
