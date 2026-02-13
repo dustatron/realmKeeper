@@ -32,7 +32,10 @@ export async function executeCreateRealm(
     currentDay: 1,
     currentWatch: 'morning',
     daysPerSeason: DEFAULT_DAYS_PER_SEASON,
+    daysPerWeek: 7,
+    watchesPerDay: 3,
     factionTurnTrigger: 'day',
+    completedThroughDay: -1,
     createdAt: now,
     updatedAt: now,
   }

@@ -5,6 +5,7 @@ import {
   NotebookPen,
   Route,
   Scroll,
+  Settings,
   Swords,
   TableProperties,
   Users,
@@ -36,6 +37,7 @@ export function getSidebarData(_realmId?: string): { navGroups: NavGroup[] } {
         items: [
           { title: 'Tables', url: '/realms/tables', icon: TableProperties },
           { title: 'Notes', url: '/realms/notes', icon: NotebookPen },
+          { title: 'Settings', url: '/realms/settings', icon: Settings },
         ],
       },
     ],

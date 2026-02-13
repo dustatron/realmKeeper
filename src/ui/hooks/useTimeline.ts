@@ -15,3 +15,12 @@ export function useTimeline(realmId: string | null, limit = 50) {
     [realmId, limit]
   ) ?? []
 }
+
+export function useAllEvents(realmId: string | null) {
+  return useLiveQuery(
+    () => realmId
+      ? db.worldEvents.where('realmId').equals(realmId).toArray()
+      : [],
+    [realmId]
+  ) ?? []
+}

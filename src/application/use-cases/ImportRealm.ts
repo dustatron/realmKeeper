@@ -37,7 +37,14 @@ export async function executeImportRealm(
 
   // Realm
   const realmId = remap(data.realm.id)
-  await deps.realmRepo.create({ ...data.realm, id: realmId, updatedAt: Date.now() })
+  await deps.realmRepo.create({
+    ...data.realm,
+    id: realmId,
+    daysPerWeek: data.realm.daysPerWeek ?? 7,
+    watchesPerDay: data.realm.watchesPerDay ?? 3,
+    completedThroughDay: data.realm.completedThroughDay ?? -1,
+    updatedAt: Date.now(),
+  })
 
   // Regions
   for (const r of data.regions) {

@@ -20,7 +20,8 @@ export type ClockTrigger =
 export function advanceClock(
   current: WorldDateTime,
   unit: ClockAdvanceUnit,
-  daysPerSeason: number
+  daysPerSeason: number,
+  daysPerWeek = 7
 ): ClockAdvanceResult {
   const previousDateTime = { ...current }
   let newDateTime: WorldDateTime
@@ -33,7 +34,7 @@ export function advanceClock(
       newDateTime = advanceDay(current, daysPerSeason)
       break
     case 'week':
-      newDateTime = advanceWeek(current, daysPerSeason)
+      newDateTime = advanceWeek(current, daysPerSeason, daysPerWeek)
       break
   }
 

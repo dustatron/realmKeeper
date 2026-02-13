@@ -65,6 +65,31 @@ db.version(3).stores(stores).upgrade(async (tx) => {
   if (sysSetIds.length > 0) await tx.table('tableSets').bulkDelete(sysSetIds)
 })
 
+// v4: Add completedThroughDay to realms
+db.version(4).stores(stores).upgrade(async (tx) => {
+  const realms = await tx.table('realms').toArray()
+  for (const realm of realms) {
+    if (realm.completedThroughDay === undefined) {
+      await tx.table('realms').put({ ...realm, completedThroughDay: -1 })
+    }
+  }
+})
+
+// v5: Add daysPerWeek + watchesPerDay to realms
+db.version(5).stores(stores).upgrade(async (tx) => {
+  const realms = await tx.table('realms').toArray()
+  for (const realm of realms) {
+    if (realm.daysPerWeek === undefined || realm.watchesPerDay === undefined) {
+      await tx.table('realms').put({
+        ...realm,
+        daysPerWeek: realm.daysPerWeek ?? 7,
+        watchesPerDay: realm.watchesPerDay ?? 3,
+        completedThroughDay: realm.completedThroughDay ?? -1,
+      })
+    }
+  }
+})
+
 // Seed system configs on first DB creation
 db.on('populate', (tx) => {
   seedDatabase(tx)

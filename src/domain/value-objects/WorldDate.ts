@@ -31,12 +31,29 @@ export function advanceDay(dt: WorldDateTime, daysPerSeason = DEFAULT_DAYS_PER_S
   return { year: dt.year + 1, season: SEASONS[0], day: 1, watch: WATCHES[0] }
 }
 
-export function advanceWeek(dt: WorldDateTime, daysPerSeason = DEFAULT_DAYS_PER_SEASON): WorldDateTime {
+export function advanceWeek(dt: WorldDateTime, daysPerSeason = DEFAULT_DAYS_PER_SEASON, daysPerWeek = 7): WorldDateTime {
   let result = dt
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < daysPerWeek; i++) {
     result = advanceDay(result, daysPerSeason)
   }
   return result
+}
+
+export function rewindDay(dt: WorldDateTime, daysPerSeason = DEFAULT_DAYS_PER_SEASON): WorldDateTime {
+  const prevDay = dt.day - 1
+  if (prevDay >= 1) {
+    return { ...dt, day: prevDay, watch: WATCHES[WATCHES.length - 1] }
+  }
+  const seasonIdx = SEASONS.indexOf(dt.season)
+  if (seasonIdx > 0) {
+    return { ...dt, season: SEASONS[seasonIdx - 1], day: daysPerSeason, watch: WATCHES[WATCHES.length - 1] }
+  }
+  return {
+    year: dt.year - 1,
+    season: SEASONS[SEASONS.length - 1],
+    day: daysPerSeason,
+    watch: WATCHES[WATCHES.length - 1],
+  }
 }
 
 export function formatWorldDate(dt: WorldDate): string {

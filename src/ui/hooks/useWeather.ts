@@ -13,3 +13,12 @@ export function useRecentWeather(realmId: string | null, limit = 7) {
     [realmId, limit]
   ) ?? []
 }
+
+export function useAllWeather(realmId: string | null) {
+  return useLiveQuery(
+    () => realmId
+      ? db.weatherHistory.where('realmId').equals(realmId).toArray()
+      : [],
+    [realmId]
+  ) ?? []
+}

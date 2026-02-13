@@ -10,7 +10,10 @@ export interface Realm {
   currentDay: number
   currentWatch: Watch
   daysPerSeason: number
+  daysPerWeek: number
+  watchesPerDay: number
   factionTurnTrigger: 'day' | 'week' | 'manual'
+  completedThroughDay: number
   createdAt: number
   updatedAt: number
 }
