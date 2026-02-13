@@ -32,7 +32,13 @@ import {
   SelectValue,
 } from '~/components/ui/select'
 import { Textarea } from '~/components/ui/textarea'
-import { LayoutDashboard, Plus, Trash2, Download, Upload, Crown, Pencil } from 'lucide-react'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '~/components/ui/collapsible'
+import { LayoutDashboard, Plus, Trash2, Download, Upload, Crown, Pencil, ChevronDown, Settings } from 'lucide-react'
+import { DEFAULT_DAYS_PER_SEASON, DEFAULT_WATCHES_PER_DAY } from '@shared/constants'
 // useRealms replaced by direct useLiveQuery to detect loading vs empty
 import { useSystemConfigs } from '~/ui/hooks/useSystemConfigs'
 import { useContainer } from '~/ui/hooks/useContainer'
@@ -69,6 +75,11 @@ function RealmsPage() {
   const [createName, setCreateName] = useState('')
   const [createSystem, setCreateSystem] = useState('')
   const [createDesc, setCreateDesc] = useState('')
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const [createWatchesPerDay, setCreateWatchesPerDay] = useState(DEFAULT_WATCHES_PER_DAY)
+  const [createDaysPerSeason, setCreateDaysPerSeason] = useState(DEFAULT_DAYS_PER_SEASON)
+  const [createDaysPerWeek, setCreateDaysPerWeek] = useState(7)
+  const [createFactionTurnTrigger, setCreateFactionTurnTrigger] = useState<'day' | 'week' | 'manual'>('day')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [editTarget, setEditTarget] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
@@ -87,6 +98,10 @@ function RealmsPage() {
           name: createName.trim(),
           systemId: createSystem,
           description: createDesc.trim(),
+          watchesPerDay: createWatchesPerDay,
+          daysPerSeason: createDaysPerSeason,
+          daysPerWeek: createDaysPerWeek,
+          factionTurnTrigger: createFactionTurnTrigger,
         },
         {
           realmRepo: container.realmRepo,
@@ -100,6 +115,11 @@ function RealmsPage() {
       setCreateName('')
       setCreateSystem('')
       setCreateDesc('')
+      setCalendarOpen(false)
+      setCreateWatchesPerDay(DEFAULT_WATCHES_PER_DAY)
+      setCreateDaysPerSeason(DEFAULT_DAYS_PER_SEASON)
+      setCreateDaysPerWeek(7)
+      setCreateFactionTurnTrigger('day')
     } catch (error) {
       console.error('Failed to create realm:', error)
     } finally {
@@ -136,6 +156,8 @@ function RealmsPage() {
         realmNoteRepo: container.realmNoteRepo,
         poiRepo: container.poiRepo,
         pathRepo: container.pathRepo,
+        factionPresenceRepo: container.factionPresenceRepo,
+        poiEventRepo: container.poiEventRepo,
       })
 
       if (!data) return
@@ -175,6 +197,8 @@ function RealmsPage() {
         realmNoteRepo: container.realmNoteRepo,
         poiRepo: container.poiRepo,
         pathRepo: container.pathRepo,
+        factionPresenceRepo: container.factionPresenceRepo,
+        poiEventRepo: container.poiEventRepo,
       })
 
       setActiveRealmId(newRealmId)
@@ -218,6 +242,77 @@ function RealmsPage() {
       setIsSavingEdit(false)
     }
   }
+
+  const calendarSettingsSection = (
+    <Collapsible open={calendarOpen} onOpenChange={setCalendarOpen}>
+      <CollapsibleTrigger asChild>
+        <Button variant="ghost" size="sm" className="w-full justify-between px-0 font-medium" disabled={isCreating}>
+          <span className="flex items-center gap-2">
+            <Settings className="size-4" />
+            Calendar Settings
+          </span>
+          <ChevronDown className={`size-4 transition-transform ${calendarOpen ? 'rotate-180' : ''}`} />
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-3 pt-2">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-1.5">
+            <Label htmlFor="watches-per-day" className="text-xs">Watches per Day</Label>
+            <Input
+              id="watches-per-day"
+              type="number"
+              min="1"
+              max="12"
+              value={createWatchesPerDay}
+              onChange={(e) => setCreateWatchesPerDay(parseInt(e.target.value) || DEFAULT_WATCHES_PER_DAY)}
+              disabled={isCreating}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="days-per-season" className="text-xs">Days per Season</Label>
+            <Input
+              id="days-per-season"
+              type="number"
+              min="1"
+              max="365"
+              value={createDaysPerSeason}
+              onChange={(e) => setCreateDaysPerSeason(parseInt(e.target.value) || DEFAULT_DAYS_PER_SEASON)}
+              disabled={isCreating}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="days-per-week" className="text-xs">Days per Week</Label>
+            <Input
+              id="days-per-week"
+              type="number"
+              min="1"
+              max="30"
+              value={createDaysPerWeek}
+              onChange={(e) => setCreateDaysPerWeek(parseInt(e.target.value) || 7)}
+              disabled={isCreating}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="faction-turn-trigger" className="text-xs">Faction Turn Trigger</Label>
+            <Select
+              value={createFactionTurnTrigger}
+              onValueChange={(v) => setCreateFactionTurnTrigger(v as typeof createFactionTurnTrigger)}
+              disabled={isCreating}
+            >
+              <SelectTrigger id="faction-turn-trigger">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="day">Every Day</SelectItem>
+                <SelectItem value="week">Every Week</SelectItem>
+                <SelectItem value="manual">Manual Only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  )
 
   // Show dashboard when a realm is active and confirmed to exist
   if (activeRealmId && realmsLoaded && realms.some((r) => r.id === activeRealmId)) {
@@ -301,6 +396,7 @@ function RealmsPage() {
                   disabled={isCreating}
                 />
               </div>
+              {calendarSettingsSection}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowCreate(false)} disabled={isCreating}>
@@ -464,6 +560,7 @@ function RealmsPage() {
                 disabled={isCreating}
               />
             </div>
+            {calendarSettingsSection}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreate(false)} disabled={isCreating}>

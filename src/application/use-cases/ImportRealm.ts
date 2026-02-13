@@ -8,6 +8,8 @@ import type { IWeatherRepository } from '@application/ports/IWeatherRepository'
 import type { IRealmNoteRepository } from '@application/ports/IRealmNoteRepository'
 import type { IPOIRepository } from '@application/ports/IPOIRepository'
 import type { IPathRepository } from '@application/ports/IPathRepository'
+import type { IFactionPresenceRepository } from '@application/ports/IFactionPresenceRepository'
+import type { IPOIEventRepository } from '@application/ports/IPOIEventRepository'
 import type { RealmExport } from './ExportRealm'
 import { newId } from '@shared/ulid'
 
@@ -22,10 +24,19 @@ export interface ImportRealmDeps {
   realmNoteRepo: IRealmNoteRepository
   poiRepo: IPOIRepository
   pathRepo: IPathRepository
+  factionPresenceRepo: IFactionPresenceRepository
+  poiEventRepo: IPOIEventRepository
 }
 
+// Accept v1 or v2 exports for backward compat
+type ImportData = RealmExport | (Omit<RealmExport, 'version' | 'factionPresences' | 'poiEvents'> & {
+  version: 1
+  factionPresences?: never
+  poiEvents?: never
+})
+
 export async function executeImportRealm(
-  data: RealmExport,
+  data: ImportData,
   deps: ImportRealmDeps
 ): Promise<string> {
   // Build ID remap table
@@ -67,16 +78,23 @@ export async function executeImportRealm(
     })
   }
 
-  // NPCs
+  // NPCs — handle v1 backward compat (location → poiId, isAlive → lifeStatus)
   for (const n of data.npcs) {
+    const npcData = n as unknown as Record<string, unknown>
     await deps.npcRepo.create({
       ...n,
       id: remap(n.id),
       realmId,
       factionId: n.factionId ? remap(n.factionId) : null,
       regionId: n.regionId ? remap(n.regionId) : null,
-      location: n.location ?? '',
-    })
+      // v1 had `location` string, v2 has `poiId` — default poiId to null for old exports
+      poiId: npcData.poiId ? remap(npcData.poiId as string) : null,
+      // v1 had `isAlive` boolean, v2 has `lifeStatus` enum
+      lifeStatus: npcData.lifeStatus
+        ? (npcData.lifeStatus as string)
+        : (npcData.isAlive === false ? 'dead' : 'alive'),
+      movementStatus: (npcData.movementStatus as string) ?? 'present',
+    } as Parameters<typeof deps.npcRepo.create>[0])
   }
 
   // Relationships
@@ -109,19 +127,51 @@ export async function executeImportRealm(
     await deps.realmNoteRepo.create({ ...n, id: remap(n.id), realmId })
   }
 
-  // POIs
+  // POIs — remap parentPoiId for v2
   for (const p of data.pois) {
-    await deps.poiRepo.create({ ...p, id: remap(p.id), regionId: remap(p.regionId) })
-  }
-
-  // Paths
-  for (const p of data.paths) {
-    await deps.pathRepo.create({
+    const poiData = p as unknown as Record<string, unknown>
+    await deps.poiRepo.create({
       ...p,
       id: remap(p.id),
       regionId: remap(p.regionId),
+      parentPoiId: poiData.parentPoiId ? remap(poiData.parentPoiId as string) : null,
+    } as Parameters<typeof deps.poiRepo.create>[0])
+  }
+
+  // Paths — v2 removed regionId
+  for (const p of data.paths) {
+    const pathData = p as unknown as Record<string, unknown>
+    await deps.pathRepo.create({
+      ...p,
+      id: remap(p.id),
       fromPoiId: remap(p.fromPoiId),
       toPoiId: remap(p.toPoiId),
+      // v1 had baseTravelDays, v2 has baseTravelWatches
+      baseTravelWatches: (pathData.baseTravelWatches as number) ?? (pathData.baseTravelDays as number) ?? 1,
+      type: (pathData.type as string) ?? 'road',
+      terrain: (pathData.terrain as string) ?? 'plains',
+    } as Parameters<typeof deps.pathRepo.create>[0])
+  }
+
+  // Faction presences (v2 only)
+  const factionPresences = data.factionPresences ?? []
+  for (const fp of factionPresences) {
+    await deps.factionPresenceRepo.create({
+      ...fp,
+      id: remap(fp.id),
+      factionId: remap(fp.factionId),
+      poiId: remap(fp.poiId),
+    })
+  }
+
+  // POI events (v2 only)
+  const poiEvents = data.poiEvents ?? []
+  for (const evt of poiEvents) {
+    await deps.poiEventRepo.create({
+      ...evt,
+      id: remap(evt.id),
+      poiId: remap(evt.poiId),
+      realmId,
     })
   }
 

@@ -45,6 +45,8 @@ export function StickyTimeBar({ realm, isAdvancing, onRewindDay, onAdvanceDay, o
           <span className={SEASON_COLORS[realm.currentSeason]}>{cap(realm.currentSeason)}</span>
           <span className="text-muted-foreground">&middot;</span>
           <span>Day {realm.currentDay}</span>
+          <span className="text-muted-foreground">&middot;</span>
+          <span className="text-sm">Watch {realm.currentWatch}</span>
         </div>
 
         {/* Advance */}

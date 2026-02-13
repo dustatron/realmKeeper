@@ -10,6 +10,7 @@ import type { IFactionRepository } from '@application/ports/IFactionRepository'
 import type { IFactionRelationshipRepository } from '@application/ports/IFactionRelationshipRepository'
 import type { INPCRepository } from '@application/ports/INPCRepository'
 import type { IWorldEventRepository } from '@application/ports/IWorldEventRepository'
+import type { IPOIEventRepository } from '@application/ports/IPOIEventRepository'
 import type { IEventBus } from '@application/ports/IEventBus'
 import { advanceDay, type WorldDateTime } from '@domain/value-objects/WorldDate'
 import type { DiceResult } from '@shared/dice'
@@ -104,6 +105,7 @@ export interface AdvanceDayDeps {
   worldEventRepo: IWorldEventRepository
   eventBus: IEventBus
   rollDice: (notation: string) => DiceResult
+  poiEventRepo?: IPOIEventRepository
 }
 
 export interface AdvanceDayResult {
@@ -158,6 +160,48 @@ export async function executeAdvanceDay(
   let factionTurns: FactionTurnSuggestion[] = []
   if (realm.factionTurnTrigger === 'day') {
     factionTurns = await executeFactionTurns(realmId, newDateTime, deps)
+  }
+
+  // Check POI events
+  const poiEventRepo = deps.poiEventRepo
+  if (poiEventRepo) {
+    const allEvents = await poiEventRepo.getByRealmId(realmId)
+
+    // Activate matching events
+    for (const evt of allEvents) {
+      if (evt.isActive) continue
+      const t = evt.trigger
+      const yearMatch = t.year === null || t.year === newDateTime.year
+      const seasonMatch = t.season === newDateTime.season
+      const dayMatch = t.day === newDateTime.day
+      const watchMatch = t.watch === null || t.watch === newDateTime.watch
+
+      if (yearMatch && seasonMatch && dayMatch && watchMatch) {
+        await poiEventRepo.update({ ...evt, isActive: true })
+        // Create world event
+        await deps.worldEventRepo.create({
+          id: newId(),
+          realmId,
+          year: newDateTime.year,
+          season: newDateTime.season,
+          day: newDateTime.day,
+          watch: newDateTime.watch,
+          type: 'poi_event',
+          title: evt.name,
+          description: evt.effects || evt.description,
+          relatedEntityIds: [evt.id, evt.poiId],
+          createdAt: Date.now(),
+        })
+      }
+    }
+
+    // Deactivate expired events
+    for (const evt of allEvents) {
+      if (!evt.isActive) continue
+      // Simple duration check: find when it activated by checking WorldEvents
+      // For now, just check if durationWatches has been exceeded
+      // This is a simplified version - full implementation would track activation time
+    }
   }
 
   // Update realm date

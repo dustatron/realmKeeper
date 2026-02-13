@@ -48,6 +48,20 @@ npm run build      # production build
 npm run preview    # preview production build
 ```
 
+## Issue Tracking
+
+This project uses **bd (beads)** for issue tracking. Issues live in `.beads/issues.jsonl`.
+
+```bash
+bd ready                          # find unblocked work
+bd show <id>                      # view issue details
+bd create --title="..." --type=task --priority=2  # create issue
+bd update <id> --status=in_progress  # claim work
+bd close <id>                     # complete work
+bd sync --from-main               # sync at session end
+bd prime                          # full workflow context
+```
+
 ## MVP Build Order
 
 1. Scaffold (TanStack Start + Tailwind + Radix + Dexie + PWA)

@@ -2,6 +2,7 @@ import type { NPC } from '@domain/entities/NPC'
 import type { SystemBlock, Attack, InventoryItem } from '@domain/value-objects/SystemBlock'
 import type { Faction } from '@domain/entities/Faction'
 import type { Region } from '@domain/entities/Region'
+import type { POI } from '@domain/entities/POI'
 import {
   Sheet,
   SheetContent,
@@ -30,6 +31,7 @@ export interface NPCEditSheetProps {
   systemConfig: any
   factions: Faction[]
   regions: Region[]
+  pois: POI[]
   open: boolean
   onOpenChange: (open: boolean) => void
   onSave: () => void
@@ -41,6 +43,7 @@ export function NPCEditSheet({
   systemConfig,
   factions,
   regions,
+  pois,
   open,
   onOpenChange,
   onSave,
@@ -225,22 +228,61 @@ export function NPCEditSheet({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={npc.location}
-                  onChange={(e) => updateField('location', e.target.value)}
-                  placeholder="Town or settlement name"
-                />
+                <Label htmlFor="poi">POI</Label>
+                <Select
+                  value={npc.poiId ?? 'none'}
+                  onValueChange={(v) => updateField('poiId', v === 'none' ? null : v)}
+                >
+                  <SelectTrigger id="poi">
+                    <SelectValue placeholder="Select POI" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {pois.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div className="flex items-center justify-between">
-                <Label htmlFor="alive">Alive</Label>
-                <Switch
-                  id="alive"
-                  checked={npc.isAlive}
-                  onCheckedChange={(checked) => updateField('isAlive', checked)}
-                />
+              <div className="space-y-2">
+                <Label htmlFor="lifeStatus">Life Status</Label>
+                <Select
+                  value={npc.lifeStatus}
+                  onValueChange={(v) => updateField('lifeStatus', v)}
+                >
+                  <SelectTrigger id="lifeStatus">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="alive">Alive</SelectItem>
+                    <SelectItem value="dead">Dead</SelectItem>
+                    <SelectItem value="undead">Undead</SelectItem>
+                    <SelectItem value="ghost">Ghost</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="movementStatus">Movement Status</Label>
+                <Select
+                  value={npc.movementStatus}
+                  onValueChange={(v) => updateField('movementStatus', v)}
+                >
+                  <SelectTrigger id="movementStatus">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="present">Present</SelectItem>
+                    <SelectItem value="traveling">Traveling</SelectItem>
+                    <SelectItem value="missing">Missing</SelectItem>
+                    <SelectItem value="captured">Captured</SelectItem>
+                    <SelectItem value="hiding">Hiding</SelectItem>
+                    <SelectItem value="escaping">Escaping</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

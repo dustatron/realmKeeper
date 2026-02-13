@@ -11,6 +11,17 @@ export class POIRepository implements IPOIRepository {
     return db.pois.where('regionId').equals(regionId).toArray()
   }
 
+  async getByParentPoiId(parentPoiId: string | null): Promise<POI[]> {
+    if (parentPoiId === null) {
+      return db.pois.where('parentPoiId').equals('').toArray()
+    }
+    return db.pois.where('parentPoiId').equals(parentPoiId).toArray()
+  }
+
+  async getChildren(poiId: string): Promise<POI[]> {
+    return db.pois.where('parentPoiId').equals(poiId).toArray()
+  }
+
   async create(poi: POI): Promise<void> {
     await db.pois.put(poi)
   }

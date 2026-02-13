@@ -21,14 +21,15 @@ export function advanceClock(
   current: WorldDateTime,
   unit: ClockAdvanceUnit,
   daysPerSeason: number,
-  daysPerWeek = 7
+  daysPerWeek = 7,
+  watchesPerDay = 3
 ): ClockAdvanceResult {
   const previousDateTime = { ...current }
   let newDateTime: WorldDateTime
 
   switch (unit) {
     case 'watch':
-      newDateTime = advanceWatch(current, daysPerSeason)
+      newDateTime = advanceWatch(current, daysPerSeason, watchesPerDay)
       break
     case 'day':
       newDateTime = advanceDay(current, daysPerSeason)

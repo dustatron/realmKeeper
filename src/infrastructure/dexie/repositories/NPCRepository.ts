@@ -19,6 +19,10 @@ export class NPCRepository implements INPCRepository {
     return db.npcs.where('regionId').equals(regionId).toArray()
   }
 
+  async getByPoiId(poiId: string): Promise<NPC[]> {
+    return db.npcs.where('poiId').equals(poiId).toArray()
+  }
+
   async getByTag(realmId: string, tag: string): Promise<NPC[]> {
     return db.npcs
       .where('tags')

@@ -8,6 +8,8 @@ import type { IWeatherRepository } from '@application/ports/IWeatherRepository'
 import type { IRealmNoteRepository } from '@application/ports/IRealmNoteRepository'
 import type { IPOIRepository } from '@application/ports/IPOIRepository'
 import type { IPathRepository } from '@application/ports/IPathRepository'
+import type { IFactionPresenceRepository } from '@application/ports/IFactionPresenceRepository'
+import type { IPOIEventRepository } from '@application/ports/IPOIEventRepository'
 import type { Realm } from '@domain/entities/Realm'
 import type { Region } from '@domain/entities/Region'
 import type { Faction } from '@domain/entities/Faction'
@@ -18,6 +20,8 @@ import type { WeatherHistory } from '@domain/entities/WeatherHistory'
 import type { RealmNote } from '@domain/entities/RealmNote'
 import type { POI } from '@domain/entities/POI'
 import type { Path } from '@domain/entities/Path'
+import type { FactionPresence } from '@domain/entities/FactionPresence'
+import type { POIEvent } from '@domain/entities/POIEvent'
 
 export interface ExportRealmDeps {
   realmRepo: IRealmRepository
@@ -30,10 +34,12 @@ export interface ExportRealmDeps {
   realmNoteRepo: IRealmNoteRepository
   poiRepo: IPOIRepository
   pathRepo: IPathRepository
+  factionPresenceRepo: IFactionPresenceRepository
+  poiEventRepo: IPOIEventRepository
 }
 
 export interface RealmExport {
-  version: 1
+  version: 2
   exportedAt: number
   realm: Realm
   regions: Region[]
@@ -45,6 +51,8 @@ export interface RealmExport {
   realmNotes: RealmNote[]
   pois: POI[]
   paths: Path[]
+  factionPresences: FactionPresence[]
+  poiEvents: POIEvent[]
 }
 
 export async function executeExportRealm(
@@ -63,12 +71,22 @@ export async function executeExportRealm(
   const weatherHistory = await deps.weatherRepo.getRecent(realmId, 9999)
   const realmNotes = await deps.realmNoteRepo.getByRealmId(realmId)
 
-  // POIs and paths per region
+  // POIs per region, paths per POI (deduplicated)
   const allPois = await Promise.all(regions.map((r) => deps.poiRepo.getByRegionId(r.id)))
-  const allPaths = await Promise.all(regions.map((r) => deps.pathRepo.getByRegionId(r.id)))
+  const flatPoisForPaths = allPois.flat()
+  const pathArrays = await Promise.all(flatPoisForPaths.map((p) => deps.pathRepo.getByPoi(p.id)))
+  const pathDedup = new Map<string, (typeof pathArrays)[0][0]>()
+  for (const arr of pathArrays) {
+    for (const p of arr) pathDedup.set(p.id, p)
+  }
+
+  // Faction presences and POI events per POI
+  const flatPois = allPois.flat()
+  const allPresences = await Promise.all(flatPois.map((p) => deps.factionPresenceRepo.getByPoiId(p.id)))
+  const poiEvents = await deps.poiEventRepo.getByRealmId(realmId)
 
   return {
-    version: 1,
+    version: 2,
     exportedAt: Date.now(),
     realm,
     regions,
@@ -78,7 +96,9 @@ export async function executeExportRealm(
     worldEvents,
     weatherHistory,
     realmNotes,
-    pois: allPois.flat(),
-    paths: allPaths.flat(),
+    pois: flatPois,
+    paths: [...pathDedup.values()],
+    factionPresences: allPresences.flat(),
+    poiEvents,
   }
 }

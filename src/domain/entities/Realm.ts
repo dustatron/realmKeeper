@@ -1,4 +1,4 @@
-import type { Season, Watch } from '@shared/constants'
+import type { Season } from '@shared/constants'
 
 export interface Realm {
   id: string
@@ -8,7 +8,7 @@ export interface Realm {
   currentYear: number
   currentSeason: Season
   currentDay: number
-  currentWatch: Watch
+  currentWatch: number
   daysPerSeason: number
   daysPerWeek: number
   watchesPerDay: number

@@ -7,16 +7,12 @@ export class PathRepository implements IPathRepository {
     return db.paths.get(id)
   }
 
-  async getByRegionId(regionId: string): Promise<Path[]> {
-    return db.paths.where('regionId').equals(regionId).toArray()
-  }
-
   async getByPoi(poiId: string): Promise<Path[]> {
     const [fromPaths, toPaths] = await Promise.all([
       db.paths.where('fromPoiId').equals(poiId).toArray(),
       db.paths.where('toPoiId').equals(poiId).toArray(),
     ])
-    // Dedupe in case compound index includes both
+    // Dedupe in case a path appears in both queries
     const seen = new Set<string>()
     const result: Path[] = []
     for (const p of [...fromPaths, ...toPaths]) {

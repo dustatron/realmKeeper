@@ -120,7 +120,9 @@ export async function executeGenerateNPC(
     name,
     factionId: input.factionId ?? null,
     regionId: input.regionId ?? null,
-    location: '',
+    poiId: null,
+    lifeStatus: 'alive',
+    movementStatus: 'present',
     description,
     traits,
     motivation,
@@ -128,7 +130,6 @@ export async function executeGenerateNPC(
     voice,
     tags,
     systemBlock: block,
-    isAlive: true,
     createdAt: now,
     updatedAt: now,
   }

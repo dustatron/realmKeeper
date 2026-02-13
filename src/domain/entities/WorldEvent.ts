@@ -1,4 +1,4 @@
-import type { Season, Watch } from '@shared/constants'
+import type { Season } from '@shared/constants'
 
 export interface WorldEvent {
   id: string
@@ -6,7 +6,7 @@ export interface WorldEvent {
   year: number
   season: Season
   day: number
-  watch: Watch
+  watch: number
   type: string
   title: string
   description: string
