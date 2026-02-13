@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import type { DayLogEntry } from '~/ui/hooks/useDayLog'
 import { Badge } from '~/components/ui/badge'
 import { ChevronRight, Swords } from 'lucide-react'
@@ -133,17 +134,31 @@ export function DayLogRow({ entry, realmId, showSeasonDivider, onMarkComplete }:
         <tr className="border-b bg-muted/20">
           <td colSpan={6} className="px-4 py-2">
             <ul className="space-y-1.5">
-              {entry.factionTurns.map((ft) => (
-                <li key={ft.id} className="flex items-start gap-2 text-sm">
-                  <Swords className="size-3.5 mt-0.5 shrink-0 text-muted-foreground" />
-                  <div>
-                    <span className="font-medium">{ft.title}</span>
-                    {ft.description && (
-                      <p className="text-xs text-muted-foreground">{ft.description}</p>
-                    )}
-                  </div>
-                </li>
-              ))}
+              {entry.factionTurns.map((ft) => {
+                const factionId = ft.relatedEntityIds[0]
+                return (
+                  <li key={ft.id} className="flex items-start gap-2 text-sm">
+                    <Swords className="size-3.5 mt-0.5 shrink-0 text-muted-foreground" />
+                    <div>
+                      {factionId ? (
+                        <Link
+                          to="/realms/factions/$factionId"
+                          params={{ factionId }}
+                          className="font-medium text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {ft.title}
+                        </Link>
+                      ) : (
+                        <span className="font-medium">{ft.title}</span>
+                      )}
+                      {ft.description && (
+                        <p className="text-xs text-muted-foreground">{ft.description}</p>
+                      )}
+                    </div>
+                  </li>
+                )
+              })}
             </ul>
           </td>
         </tr>

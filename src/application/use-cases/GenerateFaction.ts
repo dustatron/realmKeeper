@@ -36,7 +36,7 @@ function rollLongTermGoals(
     const text = rollOnTable(table, rollDice).entry.text
     if (!seen.has(text)) {
       seen.add(text)
-      results.push({ id: newId(), description: text, completed: false, timeframe: 'long-term' })
+      results.push({ id: newId(), description: text, completed: false, timeframe: 'long-term', progress: 0, segments: 4 })
     }
     attempts++
   }

@@ -20,6 +20,7 @@ export interface FactionTurnSuggestion {
     success: boolean  // true = save succeeded = faction is BLOCKED
   }
   suggestedGoalCompleted?: string
+  suggestedGoalProgressDelta?: { goalId: string; delta: number }
   suggestedAdvantageGain?: string
   suggestedAdvantageLoss?: string
   suggestedNewObstacle?: string
@@ -51,8 +52,8 @@ function getActionType(roll: number): FactionActionType {
 
 // Generate a narrative description based on action type and faction
 function describeAction(faction: Faction, actionType: FactionActionType): string {
-  const currentGoal = faction.agendaGoals.find((g) => !g.completed)
-  const goalText = currentGoal ? currentGoal.description : 'their current position'
+  const longTermGoal = faction.agendaGoals.find((g) => !g.completed && g.timeframe === 'long-term')
+  const goalText = longTermGoal ? longTermGoal.description : 'their current position'
 
   switch (actionType) {
     case 'failure':
@@ -174,7 +175,8 @@ function buildSuggestion(
     suggestedRelationshipChanges: [],
   }
 
-  const currentGoal = faction.agendaGoals.find((g) => !g.completed)
+  const immediateGoal = faction.agendaGoals.find((g) => !g.completed && g.timeframe === 'immediate')
+  const longTermGoal = faction.agendaGoals.find((g) => !g.completed && g.timeframe === 'long-term')
   const firstAdvantage = faction.advantages[0]
 
   switch (actionType) {
@@ -183,11 +185,17 @@ function buildSuggestion(
       if (firstAdvantage) {
         suggestion.suggestedAdvantageLoss = firstAdvantage.description
       }
+      if (longTermGoal) {
+        suggestion.suggestedGoalProgressDelta = { goalId: longTermGoal.id, delta: -1 }
+      }
       break
 
     case 'setback':
       if (firstAdvantage) {
         suggestion.suggestedAdvantageLoss = firstAdvantage.description
+      }
+      if (longTermGoal) {
+        suggestion.suggestedGoalProgressDelta = { goalId: longTermGoal.id, delta: -1 }
       }
       break
 
@@ -196,8 +204,9 @@ function buildSuggestion(
       break
 
     case 'mixed_success':
-      if (currentGoal) {
-        suggestion.suggestedGoalCompleted = currentGoal.description
+      // Immediate goals complete; long-term clocks don't change
+      if (immediateGoal) {
+        suggestion.suggestedGoalCompleted = immediateGoal.description
       }
       if (firstAdvantage) {
         suggestion.suggestedAdvantageLoss = firstAdvantage.description
@@ -205,14 +214,20 @@ function buildSuggestion(
       break
 
     case 'success':
-      if (currentGoal) {
-        suggestion.suggestedGoalCompleted = currentGoal.description
+      if (immediateGoal) {
+        suggestion.suggestedGoalCompleted = immediateGoal.description
+      }
+      if (longTermGoal) {
+        suggestion.suggestedGoalProgressDelta = { goalId: longTermGoal.id, delta: +1 }
       }
       break
 
     case 'major_success':
-      if (currentGoal) {
-        suggestion.suggestedGoalCompleted = currentGoal.description
+      if (immediateGoal) {
+        suggestion.suggestedGoalCompleted = immediateGoal.description
+      }
+      if (longTermGoal) {
+        suggestion.suggestedGoalProgressDelta = { goalId: longTermGoal.id, delta: +1 }
       }
       suggestion.suggestedAdvantageGain = `${faction.name} gains a strategic advantage`
       break

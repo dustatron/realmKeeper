@@ -58,7 +58,7 @@ function rollLongTermGoals(tables: TableDef[], count: number): AgendaGoal[] {
     const text = rollOnTable(table, rollDice).entry.text
     if (!seen.has(text)) {
       seen.add(text)
-      results.push({ id: newId(), description: text, completed: false, timeframe: 'long-term' })
+      results.push({ id: newId(), description: text, completed: false, timeframe: 'long-term', progress: 0, segments: 4 })
     }
     attempts++
   }
@@ -289,7 +289,8 @@ function FactionEditPage() {
   const addGoal = (timeframe: AgendaTimeframe) => {
     const input = timeframe === 'immediate' ? newImmediateGoalInput : newLongTermGoalInput
     if (!input.trim()) return
-    setGoals([...goals, { id: newId(), description: input.trim(), completed: false, timeframe }])
+    const goal = { id: newId(), description: input.trim(), completed: false, timeframe, ...(timeframe === 'long-term' ? { progress: 0, segments: 4 } : {}) }
+    setGoals([...goals, goal])
     if (timeframe === 'immediate') setNewImmediateGoalInput('')
     else setNewLongTermGoalInput('')
   }
@@ -616,6 +617,17 @@ function FactionEditPage() {
                 <span className={`flex-1 text-sm ${g.completed ? 'text-muted-foreground line-through' : ''}`}>
                   {g.description}
                 </span>
+                <select
+                  value={g.segments ?? 4}
+                  onChange={(e) => setGoals(goals.map((gg) => gg.id === g.id ? { ...gg, segments: Number(e.target.value), progress: Math.min(gg.progress ?? 0, Number(e.target.value)) } : gg))}
+                  className="h-6 w-14 rounded border bg-background px-1 text-xs"
+                  title="Clock segments"
+                >
+                  <option value={4}>4</option>
+                  <option value={6}>6</option>
+                  <option value={8}>8</option>
+                  <option value={12}>12</option>
+                </select>
                 <Button variant="ghost" size="sm" className="size-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeGoal(g.id)}>
                   <Trash2 className="size-3" />
                 </Button>

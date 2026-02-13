@@ -18,7 +18,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
-import { ArrowLeft, Trash2, Pencil, Crown, CheckCircle2, Circle, Dices, Users, Handshake } from 'lucide-react'
+import { ArrowLeft, Trash2, Pencil, Crown, CheckCircle2, Circle, Dices, Users, Handshake, ChevronUp, ChevronDown } from 'lucide-react'
+import { ProgressClock } from '~/components/shared/ProgressClock'
 import { FACTION_STATUSES } from '@shared/constants'
 import { deriveStatus } from '@domain/value-objects/RelationshipScore'
 
@@ -59,6 +60,20 @@ function FactionDetailPage() {
     const updatedGoals = faction.agendaGoals.map((g) =>
       g.id === goalId ? { ...g, completed: !g.completed } : g
     )
+    await executeUpdateFaction(
+      { ...faction, agendaGoals: updatedGoals },
+      { factionRepo: container.factionRepo }
+    )
+  }
+
+  const handleClockChange = async (goalId: string, newProgress: number) => {
+    if (!faction) return
+    const updatedGoals = faction.agendaGoals.map((g) => {
+      if (g.id !== goalId) return g
+      const segments = g.segments ?? 4
+      const clamped = Math.max(0, Math.min(segments, newProgress))
+      return { ...g, progress: clamped, completed: clamped >= segments }
+    })
     await executeUpdateFaction(
       { ...faction, agendaGoals: updatedGoals },
       { factionRepo: container.factionRepo }
@@ -269,21 +284,45 @@ function FactionDetailPage() {
                   {longTermGoals.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No long-term goals.</p>
                   ) : (
-                    longTermGoals.map((g, idx) => (
-                      <div
-                        key={g.id}
-                        className="flex items-center gap-2 py-1.5 px-1 rounded cursor-pointer hover:bg-muted/30 transition-colors"
-                        onClick={() => handleToggleGoal(g.id)}
-                      >
-                        <span className="text-xs font-mono text-muted-foreground w-4 shrink-0">{idx + 1}.</span>
-                        {g.completed
-                          ? <CheckCircle2 className="size-4 text-green-500 shrink-0" />
-                          : <Circle className="size-4 text-muted-foreground shrink-0" />}
-                        <span className={`text-sm ${g.completed ? 'text-muted-foreground line-through' : ''}`}>
-                          {g.description}
-                        </span>
-                      </div>
-                    ))
+                    longTermGoals.map((g, idx) => {
+                      const prog = g.progress ?? 0
+                      const segs = g.segments ?? 4
+                      return (
+                        <div
+                          key={g.id}
+                          className="flex items-center gap-2 py-2 px-1 rounded"
+                        >
+                          <span className="text-xs font-mono text-muted-foreground w-4 shrink-0">{idx + 1}.</span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <div className="flex flex-col">
+                              <button
+                                onClick={() => handleClockChange(g.id, prog + 1)}
+                                disabled={prog >= segs}
+                                className="p-0.5 rounded hover:bg-muted/60 text-muted-foreground hover:text-green-500 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                              >
+                                <ChevronUp className="size-4" />
+                              </button>
+                              <button
+                                onClick={() => handleClockChange(g.id, prog - 1)}
+                                disabled={prog <= 0}
+                                className="p-0.5 rounded hover:bg-muted/60 text-muted-foreground hover:text-red-500 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                              >
+                                <ChevronDown className="size-4" />
+                              </button>
+                            </div>
+                            <ProgressClock
+                              segments={segs}
+                              progress={prog}
+                              size={28}
+                              className="shrink-0"
+                            />
+                          </div>
+                          <span className={`text-sm ${g.completed ? 'text-muted-foreground line-through' : ''}`}>
+                            {g.description}
+                          </span>
+                        </div>
+                      )
+                    })
                   )}
                 </CardContent>
               </Card>

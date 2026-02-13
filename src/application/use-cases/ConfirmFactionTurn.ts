@@ -56,6 +56,7 @@ export async function executeConfirmFactionTurn(
 
     const needsUpdate =
       suggestion.suggestedGoalCompleted ||
+      suggestion.suggestedGoalProgressDelta ||
       suggestion.suggestedAdvantageGain ||
       suggestion.suggestedAdvantageLoss ||
       suggestion.suggestedNewObstacle
@@ -65,13 +66,26 @@ export async function executeConfirmFactionTurn(
     const faction = await deps.factionRepo.getById(suggestion.factionId)
     if (!faction) continue
 
-    // Mark goal as completed
+    // Mark immediate goal as completed
     if (suggestion.suggestedGoalCompleted) {
       const goal = faction.agendaGoals.find(
         (g) => !g.completed && g.description === suggestion.suggestedGoalCompleted
       )
       if (goal) {
         goal.completed = true
+      }
+    }
+
+    // Apply progress delta to long-term goal clock
+    if (suggestion.suggestedGoalProgressDelta) {
+      const { goalId, delta } = suggestion.suggestedGoalProgressDelta
+      const goal = faction.agendaGoals.find((g) => g.id === goalId)
+      if (goal) {
+        const segments = goal.segments ?? 4
+        goal.progress = Math.max(0, Math.min(segments, (goal.progress ?? 0) + delta))
+        if (goal.progress >= segments) {
+          goal.completed = true
+        }
       }
     }
 

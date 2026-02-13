@@ -7,6 +7,8 @@ export interface AgendaGoal {
   description: string
   completed: boolean
   timeframe: AgendaTimeframe
+  progress?: number
+  segments?: number
 }
 
 export interface Advantage {

@@ -32,8 +32,9 @@ function CalendarPage() {
   // Center on current day when realm loads
   useEffect(() => {
     if (realm) {
+      const d1 = toDayKey(1, 'spring', 1, realm.daysPerSeason)
       const currentKey = toDayKey(realm.currentYear, realm.currentSeason, realm.currentDay, realm.daysPerSeason)
-      setPageStartKey(Math.max(0, currentKey - Math.floor(PAGE_SIZE / 2)))
+      setPageStartKey(Math.max(d1, currentKey - Math.floor(PAGE_SIZE / 2)))
     }
   }, [realm?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
