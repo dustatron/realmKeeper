@@ -8,7 +8,7 @@ import { useContainer } from '~/ui/hooks/useContainer'
 import { executeCreateRegion } from '@application/use-cases/CreateRegion'
 import { executeUpdateRegion } from '@application/use-cases/UpdateRegion'
 import { executeDeleteRegion } from '@application/use-cases/DeleteRegion'
-import { executeGenerateRegion } from '@application/use-cases/GenerateRegion'
+import { executeGenerateRegion, type GenerateRegionResult } from '@application/use-cases/GenerateRegion'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { EmptyState } from '~/components/shared/EmptyState'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
@@ -24,8 +24,9 @@ import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { Badge } from '~/components/ui/badge'
-import { Map, Plus, Dices, Trash2, Pencil, RefreshCw, Save, X } from 'lucide-react'
+import { Map, Plus, Dices, Trash2, Pencil, RefreshCw, Save, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Region } from '@domain/entities/Region'
+import type { POI } from '@domain/entities/POI'
 
 export const Route = createFileRoute('/_app/realms/regions')({
   component: RegionsPage,
@@ -52,11 +53,12 @@ function RegionsPage() {
   // Edit sheet
   const [editingRegion, setEditingRegion] = useState<Region | null>(null)
 
-  // Generate drawer
+  // Generate wizard
   const [showGenerate, setShowGenerate] = useState(false)
   const [generateCount, setGenerateCount] = useState(3)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [generatedRegions, setGeneratedRegions] = useState<Region[]>([])
+  const [wizardStep, setWizardStep] = useState<1 | 2>(1)
+  const [bundles, setBundles] = useState<GenerateRegionResult[]>([])
 
   // Delete
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
@@ -102,15 +104,15 @@ function RegionsPage() {
     if (!activeRealmId || !systemConfig) return
     setIsGenerating(true)
     try {
-      const results: Region[] = []
+      const results: GenerateRegionResult[] = []
       for (let i = 0; i < generateCount; i++) {
-        const region = await executeGenerateRegion(
+        const result = await executeGenerateRegion(
           { realmId: activeRealmId, systemConfig },
           { tableRepo: container.tableRepo }
         )
-        results.push(region)
+        results.push(result)
       }
-      setGeneratedRegions(results)
+      setBundles(results)
     } finally {
       setIsGenerating(false)
     }
@@ -118,31 +120,59 @@ function RegionsPage() {
 
   const handleRerollOne = async (index: number) => {
     if (!activeRealmId || !systemConfig) return
-    const region = await executeGenerateRegion(
+    const result = await executeGenerateRegion(
       { realmId: activeRealmId, systemConfig },
       { tableRepo: container.tableRepo }
     )
-    setGeneratedRegions((prev) => prev.map((r, i) => (i === index ? region : r)))
+    setBundles((prev) => prev.map((b, i) => (i === index ? result : b)))
   }
 
-  const handleRemoveGenerated = (index: number) => {
-    setGeneratedRegions((prev) => prev.filter((_, i) => i !== index))
+  const handleRemoveBundle = (index: number) => {
+    setBundles((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const handleUpdateGenerated = (index: number, updates: Partial<Region>) => {
-    setGeneratedRegions((prev) => prev.map((r, i) => (i === index ? { ...r, ...updates } : r)))
+  const handleUpdateRegion = (index: number, updates: Partial<Region>) => {
+    setBundles((prev) => prev.map((b, i) => (i === index ? { ...b, region: { ...b.region, ...updates } } : b)))
+  }
+
+  const handleUpdatePoi = (bundleIdx: number, poiIdx: number, updates: Partial<POI>) => {
+    setBundles((prev) => prev.map((b, bi) => {
+      if (bi !== bundleIdx) return b
+      const pois = b.pois.map((p, pi) => (pi === poiIdx ? { ...p, ...updates } : p))
+      // Sync region string arrays from POI names
+      const settlements = pois.filter((p) => p.type === 'settlement').map((p) => p.subtypeLabel ? `${p.name} (${p.subtypeLabel})` : p.name)
+      const features = pois.filter((p) => p.type === 'landmark' || p.type === 'natural').map((p) => p.name)
+      const dangers = pois.filter((p) => p.type === 'camp' || p.type === 'dungeon').map((p) => p.name)
+      return { ...b, pois, region: { ...b.region, settlements, features, dangers } }
+    }))
+  }
+
+  const handleRemovePoi = (bundleIdx: number, poiIdx: number) => {
+    setBundles((prev) => prev.map((b, bi) => {
+      if (bi !== bundleIdx) return b
+      const pois = b.pois.filter((_, pi) => pi !== poiIdx)
+      const settlements = pois.filter((p) => p.type === 'settlement').map((p) => p.subtypeLabel ? `${p.name} (${p.subtypeLabel})` : p.name)
+      const features = pois.filter((p) => p.type === 'landmark' || p.type === 'natural').map((p) => p.name)
+      const dangers = pois.filter((p) => p.type === 'camp' || p.type === 'dungeon').map((p) => p.name)
+      return { ...b, pois, region: { ...b.region, settlements, features, dangers } }
+    }))
   }
 
   const handleSaveAllGenerated = async () => {
-    for (const region of generatedRegions) {
-      await container.regionRepo.create(region)
+    for (const bundle of bundles) {
+      await container.regionRepo.create(bundle.region)
+      for (const poi of bundle.pois) {
+        await container.poiRepo.create(poi)
+      }
     }
-    setGeneratedRegions([])
+    setBundles([])
+    setWizardStep(1)
     setShowGenerate(false)
   }
 
   const handleOpenGenerate = () => {
-    setGeneratedRegions([])
+    setBundles([])
+    setWizardStep(1)
     setShowGenerate(true)
   }
 
@@ -349,99 +379,166 @@ function RegionsPage() {
         </SheetContent>
       </Sheet>
 
-      {/* ── Generate Drawer ────────────────────────── */}
-      <Sheet open={showGenerate} onOpenChange={(open) => { if (!open) { setShowGenerate(false); setGeneratedRegions([]) } }}>
+      {/* ── Generate Wizard ────────────────────────── */}
+      <Sheet open={showGenerate} onOpenChange={(open) => { if (!open) { setShowGenerate(false); setBundles([]); setWizardStep(1) } }}>
         <SheetContent className="w-full sm:max-w-2xl flex flex-col h-full">
           <SheetHeader>
-            <SheetTitle>Generate Regions</SheetTitle>
+            <SheetTitle>Generate Regions — Step {wizardStep} of 2</SheetTitle>
           </SheetHeader>
 
-          {/* Controls */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b">
-            <Label htmlFor="gen-count" className="shrink-0">Count</Label>
-            <select
-              id="gen-count"
-              value={generateCount}
-              onChange={(e) => setGenerateCount(Number(e.target.value))}
-              className="h-8 w-16 rounded border bg-background px-2 text-sm"
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-            <Button onClick={handleGenerate} disabled={isGenerating || !systemConfig} size="sm">
-              <Dices className="mr-2 size-4" />
-              {isGenerating ? 'Rolling...' : generatedRegions.length > 0 ? 'Re-generate' : 'Generate'}
-            </Button>
-          </div>
+          {wizardStep === 1 && (
+            <>
+              {/* Step 1: Count + terrain overview */}
+              <div className="flex items-center gap-3 px-4 py-3 border-b">
+                <Label htmlFor="gen-count" className="shrink-0">Count</Label>
+                <select
+                  id="gen-count"
+                  value={generateCount}
+                  onChange={(e) => setGenerateCount(Number(e.target.value))}
+                  className="h-8 w-16 rounded border bg-background px-2 text-sm"
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+                <Button onClick={handleGenerate} disabled={isGenerating || !systemConfig} size="sm">
+                  <Dices className="mr-2 size-4" />
+                  {isGenerating ? 'Rolling...' : bundles.length > 0 ? 'Re-generate' : 'Generate'}
+                </Button>
+              </div>
 
-          {/* Generated regions */}
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="space-y-4 px-4 py-4">
-              {generatedRegions.length === 0 && !isGenerating && (
-                <p className="text-sm text-muted-foreground text-center py-8">Pick a count and hit Generate.</p>
-              )}
-              {generatedRegions.map((region, idx) => (
-                <Card key={region.id}>
-                  <CardContent className="pt-4 space-y-3">
-                    <div className="flex items-center gap-2">
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="space-y-2 px-4 py-4">
+                  {bundles.length === 0 && !isGenerating && (
+                    <p className="text-sm text-muted-foreground text-center py-8">Pick a count and hit Generate.</p>
+                  )}
+                  {bundles.map((bundle, idx) => (
+                    <div key={bundle.region.id} className="flex items-center gap-2 rounded-md border p-3">
                       <Input
-                        className="flex-1 font-medium"
-                        value={region.name}
-                        onChange={(e) => handleUpdateGenerated(idx, { name: e.target.value })}
+                        className="flex-1 h-8 font-medium text-sm"
+                        value={bundle.region.name}
+                        onChange={(e) => handleUpdateRegion(idx, { name: e.target.value })}
                       />
                       <Select
-                        value={region.terrain}
-                        onValueChange={(v) => handleUpdateGenerated(idx, { terrain: v })}
+                        value={bundle.region.terrain}
+                        onValueChange={(v) => handleUpdateRegion(idx, { terrain: v })}
                       >
-                        <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {TERRAIN_OPTIONS.map((t) => (
                             <SelectItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={() => handleRerollOne(idx)} title="Re-roll">
-                        <RefreshCw className="size-4" />
+                      <span className="text-xs text-muted-foreground">{bundle.pois.length} POIs</span>
+                      <Button variant="ghost" size="icon" className="size-7 shrink-0" onClick={() => handleRerollOne(idx)} title="Re-roll">
+                        <RefreshCw className="size-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={() => handleRemoveGenerated(idx)} title="Remove">
-                        <X className="size-4" />
+                      <Button variant="ghost" size="icon" className="size-7 shrink-0" onClick={() => handleRemoveBundle(idx)} title="Remove">
+                        <X className="size-3.5" />
                       </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground">{region.description}</p>
-                    <div className="space-y-2">
-                      <div>
-                        <span className="text-xs font-semibold uppercase text-muted-foreground">Features</span>
-                        <TagInput tags={region.features} onChange={(features) => handleUpdateGenerated(idx, { features })} placeholder="Add feature..." />
-                      </div>
-                      <div>
-                        <span className="text-xs font-semibold uppercase text-muted-foreground">Dangers</span>
-                        <TagInput tags={region.dangers} onChange={(dangers) => handleUpdateGenerated(idx, { dangers })} placeholder="Add danger..." />
-                      </div>
-                      <div>
-                        <span className="text-xs font-semibold uppercase text-muted-foreground">Settlements</span>
-                        <TagInput tags={region.settlements} onChange={(settlements) => handleUpdateGenerated(idx, { settlements })} placeholder="Add settlement..." />
-                      </div>
-                      <div>
-                        <span className="text-xs font-semibold uppercase text-muted-foreground">Resources</span>
-                        <TagInput tags={region.resources} onChange={(resources) => handleUpdateGenerated(idx, { resources })} placeholder="Add resource..." />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </ScrollArea>
+                  ))}
+                </div>
+              </ScrollArea>
 
-          {/* Footer */}
-          {generatedRegions.length > 0 && (
-            <div className="flex shrink-0 justify-end gap-2 border-t px-4 pt-4 pb-4">
-              <Button variant="outline" onClick={() => { setShowGenerate(false); setGeneratedRegions([]) }}>Cancel</Button>
-              <Button onClick={handleSaveAllGenerated}>
-                <Save className="mr-2 size-4" />
-                Save All ({generatedRegions.length})
-              </Button>
-            </div>
+              {bundles.length > 0 && (
+                <div className="flex shrink-0 justify-end gap-2 border-t px-4 pt-4 pb-4">
+                  <Button variant="outline" onClick={() => { setShowGenerate(false); setBundles([]); setWizardStep(1) }}>Cancel</Button>
+                  <Button onClick={() => setWizardStep(2)}>
+                    Next <ChevronRight className="ml-1 size-4" />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+
+          {wizardStep === 2 && (
+            <>
+              {/* Step 2: Full edit with POIs */}
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="space-y-4 px-4 py-4">
+                  {bundles.map((bundle, idx) => (
+                    <Card key={bundle.region.id}>
+                      <CardContent className="pt-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            className="flex-1 font-medium"
+                            value={bundle.region.name}
+                            onChange={(e) => handleUpdateRegion(idx, { name: e.target.value })}
+                          />
+                          <Select
+                            value={bundle.region.terrain}
+                            onValueChange={(v) => handleUpdateRegion(idx, { terrain: v })}
+                          >
+                            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {TERRAIN_OPTIONS.map((t) => (
+                                <SelectItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={() => handleRerollOne(idx)} title="Re-roll">
+                            <RefreshCw className="size-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={() => handleRemoveBundle(idx)} title="Remove">
+                            <X className="size-4" />
+                          </Button>
+                        </div>
+                        <Textarea
+                          className="text-sm"
+                          value={bundle.region.description}
+                          onChange={(e) => handleUpdateRegion(idx, { description: e.target.value })}
+                          rows={2}
+                        />
+
+                        {/* POIs section */}
+                        <div>
+                          <span className="text-xs font-semibold uppercase text-muted-foreground">Points of Interest</span>
+                          <div className="mt-1 space-y-1">
+                            {bundle.pois.map((poi, poiIdx) => (
+                              <div key={poi.id} className="flex items-center gap-2 rounded border px-2 py-1">
+                                <Badge variant="secondary" className="text-[10px] shrink-0">{poi.type}</Badge>
+                                <Input
+                                  className="h-7 flex-1 text-sm"
+                                  value={poi.name}
+                                  onChange={(e) => handleUpdatePoi(idx, poiIdx, { name: e.target.value })}
+                                />
+                                <Button variant="ghost" size="icon" className="size-6 shrink-0" onClick={() => handleRemovePoi(idx, poiIdx)}>
+                                  <X className="size-3" />
+                                </Button>
+                              </div>
+                            ))}
+                            {bundle.pois.length === 0 && (
+                              <p className="text-xs text-muted-foreground italic">No POIs</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Resources (non-POI) */}
+                        <div>
+                          <span className="text-xs font-semibold uppercase text-muted-foreground">Resources</span>
+                          <TagInput tags={bundle.region.resources} onChange={(resources) => handleUpdateRegion(idx, { resources })} placeholder="Add resource..." />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+
+              <div className="flex shrink-0 justify-between gap-2 border-t px-4 pt-4 pb-4">
+                <Button variant="outline" onClick={() => setWizardStep(1)}>
+                  <ChevronLeft className="mr-1 size-4" /> Back
+                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => { setShowGenerate(false); setBundles([]); setWizardStep(1) }}>Cancel</Button>
+                  <Button onClick={handleSaveAllGenerated}>
+                    <Save className="mr-2 size-4" />
+                    Save All ({bundles.length})
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
         </SheetContent>
       </Sheet>

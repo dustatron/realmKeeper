@@ -81,13 +81,15 @@ interface InteractiveMapProps {
   gameMap: GameMap
   /** Tailwind classes for the outer container. Controls height, etc. */
   className?: string
+  /** Inline styles for the outer container (e.g. aspect-ratio) */
+  style?: React.CSSProperties
   /** If set, new POIs created from the map will be children of this POI */
   parentPoiId?: string | null
   /** Hide the map name in the toolbar */
   hideMapName?: boolean
 }
 
-export function InteractiveMap({ gameMap, className, parentPoiId, hideMapName }: InteractiveMapProps) {
+export function InteractiveMap({ gameMap, className, style, parentPoiId, hideMapName }: InteractiveMapProps) {
   const navigate = useNavigate()
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const container = useContainer()
@@ -254,7 +256,7 @@ export function InteractiveMap({ gameMap, className, parentPoiId, hideMapName }:
   }
 
   return (
-    <div className={`flex flex-col ${className ?? ''}`}>
+    <div className={`flex flex-col ${className ?? ''}`} style={style}>
       {/* Status hints */}
       {(mode === 'place-poi' || mode === 'draw-path') && (
         <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-muted/50">

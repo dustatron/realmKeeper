@@ -135,7 +135,7 @@ function MapsPage() {
         {/* ── Realm Map tab ── */}
         <TabsContent value="realm-map">
           {realmMap ? (
-            <InteractiveMap gameMap={realmMap} className="h-[calc(100vh-12rem)]" />
+            <InteractiveMap gameMap={realmMap} className="h-[calc(100vh-10rem)]" />
           ) : (
             <EmptyState
               icon={MapPinned}

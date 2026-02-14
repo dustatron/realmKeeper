@@ -1,14 +1,21 @@
 import type { Region } from '@domain/entities/Region'
+import type { POI } from '@domain/entities/POI'
 import type { SystemConfig } from '@domain/entities/SystemConfig'
 import type { ITableRepository } from '@application/ports/ITableRepository'
 import { rollOnTable } from '@domain/services/RandomTableEngine'
 import { rollDice } from '@shared/dice'
 import { newId } from '@shared/ulid'
 import type { TableDef } from '@domain/entities/TableDef'
+import type { PoiType } from '@shared/constants'
 
 export interface GenerateRegionInput {
   realmId: string
   systemConfig: SystemConfig
+}
+
+export interface GenerateRegionResult {
+  region: Region
+  pois: POI[]
 }
 
 function findTable(tables: TableDef[], id: string, tag: string): TableDef | undefined {
@@ -30,11 +37,33 @@ function rollUnique(table: TableDef, count: number): string[] {
   return results
 }
 
+function makePoi(regionId: string, name: string, type: PoiType, description: string, subtypeLabel: string | null = null): POI {
+  const now = Date.now()
+  return {
+    id: newId(),
+    regionId,
+    parentPoiId: null,
+    name,
+    description,
+    type,
+    subtypeLabel,
+    floor: null,
+    tags: [],
+    position: null,
+    mapRef: null,
+    markerColor: null,
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
 export async function executeGenerateRegion(
   input: GenerateRegionInput,
   deps: { tableRepo: ITableRepository }
-): Promise<Region> {
+): Promise<GenerateRegionResult> {
   const allTables = await deps.tableRepo.getTablesBySystemId(input.systemConfig.id)
+  const pois: POI[] = []
+  const regionId = newId()
 
   // Step 1: Roll terrain difficulty (1d6: 1-3 easy, 4-5 tough, 6 perilous)
   const diffRoll = rollDice('1d6').total
@@ -58,38 +87,45 @@ export async function executeGenerateRegion(
   for (let i = 0; i < numSettlements; i++) {
     const type = settlementTable ? rollOnTable(settlementTable, rollDice).entry.text : ''
     const feature = settlementFeatureTable ? rollOnTable(settlementFeatureTable, rollDice).entry.text : ''
-    settlements.push(feature ? `${type} (${feature})` : type)
+    const label = feature ? `${type} (${feature})` : type
+    settlements.push(label)
+    pois.push(makePoi(regionId, type, 'settlement', feature ? `Feature: ${feature}` : '', feature || null))
   }
 
   // Step 4: Roll 1-2 features (curiosity + feature, plus landmark)
   const curiosityTable = findTable(allTables, 'table-cairn-curiosity', 'region-curiosity')
   const curiosityFeatureTable = findTable(allTables, 'table-cairn-curiosity-feature', 'region-curiosity-feature')
   const features: string[] = []
-  if (landmark) features.push(landmark)
+  if (landmark) {
+    features.push(landmark)
+    pois.push(makePoi(regionId, landmark, 'landmark', ''))
+  }
   const numCuriosities = rollDice('1d2').total
   for (let i = 0; i < numCuriosities; i++) {
     const curiosity = curiosityTable ? rollOnTable(curiosityTable, rollDice).entry.text : ''
     const cFeature = curiosityFeatureTable ? rollOnTable(curiosityFeatureTable, rollDice).entry.text : ''
     features.push(cFeature ? `${curiosity} — ${cFeature}` : curiosity)
+    pois.push(makePoi(regionId, curiosity, 'natural', cFeature))
   }
 
   // Step 5: Roll 0-1 danger (lair or dungeon)
   const dangers: string[] = []
   const dangerRoll = rollDice('1d6').total
   if (dangerRoll >= 3) {
-    // 3-4 = lair, 5-6 = dungeon
     if (dangerRoll <= 4) {
       const lairTable = findTable(allTables, 'table-cairn-lair', 'region-lair')
       const lairFeatureTable = findTable(allTables, 'table-cairn-lair-feature', 'region-lair-feature')
       const lair = lairTable ? rollOnTable(lairTable, rollDice).entry.text : ''
       const lFeature = lairFeatureTable ? rollOnTable(lairFeatureTable, rollDice).entry.text : ''
       dangers.push(lFeature ? `Lair: ${lair} — ${lFeature}` : `Lair: ${lair}`)
+      pois.push(makePoi(regionId, lair, 'camp', lFeature))
     } else {
       const dungeonTable = findTable(allTables, 'table-cairn-dungeon', 'region-dungeon')
       const dungeonFeatureTable = findTable(allTables, 'table-cairn-dungeon-feature', 'region-dungeon-feature')
       const dungeon = dungeonTable ? rollOnTable(dungeonTable, rollDice).entry.text : ''
       const dFeature = dungeonFeatureTable ? rollOnTable(dungeonFeatureTable, rollDice).entry.text : ''
       dangers.push(dFeature ? `Dungeon: ${dungeon} — ${dFeature}` : `Dungeon: ${dungeon}`)
+      pois.push(makePoi(regionId, dungeon, 'dungeon', dFeature))
     }
   }
 
@@ -99,7 +135,6 @@ export async function executeGenerateRegion(
   if (resourceTable) {
     const abundance = rollOnTable(resourceTable, rollDice).entry.text
     let scarcity = rollOnTable(resourceTable, rollDice).entry.text
-    // Re-roll if same
     let attempts = 0
     while (scarcity === abundance && attempts < 5) {
       scarcity = rollOnTable(resourceTable, rollDice).entry.text
@@ -112,13 +147,12 @@ export async function executeGenerateRegion(
   const now = Date.now()
   const name = `The ${terrain}`
 
-  // Map terrain name to a simpler terrain category
   const terrainCategory = difficulty === 'easy' ? 'plains'
     : difficulty === 'tough' ? 'forest'
     : 'mountain'
 
-  return {
-    id: newId(),
+  const region: Region = {
+    id: regionId,
     realmId: input.realmId,
     name,
     description: `${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} ${terrain.toLowerCase()} region.`,
@@ -130,4 +164,6 @@ export async function executeGenerateRegion(
     createdAt: now,
     updatedAt: now,
   }
+
+  return { region, pois }
 }
