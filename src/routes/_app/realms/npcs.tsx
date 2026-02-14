@@ -4,6 +4,7 @@ import { useUIStore } from '~/ui/stores/uiStore'
 import { useNPCs } from '~/ui/hooks/useNPCs'
 import { useFactions } from '~/ui/hooks/useFactions'
 import { useRegions } from '~/ui/hooks/useRegions'
+import { useRealmPOIs } from '~/ui/hooks/usePOIs'
 import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
 import { useSystemConfig } from '~/ui/hooks/useSystemConfigs'
 import { useContainer } from '~/ui/hooks/useContainer'
@@ -13,6 +14,7 @@ import { executeDeleteNPC } from '@application/use-cases/DeleteNPC'
 import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import type { NPC } from '@domain/entities/NPC'
 import type { SystemBlock } from '@domain/value-objects/SystemBlock'
+import type { LifeStatus } from '@shared/constants'
 import { newId } from '@shared/ulid'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { EmptyState } from '~/components/shared/EmptyState'
@@ -54,12 +56,13 @@ function NPCsPage() {
   const npcs = useNPCs(activeRealmId)
   const factions = useFactions(activeRealmId)
   const regions = useRegions(activeRealmId)
+  const pois = useRealmPOIs(activeRealmId)
   const systemConfig = useSystemConfig(realm?.systemId ?? null)
   const container = useContainer()
 
   const [search, setSearch] = useState('')
   const [factionFilter, setFactionFilter] = useState<string>('all')
-  const [aliveFilter, setAliveFilter] = useState<'all' | 'alive' | 'dead'>('all')
+  const [lifeStatusFilter, setLifeStatusFilter] = useState<LifeStatus | 'all'>('all')
   const [editingNPC, setEditingNPC] = useState<NPC | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
@@ -75,16 +78,13 @@ function NPCsPage() {
       if (factionFilter !== 'all' && npc.factionId !== factionFilter) {
         return false
       }
-      // Alive filter
-      if (aliveFilter === 'alive' && !npc.isAlive) {
-        return false
-      }
-      if (aliveFilter === 'dead' && npc.isAlive) {
+      // Life status filter
+      if (lifeStatusFilter !== 'all' && npc.lifeStatus !== lifeStatusFilter) {
         return false
       }
       return true
     })
-  }, [npcs, search, factionFilter, aliveFilter])
+  }, [npcs, search, factionFilter, lifeStatusFilter])
 
   const handleGenerateNPC = async () => {
     if (!activeRealmId || !systemConfig) return
@@ -127,7 +127,9 @@ function NPCsPage() {
       name: '',
       factionId: null,
       regionId: null,
-      location: '',
+      poiId: null,
+      lifeStatus: 'alive',
+      movementStatus: 'present',
       description: '',
       traits: [],
       motivation: '',
@@ -135,7 +137,6 @@ function NPCsPage() {
       voice: '',
       tags: [],
       systemBlock: defaultSystemBlock,
-      isAlive: true,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }
@@ -234,14 +235,16 @@ function NPCsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={aliveFilter} onValueChange={(v) => setAliveFilter(v as typeof aliveFilter)}>
+            <Select value={lifeStatusFilter} onValueChange={(v) => setLifeStatusFilter(v as typeof lifeStatusFilter)}>
               <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="All NPCs" />
+                <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All NPCs</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="alive">Alive</SelectItem>
                 <SelectItem value="dead">Dead</SelectItem>
+                <SelectItem value="undead">Undead</SelectItem>
+                <SelectItem value="ghost">Ghost</SelectItem>
               </SelectContent>
             </Select>
           </FilterBar>
@@ -252,7 +255,7 @@ function NPCsPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Faction</TableHead>
                 <TableHead>Region</TableHead>
-                <TableHead>Location</TableHead>
+                <TableHead>POI</TableHead>
                 <TableHead>Traits</TableHead>
                 <TableHead className="text-center">HP</TableHead>
                 <TableHead className="text-center">Armor</TableHead>
@@ -264,6 +267,7 @@ function NPCsPage() {
               {filteredNPCs.map((npc) => {
                 const faction = factions.find((f) => f.id === npc.factionId)
                 const region = regions.find((r) => r.id === npc.regionId)
+                const poi = pois.find((p) => p.id === npc.poiId)
                 return (
                   <TableRow
                     key={npc.id}
@@ -293,8 +297,8 @@ function NPCsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {npc.location ? (
-                        <span className="text-sm">{npc.location}</span>
+                      {poi ? (
+                        <Badge variant="outline">{poi.name}</Badge>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -318,11 +322,11 @@ function NPCsPage() {
                     </TableCell>
                     <TableCell className="text-center">{npc.systemBlock.armor}</TableCell>
                     <TableCell>
-                      {npc.isAlive ? (
+                      {npc.lifeStatus === 'alive' ? (
                         <Badge variant="secondary" className="text-xs">Alive</Badge>
                       ) : (
                         <Badge variant="destructive" className="text-xs gap-1">
-                          <Skull className="size-3" />Dead
+                          <Skull className="size-3" />{npc.lifeStatus.charAt(0).toUpperCase() + npc.lifeStatus.slice(1)}
                         </Badge>
                       )}
                     </TableCell>
@@ -350,6 +354,7 @@ function NPCsPage() {
           systemConfig={systemConfig}
           factions={factions}
           regions={regions}
+          pois={pois}
           open={!!editingNPC}
           onOpenChange={(open) => {
             if (!open) {

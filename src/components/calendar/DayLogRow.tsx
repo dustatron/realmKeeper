@@ -11,6 +11,7 @@ import {
 import {
   ChevronRight,
   Swords,
+  CalendarClock,
   Sun,
   Cloud,
   CloudRain,
@@ -209,7 +210,7 @@ export function DayLogRow({
       {showSeasonDivider && (
         <tr>
           <td
-            colSpan={6}
+            colSpan={7}
             className={cn(
               "px-3 py-1 text-xs font-semibold tracking-wide",
               SEASON_COLORS[entry.season],
@@ -326,6 +327,50 @@ export function DayLogRow({
           )}
         </td>
 
+        {/* Scheduled Events */}
+        <td className="px-2 py-2 align-middle">
+          {entry.scheduledEvents.length > 0 ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    to="/realms/events/$eventId"
+                    params={{ eventId: entry.scheduledEvents[0].id }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex"
+                  >
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        "text-xs cursor-pointer hover:bg-secondary/80",
+                        entry.scheduledEvents.some((e) => e.isActive) &&
+                          "bg-green-600 text-white hover:bg-green-700"
+                      )}
+                    >
+                      <CalendarClock className="size-3 mr-1" />
+                      {entry.scheduledEvents.length}
+                    </Badge>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <div className="space-y-1 max-w-[14rem]">
+                    {entry.scheduledEvents.map((se) => (
+                      <div key={se.id} className="text-xs">
+                        <span className="font-medium">{se.name}</span>
+                        {se.isActive && (
+                          <span className="ml-1 text-green-400">(active)</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <span className="text-xs text-muted-foreground/40">--</span>
+          )}
+        </td>
+
         {/* Notes */}
         <td
           className="px-2 py-2 align-middle max-w-[12rem]"
@@ -353,7 +398,7 @@ export function DayLogRow({
       {/* Expanded faction turn details */}
       {isOpen && hasFactionTurns && (
         <tr className="border-b bg-muted/20">
-          <td colSpan={6} className="px-4 py-2">
+          <td colSpan={7} className="px-4 py-2">
             <ul className="space-y-2">
               {entry.factionTurns.map((ft) => (
                 <FactionTurnDetail

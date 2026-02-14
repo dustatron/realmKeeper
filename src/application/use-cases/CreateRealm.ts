@@ -3,12 +3,16 @@ import type { IFactionRepository } from '@application/ports/IFactionRepository'
 import type { IRealmNoteRepository } from '@application/ports/IRealmNoteRepository'
 import type { Realm } from '@domain/entities/Realm'
 import { newId } from '@shared/ulid'
-import { DEFAULT_DAYS_PER_SEASON } from '@shared/constants'
+import { DEFAULT_DAYS_PER_SEASON, DEFAULT_WATCHES_PER_DAY } from '@shared/constants'
 
 export interface CreateRealmInput {
   name: string
   systemId: string
   description?: string
+  watchesPerDay?: number
+  daysPerSeason?: number
+  daysPerWeek?: number
+  factionTurnTrigger?: 'day' | 'week' | 'manual'
 }
 
 export interface CreateRealmDeps {
@@ -30,11 +34,11 @@ export async function executeCreateRealm(
     currentYear: 1,
     currentSeason: 'spring',
     currentDay: 1,
-    currentWatch: 'morning',
-    daysPerSeason: DEFAULT_DAYS_PER_SEASON,
-    daysPerWeek: 7,
-    watchesPerDay: 3,
-    factionTurnTrigger: 'day',
+    currentWatch: 1,
+    daysPerSeason: input.daysPerSeason ?? DEFAULT_DAYS_PER_SEASON,
+    daysPerWeek: input.daysPerWeek ?? 7,
+    watchesPerDay: input.watchesPerDay ?? DEFAULT_WATCHES_PER_DAY,
+    factionTurnTrigger: input.factionTurnTrigger ?? 'day',
     completedThroughDay: -1,
     createdAt: now,
     updatedAt: now,

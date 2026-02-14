@@ -136,7 +136,7 @@ export function Dashboard({ realmId }: DashboardProps) {
                 Year {realm.currentYear}
               </div>
               <div className="text-sm text-muted-foreground">
-                Day {realm.currentDay} • {realm.currentWatch}
+                Day {realm.currentDay} • Watch {realm.currentWatch}
               </div>
             </div>
           </CardContent>

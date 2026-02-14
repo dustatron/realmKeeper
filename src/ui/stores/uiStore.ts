@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
@@ -5,6 +6,10 @@ interface UIState {
   // Active realm
   activeRealmId: string | null
   setActiveRealmId: (id: string | null) => void
+
+  // Dynamic header title (set by detail pages, cleared on unmount)
+  headerTitle: ReactNode | null
+  setHeaderTitle: (title: ReactNode | null) => void
 
   // Sidebar
   sidebarOpen: boolean
@@ -22,6 +27,12 @@ interface UIState {
   setFilter: (key: string, value: string) => void
   clearFilter: (key: string) => void
   clearAllFilters: () => void
+
+  // Map settings
+  mapShowLabels: boolean
+  setMapShowLabels: (show: boolean) => void
+  mapViewStates: Record<string, { zoom: number; center: [number, number] }>
+  setMapViewState: (mapId: string, zoom: number, center: [number, number]) => void
 }
 
 export const useUIStore = create<UIState>()(
@@ -29,6 +40,9 @@ export const useUIStore = create<UIState>()(
     (set) => ({
       activeRealmId: null,
       setActiveRealmId: (id) => set({ activeRealmId: id }),
+
+      headerTitle: null,
+      setHeaderTitle: (title) => set({ headerTitle: title }),
 
       sidebarOpen: true,
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
@@ -50,12 +64,22 @@ export const useUIStore = create<UIState>()(
           return { activeFilters: rest }
         }),
       clearAllFilters: () => set({ activeFilters: {} }),
+
+      mapShowLabels: false,
+      setMapShowLabels: (show) => set({ mapShowLabels: show }),
+      mapViewStates: {},
+      setMapViewState: (mapId, zoom, center) =>
+        set((s) => ({
+          mapViewStates: { ...s.mapViewStates, [mapId]: { zoom, center } },
+        })),
     }),
     {
       name: 'rk-ui-store',
       partialize: (state) => ({
         activeRealmId: state.activeRealmId,
         sidebarOpen: state.sidebarOpen,
+        mapShowLabels: state.mapShowLabels,
+        mapViewStates: state.mapViewStates,
       }),
     }
   )

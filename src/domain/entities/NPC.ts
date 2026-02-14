@@ -1,4 +1,5 @@
 import type { SystemBlock } from '@domain/value-objects/SystemBlock'
+import type { LifeStatus, MovementStatus } from '@shared/constants'
 
 export interface NPC {
   id: string
@@ -6,7 +7,9 @@ export interface NPC {
   name: string
   factionId: string | null
   regionId: string | null
-  location: string
+  poiId: string | null
+  lifeStatus: LifeStatus
+  movementStatus: MovementStatus
   description: string
   traits: string[]
   motivation: string
@@ -14,7 +17,6 @@ export interface NPC {
   voice: string
   tags: string[]
   systemBlock: SystemBlock
-  isAlive: boolean
   createdAt: number
   updatedAt: number
 }

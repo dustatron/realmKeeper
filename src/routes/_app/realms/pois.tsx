@@ -1,5 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { useState, useMemo } from 'react'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useRegions } from '~/ui/hooks/useRegions'
 import { usePOIs, useRealmPOIs } from '~/ui/hooks/usePOIs'
@@ -46,11 +46,45 @@ import {
   SelectValue,
 } from '~/components/ui/select'
 import { Badge } from '~/components/ui/badge'
-import { Compass, Plus, Pencil, Trash2 } from 'lucide-react'
+import {
+  Compass,
+  Plus,
+  Pencil,
+  Trash2,
+  Building2,
+  Home,
+  DoorOpen,
+  Castle,
+  Skull,
+  TreePine,
+  Flag,
+  LayoutGrid,
+  Map,
+  Landmark,
+  Tent,
+  Sparkles,
+  MapPin,
+} from 'lucide-react'
 
 export const Route = createFileRoute('/_app/realms/pois')({
   component: POIsPage,
 })
+
+const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }>> = {
+  settlement: Building2,
+  building: Home,
+  interior: DoorOpen,
+  fortification: Castle,
+  dungeon: Skull,
+  natural: TreePine,
+  landmark: Flag,
+  district: LayoutGrid,
+  zone: Map,
+  ruin: Landmark,
+  camp: Tent,
+  shrine: Sparkles,
+  other: MapPin,
+}
 
 function POIsPage() {
   const activeRealmId = useUIStore((s) => s.activeRealmId)
@@ -72,6 +106,9 @@ function POIsPage() {
     description: '',
     type: 'settlement' as PoiType,
     regionId: '',
+    parentPoiId: null as string | null,
+    subtypeLabel: '',
+    floor: null as number | null,
     tags: [] as string[],
   })
 
@@ -81,8 +118,33 @@ function POIsPage() {
     description: '',
     type: 'settlement' as PoiType,
     regionId: '',
+    parentPoiId: null as string | null,
+    subtypeLabel: '',
+    floor: null as number | null,
     tags: [] as string[],
   })
+
+  // Filter top-level POIs only
+  const topLevelPois = useMemo(() => {
+    return pois.filter((poi) => poi.parentPoiId === null)
+  }, [pois])
+
+  // Group by region
+  const poisByRegionMap = useMemo(() => {
+    const mapObj: Record<string, POI[]> = {}
+    topLevelPois.forEach((poi) => {
+      if (!mapObj[poi.regionId]) {
+        mapObj[poi.regionId] = []
+      }
+      mapObj[poi.regionId].push(poi)
+    })
+    return mapObj
+  }, [topLevelPois])
+
+  // Get child count for a POI
+  const getChildCount = (poiId: string) => {
+    return pois.filter((p) => p.parentPoiId === poiId).length
+  }
 
   const handleCreate = async () => {
     if (!createForm.name.trim()) return
@@ -92,6 +154,9 @@ function POIsPage() {
         description: createForm.description,
         type: createForm.type,
         regionId: createForm.regionId,
+        parentPoiId: createForm.parentPoiId,
+        subtypeLabel: createForm.subtypeLabel || null,
+        floor: createForm.floor,
         tags: createForm.tags,
       },
       { poiRepo: container.poiRepo }
@@ -102,6 +167,9 @@ function POIsPage() {
       description: '',
       type: 'settlement',
       regionId: '',
+      parentPoiId: null,
+      subtypeLabel: '',
+      floor: null,
       tags: [],
     })
   }
@@ -115,6 +183,9 @@ function POIsPage() {
         description: editForm.description,
         type: editForm.type,
         regionId: editForm.regionId,
+        parentPoiId: editForm.parentPoiId,
+        subtypeLabel: editForm.subtypeLabel || null,
+        floor: editForm.floor,
         tags: editForm.tags,
       },
       { poiRepo: container.poiRepo }
@@ -137,6 +208,9 @@ function POIsPage() {
       description: '',
       type: 'settlement',
       regionId: defaultRegion,
+      parentPoiId: null,
+      subtypeLabel: '',
+      floor: null,
       tags: [],
     })
     setCreateDialogOpen(true)
@@ -148,6 +222,9 @@ function POIsPage() {
       description: poi.description,
       type: poi.type,
       regionId: poi.regionId,
+      parentPoiId: poi.parentPoiId,
+      subtypeLabel: poi.subtypeLabel ?? '',
+      floor: poi.floor,
       tags: poi.tags,
     })
     setEditingPOI(poi)
@@ -226,8 +303,8 @@ function POIsPage() {
         </Select>
       </div>
 
-      {/* POI Cards Grid */}
-      {pois.length === 0 ? (
+      {/* POI Cards Grid - Grouped by Region */}
+      {topLevelPois.length === 0 ? (
         <EmptyState
           icon={Compass}
           title="No POIs yet"
@@ -240,51 +317,85 @@ function POIsPage() {
           }
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {pois.map((poi) => (
-            <Card
-              key={poi.id}
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => openEditSheet(poi)}
-            >
-              <CardHeader>
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <CardTitle>{poi.name}</CardTitle>
-                    {selectedRegionId === 'all' && (() => {
-                      const r = regions.find((reg) => reg.id === poi.regionId)
-                      return r ? (
-                        <CardDescription className="mt-0.5 text-xs">{r.name}</CardDescription>
-                      ) : null
-                    })()}
-                  </div>
-                  <Badge variant={getPoiTypeColor(poi.type)}>{poi.type}</Badge>
+        <div className="space-y-6">
+          {Object.entries(poisByRegionMap).map(([regionId, regionPois]: [string, POI[]]) => {
+            const region = regions.find((r) => r.id === regionId)
+            if (!region) return null
+
+            return (
+              <div key={regionId} className="space-y-3">
+                {selectedRegionId === 'all' && (
+                  <h3 className="text-lg font-semibold">{region.name}</h3>
+                )}
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {regionPois.map((poi: POI) => {
+                    const Icon = POI_TYPE_ICONS[poi.type]
+                    const childCount = getChildCount(poi.id)
+
+                    return (
+                      <Link
+                        key={poi.id}
+                        to="/realms/pois/$poiId"
+                        params={{ poiId: poi.id }}
+                        className="block"
+                      >
+                        <Card className="cursor-pointer transition-shadow hover:shadow-md h-full">
+                          <CardHeader>
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-2 flex-1">
+                                <Icon className="size-5 text-muted-foreground shrink-0 mt-0.5" />
+                                <div className="flex-1 min-w-0">
+                                  <CardTitle className="text-base">{poi.name}</CardTitle>
+                                  {poi.subtypeLabel && (
+                                    <CardDescription className="mt-0.5 text-xs">
+                                      {poi.subtypeLabel}
+                                    </CardDescription>
+                                  )}
+                                </div>
+                              </div>
+                              <Badge variant={getPoiTypeColor(poi.type)}>{poi.type}</Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-2">
+                            {poi.description && (
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {poi.description}
+                              </p>
+                            )}
+                            {childCount > 0 && (
+                              <Badge variant="outline" className="text-xs">
+                                {childCount} {childCount === 1 ? 'location' : 'locations'}
+                              </Badge>
+                            )}
+                            {poi.floor !== null && (
+                              <Badge variant="outline" className="text-xs">
+                                Floor {poi.floor}
+                              </Badge>
+                            )}
+                            {poi.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {poi.tags.map((tag: string) => (
+                                  <Badge key={tag} variant="outline" className="text-xs">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    )
+                  })}
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {poi.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {poi.description}
-                  </p>
-                )}
-                {poi.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {poi.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            )
+          })}
         </div>
       )}
 
       {/* Create Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Point of Interest</DialogTitle>
           </DialogHeader>
@@ -312,25 +423,38 @@ function POIsPage() {
                 rows={3}
               />
             </div>
-            <div>
-              <Label htmlFor="create-type">Type</Label>
-              <Select
-                value={createForm.type}
-                onValueChange={(value) =>
-                  setCreateForm((f) => ({ ...f, type: value as PoiType }))
-                }
-              >
-                <SelectTrigger id="create-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {POI_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="create-type">Type</Label>
+                <Select
+                  value={createForm.type}
+                  onValueChange={(value) =>
+                    setCreateForm((f) => ({ ...f, type: value as PoiType }))
+                  }
+                >
+                  <SelectTrigger id="create-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {POI_TYPES.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="create-subtype">Subtype Label</Label>
+                <Input
+                  id="create-subtype"
+                  value={createForm.subtypeLabel}
+                  onChange={(e) =>
+                    setCreateForm((f) => ({ ...f, subtypeLabel: e.target.value }))
+                  }
+                  placeholder="e.g., Tavern, Tower"
+                />
+              </div>
             </div>
             <div>
               <Label htmlFor="create-region">Region</Label>
@@ -351,6 +475,40 @@ function POIsPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="create-parent">Parent POI (Optional)</Label>
+              <Select
+                value={createForm.parentPoiId ?? 'none'}
+                onValueChange={(value) =>
+                  setCreateForm((f) => ({ ...f, parentPoiId: value === 'none' ? null : value }))
+                }
+              >
+                <SelectTrigger id="create-parent">
+                  <SelectValue placeholder="None (top-level)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None (top-level)</SelectItem>
+                  {pois.map((poi) => (
+                    <SelectItem key={poi.id} value={poi.id}>
+                      {poi.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="create-floor">Floor (Optional)</Label>
+              <Input
+                id="create-floor"
+                type="number"
+                value={createForm.floor ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setCreateForm((f) => ({ ...f, floor: val ? parseInt(val, 10) : null }))
+                }}
+                placeholder="e.g., 1, 2, -1"
+              />
             </div>
             <div>
               <Label>Tags</Label>
@@ -401,25 +559,38 @@ function POIsPage() {
                 rows={3}
               />
             </div>
-            <div>
-              <Label htmlFor="edit-type">Type</Label>
-              <Select
-                value={editForm.type}
-                onValueChange={(value) =>
-                  setEditForm((f) => ({ ...f, type: value as PoiType }))
-                }
-              >
-                <SelectTrigger id="edit-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {POI_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-type">Type</Label>
+                <Select
+                  value={editForm.type}
+                  onValueChange={(value) =>
+                    setEditForm((f) => ({ ...f, type: value as PoiType }))
+                  }
+                >
+                  <SelectTrigger id="edit-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {POI_TYPES.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit-subtype">Subtype Label</Label>
+                <Input
+                  id="edit-subtype"
+                  value={editForm.subtypeLabel}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, subtypeLabel: e.target.value }))
+                  }
+                  placeholder="e.g., Tavern, Tower"
+                />
+              </div>
             </div>
             <div>
               <Label htmlFor="edit-region">Region</Label>
@@ -440,6 +611,42 @@ function POIsPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="edit-parent">Parent POI (Optional)</Label>
+              <Select
+                value={editForm.parentPoiId ?? 'none'}
+                onValueChange={(value) =>
+                  setEditForm((f) => ({ ...f, parentPoiId: value === 'none' ? null : value }))
+                }
+              >
+                <SelectTrigger id="edit-parent">
+                  <SelectValue placeholder="None (top-level)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None (top-level)</SelectItem>
+                  {pois
+                    .filter((p) => p.id !== editingPOI?.id) // Don't allow self-parenting
+                    .map((poi) => (
+                      <SelectItem key={poi.id} value={poi.id}>
+                        {poi.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="edit-floor">Floor (Optional)</Label>
+              <Input
+                id="edit-floor"
+                type="number"
+                value={editForm.floor ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setEditForm((f) => ({ ...f, floor: val ? parseInt(val, 10) : null }))
+                }}
+                placeholder="e.g., 1, 2, -1"
+              />
             </div>
             <div>
               <Label>Tags</Label>

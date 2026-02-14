@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Pencil } from 'lucide-react'
 import type { WorldEvent } from '@domain/entities/WorldEvent'
-import type { Season, Watch } from '@shared/constants'
+import type { Season } from '@shared/constants'
 import { newId } from '@shared/ulid'
 import { useContainer } from '~/ui/hooks/useContainer'
 
@@ -47,7 +47,7 @@ export function InlineGMNote({ existingNote, realmId, year, season, day }: Inlin
       year,
       season,
       day,
-      watch: 'morning' as Watch,
+      watch: 1,
       type: 'gm_note',
       title: 'GM Note',
       description: trimmed,

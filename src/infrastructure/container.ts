@@ -11,6 +11,9 @@ import { PathRepository } from '@infrastructure/dexie/repositories/PathRepositor
 import { TableRepository } from '@infrastructure/dexie/repositories/TableRepository'
 import { RollHistoryRepository } from '@infrastructure/dexie/repositories/RollHistoryRepository'
 import { SystemConfigRepository } from '@infrastructure/dexie/repositories/SystemConfigRepository'
+import { FactionPresenceRepository } from '@infrastructure/dexie/repositories/FactionPresenceRepository'
+import { POIEventRepository } from '@infrastructure/dexie/repositories/POIEventRepository'
+import { GameMapRepository } from '@infrastructure/dexie/repositories/GameMapRepository'
 import { EventBus } from '@infrastructure/event-bus/EventBus'
 
 export function createContainer() {
@@ -28,6 +31,9 @@ export function createContainer() {
     tableRepo: new TableRepository(),
     rollHistoryRepo: new RollHistoryRepository(),
     systemConfigRepo: new SystemConfigRepository(),
+    factionPresenceRepo: new FactionPresenceRepository(),
+    poiEventRepo: new POIEventRepository(),
+    gameMapRepo: new GameMapRepository(),
     eventBus: new EventBus(),
   } as const
 }

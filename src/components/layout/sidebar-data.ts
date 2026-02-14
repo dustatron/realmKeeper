@@ -2,6 +2,7 @@ import {
   Compass,
   LayoutDashboard,
   Map,
+  MapPinned,
   NotebookPen,
   Route,
   Scroll,
@@ -20,6 +21,7 @@ export function getSidebarData(_realmId?: string): { navGroups: NavGroup[] } {
         items: [
           { title: 'Dashboard', url: '/realms', icon: LayoutDashboard },
           { title: 'Calendar', url: '/realms/calendar', icon: Scroll },
+          { title: 'Maps', url: '/realms/maps', icon: MapPinned },
         ],
       },
       {

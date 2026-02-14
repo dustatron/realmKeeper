@@ -8,6 +8,9 @@ import type { IWeatherRepository } from '@application/ports/IWeatherRepository'
 import type { IRealmNoteRepository } from '@application/ports/IRealmNoteRepository'
 import type { IPOIRepository } from '@application/ports/IPOIRepository'
 import type { IPathRepository } from '@application/ports/IPathRepository'
+import type { IFactionPresenceRepository } from '@application/ports/IFactionPresenceRepository'
+import type { IPOIEventRepository } from '@application/ports/IPOIEventRepository'
+import type { IGameMapRepository } from '@application/ports/IGameMapRepository'
 import type { Realm } from '@domain/entities/Realm'
 import type { Region } from '@domain/entities/Region'
 import type { Faction } from '@domain/entities/Faction'
@@ -18,6 +21,9 @@ import type { WeatherHistory } from '@domain/entities/WeatherHistory'
 import type { RealmNote } from '@domain/entities/RealmNote'
 import type { POI } from '@domain/entities/POI'
 import type { Path } from '@domain/entities/Path'
+import type { FactionPresence } from '@domain/entities/FactionPresence'
+import type { POIEvent } from '@domain/entities/POIEvent'
+import type { GameMap } from '@domain/entities/GameMap'
 
 export interface ExportRealmDeps {
   realmRepo: IRealmRepository
@@ -30,10 +36,26 @@ export interface ExportRealmDeps {
   realmNoteRepo: IRealmNoteRepository
   poiRepo: IPOIRepository
   pathRepo: IPathRepository
+  factionPresenceRepo: IFactionPresenceRepository
+  poiEventRepo: IPOIEventRepository
+  gameMapRepo: IGameMapRepository
+}
+
+export interface GameMapExport {
+  id: string
+  name: string
+  ownerRealmId: string | null
+  ownerPoiId: string | null
+  imageBase64: string
+  width: number
+  height: number
+  sortOrder: number
+  createdAt: number
+  updatedAt: number
 }
 
 export interface RealmExport {
-  version: 1
+  version: 3
   exportedAt: number
   realm: Realm
   regions: Region[]
@@ -45,6 +67,22 @@ export interface RealmExport {
   realmNotes: RealmNote[]
   pois: POI[]
   paths: Path[]
+  factionPresences: FactionPresence[]
+  poiEvents: POIEvent[]
+  gameMaps: GameMapExport[]
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const result = reader.result as string
+      // Strip data URL prefix to store raw base64
+      resolve(result.split(',')[1] ?? '')
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
 }
 
 export async function executeExportRealm(
@@ -63,12 +101,44 @@ export async function executeExportRealm(
   const weatherHistory = await deps.weatherRepo.getRecent(realmId, 9999)
   const realmNotes = await deps.realmNoteRepo.getByRealmId(realmId)
 
-  // POIs and paths per region
+  // POIs per region, paths per POI (deduplicated)
   const allPois = await Promise.all(regions.map((r) => deps.poiRepo.getByRegionId(r.id)))
-  const allPaths = await Promise.all(regions.map((r) => deps.pathRepo.getByRegionId(r.id)))
+  const flatPoisForPaths = allPois.flat()
+  const pathArrays = await Promise.all(flatPoisForPaths.map((p) => deps.pathRepo.getByPoi(p.id)))
+  const pathDedup = new Map<string, (typeof pathArrays)[0][0]>()
+  for (const arr of pathArrays) {
+    for (const p of arr) pathDedup.set(p.id, p)
+  }
+
+  // Faction presences and POI events per POI
+  const flatPois = allPois.flat()
+  const allPresences = await Promise.all(flatPois.map((p) => deps.factionPresenceRepo.getByPoiId(p.id)))
+  const poiEvents = await deps.poiEventRepo.getByRealmId(realmId)
+
+  // Game maps — realm-owned + POI-owned
+  const realmMaps = await deps.gameMapRepo.getByRealmId(realmId)
+  const poiMapArrays = await Promise.all(flatPois.map((p) => deps.gameMapRepo.getByPoiId(p.id)))
+  const allMaps = [...realmMaps, ...poiMapArrays.flat()]
+  const mapDedup = new Map<string, GameMap>()
+  for (const m of allMaps) mapDedup.set(m.id, m)
+
+  const gameMaps: GameMapExport[] = await Promise.all(
+    [...mapDedup.values()].map(async (m) => ({
+      id: m.id,
+      name: m.name,
+      ownerRealmId: m.ownerRealmId,
+      ownerPoiId: m.ownerPoiId,
+      imageBase64: await blobToBase64(m.imageBlob),
+      width: m.width,
+      height: m.height,
+      sortOrder: m.sortOrder,
+      createdAt: m.createdAt,
+      updatedAt: m.updatedAt,
+    }))
+  )
 
   return {
-    version: 1,
+    version: 3,
     exportedAt: Date.now(),
     realm,
     regions,
@@ -78,7 +148,10 @@ export async function executeExportRealm(
     worldEvents,
     weatherHistory,
     realmNotes,
-    pois: allPois.flat(),
-    paths: allPaths.flat(),
+    pois: flatPois,
+    paths: [...pathDedup.values()],
+    factionPresences: allPresences.flat(),
+    poiEvents,
+    gameMaps,
   }
 }

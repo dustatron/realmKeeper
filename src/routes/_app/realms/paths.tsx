@@ -3,13 +3,15 @@ import { useState } from 'react'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useRegions } from '~/ui/hooks/useRegions'
 import { usePaths } from '~/ui/hooks/usePaths'
-import { usePOIs } from '~/ui/hooks/usePOIs'
+import { useRealmPOIs } from '~/ui/hooks/usePOIs'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { executeCreatePath } from '@application/use-cases/CreatePath'
 import { executeUpdatePath } from '@application/use-cases/UpdatePath'
 import { executeDeletePath } from '@application/use-cases/DeletePath'
 import { calculateTravelTime } from '@application/use-cases/CalculateTravelTime'
 import type { Path } from '@domain/entities/Path'
+import type { TerrainType, PathType } from '@shared/constants'
+import { TERRAIN_TYPES, PATH_TYPES } from '@shared/constants'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { EmptyState } from '~/components/shared/EmptyState'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
@@ -47,17 +49,6 @@ import {
 import { Badge } from '~/components/ui/badge'
 import { Route as RouteIcon, Plus, Pencil, Trash2, Clock } from 'lucide-react'
 
-const TERRAIN_OPTIONS = [
-  'plains',
-  'forest',
-  'hills',
-  'mountain',
-  'swamp',
-  'desert',
-  'coast',
-  'road',
-] as const
-
 export const Route = createFileRoute('/_app/realms/paths')({
   component: PathsPage,
 })
@@ -65,11 +56,8 @@ export const Route = createFileRoute('/_app/realms/paths')({
 function PathsPage() {
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const regions = useRegions(activeRealmId)
-  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(
-    regions[0]?.id ?? null
-  )
-  const paths = usePaths(selectedRegionId)
-  const pois = usePOIs(selectedRegionId)
+  const paths = usePaths()
+  const pois = useRealmPOIs(activeRealmId)
   const container = useContainer()
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -83,9 +71,9 @@ function PathsPage() {
     description: '',
     fromPoiId: '',
     toPoiId: '',
-    baseTravelDays: 1,
-    terrain: 'plains' as string,
-    regionId: selectedRegionId ?? '',
+    baseTravelWatches: 1,
+    terrain: 'plains' as TerrainType,
+    type: 'road' as PathType,
   })
 
   // Edit form state
@@ -94,19 +82,20 @@ function PathsPage() {
     description: '',
     fromPoiId: '',
     toPoiId: '',
-    baseTravelDays: 1,
-    terrain: 'plains' as string,
-    regionId: '',
+    baseTravelWatches: 1,
+    terrain: 'plains' as TerrainType,
+    type: 'road' as PathType,
   })
-
-  // Update selected region when regions load
-  if (regions.length > 0 && !selectedRegionId) {
-    setSelectedRegionId(regions[0].id)
-  }
 
   const getPOIName = (poiId: string): string => {
     return pois.find((p) => p.id === poiId)?.name ?? 'Unknown'
   }
+
+  // Filter paths to only those connected to POIs in this realm
+  const realmPoiIds = new Set(pois.map((p) => p.id))
+  const realmPaths = paths.filter(
+    (p) => realmPoiIds.has(p.fromPoiId) || realmPoiIds.has(p.toPoiId)
+  )
 
   const handleCreate = async () => {
     if (!createForm.name.trim() || !createForm.fromPoiId || !createForm.toPoiId) return
@@ -116,9 +105,9 @@ function PathsPage() {
         description: createForm.description,
         fromPoiId: createForm.fromPoiId,
         toPoiId: createForm.toPoiId,
-        baseTravelDays: createForm.baseTravelDays,
+        baseTravelWatches: createForm.baseTravelWatches,
         terrain: createForm.terrain,
-        regionId: createForm.regionId,
+        type: createForm.type,
       },
       { pathRepo: container.pathRepo }
     )
@@ -128,9 +117,9 @@ function PathsPage() {
       description: '',
       fromPoiId: '',
       toPoiId: '',
-      baseTravelDays: 1,
+      baseTravelWatches: 1,
       terrain: 'plains',
-      regionId: selectedRegionId ?? '',
+      type: 'road',
     })
   }
 
@@ -143,9 +132,9 @@ function PathsPage() {
         description: editForm.description,
         fromPoiId: editForm.fromPoiId,
         toPoiId: editForm.toPoiId,
-        baseTravelDays: editForm.baseTravelDays,
+        baseTravelWatches: editForm.baseTravelWatches,
         terrain: editForm.terrain,
-        regionId: editForm.regionId,
+        type: editForm.type,
       },
       { pathRepo: container.pathRepo }
     )
@@ -166,9 +155,9 @@ function PathsPage() {
       description: '',
       fromPoiId: '',
       toPoiId: '',
-      baseTravelDays: 1,
+      baseTravelWatches: 1,
       terrain: 'plains',
-      regionId: selectedRegionId ?? '',
+      type: 'road',
     })
     setCreateDialogOpen(true)
   }
@@ -179,9 +168,9 @@ function PathsPage() {
       description: path.description,
       fromPoiId: path.fromPoiId,
       toPoiId: path.toPoiId,
-      baseTravelDays: path.baseTravelDays,
+      baseTravelWatches: path.baseTravelWatches,
       terrain: path.terrain,
-      regionId: path.regionId,
+      type: path.type,
     })
     setEditingPath(path)
   }
@@ -200,40 +189,10 @@ function PathsPage() {
     )
   }
 
-  if (regions.length === 0) {
-    return (
-      <div>
-        <PageHeader title="Paths" description="Travel routes between points of interest." />
-        <EmptyState
-          icon={RouteIcon}
-          title="Create regions first before adding paths"
-        />
-      </div>
-    )
-  }
-
   if (pois.length === 0) {
     return (
       <div className="space-y-4">
         <PageHeader title="Paths" description="Travel routes between points of interest." />
-        <div className="flex items-center gap-2">
-          <Label htmlFor="region-select">Region:</Label>
-          <Select
-            value={selectedRegionId ?? undefined}
-            onValueChange={(value) => setSelectedRegionId(value)}
-          >
-            <SelectTrigger id="region-select" className="w-64">
-              <SelectValue placeholder="Select a region" />
-            </SelectTrigger>
-            <SelectContent>
-              {regions.map((region) => (
-                <SelectItem key={region.id} value={region.id}>
-                  {region.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
         <EmptyState
           icon={RouteIcon}
           title="Create POIs first before adding paths"
@@ -256,28 +215,8 @@ function PathsPage() {
         }
       />
 
-      {/* Region Selector */}
-      <div className="flex items-center gap-2">
-        <Label htmlFor="region-select">Region:</Label>
-        <Select
-          value={selectedRegionId ?? undefined}
-          onValueChange={(value) => setSelectedRegionId(value)}
-        >
-          <SelectTrigger id="region-select" className="w-64">
-            <SelectValue placeholder="Select a region" />
-          </SelectTrigger>
-          <SelectContent>
-            {regions.map((region) => (
-              <SelectItem key={region.id} value={region.id}>
-                {region.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
       {/* Path Cards Grid */}
-      {paths.length === 0 ? (
+      {realmPaths.length === 0 ? (
         <EmptyState
           icon={RouteIcon}
           title="No paths yet"
@@ -291,9 +230,9 @@ function PathsPage() {
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {paths.map((path) => {
+          {realmPaths.map((path) => {
             const travelTime = calculateTravelTime({
-              baseTravelDays: path.baseTravelDays,
+              baseTravelWatches: path.baseTravelWatches,
               terrain: path.terrain,
             })
             return (
@@ -317,10 +256,11 @@ function PathsPage() {
                     </p>
                   )}
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">{path.terrain}</Badge>
+                    <Badge variant="outline">{path.type}</Badge>
+                    <Badge variant="secondary">{path.terrain}</Badge>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Clock className="size-3" />
-                      <span>{travelTime} {travelTime === 1 ? 'day' : 'days'}</span>
+                      <span>{travelTime} {travelTime === 1 ? 'watch' : 'watches'}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -402,35 +342,55 @@ function PathsPage() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="create-days">Base Travel Days *</Label>
+                <Label htmlFor="create-watches">Travel Watches *</Label>
                 <Input
-                  id="create-days"
+                  id="create-watches"
                   type="number"
                   min="1"
-                  value={createForm.baseTravelDays}
+                  value={createForm.baseTravelWatches}
                   onChange={(e) =>
                     setCreateForm((f) => ({
                       ...f,
-                      baseTravelDays: parseInt(e.target.value) || 1,
+                      baseTravelWatches: parseInt(e.target.value) || 1,
                     }))
                   }
                 />
+              </div>
+              <div>
+                <Label htmlFor="create-type">Path Type</Label>
+                <Select
+                  value={createForm.type}
+                  onValueChange={(value) =>
+                    setCreateForm((f) => ({ ...f, type: value as PathType }))
+                  }
+                >
+                  <SelectTrigger id="create-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PATH_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="create-terrain">Terrain</Label>
                 <Select
                   value={createForm.terrain}
                   onValueChange={(value) =>
-                    setCreateForm((f) => ({ ...f, terrain: value }))
+                    setCreateForm((f) => ({ ...f, terrain: value as TerrainType }))
                   }
                 >
                   <SelectTrigger id="create-terrain">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {TERRAIN_OPTIONS.map((terrain) => (
+                    {TERRAIN_TYPES.map((terrain) => (
                       <SelectItem key={terrain} value={terrain}>
                         {terrain}
                       </SelectItem>
@@ -438,26 +398,6 @@ function PathsPage() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            <div>
-              <Label htmlFor="create-region">Region</Label>
-              <Select
-                value={createForm.regionId}
-                onValueChange={(value) =>
-                  setCreateForm((f) => ({ ...f, regionId: value }))
-                }
-              >
-                <SelectTrigger id="create-region">
-                  <SelectValue placeholder="Select a region" />
-                </SelectTrigger>
-                <SelectContent>
-                  {regions.map((region) => (
-                    <SelectItem key={region.id} value={region.id}>
-                      {region.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
           <DialogFooter>
@@ -550,35 +490,55 @@ function PathsPage() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="edit-days">Base Travel Days *</Label>
+                <Label htmlFor="edit-watches">Travel Watches *</Label>
                 <Input
-                  id="edit-days"
+                  id="edit-watches"
                   type="number"
                   min="1"
-                  value={editForm.baseTravelDays}
+                  value={editForm.baseTravelWatches}
                   onChange={(e) =>
                     setEditForm((f) => ({
                       ...f,
-                      baseTravelDays: parseInt(e.target.value) || 1,
+                      baseTravelWatches: parseInt(e.target.value) || 1,
                     }))
                   }
                 />
+              </div>
+              <div>
+                <Label htmlFor="edit-type">Path Type</Label>
+                <Select
+                  value={editForm.type}
+                  onValueChange={(value) =>
+                    setEditForm((f) => ({ ...f, type: value as PathType }))
+                  }
+                >
+                  <SelectTrigger id="edit-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PATH_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="edit-terrain">Terrain</Label>
                 <Select
                   value={editForm.terrain}
                   onValueChange={(value) =>
-                    setEditForm((f) => ({ ...f, terrain: value }))
+                    setEditForm((f) => ({ ...f, terrain: value as TerrainType }))
                   }
                 >
                   <SelectTrigger id="edit-terrain">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {TERRAIN_OPTIONS.map((terrain) => (
+                    {TERRAIN_TYPES.map((terrain) => (
                       <SelectItem key={terrain} value={terrain}>
                         {terrain}
                       </SelectItem>
@@ -587,26 +547,6 @@ function PathsPage() {
                 </Select>
               </div>
             </div>
-            <div>
-              <Label htmlFor="edit-region">Region</Label>
-              <Select
-                value={editForm.regionId}
-                onValueChange={(value) =>
-                  setEditForm((f) => ({ ...f, regionId: value }))
-                }
-              >
-                <SelectTrigger id="edit-region">
-                  <SelectValue placeholder="Select a region" />
-                </SelectTrigger>
-                <SelectContent>
-                  {regions.map((region) => (
-                    <SelectItem key={region.id} value={region.id}>
-                      {region.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             {/* Show calculated travel time */}
             <div className="rounded-md bg-muted p-3">
               <div className="flex items-center gap-2 text-sm">
@@ -614,10 +554,10 @@ function PathsPage() {
                 <span className="font-medium">Calculated Travel Time:</span>
                 <span>
                   {calculateTravelTime({
-                    baseTravelDays: editForm.baseTravelDays,
+                    baseTravelWatches: editForm.baseTravelWatches,
                     terrain: editForm.terrain,
                   })}{' '}
-                  days
+                  watches
                 </span>
               </div>
             </div>

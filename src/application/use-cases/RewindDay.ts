@@ -58,7 +58,7 @@ export async function executeRewindDay(
   }
 
   // Move back 1 day
-  const newDateTime = rewindDay(current, realm.daysPerSeason)
+  const newDateTime = rewindDay(current, realm.daysPerSeason, realm.watchesPerDay)
 
   // Update realm
   await deps.realmRepo.update({

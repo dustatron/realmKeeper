@@ -1,15 +1,16 @@
 import type { IPathRepository } from '@application/ports/IPathRepository'
 import type { Path } from '@domain/entities/Path'
+import type { PathType, TerrainType } from '@shared/constants'
 import { newId } from '@shared/ulid'
 
 export interface CreatePathInput {
-  regionId: string
   fromPoiId: string
   toPoiId: string
   name: string
   description?: string
-  baseTravelDays: number
-  terrain?: string
+  type?: PathType
+  baseTravelWatches: number
+  terrain?: TerrainType
 }
 
 export async function executeCreatePath(
@@ -19,13 +20,13 @@ export async function executeCreatePath(
   const now = Date.now()
   const path: Path = {
     id: newId(),
-    regionId: input.regionId,
     fromPoiId: input.fromPoiId,
     toPoiId: input.toPoiId,
     name: input.name,
     description: input.description ?? '',
-    baseTravelDays: input.baseTravelDays,
-    terrain: input.terrain ?? '',
+    type: input.type ?? 'road',
+    baseTravelWatches: input.baseTravelWatches,
+    terrain: input.terrain ?? 'plains',
     createdAt: now,
     updatedAt: now,
   }

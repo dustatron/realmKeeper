@@ -1,5 +1,5 @@
 export interface TravelTimeInput {
-  baseTravelDays: number
+  baseTravelWatches: number
   terrain: string
   weatherCondition?: string
 }
@@ -33,5 +33,5 @@ export function calculateTravelTime(input: TravelTimeInput): number {
     }
   }
 
-  return Math.max(1, Math.ceil(input.baseTravelDays * multiplier))
+  return Math.max(1, Math.ceil(input.baseTravelWatches * multiplier))
 }

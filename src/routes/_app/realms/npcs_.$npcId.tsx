@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useNPC } from '~/ui/hooks/useNPCs'
 import { useFaction, useFactions } from '~/ui/hooks/useFactions'
 import { useRegion, useRegions } from '~/ui/hooks/useRegions'
+import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
 import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
 import { useSystemConfig } from '~/ui/hooks/useSystemConfigs'
 import { useUIStore } from '~/ui/stores/uiStore'
@@ -36,8 +37,10 @@ function NPCDetailPage() {
   const systemConfig = useSystemConfig(realm?.systemId ?? null)
   const faction = useFaction(npc?.factionId ?? null)
   const region = useRegion(npc?.regionId ?? null)
+  const poi = usePOI(npc?.poiId ?? null)
   const factions = useFactions(activeRealmId)
   const regions = useRegions(activeRealmId)
+  const pois = useRealmPOIs(activeRealmId)
   const container = useContainer()
 
   const [editingNPC, setEditingNPC] = useState<NPC | null>(null)
@@ -66,7 +69,7 @@ function NPCDetailPage() {
       <PageHeader
         title={
           <span className="flex items-center gap-2">
-            {!npc.isAlive && <Skull className="size-5 text-red-500" />}
+            {npc.lifeStatus !== 'alive' && <Skull className="size-5 text-red-500" />}
             {npc.name || 'Unnamed NPC'}
           </span>
         }
@@ -111,14 +114,21 @@ function NPCDetailPage() {
                 <span className="text-sm">{npc.voice}</span>
               </div>
             )}
-            {(region || npc.location) && (
+            {(region || poi) && (
               <div className="flex items-start gap-2">
                 <span className="text-sm font-medium text-muted-foreground w-24 shrink-0 pt-0.5">
                   <MapPin className="size-3.5 inline mr-1" />Location
                 </span>
                 <div className="flex flex-wrap gap-1.5 items-center">
                   {region && <Badge variant="secondary">{region.name}</Badge>}
-                  {npc.location && <span className="text-sm">{npc.location}</span>}
+                  {poi && (
+                    <Link
+                      to="/realms/pois"
+                      className="text-primary hover:underline text-sm"
+                    >
+                      {poi.name}
+                    </Link>
+                  )}
                 </div>
               </div>
             )}
@@ -150,11 +160,12 @@ function NPCDetailPage() {
             )}
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-muted-foreground w-24 shrink-0">Status</span>
-              {npc.isAlive ? (
+              {npc.lifeStatus === 'alive' ? (
                 <Badge variant="secondary">Alive</Badge>
               ) : (
-                <Badge variant="destructive">Dead</Badge>
+                <Badge variant="destructive">{npc.lifeStatus.charAt(0).toUpperCase() + npc.lifeStatus.slice(1)}</Badge>
               )}
+              <Badge variant="outline">{npc.movementStatus.charAt(0).toUpperCase() + npc.movementStatus.slice(1)}</Badge>
             </div>
           </CardContent>
         </Card>
@@ -318,6 +329,7 @@ function NPCDetailPage() {
           systemConfig={systemConfig}
           factions={factions}
           regions={regions}
+          pois={pois}
           open={!!editingNPC}
           onOpenChange={(open) => { if (!open) setEditingNPC(null) }}
           onSave={handleSaveNPC}

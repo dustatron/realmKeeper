@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useFaction, useFactions } from '~/ui/hooks/useFactions'
 import { useNPCsByFaction } from '~/ui/hooks/useNPCs'
@@ -12,16 +13,22 @@ import { useContainer } from '~/ui/hooks/useContainer'
 import { executeUpdateFaction } from '@application/use-cases/UpdateFaction'
 import { executeDeleteFaction } from '@application/use-cases/DeleteFaction'
 import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
+import { executeCreateFactionPresence } from '@application/use-cases/CreateFactionPresence'
+import { executeDeleteFactionPresence } from '@application/use-cases/DeleteFactionPresence'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
-import { ArrowLeft, Trash2, Pencil, Crown, CheckCircle2, Circle, Dices, Users, Handshake, ChevronUp, ChevronDown } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '~/components/ui/dialog'
+import { Label } from '~/components/ui/label'
+import { Textarea } from '~/components/ui/textarea'
+import { ArrowLeft, Trash2, Pencil, Crown, CheckCircle2, Circle, Dices, Users, Handshake, ChevronUp, ChevronDown, MapPin } from 'lucide-react'
 import { ProgressClock } from '~/components/shared/ProgressClock'
-import { FACTION_STATUSES } from '@shared/constants'
+import { FACTION_STATUSES, FACTION_PRESENCE_TYPES, type FactionPresenceType } from '@shared/constants'
 import { deriveStatus } from '@domain/value-objects/RelationshipScore'
+import { db } from '@infrastructure/dexie/db'
 
 export const Route = createFileRoute('/_app/realms/factions_/$factionId')({
   component: FactionDetailPage,
@@ -49,6 +56,20 @@ function FactionDetailPage() {
 
   const [showDelete, setShowDelete] = useState(false)
   const [isAddingAgent, setIsAddingAgent] = useState(false)
+  const [showAddPresence, setShowAddPresence] = useState(false)
+  const [presenceForm, setPresenceForm] = useState({
+    poiId: '',
+    type: 'controls' as FactionPresenceType,
+    notes: '',
+  })
+
+  const factionPresences = useLiveQuery(
+    async () => {
+      if (!factionId) return []
+      return await db.factionPresences.where('factionId').equals(factionId).toArray()
+    },
+    [factionId]
+  ) ?? []
 
   const handleDelete = async () => {
     await executeDeleteFaction(factionId, { factionRepo: container.factionRepo })
@@ -96,6 +117,25 @@ function FactionDetailPage() {
     } finally {
       setIsAddingAgent(false)
     }
+  }
+
+  const handleAddPresence = async () => {
+    if (!presenceForm.poiId) return
+    await executeCreateFactionPresence(
+      {
+        factionId,
+        poiId: presenceForm.poiId,
+        type: presenceForm.type,
+        notes: presenceForm.notes,
+      },
+      { factionPresenceRepo: container.factionPresenceRepo }
+    )
+    setShowAddPresence(false)
+    setPresenceForm({ poiId: '', type: 'controls', notes: '' })
+  }
+
+  const handleDeletePresence = async (presenceId: string) => {
+    await executeDeleteFactionPresence(presenceId, { factionPresenceRepo: container.factionPresenceRepo })
   }
 
   if (faction === undefined) {
@@ -409,7 +449,7 @@ function FactionDetailPage() {
                         {npc.traits.slice(0, 2).map((trait) => (
                           <Badge key={trait} variant="secondary" className="text-xs">{trait}</Badge>
                         ))}
-                        {!npc.isAlive && <Badge variant="destructive" className="text-xs">Dead</Badge>}
+                        {npc.lifeStatus !== 'alive' && <Badge variant="destructive" className="text-xs">{npc.lifeStatus.charAt(0).toUpperCase() + npc.lifeStatus.slice(1)}</Badge>}
                       </div>
                     </div>
                   ))}
@@ -418,7 +458,135 @@ function FactionDetailPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Locations */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <MapPin className="size-4" />
+              Locations ({factionPresences.length})
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              onClick={() => setShowAddPresence(true)}
+            >
+              Add Presence
+            </Button>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {factionPresences.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No locations.</p>
+            ) : (
+              <div className="space-y-2">
+                {factionPresences.map((presence) => {
+                  const poi = realmPOIs.find((p) => p.id === presence.poiId)
+                  return (
+                    <div key={presence.id} className="flex items-start gap-2 py-2 border-b last:border-0">
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to="/realms/pois"
+                            className="text-sm text-primary hover:underline font-medium"
+                          >
+                            {poi?.name ?? 'Unknown'}
+                          </Link>
+                          <Badge variant="outline" className="text-xs">
+                            {presence.type}
+                          </Badge>
+                        </div>
+                        {presence.notes && (
+                          <p className="text-xs text-muted-foreground">{presence.notes}</p>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 shrink-0"
+                        onClick={() => handleDeletePresence(presence.id)}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Add Presence Dialog */}
+      <Dialog open={showAddPresence} onOpenChange={setShowAddPresence}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Faction Presence</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="presence-poi">Location (POI) *</Label>
+              <Select
+                value={presenceForm.poiId}
+                onValueChange={(value) =>
+                  setPresenceForm((f) => ({ ...f, poiId: value }))
+                }
+              >
+                <SelectTrigger id="presence-poi">
+                  <SelectValue placeholder="Select a POI" />
+                </SelectTrigger>
+                <SelectContent>
+                  {realmPOIs.map((poi) => (
+                    <SelectItem key={poi.id} value={poi.id}>
+                      {poi.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="presence-type">Presence Type</Label>
+              <Select
+                value={presenceForm.type}
+                onValueChange={(value) =>
+                  setPresenceForm((f) => ({ ...f, type: value as FactionPresenceType }))
+                }
+              >
+                <SelectTrigger id="presence-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FACTION_PRESENCE_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="presence-notes">Notes</Label>
+              <Textarea
+                id="presence-notes"
+                value={presenceForm.notes}
+                onChange={(e) =>
+                  setPresenceForm((f) => ({ ...f, notes: e.target.value }))
+                }
+                placeholder="Additional details..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddPresence(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddPresence} disabled={!presenceForm.poiId}>
+              Add
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={showDelete}

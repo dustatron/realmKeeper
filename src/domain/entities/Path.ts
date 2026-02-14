@@ -1,12 +1,14 @@
+import type { PathType, TerrainType } from '@shared/constants'
+
 export interface Path {
   id: string
-  regionId: string
   fromPoiId: string
   toPoiId: string
   name: string
   description: string
-  baseTravelDays: number
-  terrain: string
+  type: PathType
+  baseTravelWatches: number
+  terrain: TerrainType
   createdAt: number
   updatedAt: number
 }
