@@ -180,6 +180,7 @@ export async function executeGenerateFaction(
     isParty: false,
     regionId: null,
     headquartersPoiId: null,
+    leaderNpcId: agentNpcs.length > 0 ? agentNpcs[0].id : null,
     agentNpcIds: agentNpcs.map((n) => n.id),
     agendaGoals,
     advantages,

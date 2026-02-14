@@ -31,6 +31,7 @@ export interface Faction {
   isParty: boolean
   regionId: string | null
   headquartersPoiId: string | null
+  leaderNpcId: string | null
   agentNpcIds: string[]
   agendaGoals: AgendaGoal[]
   advantages: Advantage[]

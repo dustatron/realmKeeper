@@ -26,7 +26,11 @@
       "Bash(grep:*)",
       "Bash(bd show:*)",
       "Bash(bd close:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git rebase:*)",
+      "Bash(GIT_EDITOR=true git rebase:*)"
     ]
   }
 }

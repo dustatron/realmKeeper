@@ -23,10 +23,16 @@ import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
-import { Dices, Trash2, Plus, Save, X } from 'lucide-react'
+import { Dices, Trash2, Plus, Save, X, Crown, Pencil, Users } from 'lucide-react'
 import type { TableDef } from '@domain/entities/TableDef'
+import type { NPC } from '@domain/entities/NPC'
 import type { AgendaGoal, AgendaTimeframe, Advantage, Obstacle } from '@domain/entities/Faction'
 import { FACTION_STATUSES } from '@shared/constants'
+import { useNPCsByFaction } from '~/ui/hooks/useNPCs'
+import { useFactions } from '~/ui/hooks/useFactions'
+import { NPCEditSheet } from '~/components/shared/NPCEditSheet'
+import { Badge } from '~/components/ui/badge'
+import { executeUpdateNPC } from '@application/use-cases/UpdateNPC'
 
 export const Route = createFileRoute('/_app/realms/factions_/$factionId_/edit')({
   component: FactionEditPage,
@@ -125,8 +131,10 @@ function FactionEditPage() {
   const systemConfig = useSystemConfig(realm?.systemId ?? null)
   const container = useContainer()
   const existingFaction = useFaction(isCreate ? null : factionId)
+  const allFactions = useFactions(activeRealmId)
   const regions = useRegions(activeRealmId)
   const realmPOIs = useRealmPOIs(activeRealmId)
+  const agentNpcs = useNPCsByFaction(isCreate ? null : factionId)
 
   // Faction tables for re-roll
   const [factionTables, setFactionTables] = useState<TableDef[]>([])
@@ -148,6 +156,7 @@ function FactionEditPage() {
   const [advantages, setAdvantages] = useState<Advantage[]>([])
   const [obstacles, setObstacles] = useState<Obstacle[]>([])
   const [goals, setGoals] = useState<AgendaGoal[]>([])
+  const [leaderNpcId, setLeaderNpcId] = useState<string | null>(null)
   const [agentNpcIds, setAgentNpcIds] = useState<string[]>([])
 
   // Input helpers
@@ -163,6 +172,8 @@ function FactionEditPage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [editingNPC, setEditingNPC] = useState<NPC | null>(null)
+  const [isAddingAgent, setIsAddingAgent] = useState(false)
 
   // Populate form from existing faction
   useEffect(() => {
@@ -178,6 +189,7 @@ function FactionEditPage() {
       setAdvantages([...(existingFaction.advantages ?? [])])
       setObstacles([...(existingFaction.obstacles ?? [])])
       setGoals([...existingFaction.agendaGoals])
+      setLeaderNpcId(existingFaction.leaderNpcId ?? null)
       setAgentNpcIds([...existingFaction.agentNpcIds])
       setLoaded(true)
     }
@@ -298,6 +310,39 @@ function FactionEditPage() {
   const removeGoal = (id: string) => setGoals(goals.filter((g) => g.id !== id))
   const toggleGoal = (id: string) => setGoals(goals.map((g) => (g.id === id ? { ...g, completed: !g.completed } : g)))
 
+  // ── NPC edit handlers ────────────────────────────────
+
+  const handleSaveNPC = async () => {
+    if (!editingNPC) return
+    await executeUpdateNPC(editingNPC, { npcRepo: container.npcRepo })
+    setEditingNPC(null)
+  }
+
+  const handleAddAgent = async () => {
+    if (!activeRealmId || !systemConfig) return
+    setIsAddingAgent(true)
+    try {
+      const npc = await executeGenerateNPC(
+        { realmId: activeRealmId, systemConfig, factionId: isCreate ? undefined : factionId },
+        { tableRepo: container.tableRepo }
+      )
+      await container.npcRepo.create(npc)
+      if (!isCreate && existingFaction) {
+        await executeUpdateFaction(
+          { ...existingFaction, agentNpcIds: [...existingFaction.agentNpcIds, npc.id] },
+          { factionRepo: container.factionRepo }
+        )
+      }
+      setAgentNpcIds((prev) => [...prev, npc.id])
+    } finally {
+      setIsAddingAgent(false)
+    }
+  }
+
+  const toggleLeader = (npcId: string) => {
+    setLeaderNpcId(leaderNpcId === npcId ? null : npcId)
+  }
+
   // ── Save ─────────────────────────────────────────────
 
   const handleSave = async () => {
@@ -312,7 +357,7 @@ function FactionEditPage() {
           { factionRepo: container.factionRepo }
         )
         await executeUpdateFaction(
-          { ...newFaction, traits, advantages, obstacles, agendaGoals: goals, agentNpcIds, regionId, headquartersPoiId },
+          { ...newFaction, traits, advantages, obstacles, agendaGoals: goals, agentNpcIds, leaderNpcId, regionId, headquartersPoiId },
           { factionRepo: container.factionRepo }
         )
         await executeInitializeRelationships(newFaction.id, activeRealmId, {
@@ -329,7 +374,7 @@ function FactionEditPage() {
         navigate({ to: '/realms/factions/$factionId', params: { factionId: newFaction.id } })
       } else if (existingFaction) {
         await executeUpdateFaction(
-          { ...existingFaction, name: name.trim(), description: description.trim(), type: type.trim(), status, traits, advantages, obstacles, agendaGoals: goals, agentNpcIds, regionId, headquartersPoiId },
+          { ...existingFaction, name: name.trim(), description: description.trim(), type: type.trim(), status, traits, advantages, obstacles, agendaGoals: goals, agentNpcIds, leaderNpcId, regionId, headquartersPoiId },
           { factionRepo: container.factionRepo }
         )
         navigate({ to: '/realms/factions/$factionId', params: { factionId } })
@@ -640,6 +685,77 @@ function FactionEditPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Agents ────────────────────────────── */}
+      {!isCreate && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <Users className="size-4" />
+              Agents ({agentNpcs.length})
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              onClick={handleAddAgent}
+              disabled={isAddingAgent || !systemConfig}
+            >
+              <Dices className="mr-1.5 size-3.5" />
+              {isAddingAgent ? '...' : 'Generate'}
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {agentNpcs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No agents assigned.</p>
+            ) : (
+              agentNpcs.map((npc) => (
+                <div key={npc.id} className="flex items-center justify-between py-1.5 px-1 rounded hover:bg-muted/30 transition-colors group">
+                  <div className="flex items-center gap-2">
+                    {leaderNpcId === npc.id && <Crown className="size-3.5 text-amber-500" />}
+                    <span className="text-sm font-medium">{npc.name}</span>
+                    {!npc.isAlive && <Badge variant="destructive" className="text-xs">Dead</Badge>}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant={leaderNpcId === npc.id ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => toggleLeader(npc.id)}
+                      title={leaderNpcId === npc.id ? 'Remove as leader' : 'Set as leader'}
+                    >
+                      <Crown className={`size-3.5 mr-1 ${leaderNpcId === npc.id ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                      {leaderNpcId === npc.id ? 'Leader' : 'Set Leader'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7"
+                      onClick={() => setEditingNPC({ ...npc })}
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* NPC Edit Sheet */}
+      {editingNPC && systemConfig && (
+        <NPCEditSheet
+          npc={editingNPC}
+          systemConfig={systemConfig}
+          factions={allFactions}
+          regions={regions}
+          open={!!editingNPC}
+          onOpenChange={(open) => { if (!open) setEditingNPC(null) }}
+          onSave={handleSaveNPC}
+          onChange={setEditingNPC}
+        />
+      )}
 
       {/* ── Sticky Footer ────────────────────────── */}
       <div className="fixed bottom-0 left-0 right-0 z-10 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">

@@ -4,6 +4,10 @@ export interface Region {
   name: string
   description: string
   terrain: string
+  features: string[]
+  dangers: string[]
+  settlements: string[]
+  resources: string[]
   createdAt: number
   updatedAt: number
 }

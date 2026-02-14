@@ -212,6 +212,16 @@ db.version(8).stores(stores).upgrade(async (tx) => {
   }
 })
 
+// v9: Add leaderNpcId to factions
+db.version(9).stores(stores).upgrade(async (tx) => {
+  const factions = await tx.table('factions').toArray()
+  for (const f of factions) {
+    if (f.leaderNpcId === undefined) {
+      await tx.table('factions').put({ ...f, leaderNpcId: null })
+    }
+  }
+})
+
 // Seed system configs on first DB creation
 db.on('populate', (tx) => {
   seedDatabase(tx)
