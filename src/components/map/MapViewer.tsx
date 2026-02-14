@@ -101,13 +101,17 @@ export function MapViewer({
   const markerRootsRef = useRef<Map<string, ReturnType<typeof createRoot>>>(new Map())
   const markerDataRef = useRef<Map<string, { type: string; name: string; color: string | null; showLabel: boolean }>>(new Map())
   const imageUrlRef = useRef<string | null>(null)
+  const onPoiClickRef = useRef(onPoiClick)
+  onPoiClickRef.current = onPoiClick
+  const onPoiDragRef = useRef(onPoiDrag)
+  onPoiDragRef.current = onPoiDrag
   const [mapReady, setMapReady] = useState(false)
 
-  // Convert pixel coords to lng/lat using a safe coordinate range.
-  // We scale the image so the larger dimension fits within 160° (staying well within ±85°).
+  // Convert pixel coords to lng/lat near the equator where Mercator distortion is negligible.
+  // Using a tiny range (1°) keeps the image undistorted regardless of aspect ratio.
   const scale = useMemo(() => {
-    const maxDeg = 160
-    return Math.min(maxDeg / map.width, maxDeg / map.height)
+    const maxDeg = 1
+    return maxDeg / Math.max(map.width, map.height)
   }, [map.width, map.height])
 
   const pxToLngLat = useCallback(
@@ -171,8 +175,8 @@ export function MapViewer({
       center: initialViewState?.center ?? [0, 0],
       zoom: initialViewState?.zoom ?? 1,
       maxBounds: [
-        [Math.max(swLng - 20, -180), Math.max(swLat - 20, -85)],
-        [Math.min(neLng + 20, 180), Math.min(neLat + 20, 85)],
+        [swLng - 0.5, swLat - 0.5],
+        [neLng + 0.5, neLat + 0.5],
       ],
       attributionControl: false,
     })
@@ -215,33 +219,69 @@ export function MapViewer({
     }
   }, [map.id, map.imageBlob, map.width, map.height, pxToLngLat])
 
-  // Handle map click (for placing POIs)
+  // Keep pois in a ref so map click handler always has latest data
+  const poisRef = useRef(pois)
+  poisRef.current = pois
+
+  // Handle map clicks (place-poi and draw-path modes)
   useEffect(() => {
     const instance = mapRef.current
     if (!instance || !mapReady) return
 
     const handler = (e: maplibregl.MapMouseEvent) => {
-      if (mode !== 'place-poi' || !onMapClick) return
       const pos = lngLatToPx(e.lngLat.lng, e.lngLat.lat)
-      // Only fire if within image bounds
-      if (pos.x >= 0 && pos.x <= map.width && pos.y >= 0 && pos.y <= map.height) {
-        onMapClick(pos)
+      const inBounds = pos.x >= 0 && pos.x <= map.width && pos.y >= 0 && pos.y <= map.height
+
+      if (mode === 'place-poi' && inBounds) {
+        onMapClick?.(pos)
+        return
+      }
+
+      if (mode === 'draw-path') {
+        // Find nearest POI within 30 screen-pixels
+        const clickPx = 30
+        const clickPoint = e.point // screen coords
+        let nearest: POI | null = null
+        let nearestDist = Infinity
+        for (const poi of poisRef.current) {
+          if (!poi.position) continue
+          const [lng, lat] = pxToLngLat(poi.position.x, poi.position.y)
+          const projected = instance.project([lng, lat])
+          const dx = clickPoint.x - projected.x
+          const dy = clickPoint.y - projected.y
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          if (dist < nearestDist && dist < clickPx) {
+            nearest = poi
+            nearestDist = dist
+          }
+        }
+        if (nearest) {
+          onPoiClickRef.current?.(nearest)
+        }
+        return
       }
     }
     instance.on('click', handler)
     return () => {
       instance.off('click', handler)
     }
-  }, [mapReady, mode, onMapClick, lngLatToPx, map.width, map.height])
+  }, [mapReady, mode, onMapClick, lngLatToPx, pxToLngLat, map.width, map.height])
 
-  // Update cursor based on mode
+  // Update cursor and drag behavior based on mode
   useEffect(() => {
     const instance = mapRef.current
     if (!instance || !mapReady) return
+    const interactive = mode === 'place-poi' || mode === 'draw-path'
     const canvas = instance.getCanvas()
-    canvas.style.cursor = mode === 'place-poi' ? 'crosshair' : ''
+    canvas.style.cursor = interactive ? 'crosshair' : ''
+    if (interactive) {
+      instance.dragPan.disable()
+    } else {
+      instance.dragPan.enable()
+    }
     return () => {
       canvas.style.cursor = ''
+      instance.dragPan.enable()
     }
   }, [mode, mapReady])
 
@@ -298,30 +338,32 @@ export function MapViewer({
 
       el.addEventListener('click', (e) => {
         e.stopPropagation()
-        onPoiClick?.(poi)
+        onPoiClickRef.current?.(poi)
       })
 
       marker.on('dragend', () => {
         const lngLat = marker.getLngLat()
         const pos = lngLatToPx(lngLat.lng, lngLat.lat)
-        onPoiDrag?.(poi.id, pos)
+        onPoiDragRef.current?.(poi.id, pos)
       })
 
       markersRef.current.set(poi.id, marker)
     })
-  }, [pois, mapReady, mode, showLabels, pxToLngLat, lngLatToPx, onPoiClick, onPoiDrag])
+  }, [pois, mapReady, mode, showLabels, pxToLngLat, lngLatToPx])
 
-  // Render path lines
+  // Render path lines + watch labels
   useEffect(() => {
     const instance = mapRef.current
     if (!instance || !mapReady) return
 
-    const sourceId = 'paths-source'
-    const layerId = 'paths-layer'
+    const lineSourceId = 'paths-source'
+    const lineLayerId = 'paths-layer'
+    const labelSourceId = 'path-labels-source'
+    const labelLayerId = 'path-labels-layer'
 
-    // Build GeoJSON for paths
+    // Build GeoJSON for path lines
     const poiMap = new Map(pois.map((p) => [p.id, p]))
-    const features = paths
+    const lineFeatures = paths
       .map((path) => {
         const from = poiMap.get(path.fromPoiId)
         const to = poiMap.get(path.toPoiId)
@@ -339,28 +381,74 @@ export function MapViewer({
       })
       .filter(Boolean)
 
-    const geojson = {
-      type: 'FeatureCollection' as const,
-      features,
-    }
+    const lineGeojson = { type: 'FeatureCollection' as const, features: lineFeatures }
 
-    if (instance.getSource(sourceId)) {
-      ;(instance.getSource(sourceId) as maplibregl.GeoJSONSource).setData(geojson as GeoJSON.FeatureCollection)
+    // Build GeoJSON for midpoint labels
+    const labelFeatures = paths
+      .map((path) => {
+        const from = poiMap.get(path.fromPoiId)
+        const to = poiMap.get(path.toPoiId)
+        if (!from?.position || !to?.position) return null
+        const midX = (from.position.x + to.position.x) / 2
+        const midY = (from.position.y + to.position.y) / 2
+        const midCoord = pxToLngLat(midX, midY)
+        return {
+          type: 'Feature' as const,
+          properties: { label: `${path.baseTravelWatches}w` },
+          geometry: { type: 'Point' as const, coordinates: midCoord },
+        }
+      })
+      .filter(Boolean)
+
+    const labelGeojson = { type: 'FeatureCollection' as const, features: labelFeatures }
+
+    // Lines
+    if (instance.getSource(lineSourceId)) {
+      ;(instance.getSource(lineSourceId) as maplibregl.GeoJSONSource).setData(lineGeojson as GeoJSON.FeatureCollection)
     } else {
-      instance.addSource(sourceId, { type: 'geojson', data: geojson as GeoJSON.FeatureCollection })
+      instance.addSource(lineSourceId, { type: 'geojson', data: lineGeojson as GeoJSON.FeatureCollection })
       instance.addLayer({
-        id: layerId,
+        id: lineLayerId,
         type: 'line',
-        source: sourceId,
+        source: lineSourceId,
         paint: {
-          'line-color': '#f59e0b',
-          'line-width': 2,
-          'line-dasharray': [2, 2],
-          'line-opacity': 0.8,
+          'line-color': '#1e293b',
+          'line-width': 6,
+          'line-dasharray': [2, 1],
+          'line-opacity': 0.9,
         },
       })
     }
-  }, [paths, pois, mapReady, pxToLngLat])
+
+    // Labels
+    if (instance.getSource(labelSourceId)) {
+      ;(instance.getSource(labelSourceId) as maplibregl.GeoJSONSource).setData(labelGeojson as GeoJSON.FeatureCollection)
+    } else {
+      instance.addSource(labelSourceId, { type: 'geojson', data: labelGeojson as GeoJSON.FeatureCollection })
+      instance.addLayer({
+        id: labelLayerId,
+        type: 'symbol',
+        source: labelSourceId,
+        layout: {
+          'text-field': ['get', 'label'],
+          'text-size': 13,
+          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+          'text-allow-overlap': true,
+          'text-offset': [0, -1],
+        },
+        paint: {
+          'text-color': '#1e293b',
+          'text-halo-color': '#ffffff',
+          'text-halo-width': 2,
+        },
+      })
+    }
+
+    // Toggle label visibility based on showLabels
+    if (instance.getLayer(labelLayerId)) {
+      instance.setLayoutProperty(labelLayerId, 'visibility', showLabels ? 'visible' : 'none')
+    }
+  }, [paths, pois, mapReady, showLabels, pxToLngLat])
 
   // Highlight selected POI
   useEffect(() => {

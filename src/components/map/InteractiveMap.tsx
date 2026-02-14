@@ -264,6 +264,9 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId }: Inter
           {mode === 'place-poi' && !selectedPoiForPlacement && (
             <Badge variant="outline">Click map to create new POI, or select one from sidebar</Badge>
           )}
+          {mode === 'draw-path' && !drawPathFrom && (
+            <Badge variant="outline">Click a POI to start drawing a path</Badge>
+          )}
           {mode === 'draw-path' && drawPathFrom && !drawPathTo && (
             <Badge variant="secondary">Click second POI to draw path from: {drawPathFrom.name}</Badge>
           )}
