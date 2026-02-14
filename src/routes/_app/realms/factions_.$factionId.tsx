@@ -489,7 +489,7 @@ function FactionDetailPage() {
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
                           <Link
-                            to="/realms/pois"
+                            to="/realms/locations/pois"
                             className="text-sm text-primary hover:underline font-medium"
                           >
                             {poi?.name ?? 'Unknown'}

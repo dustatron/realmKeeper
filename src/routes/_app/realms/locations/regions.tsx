@@ -9,7 +9,6 @@ import { executeCreateRegion } from '@application/use-cases/CreateRegion'
 import { executeUpdateRegion } from '@application/use-cases/UpdateRegion'
 import { executeDeleteRegion } from '@application/use-cases/DeleteRegion'
 import { executeGenerateRegion, type GenerateRegionResult } from '@application/use-cases/GenerateRegion'
-import { PageHeader } from '~/components/shared/PageHeader'
 import { EmptyState } from '~/components/shared/EmptyState'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { TagInput } from '~/components/shared/TagInput'
@@ -28,7 +27,7 @@ import { Map, Plus, Dices, Trash2, Pencil, RefreshCw, Save, X, ChevronLeft, Chev
 import type { Region } from '@domain/entities/Region'
 import type { POI } from '@domain/entities/POI'
 
-export const Route = createFileRoute('/_app/realms/regions')({
+export const Route = createFileRoute('/_app/realms/locations/regions')({
   component: RegionsPage,
 })
 
@@ -194,31 +193,21 @@ function RegionsPage() {
 
   // ── Guards ──────────────────────────────────────────
   if (!activeRealmId) {
-    return (
-      <div>
-        <PageHeader title="Regions" />
-        <EmptyState icon={Map} title="Select a realm first" />
-      </div>
-    )
+    return <EmptyState icon={Map} title="Select a realm first" />
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Regions"
-        actions={
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleOpenGenerate} disabled={!systemConfig}>
-              <Dices className="mr-2 size-4" />
-              Generate
-            </Button>
-            <Button onClick={() => setShowCreate(true)}>
-              <Plus className="mr-2 size-4" />
-              New Region
-            </Button>
-          </div>
-        }
-      />
+    <div className="space-y-4">
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={handleOpenGenerate} disabled={!systemConfig}>
+          <Dices className="mr-2 size-4" />
+          Generate
+        </Button>
+        <Button onClick={() => setShowCreate(true)}>
+          <Plus className="mr-2 size-4" />
+          New Region
+        </Button>
+      </div>
 
       {regions.length === 0 ? (
         <EmptyState

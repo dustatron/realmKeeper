@@ -1,10 +1,8 @@
 import {
-  Compass,
   LayoutDashboard,
   Map,
   MapPinned,
   NotebookPen,
-  Route,
   Scroll,
   Settings,
   Swords,
@@ -29,9 +27,7 @@ export function getSidebarData(_realmId?: string): { navGroups: NavGroup[] } {
         items: [
           { title: 'Factions', url: '/realms/factions', icon: Swords },
           { title: 'NPCs', url: '/realms/npcs', icon: Users },
-          { title: 'Regions', url: '/realms/regions', icon: Map },
-          { title: 'POIs', url: '/realms/pois', icon: Compass },
-          { title: 'Paths', url: '/realms/paths', icon: Route },
+          { title: 'Locations', url: '/realms/locations', icon: Map },
         ],
       },
       {

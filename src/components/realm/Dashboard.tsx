@@ -260,7 +260,7 @@ export function Dashboard({ realmId }: DashboardProps) {
             </Button>
           </Link>
 
-          <Link to="/realms/regions">
+          <Link to="/realms/locations/regions">
             <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
               <Map className="size-5" />
               <div className="text-left">
@@ -271,7 +271,7 @@ export function Dashboard({ realmId }: DashboardProps) {
             </Button>
           </Link>
 
-          <Link to="/realms/pois">
+          <Link to="/realms/locations/pois">
             <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
               <MapPin className="size-5" />
               <div className="text-left">

@@ -122,7 +122,7 @@ function POIDetailPage() {
     if (!poi) return
     setHeaderTitle(
       <div className="flex items-center gap-1.5 text-sm">
-        <Link to="/realms/pois" className="text-muted-foreground hover:text-foreground">
+        <Link to="/realms/locations/pois" className="text-muted-foreground hover:text-foreground">
           POIs
         </Link>
         {region && (

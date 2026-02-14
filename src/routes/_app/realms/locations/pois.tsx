@@ -9,7 +9,6 @@ import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
 import { executeDeletePOI } from '@application/use-cases/DeletePOI'
 import type { POI } from '@domain/entities/POI'
 import { POI_TYPES, type PoiType } from '@shared/constants'
-import { PageHeader } from '~/components/shared/PageHeader'
 import { EmptyState } from '~/components/shared/EmptyState'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { TagInput } from '~/components/shared/TagInput'
@@ -66,7 +65,7 @@ import {
   MapPin,
 } from 'lucide-react'
 
-export const Route = createFileRoute('/_app/realms/pois')({
+export const Route = createFileRoute('/_app/realms/locations/pois')({
   component: POIsPage,
 })
 
@@ -249,58 +248,45 @@ function POIsPage() {
   }
 
   if (!activeRealmId) {
-    return (
-      <div>
-        <PageHeader title="Points of Interest" description="Settlements, dungeons, landmarks, and more." />
-        <EmptyState icon={Compass} title="Select a realm first" />
-      </div>
-    )
+    return <EmptyState icon={Compass} title="Select a realm first" />
   }
 
   if (regions.length === 0) {
     return (
-      <div>
-        <PageHeader title="Points of Interest" description="Settlements, dungeons, landmarks, and more." />
-        <EmptyState
-          icon={Compass}
-          title="Create regions first before adding POIs"
-        />
-      </div>
+      <EmptyState
+        icon={Compass}
+        title="Create regions first before adding POIs"
+      />
     )
   }
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Points of Interest"
-        description="Settlements, dungeons, landmarks, and more."
-        actions={
-          <Button onClick={openCreateDialog}>
-            <Plus className="mr-2 size-4" />
-            New POI
-          </Button>
-        }
-      />
-
-      {/* Region Selector */}
-      <div className="flex items-center gap-2">
-        <Label htmlFor="region-select">Region:</Label>
-        <Select
-          value={selectedRegionId}
-          onValueChange={(value) => setSelectedRegionId(value)}
-        >
-          <SelectTrigger id="region-select" className="w-64">
-            <SelectValue placeholder="All Regions" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Regions</SelectItem>
-            {regions.map((region) => (
-              <SelectItem key={region.id} value={region.id}>
-                {region.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex items-center justify-between gap-2">
+        {/* Region Selector */}
+        <div className="flex items-center gap-2">
+          <Label htmlFor="region-select">Region:</Label>
+          <Select
+            value={selectedRegionId}
+            onValueChange={(value) => setSelectedRegionId(value)}
+          >
+            <SelectTrigger id="region-select" className="w-64">
+              <SelectValue placeholder="All Regions" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Regions</SelectItem>
+              {regions.map((region) => (
+                <SelectItem key={region.id} value={region.id}>
+                  {region.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button onClick={openCreateDialog}>
+          <Plus className="mr-2 size-4" />
+          New POI
+        </Button>
       </div>
 
       {/* POI Cards Grid - Grouped by Region */}

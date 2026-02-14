@@ -123,7 +123,7 @@ function NPCDetailPage() {
                   {region && <Badge variant="secondary">{region.name}</Badge>}
                   {poi && (
                     <Link
-                      to="/realms/pois"
+                      to="/realms/locations/pois"
                       className="text-primary hover:underline text-sm"
                     >
                       {poi.name}
