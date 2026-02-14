@@ -158,6 +158,7 @@ function RealmsPage() {
         pathRepo: container.pathRepo,
         factionPresenceRepo: container.factionPresenceRepo,
         poiEventRepo: container.poiEventRepo,
+        gameMapRepo: container.gameMapRepo,
       })
 
       if (!data) return
@@ -199,6 +200,7 @@ function RealmsPage() {
         pathRepo: container.pathRepo,
         factionPresenceRepo: container.factionPresenceRepo,
         poiEventRepo: container.poiEventRepo,
+        gameMapRepo: container.gameMapRepo,
       })
 
       setActiveRealmId(newRealmId)

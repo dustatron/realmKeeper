@@ -22,7 +22,11 @@
       "Bash(bd create:*)",
       "Bash(bd ready:*)",
       "Bash(bd update:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(grep:*)",
+      "Bash(bd show:*)",
+      "Bash(bd close:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

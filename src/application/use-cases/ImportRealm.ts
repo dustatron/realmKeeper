@@ -10,7 +10,8 @@ import type { IPOIRepository } from '@application/ports/IPOIRepository'
 import type { IPathRepository } from '@application/ports/IPathRepository'
 import type { IFactionPresenceRepository } from '@application/ports/IFactionPresenceRepository'
 import type { IPOIEventRepository } from '@application/ports/IPOIEventRepository'
-import type { RealmExport } from './ExportRealm'
+import type { IGameMapRepository } from '@application/ports/IGameMapRepository'
+import type { RealmExport, GameMapExport } from './ExportRealm'
 import { newId } from '@shared/ulid'
 
 export interface ImportRealmDeps {
@@ -26,14 +27,24 @@ export interface ImportRealmDeps {
   pathRepo: IPathRepository
   factionPresenceRepo: IFactionPresenceRepository
   poiEventRepo: IPOIEventRepository
+  gameMapRepo: IGameMapRepository
 }
 
-// Accept v1 or v2 exports for backward compat
-type ImportData = RealmExport | (Omit<RealmExport, 'version' | 'factionPresences' | 'poiEvents'> & {
-  version: 1
-  factionPresences?: never
-  poiEvents?: never
-})
+// Accept v1, v2, or v3 exports for backward compat
+type ImportData =
+  | RealmExport
+  | (Omit<RealmExport, 'version' | 'factionPresences' | 'poiEvents' | 'gameMaps'> & {
+      version: 2
+      factionPresences: RealmExport['factionPresences']
+      poiEvents: RealmExport['poiEvents']
+      gameMaps?: never
+    })
+  | (Omit<RealmExport, 'version' | 'factionPresences' | 'poiEvents' | 'gameMaps'> & {
+      version: 1
+      factionPresences?: never
+      poiEvents?: never
+      gameMaps?: never
+    })
 
 export async function executeImportRealm(
   data: ImportData,
@@ -164,7 +175,7 @@ export async function executeImportRealm(
     })
   }
 
-  // POI events (v2 only)
+  // POI events (v2+)
   const poiEvents = data.poiEvents ?? []
   for (const evt of poiEvents) {
     await deps.poiEventRepo.create({
@@ -173,6 +184,46 @@ export async function executeImportRealm(
       poiId: remap(evt.poiId),
       realmId,
     })
+  }
+
+  // Game maps (v3+)
+  const gameMaps: GameMapExport[] = (data as { gameMaps?: GameMapExport[] }).gameMaps ?? []
+  for (const gm of gameMaps) {
+    // Convert base64 back to Blob
+    const binary = atob(gm.imageBase64)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i)
+    }
+    const imageBlob = new Blob([bytes], { type: 'image/png' })
+
+    await deps.gameMapRepo.create({
+      id: remap(gm.id),
+      name: gm.name,
+      ownerRealmId: gm.ownerRealmId ? remap(gm.ownerRealmId) : null,
+      ownerPoiId: gm.ownerPoiId ? remap(gm.ownerPoiId) : null,
+      imageBlob,
+      width: gm.width,
+      height: gm.height,
+      sortOrder: gm.sortOrder,
+      createdAt: gm.createdAt,
+      updatedAt: gm.updatedAt,
+    })
+  }
+
+  // Remap mapRef on POIs (update after maps are imported)
+  for (const p of data.pois) {
+    const poiData = p as unknown as Record<string, unknown>
+    if (poiData.mapRef) {
+      const newPoiId = remap(p.id)
+      const poi = await deps.poiRepo.getById(newPoiId)
+      if (poi) {
+        await deps.poiRepo.update({
+          ...poi,
+          mapRef: remap(poiData.mapRef as string),
+        })
+      }
+    }
   }
 
   return realmId

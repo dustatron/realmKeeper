@@ -14,6 +14,7 @@ import type { TableSet, TableDef } from '@domain/entities/TableDef'
 import type { RollHistory } from '@domain/entities/RollHistory'
 import type { FactionPresence } from '@domain/entities/FactionPresence'
 import type { POIEvent } from '@domain/entities/POIEvent'
+import type { GameMap } from '@domain/entities/GameMap'
 import { seedDatabase } from './seed'
 
 const db = new Dexie('RealmKeeperDB') as Dexie & {
@@ -33,6 +34,7 @@ const db = new Dexie('RealmKeeperDB') as Dexie & {
   rollHistory: EntityTable<RollHistory, 'id'>
   factionPresences: EntityTable<FactionPresence, 'id'>
   poiEvents: EntityTable<POIEvent, 'id'>
+  gameMaps: EntityTable<GameMap, 'id'>
 }
 
 const storesV5 = {
@@ -52,7 +54,7 @@ const storesV5 = {
   rollHistory: 'id, realmId, tableId, timestamp',
 }
 
-const stores = {
+const storesV6 = {
   systemConfigs: 'id',
   realms: 'id, systemId',
   regions: 'id, realmId',
@@ -69,6 +71,12 @@ const stores = {
   rollHistory: 'id, realmId, tableId, timestamp',
   factionPresences: 'id, factionId, poiId, [factionId+poiId]',
   poiEvents: 'id, poiId, realmId, type, isActive, [realmId+isActive]',
+}
+
+const stores = {
+  ...storesV6,
+  pois: 'id, regionId, parentPoiId, type, mapRef',
+  gameMaps: 'id, ownerRealmId, ownerPoiId',
 }
 
 db.version(1).stores(storesV5)
@@ -114,7 +122,7 @@ db.version(5).stores(storesV5).upgrade(async (tx) => {
 })
 
 // v6: POI hierarchy overhaul — new fields, watch string→number, new tables
-db.version(6).stores(stores).upgrade(async (tx) => {
+db.version(6).stores(storesV6).upgrade(async (tx) => {
   const watchNameToNumber: Record<string, number> = {
     morning: 1,
     afternoon: 2,
@@ -190,6 +198,9 @@ db.version(6).stores(stores).upgrade(async (tx) => {
     }
   }
 })
+
+// v7: Add gameMaps table + mapRef index on pois
+db.version(7).stores(stores)
 
 // Seed system configs on first DB creation
 db.on('populate', (tx) => {

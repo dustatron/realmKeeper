@@ -2,7 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
-import { usePOI } from '~/ui/hooks/usePOIs'
+import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
 import { useRegion } from '~/ui/hooks/useRegions'
 import { usePOIBreadcrumb } from '~/ui/hooks/usePOIBreadcrumb'
 import { usePOIChildren } from '~/ui/hooks/usePOIChildren'
@@ -10,12 +10,16 @@ import { useNPCsByPoi } from '~/ui/hooks/useNPCsByPoi'
 import { useFactionPresencesByPoi } from '~/ui/hooks/useFactionPresences'
 import { useFaction } from '~/ui/hooks/useFactions'
 import { usePathsByPoi } from '~/ui/hooks/usePaths'
+import { usePOIMaps } from '~/ui/hooks/useGameMaps'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
 import { executeDeletePOI } from '@application/use-cases/DeletePOI'
 import { executeCreatePOI } from '@application/use-cases/CreatePOI'
 import { executeCreatePOIEvent } from '@application/use-cases/CreatePOIEvent'
 import { executeDeletePOIEvent } from '@application/use-cases/DeletePOIEvent'
+import { executeCreateGameMap } from '@application/use-cases/CreateGameMap'
+import { MapUploadDialog } from '~/components/map/MapUploadDialog'
+import { InteractiveMap } from '~/components/map/InteractiveMap'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { EmptyState } from '~/components/shared/EmptyState'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
@@ -69,6 +73,8 @@ import {
   Sparkles,
   ChevronRight,
   CalendarClock,
+  MapPinned,
+  ExternalLink,
 } from 'lucide-react'
 import { POI_TYPES, POI_EVENT_TYPES, SEASONS, type PoiType, type POIEventType, type Season } from '@shared/constants'
 import type { POI } from '@domain/entities/POI'
@@ -107,8 +113,10 @@ function POIDetailPage() {
     () => (poiId ? db.poiEvents.where('poiId').equals(poiId).toArray() : []),
     [poiId]
   ) ?? []
+  const poiMaps = usePOIMaps(poiId)
   const container = useContainer()
 
+  const [mapUploadDialogOpen, setMapUploadDialogOpen] = useState(false)
   const [editSheetOpen, setEditSheetOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [createChildDialogOpen, setCreateChildDialogOpen] = useState(false)
@@ -269,6 +277,14 @@ function POIDetailPage() {
     setCreateChildDialogOpen(false)
   }
 
+  const handleUploadMap = async (data: { name: string; imageBlob: Blob; width: number; height: number }) => {
+    if (!poi) return
+    await executeCreateGameMap(
+      { ...data, ownerPoiId: poi.id },
+      { gameMapRepo: container.gameMapRepo }
+    )
+  }
+
   const getPoiTypeColor = (type: PoiType): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (type) {
       case 'settlement':
@@ -343,6 +359,10 @@ function POIDetailPage() {
                 Back to POIs
               </Button>
             </Link>
+            <Button size="sm" variant="outline" onClick={() => setMapUploadDialogOpen(true)}>
+              <MapPinned className="mr-2 size-4" />
+              Add Map
+            </Button>
             <Button size="sm" onClick={openEditSheet}>
               <Pencil className="mr-2 size-4" />
               Edit
@@ -354,6 +374,11 @@ function POIDetailPage() {
           </div>
         }
       />
+
+      {/* Inline Map Viewer */}
+      {poiMaps.length > 0 && (
+        <POIDetailMap gameMap={poiMaps[0]} poiMaps={poiMaps} parentPoiId={poiId} />
+      )}
 
       <div className="space-y-4">
         {/* POI Info Card */}
@@ -580,6 +605,51 @@ function POIDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Maps */}
+            <div>
+              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <MapPinned className="size-4" />
+                Maps ({poiMaps.length})
+              </h4>
+              {poiMaps.length > 0 ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {poiMaps.map((m) => (
+                    <Link
+                      key={m.id}
+                      to="/realms/maps/$mapId"
+                      params={{ mapId: m.id }}
+                      className="block"
+                    >
+                      <div className="flex items-center gap-2 rounded-md border p-2 hover:bg-accent transition-colors">
+                        <MapPinned className="size-4 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{m.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {m.width} × {m.height}px
+                          </div>
+                        </div>
+                        <ExternalLink className="size-3 text-muted-foreground shrink-0" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">No maps uploaded.</div>
+              )}
+              {poi.mapRef && (
+                <div className="mt-2">
+                  <Link
+                    to="/realms/maps/$mapId"
+                    params={{ mapId: poi.mapRef }}
+                    className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                  >
+                    <MapPinned className="size-3.5" />
+                    View on parent map
+                  </Link>
+                </div>
+              )}
+            </div>
 
             {/* Events */}
             <div>
@@ -1014,7 +1084,42 @@ function POIDetailPage() {
         variant="destructive"
         onConfirm={handleDelete}
       />
+
+      {/* Map Upload Dialog */}
+      <MapUploadDialog
+        open={mapUploadDialogOpen}
+        onOpenChange={setMapUploadDialogOpen}
+        onUpload={handleUploadMap}
+      />
     </div>
+  )
+}
+
+function POIDetailMap({ gameMap, poiMaps, parentPoiId }: { gameMap: import('@domain/entities/GameMap').GameMap; poiMaps: import('@domain/entities/GameMap').GameMap[]; parentPoiId: string }) {
+  const [activeMapIndex, setActiveMapIndex] = useState(0)
+  const activeMap = poiMaps[activeMapIndex] ?? gameMap
+
+  return (
+    <Card className="overflow-hidden">
+      {poiMaps.length > 1 && (
+        <div className="flex items-center gap-1 px-3 pt-3">
+          {poiMaps.map((m, i) => (
+            <Button
+              key={m.id}
+              variant={i === activeMapIndex ? 'secondary' : 'ghost'}
+              size="sm"
+              className="text-xs"
+              onClick={() => setActiveMapIndex(i)}
+            >
+              {m.name}
+            </Button>
+          ))}
+        </div>
+      )}
+      <CardContent className="p-0">
+        <InteractiveMap gameMap={activeMap} className="h-[300px] md:h-[500px]" parentPoiId={parentPoiId} />
+      </CardContent>
+    </Card>
   )
 }
 
