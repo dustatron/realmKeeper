@@ -24,6 +24,7 @@ export async function executeCreateFaction(
     isParty: false,
     regionId: null,
     headquartersPoiId: null,
+    leaderNpcId: null,
     agentNpcIds: [],
     agendaGoals: [],
     advantages: [],

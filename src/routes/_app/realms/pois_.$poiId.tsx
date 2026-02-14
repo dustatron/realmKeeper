@@ -1127,7 +1127,7 @@ function POIDetailMap({ gameMap, poiMaps, parentPoiId }: { gameMap: import('@dom
           ))}
         </div>
       )}
-      <InteractiveMap gameMap={activeMap} className="h-[300px] md:h-[500px]" parentPoiId={parentPoiId} hideMapName />
+      <InteractiveMap gameMap={activeMap} className="h-[300px] md:h-[500px]" parentPoiId={parentPoiId} />
     </div>
   )
 }

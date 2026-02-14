@@ -212,6 +212,52 @@ db.version(8).stores(stores).upgrade(async (tx) => {
   }
 })
 
+// v9: Add leaderNpcId to factions
+db.version(9).stores(stores).upgrade(async (tx) => {
+  const factions = await tx.table('factions').toArray()
+  for (const f of factions) {
+    if (f.leaderNpcId === undefined) {
+      await tx.table('factions').put({ ...f, leaderNpcId: null })
+    }
+  }
+})
+
+// v10: Add features/dangers/settlements/resources to regions
+db.version(10).stores(stores).upgrade(async (tx) => {
+  const regions = await tx.table('regions').toArray()
+  for (const r of regions) {
+    if (r.features === undefined) {
+      await tx.table('regions').put({
+        ...r,
+        features: [],
+        dangers: [],
+        settlements: [],
+        resources: [],
+      })
+    }
+  }
+})
+
+// v11: Add boundary to regions
+db.version(11).stores(stores).upgrade(async (tx) => {
+  const regions = await tx.table('regions').toArray()
+  for (const r of regions) {
+    if (r.boundary === undefined) {
+      await tx.table('regions').put({ ...r, boundary: null })
+    }
+  }
+})
+
+// v12: Add color to regions
+db.version(12).stores(stores).upgrade(async (tx) => {
+  const regions = await tx.table('regions').toArray()
+  for (const r of regions) {
+    if (r.color === undefined) {
+      await tx.table('regions').put({ ...r, color: null })
+    }
+  }
+})
+
 // Seed system configs on first DB creation
 db.on('populate', (tx) => {
   seedDatabase(tx)

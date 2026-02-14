@@ -24,6 +24,7 @@ import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '~/components/ui/sheet'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '~/components/ui/dialog'
 import {
@@ -92,6 +93,8 @@ function RegionDetailPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [createPoiOpen, setCreatePoiOpen] = useState(false)
   const [createFactionOpen, setCreateFactionOpen] = useState(false)
+  const [assignFactionOpen, setAssignFactionOpen] = useState(false)
+  const [assignFactionId, setAssignFactionId] = useState<string>('')
   const [createEventOpen, setCreateEventOpen] = useState(false)
   const [isGeneratingNPC, setIsGeneratingNPC] = useState(false)
 
@@ -139,6 +142,17 @@ function RegionDetailPage() {
       return [...regionFactions, ...presenceFactions]
     },
     [regionId, region?.realmId, poiIds.join(',')]
+  ) ?? []
+
+  // Realm factions not already in this region (for "assign existing" dialog)
+  const factionIds = new Set(factions.map(f => f.id))
+  const unassignedFactions = useLiveQuery(
+    async () => {
+      if (!realm) return []
+      const all = await db.factions.where('realmId').equals(realm.id).toArray()
+      return all.filter(f => f.regionId !== regionId && !factionIds.has(f.id))
+    },
+    [realm?.id, regionId, [...factionIds].join(',')]
   ) ?? []
 
   const topLevelPOIs = useMemo(() => pois.filter(p => p.parentPoiId === null), [pois])
@@ -219,6 +233,15 @@ function RegionDetailPage() {
     setCreateFactionOpen(false)
     setFactionForm({ name: '', type: '' })
     navigate({ to: '/realms/factions/$factionId', params: { factionId: faction.id } })
+  }
+
+  const handleAssignFaction = async () => {
+    if (!assignFactionId) return
+    const faction = await db.factions.get(assignFactionId)
+    if (!faction) return
+    await container.factionRepo.update({ ...faction, regionId })
+    setAssignFactionOpen(false)
+    setAssignFactionId('')
   }
 
   const handleCreateEvent = async () => {
@@ -390,10 +413,18 @@ function RegionDetailPage() {
               <Swords className="size-4" />
               Factions ({factions.length})
             </CardTitle>
-            <Button variant="outline" size="sm" className="h-7" onClick={() => setCreateFactionOpen(true)}>
-              <Plus className="mr-1.5 size-3.5" />
-              Add
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7">
+                  <Plus className="mr-1.5 size-3.5" />
+                  Add
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setCreateFactionOpen(true)}>Create New</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setAssignFactionOpen(true)}>Assign Existing</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </CardHeader>
           <CardContent>
             {factions.length === 0 ? (
@@ -628,6 +659,38 @@ function RegionDetailPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateFactionOpen(false)}>Cancel</Button>
             <Button onClick={handleCreateFaction} disabled={!factionForm.name.trim()}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Existing Faction Dialog */}
+      <Dialog open={assignFactionOpen} onOpenChange={(open) => { setAssignFactionOpen(open); if (!open) setAssignFactionId('') }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Faction to Region</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {unassignedFactions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No unassigned factions available.</p>
+            ) : (
+              <div>
+                <Label>Faction</Label>
+                <Select value={assignFactionId} onValueChange={setAssignFactionId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a faction..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unassignedFactions.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setAssignFactionOpen(false); setAssignFactionId('') }}>Cancel</Button>
+            <Button onClick={handleAssignFaction} disabled={!assignFactionId}>Assign</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

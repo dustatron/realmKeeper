@@ -70,7 +70,16 @@ export async function executeImportRealm(
 
   // Regions
   for (const r of data.regions) {
-    await deps.regionRepo.create({ ...r, id: remap(r.id), realmId })
+    const regionData = r as unknown as Record<string, unknown>
+    await deps.regionRepo.create({
+      ...r,
+      id: remap(r.id),
+      realmId,
+      features: (regionData.features as string[]) ?? [],
+      dangers: (regionData.dangers as string[]) ?? [],
+      settlements: (regionData.settlements as string[]) ?? [],
+      resources: (regionData.resources as string[]) ?? [],
+    } as Parameters<typeof deps.regionRepo.create>[0])
   }
 
   // Factions
@@ -83,6 +92,7 @@ export async function executeImportRealm(
       agendaGoals: f.agendaGoals.map((g) => ({ ...g, id: remap(g.id), timeframe: g.timeframe ?? 'long-term', progress: g.progress ?? 0, segments: g.segments ?? 4 })),
       advantages: f.advantages.map((a) => ({ ...a, id: remap(a.id) })),
       obstacles: (f.obstacles ?? []).map((o: { id: string; description: string }) => ({ ...o, id: remap(o.id) })),
+      leaderNpcId: f.leaderNpcId ? remap(f.leaderNpcId) : null,
       regionId: f.regionId ? remap(f.regionId) : null,
       headquartersPoiId: f.headquartersPoiId ? remap(f.headquartersPoiId) : null,
       sortOrder: f.sortOrder ?? 0,

@@ -443,9 +443,11 @@ function FactionDetailPage() {
                         params={{ npcId: npc.id }}
                         className="text-sm text-primary hover:underline font-medium"
                       >
+                        {f.leaderNpcId === npc.id && <Crown className="inline size-3.5 text-amber-500 mr-1" />}
                         {npc.name}
                       </Link>
                       <div className="flex items-center gap-1">
+                        {f.leaderNpcId === npc.id && <Badge variant="outline" className="text-xs text-amber-500 border-amber-500/50">Leader</Badge>}
                         {npc.traits.slice(0, 2).map((trait) => (
                           <Badge key={trait} variant="secondary" className="text-xs">{trait}</Badge>
                         ))}

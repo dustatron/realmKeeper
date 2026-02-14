@@ -57,6 +57,7 @@ export async function executeCreateRealm(
     isParty: true,
     regionId: null,
     headquartersPoiId: null,
+    leaderNpcId: null,
     agentNpcIds: [],
     agendaGoals: [],
     advantages: [],

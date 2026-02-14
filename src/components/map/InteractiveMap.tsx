@@ -10,6 +10,7 @@ import { executeRemovePOIFromMap } from '@application/use-cases/RemovePOIFromMap
 import { executeCreatePOI } from '@application/use-cases/CreatePOI'
 import { executeCreatePath } from '@application/use-cases/CreatePath'
 import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
+import { executeUpdateRegion } from '@application/use-cases/UpdateRegion'
 import { MapViewer, type MapMode, type MapViewerHandle } from '~/components/map/MapViewer'
 import { MapToolbar } from '~/components/map/MapToolbar'
 import { POIPlacementSheet } from '~/components/map/POIPlacementSheet'
@@ -49,6 +50,7 @@ import {
   Tent,
   Sparkles,
   MapPin,
+  Trash2,
 } from 'lucide-react'
 import {
   POI_TYPES,
@@ -60,6 +62,7 @@ import {
 } from '@shared/constants'
 import type { GameMap } from '@domain/entities/GameMap'
 import type { POI } from '@domain/entities/POI'
+import type { Region } from '@domain/entities/Region'
 
 const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }>> = {
   settlement: Building2,
@@ -81,13 +84,13 @@ interface InteractiveMapProps {
   gameMap: GameMap
   /** Tailwind classes for the outer container. Controls height, etc. */
   className?: string
+  /** Inline styles for the outer container (e.g. aspect-ratio) */
+  style?: React.CSSProperties
   /** If set, new POIs created from the map will be children of this POI */
   parentPoiId?: string | null
-  /** Hide the map name in the toolbar */
-  hideMapName?: boolean
 }
 
-export function InteractiveMap({ gameMap, className, parentPoiId, hideMapName }: InteractiveMapProps) {
+export function InteractiveMap({ gameMap, className, style, parentPoiId }: InteractiveMapProps) {
   const navigate = useNavigate()
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const container = useContainer()
@@ -99,12 +102,15 @@ export function InteractiveMap({ gameMap, className, parentPoiId, hideMapName }:
   const mapHandleRef = useRef<MapViewerHandle | null>(null)
   const showLabels = useUIStore((s) => s.mapShowLabels)
   const setShowLabels = useUIStore((s) => s.setMapShowLabels)
+  const showRegions = useUIStore((s) => s.mapShowRegions)
+  const setShowRegions = useUIStore((s) => s.setMapShowRegions)
   const savedViewState = useUIStore((s) => s.mapViewStates[gameMap.id])
   const setMapViewState = useUIStore((s) => s.setMapViewState)
   const [mode, setMode] = useState<MapMode>('view')
   const [placementSheetOpen, setPlacementSheetOpen] = useState(false)
   const [selectedPoiForPlacement, setSelectedPoiForPlacement] = useState<POI | null>(null)
   const [poiPopup, setPoiPopup] = useState<POI | null>(null)
+  const [regionPopup, setRegionPopup] = useState<Region | null>(null)
 
   // Create POI state
   const [createPoiDialogOpen, setCreatePoiDialogOpen] = useState(false)
@@ -126,6 +132,11 @@ export function InteractiveMap({ gameMap, className, parentPoiId, hideMapName }:
     terrain: 'plains' as TerrainType,
     baseTravelWatches: 3,
   })
+
+  // Draw-region state
+  const [regionDialogOpen, setRegionDialogOpen] = useState(false)
+  const [pendingBoundary, setPendingBoundary] = useState<{ x: number; y: number }[] | null>(null)
+  const [selectedRegionId, setSelectedRegionId] = useState('')
 
   const scopedPois = parentPoiId
     ? allPois.filter((p) => p.parentPoiId === parentPoiId)
@@ -220,6 +231,29 @@ export function InteractiveMap({ gameMap, className, parentPoiId, hideMapName }:
     setPendingPosition(null)
   }
 
+  const handleRegionBoundaryDrawn = useCallback(
+    (vertices: { x: number; y: number }[]) => {
+      setPendingBoundary(vertices)
+      setSelectedRegionId(regions[0]?.id ?? '')
+      setRegionDialogOpen(true)
+    },
+    [regions],
+  )
+
+  const handleAssignRegionBoundary = async () => {
+    if (!pendingBoundary || !selectedRegionId) return
+    const region = regions.find((r) => r.id === selectedRegionId)
+    if (!region) return
+    await executeUpdateRegion(
+      { ...region, boundary: pendingBoundary },
+      { regionRepo: container.regionRepo },
+    )
+    setRegionDialogOpen(false)
+    setPendingBoundary(null)
+    setSelectedRegionId('')
+    setMode('view')
+  }
+
   const handleModeChange = (newMode: MapMode) => {
     setMode(newMode)
     if (newMode === 'place-poi') {
@@ -231,6 +265,9 @@ export function InteractiveMap({ gameMap, className, parentPoiId, hideMapName }:
     if (newMode !== 'draw-path') {
       setDrawPathFrom(null)
       setDrawPathTo(null)
+    }
+    if (newMode !== 'draw-region') {
+      setPendingBoundary(null)
     }
   }
 
@@ -254,9 +291,9 @@ export function InteractiveMap({ gameMap, className, parentPoiId, hideMapName }:
   }
 
   return (
-    <div className={`flex flex-col ${className ?? ''}`}>
+    <div className={`flex flex-col ${className ?? ''}`} style={style}>
       {/* Status hints */}
-      {(mode === 'place-poi' || mode === 'draw-path') && (
+      {(mode === 'place-poi' || mode === 'draw-path' || mode === 'draw-region') && (
         <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-muted/50">
           {mode === 'place-poi' && selectedPoiForPlacement && (
             <Badge variant="secondary">Click map to place: {selectedPoiForPlacement.name}</Badge>
@@ -264,18 +301,25 @@ export function InteractiveMap({ gameMap, className, parentPoiId, hideMapName }:
           {mode === 'place-poi' && !selectedPoiForPlacement && (
             <Badge variant="outline">Click map to create new POI, or select one from sidebar</Badge>
           )}
+          {mode === 'draw-path' && !drawPathFrom && (
+            <Badge variant="outline">Click a POI to start drawing a path</Badge>
+          )}
           {mode === 'draw-path' && drawPathFrom && !drawPathTo && (
             <Badge variant="secondary">Click second POI to draw path from: {drawPathFrom.name}</Badge>
+          )}
+          {mode === 'draw-region' && (
+            <Badge variant="outline">Click to place vertices. Click first vertex or double-click to close polygon.</Badge>
           )}
         </div>
       )}
 
       <MapToolbar
-        mapName={hideMapName ? undefined : gameMap.name}
         mode={mode}
         showLabels={showLabels}
+        showRegions={showRegions}
         onModeChange={handleModeChange}
         onToggleLabels={() => setShowLabels(!showLabels)}
+        onToggleRegions={() => setShowRegions(!showRegions)}
         onUpload={() => {}}
         onZoomToFit={() => mapHandleRef.current?.zoomToFit()}
       />
@@ -285,8 +329,10 @@ export function InteractiveMap({ gameMap, className, parentPoiId, hideMapName }:
           map={gameMap}
           pois={poisOnMap}
           paths={pathsOnMap}
+          regions={regions}
           mode={mode}
           showLabels={showLabels}
+          showRegions={showRegions}
           initialViewState={savedViewState}
           onViewStateChange={(zoom, center) => setMapViewState(gameMap.id, zoom, center)}
           selectedPoiId={selectedPoiForPlacement?.id}
@@ -294,6 +340,8 @@ export function InteractiveMap({ gameMap, className, parentPoiId, hideMapName }:
           onPoiClick={handlePoiClick}
           onMapClick={handleMapClick}
           onPoiDrag={handlePoiDrag}
+          onRegionBoundaryDrawn={handleRegionBoundaryDrawn}
+          onRegionClick={setRegionPopup}
         />
       </div>
 
@@ -321,6 +369,33 @@ export function InteractiveMap({ gameMap, className, parentPoiId, hideMapName }:
         onChangeColor={async (poi, color) => {
           await executeUpdatePOI({ ...poi, markerColor: color }, { poiRepo: container.poiRepo })
           setPoiPopup({ ...poi, markerColor: color })
+        }}
+      />
+
+      {/* Region Popup Dialog */}
+      <RegionPopupDialog
+        region={regionPopup}
+        allRegions={regions}
+        onClose={() => setRegionPopup(null)}
+        onChangeColor={async (region, color) => {
+          await executeUpdateRegion({ ...region, color }, { regionRepo: container.regionRepo })
+          setRegionPopup({ ...region, color })
+        }}
+        onChangeTerrain={async (region, terrain) => {
+          await executeUpdateRegion({ ...region, terrain }, { regionRepo: container.regionRepo })
+          setRegionPopup({ ...region, terrain })
+        }}
+        onDeleteBoundary={async (region) => {
+          await executeUpdateRegion({ ...region, boundary: null }, { regionRepo: container.regionRepo })
+          setRegionPopup(null)
+        }}
+        onReassignBoundary={async (fromRegion, toRegionId) => {
+          const toRegion = regions.find((r) => r.id === toRegionId)
+          if (!toRegion) return
+          // Move boundary from one region to another
+          await executeUpdateRegion({ ...toRegion, boundary: fromRegion.boundary }, { regionRepo: container.regionRepo })
+          await executeUpdateRegion({ ...fromRegion, boundary: null }, { regionRepo: container.regionRepo })
+          setRegionPopup(null)
         }}
       />
 
@@ -425,6 +500,37 @@ export function InteractiveMap({ gameMap, className, parentPoiId, hideMapName }:
           <DialogFooter>
             <Button variant="outline" onClick={() => { setPathDialogOpen(false); setDrawPathFrom(null); setDrawPathTo(null); setPathForm({ name: '', type: 'road', terrain: 'plains', baseTravelWatches: 3 }) }}>Cancel</Button>
             <Button onClick={handleCreatePath}>Create Path</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Region Boundary Dialog */}
+      <Dialog open={regionDialogOpen} onOpenChange={(open) => {
+        if (!open) { setRegionDialogOpen(false); setPendingBoundary(null) }
+      }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Assign Region Boundary</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Polygon drawn with {pendingBoundary?.length ?? 0} vertices. Choose which region to assign it to.
+            </p>
+            <div>
+              <Label>Region</Label>
+              <Select value={selectedRegionId} onValueChange={setSelectedRegionId}>
+                <SelectTrigger><SelectValue placeholder="Select region…" /></SelectTrigger>
+                <SelectContent>
+                  {regions.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}{r.boundary ? ' (replace existing)' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setRegionDialogOpen(false); setPendingBoundary(null) }}>Cancel</Button>
+            <Button onClick={handleAssignRegionBoundary} disabled={!selectedRegionId}>Assign</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -567,6 +673,150 @@ function POIPopupDialog({
           >
             <Eye className="mr-2 size-4" />
             View Details
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─── Region Popup Dialog (shows when clicking a region polygon) ──────
+
+const REGION_COLORS: Record<string, string> = {
+  plains: '#22c55e',
+  forest: '#166534',
+  hills: '#d97706',
+  mountain: '#64748b',
+  swamp: '#713f12',
+  desert: '#fbbf24',
+  coast: '#06b6d4',
+  road: '#78716c',
+  tundra: '#94a3b8',
+  other: '#8b5cf6',
+}
+
+const REGION_PALETTE = [
+  null, // terrain default
+  '#ef4444',
+  '#f97316',
+  '#eab308',
+  '#22c55e',
+  '#06b6d4',
+  '#3b82f6',
+  '#8b5cf6',
+  '#ec4899',
+  '#78716c',
+  '#166534',
+  '#1e293b',
+]
+
+function RegionPopupDialog({
+  region,
+  allRegions,
+  onClose,
+  onChangeColor,
+  onChangeTerrain,
+  onDeleteBoundary,
+  onReassignBoundary,
+}: {
+  region: Region | null
+  allRegions: Region[]
+  onClose: () => void
+  onChangeColor: (region: Region, color: string | null) => void
+  onChangeTerrain: (region: Region, terrain: string) => void
+  onDeleteBoundary: (region: Region) => void
+  onReassignBoundary: (fromRegion: Region, toRegionId: string) => void
+}) {
+  if (!region) return null
+
+  const terrainDefault = REGION_COLORS[region.terrain] ?? REGION_COLORS.other
+  const otherRegions = allRegions.filter((r) => r.id !== region.id)
+
+  return (
+    <Dialog open={!!region} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{region.name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          {/* Region reassign */}
+          {otherRegions.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">Assign to Region</h4>
+              <Select value={region.id} onValueChange={(v) => onReassignBoundary(region, v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={region.id}>{region.name} (current)</SelectItem>
+                  {otherRegions.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}{r.boundary ? ' (replace boundary)' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Terrain picker */}
+          <div>
+            <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">Terrain</h4>
+            <Select value={region.terrain} onValueChange={(v) => onChangeTerrain(region, v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {TERRAIN_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    <span className="flex items-center gap-2">
+                      <span className="size-3 rounded-full inline-block" style={{ backgroundColor: REGION_COLORS[t] ?? REGION_COLORS.other }} />
+                      {t}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Color picker */}
+          <div>
+            <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">Color</h4>
+            <div className="flex flex-wrap gap-1">
+              {REGION_PALETTE.map((c) => {
+                const isSelected = (region.color ?? null) === c
+                const displayColor = c ?? terrainDefault
+                return (
+                  <button
+                    key={c ?? 'default'}
+                    className={`size-6 rounded-full border-2 transition-transform hover:scale-110 ${
+                      isSelected ? 'border-foreground scale-110' : 'border-transparent'
+                    }`}
+                    style={{ backgroundColor: displayColor }}
+                    onClick={() => onChangeColor(region, c)}
+                    title={c ?? `Terrain default (${region.terrain})`}
+                  >
+                    {!c && (
+                      <span className="flex items-center justify-center size-full rounded-full text-white text-[9px] font-bold">T</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Delete boundary */}
+          <div>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="w-full"
+              onClick={() => onDeleteBoundary(region)}
+            >
+              <Trash2 className="mr-2 size-4" />
+              Delete Boundary
+            </Button>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Close
           </Button>
         </DialogFooter>
       </DialogContent>

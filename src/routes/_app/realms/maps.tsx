@@ -135,7 +135,7 @@ function MapsPage() {
         {/* ── Realm Map tab ── */}
         <TabsContent value="realm-map">
           {realmMap ? (
-            <InteractiveMap gameMap={realmMap} className="h-[calc(100vh-12rem)]" />
+            <InteractiveMap gameMap={realmMap} className="h-[calc(100vh-10rem)]" />
           ) : (
             <EmptyState
               icon={MapPinned}
@@ -180,11 +180,12 @@ function MapsPage() {
                         <CardContent className="p-3">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <div className="font-medium text-sm truncate">{map.name}</div>
+                              <div className="font-medium text-sm truncate">
+                                {map.ownerPoiId && poisById.get(map.ownerPoiId)
+                                  ? poisById.get(map.ownerPoiId)!.name
+                                  : 'Realm Map'}
+                              </div>
                               <div className="text-xs text-muted-foreground mt-0.5">
-                                {map.ownerPoiId && poisById.get(map.ownerPoiId) && (
-                                  <span className="text-primary">{poisById.get(map.ownerPoiId)!.name} · </span>
-                                )}
                                 {map.width} × {map.height}px
                                 {poisByMap.has(map.id) && (
                                   <> · {poisByMap.get(map.id)} POI{poisByMap.get(map.id)! > 1 ? 's' : ''}</>
