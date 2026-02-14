@@ -222,6 +222,22 @@ db.version(9).stores(stores).upgrade(async (tx) => {
   }
 })
 
+// v10: Add features/dangers/settlements/resources to regions
+db.version(10).stores(stores).upgrade(async (tx) => {
+  const regions = await tx.table('regions').toArray()
+  for (const r of regions) {
+    if (r.features === undefined) {
+      await tx.table('regions').put({
+        ...r,
+        features: [],
+        dangers: [],
+        settlements: [],
+        resources: [],
+      })
+    }
+  }
+})
+
 // Seed system configs on first DB creation
 db.on('populate', (tx) => {
   seedDatabase(tx)

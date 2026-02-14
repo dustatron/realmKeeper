@@ -714,7 +714,7 @@ function FactionEditPage() {
                   <div className="flex items-center gap-2">
                     {leaderNpcId === npc.id && <Crown className="size-3.5 text-amber-500" />}
                     <span className="text-sm font-medium">{npc.name}</span>
-                    {!npc.isAlive && <Badge variant="destructive" className="text-xs">Dead</Badge>}
+                    {npc.lifeStatus !== 'alive' && <Badge variant="destructive" className="text-xs">{npc.lifeStatus.charAt(0).toUpperCase() + npc.lifeStatus.slice(1)}</Badge>}
                   </div>
                   <div className="flex items-center gap-1">
                     <Button
@@ -750,6 +750,7 @@ function FactionEditPage() {
           systemConfig={systemConfig}
           factions={allFactions}
           regions={regions}
+          pois={realmPOIs}
           open={!!editingNPC}
           onOpenChange={(open) => { if (!open) setEditingNPC(null) }}
           onSave={handleSaveNPC}

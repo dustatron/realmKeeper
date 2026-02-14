@@ -70,7 +70,16 @@ export async function executeImportRealm(
 
   // Regions
   for (const r of data.regions) {
-    await deps.regionRepo.create({ ...r, id: remap(r.id), realmId })
+    const regionData = r as unknown as Record<string, unknown>
+    await deps.regionRepo.create({
+      ...r,
+      id: remap(r.id),
+      realmId,
+      features: (regionData.features as string[]) ?? [],
+      dangers: (regionData.dangers as string[]) ?? [],
+      settlements: (regionData.settlements as string[]) ?? [],
+      resources: (regionData.resources as string[]) ?? [],
+    } as Parameters<typeof deps.regionRepo.create>[0])
   }
 
   // Factions

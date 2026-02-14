@@ -16,21 +16,8 @@
       "mcp__chrome-devtools__take_screenshot",
       "mcp__chrome-devtools__take_snapshot",
       "mcp__chrome-devtools__click",
-      "Bash(bd list:*)",
-      "Bash(bd onboard:*)",
-      "Bash(bd prime:*)",
-      "Bash(bd create:*)",
-      "Bash(bd ready:*)",
-      "Bash(bd update:*)",
-      "Bash(npm run build:*)",
-      "Bash(grep:*)",
-      "Bash(bd show:*)",
-      "Bash(bd close:*)",
-      "Bash(npm install:*)",
-      "Bash(git checkout:*)",
-      "Bash(git add:*)",
-      "Bash(git rebase:*)",
-      "Bash(GIT_EDITOR=true git rebase:*)"
+      "Bash(git pull:*)",
+      "Bash(git stash:*)"
     ]
   }
 }

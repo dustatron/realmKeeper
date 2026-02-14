@@ -20,6 +20,10 @@ export async function executeCreateRegion(
     name: input.name,
     description: input.description ?? '',
     terrain: input.terrain ?? '',
+    features: [],
+    dangers: [],
+    settlements: [],
+    resources: [],
     createdAt: now,
     updatedAt: now,
   }
