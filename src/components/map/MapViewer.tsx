@@ -181,14 +181,17 @@ export function MapViewer({
 
     mapInstance.on('load', () => {
       setMapReady(true)
-      onReady?.({
-        zoomToFit: () => {
-          mapInstance.fitBounds(
-            [[swLng, swLat], [neLng, neLat]],
-            { padding: 20, duration: 300 }
-          )
-        },
-      })
+      const fitToImage = (duration = 300) => {
+        mapInstance.fitBounds(
+          [[swLng, swLat], [neLng, neLat]],
+          { padding: 20, duration }
+        )
+      }
+      onReady?.({ zoomToFit: () => fitToImage(300) })
+      // Auto-fit on first load when no saved view state
+      if (!initialViewState) {
+        fitToImage(0)
+      }
     })
 
     mapInstance.on('moveend', () => {

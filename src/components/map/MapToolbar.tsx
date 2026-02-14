@@ -10,7 +10,6 @@ import {
 import type { MapMode } from './MapViewer'
 
 interface MapToolbarProps {
-  mapName?: string
   mode: MapMode
   showLabels: boolean
   onModeChange: (mode: MapMode) => void
@@ -20,7 +19,6 @@ interface MapToolbarProps {
 }
 
 export function MapToolbar({
-  mapName,
   mode,
   showLabels,
   onModeChange,
@@ -30,8 +28,7 @@ export function MapToolbar({
 }: MapToolbarProps) {
   return (
     <div className="flex items-center gap-2 p-2 bg-background/95 backdrop-blur border-b">
-      {mapName && <span className="text-sm font-medium truncate mr-auto">{mapName}</span>}
-      {!mapName && <div className="mr-auto" />}
+      <div className="mr-auto" />
 
       <div className="flex items-center border rounded-md">
         <Button

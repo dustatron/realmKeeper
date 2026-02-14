@@ -85,11 +85,9 @@ interface InteractiveMapProps {
   style?: React.CSSProperties
   /** If set, new POIs created from the map will be children of this POI */
   parentPoiId?: string | null
-  /** Hide the map name in the toolbar */
-  hideMapName?: boolean
 }
 
-export function InteractiveMap({ gameMap, className, style, parentPoiId, hideMapName }: InteractiveMapProps) {
+export function InteractiveMap({ gameMap, className, style, parentPoiId }: InteractiveMapProps) {
   const navigate = useNavigate()
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const container = useContainer()
@@ -273,7 +271,6 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, hideMap
       )}
 
       <MapToolbar
-        mapName={hideMapName ? undefined : gameMap.name}
         mode={mode}
         showLabels={showLabels}
         onModeChange={handleModeChange}
