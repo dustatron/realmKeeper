@@ -161,6 +161,8 @@ export async function executeGenerateRegion(
     dangers,
     settlements,
     resources,
+    boundary: null,
+    color: null,
     createdAt: now,
     updatedAt: now,
   }

@@ -8,6 +8,8 @@ export interface Region {
   dangers: string[]
   settlements: string[]
   resources: string[]
+  boundary: { x: number; y: number }[] | null
+  color: string | null
   createdAt: number
   updatedAt: number
 }

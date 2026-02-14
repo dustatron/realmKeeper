@@ -7,6 +7,7 @@ export interface CreateRegionInput {
   name: string
   description?: string
   terrain?: string
+  color?: string | null
 }
 
 export async function executeCreateRegion(
@@ -24,6 +25,8 @@ export async function executeCreateRegion(
     dangers: [],
     settlements: [],
     resources: [],
+    boundary: null,
+    color: input.color ?? null,
     createdAt: now,
     updatedAt: now,
   }

@@ -26,7 +26,8 @@
       "Bash(bd close:*)",
       "Bash(bd sync:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nadd region generation + table layout\n\n- 15 Cairn region tables \\(terrain/landmarks/settlements/lairs/dungeons/curiosities/resources\\)\n- GenerateRegion use case: rolls difficulty → terrain/landmarks/settlements/features/dangers/resources\n- Region entity: features, dangers, settlements, resources fields + Dexie v10 migration\n- Regions page: table layout, generate drawer \\(1-10 count, editable cards\\), edit sheet with tag inputs\n- ImportRealm: defensive defaults for new region fields\n- Fix faction edit: lifeStatus compat\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nadd region generation + table layout\n\n- 15 Cairn region tables \\(terrain/landmarks/settlements/lairs/dungeons/curiosities/resources\\)\n- GenerateRegion use case: rolls difficulty → terrain/landmarks/settlements/features/dangers/resources\n- Region entity: features, dangers, settlements, resources fields + Dexie v10 migration\n- Regions page: table layout, generate drawer \\(1-10 count, editable cards\\), edit sheet with tag inputs\n- ImportRealm: defensive defaults for new region fields\n- Fix faction edit: lifeStatus compat\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(find:*)"
     ]
   }
 }

@@ -31,6 +31,8 @@ interface UIState {
   // Map settings
   mapShowLabels: boolean
   setMapShowLabels: (show: boolean) => void
+  mapShowRegions: boolean
+  setMapShowRegions: (show: boolean) => void
   mapViewStates: Record<string, { zoom: number; center: [number, number] }>
   setMapViewState: (mapId: string, zoom: number, center: [number, number]) => void
 }
@@ -67,6 +69,8 @@ export const useUIStore = create<UIState>()(
 
       mapShowLabels: false,
       setMapShowLabels: (show) => set({ mapShowLabels: show }),
+      mapShowRegions: true,
+      setMapShowRegions: (show) => set({ mapShowRegions: show }),
       mapViewStates: {},
       setMapViewState: (mapId, zoom, center) =>
         set((s) => ({
@@ -79,6 +83,7 @@ export const useUIStore = create<UIState>()(
         activeRealmId: state.activeRealmId,
         sidebarOpen: state.sidebarOpen,
         mapShowLabels: state.mapShowLabels,
+        mapShowRegions: state.mapShowRegions,
         mapViewStates: state.mapViewStates,
       }),
     }

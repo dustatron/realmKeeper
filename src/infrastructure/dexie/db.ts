@@ -238,6 +238,26 @@ db.version(10).stores(stores).upgrade(async (tx) => {
   }
 })
 
+// v11: Add boundary to regions
+db.version(11).stores(stores).upgrade(async (tx) => {
+  const regions = await tx.table('regions').toArray()
+  for (const r of regions) {
+    if (r.boundary === undefined) {
+      await tx.table('regions').put({ ...r, boundary: null })
+    }
+  }
+})
+
+// v12: Add color to regions
+db.version(12).stores(stores).upgrade(async (tx) => {
+  const regions = await tx.table('regions').toArray()
+  for (const r of regions) {
+    if (r.color === undefined) {
+      await tx.table('regions').put({ ...r, color: null })
+    }
+  }
+})
+
 // Seed system configs on first DB creation
 db.on('populate', (tx) => {
   seedDatabase(tx)

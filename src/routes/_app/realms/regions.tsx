@@ -37,6 +37,17 @@ const TERRAIN_OPTIONS = [
   'desert', 'coast', 'road', 'tundra', 'other',
 ] as const
 
+const AUTO_COLORS = [
+  '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4',
+  '#3b82f6', '#8b5cf6', '#ec4899', '#78716c', '#166534',
+  '#1e293b', '#d97706',
+]
+
+function nextAutoColor(existingRegions: Region[]): string {
+  const usedColors = new Set(existingRegions.map((r) => r.color).filter(Boolean))
+  return AUTO_COLORS.find((c) => !usedColors.has(c)) ?? AUTO_COLORS[existingRegions.length % AUTO_COLORS.length]
+}
+
 function RegionsPage() {
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const realm = useActiveRealm()
@@ -73,7 +84,7 @@ function RegionsPage() {
   const handleCreate = async () => {
     if (!activeRealmId || !createName.trim()) return
     await executeCreateRegion(
-      { realmId: activeRealmId, name: createName.trim(), description: createDescription.trim(), terrain: createTerrain },
+      { realmId: activeRealmId, name: createName.trim(), description: createDescription.trim(), terrain: createTerrain, color: nextAutoColor(regions) },
       { regionRepo: container.regionRepo }
     )
     resetCreateForm()
@@ -159,8 +170,13 @@ function RegionsPage() {
   }
 
   const handleSaveAllGenerated = async () => {
+    // Collect existing + already-saved colors to avoid duplication
+    const allRegionsSoFar = [...regions]
     for (const bundle of bundles) {
-      await container.regionRepo.create(bundle.region)
+      const color = nextAutoColor(allRegionsSoFar)
+      const region = { ...bundle.region, color }
+      await container.regionRepo.create(region)
+      allRegionsSoFar.push(region)
       for (const poi of bundle.pois) {
         await container.poiRepo.create(poi)
       }
