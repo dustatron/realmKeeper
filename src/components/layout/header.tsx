@@ -4,6 +4,7 @@ import { SidebarTrigger } from '~/components/ui/sidebar'
 import { ThemeSwitch } from './theme-switch'
 import { getSidebarData } from './sidebar-data'
 import { isNavCollapsible } from './types'
+import { useUIStore } from '~/ui/stores/uiStore'
 
 function usePageTitle(): string | null {
   const { location } = useRouterState()
@@ -34,15 +35,18 @@ function usePageTitle(): string | null {
 
 export function Header() {
   const pageTitle = usePageTitle()
+  const headerTitle = useUIStore((s) => s.headerTitle)
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0">
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mr-2 h-4" />
-        {pageTitle && (
+        {headerTitle ? (
+          <div className="text-sm font-medium truncate">{headerTitle}</div>
+        ) : pageTitle ? (
           <span className="text-sm font-medium">{pageTitle}</span>
-        )}
+        ) : null}
       </div>
       <div className="ml-auto flex items-center gap-2">
         <ThemeSwitch />

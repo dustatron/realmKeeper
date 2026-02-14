@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
 import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
@@ -12,6 +12,7 @@ import { useFaction } from '~/ui/hooks/useFactions'
 import { usePathsByPoi } from '~/ui/hooks/usePaths'
 import { usePOIMaps } from '~/ui/hooks/useGameMaps'
 import { useContainer } from '~/ui/hooks/useContainer'
+import { useUIStore } from '~/ui/stores/uiStore'
 import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
 import { executeDeletePOI } from '@application/use-cases/DeletePOI'
 import { executeCreatePOI } from '@application/use-cases/CreatePOI'
@@ -20,7 +21,7 @@ import { executeDeletePOIEvent } from '@application/use-cases/DeletePOIEvent'
 import { executeCreateGameMap } from '@application/use-cases/CreateGameMap'
 import { MapUploadDialog } from '~/components/map/MapUploadDialog'
 import { InteractiveMap } from '~/components/map/InteractiveMap'
-import { PageHeader } from '~/components/shared/PageHeader'
+
 import { EmptyState } from '~/components/shared/EmptyState'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { TagInput } from '~/components/shared/TagInput'
@@ -52,7 +53,6 @@ import {
   DialogFooter,
 } from '~/components/ui/dialog'
 import {
-  ArrowLeft,
   Pencil,
   Trash2,
   Plus,
@@ -115,6 +115,40 @@ function POIDetailPage() {
   ) ?? []
   const poiMaps = usePOIMaps(poiId)
   const container = useContainer()
+  const setHeaderTitle = useUIStore((s) => s.setHeaderTitle)
+
+  // Set breadcrumb in site header
+  useEffect(() => {
+    if (!poi) return
+    setHeaderTitle(
+      <div className="flex items-center gap-1.5 text-sm">
+        <Link to="/realms/pois" className="text-muted-foreground hover:text-foreground">
+          POIs
+        </Link>
+        {region && (
+          <>
+            <ChevronRight className="size-3 text-muted-foreground" />
+            <Link to="/realms/regions/$regionId" params={{ regionId: region.id }} className="text-muted-foreground hover:text-foreground">{region.name}</Link>
+          </>
+        )}
+        {breadcrumb.slice(0, -1).map((ancestor) => (
+          <span key={ancestor.id} className="flex items-center gap-1.5">
+            <ChevronRight className="size-3 text-muted-foreground" />
+            <Link
+              to="/realms/pois/$poiId"
+              params={{ poiId: ancestor.id }}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              {ancestor.name}
+            </Link>
+          </span>
+        ))}
+        <ChevronRight className="size-3 text-muted-foreground" />
+        <span className="font-medium">{poi.name}</span>
+      </div>
+    )
+    return () => setHeaderTitle(null)
+  }, [poi, region, breadcrumb, setHeaderTitle])
 
   const [mapUploadDialogOpen, setMapUploadDialogOpen] = useState(false)
   const [editSheetOpen, setEditSheetOpen] = useState(false)
@@ -319,66 +353,34 @@ function POIDetailPage() {
   const Icon = POI_TYPE_ICONS[poi.type]
 
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        {region && (
-          <>
-            <span>{region.name}</span>
-            <ChevronRight className="size-4" />
-          </>
-        )}
-        {breadcrumb.slice(0, -1).map((ancestor) => (
-          <div key={ancestor.id} className="flex items-center gap-2">
-            <Link
-              to="/realms/pois/$poiId"
-              params={{ poiId: ancestor.id }}
-              className="hover:text-foreground"
-            >
-              {ancestor.name}
-            </Link>
-            <ChevronRight className="size-4" />
-          </div>
-        ))}
-        <span className="text-foreground font-medium">{poi.name}</span>
-      </div>
-
-      {/* Page Header */}
-      <PageHeader
-        title={
-          <span className="flex items-center gap-3">
-            <Icon className="size-6" />
-            {poi.name}
-          </span>
-        }
-        actions={
-          <div className="flex items-center gap-2">
-            <Link to="/realms/pois">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="mr-2 size-4" />
-                Back to POIs
-              </Button>
-            </Link>
-            <Button size="sm" variant="outline" onClick={() => setMapUploadDialogOpen(true)}>
-              <MapPinned className="mr-2 size-4" />
-              Add Map
-            </Button>
-            <Button size="sm" onClick={openEditSheet}>
-              <Pencil className="mr-2 size-4" />
-              Edit
-            </Button>
-            <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmOpen(true)}>
-              <Trash2 className="mr-2 size-4" />
-              Delete
-            </Button>
-          </div>
-        }
-      />
-
-      {/* Inline Map Viewer */}
+    <div className="space-y-4">
+      {/* Map — topmost element */}
       {poiMaps.length > 0 && (
         <POIDetailMap gameMap={poiMaps[0]} poiMaps={poiMaps} parentPoiId={poiId} />
       )}
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-2">
+        <span className="flex items-center gap-2 mr-auto">
+          <Icon className="size-5" />
+          <span className="font-medium">{poi.name}</span>
+        </span>
+        {poiMaps.length > 0 ? (
+          <Button size="sm" variant="outline" onClick={() => setMapUploadDialogOpen(true)}>
+            <MapPinned className="mr-2 size-4" />
+            Edit Map
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" onClick={() => setMapUploadDialogOpen(true)}>
+            <MapPinned className="mr-2 size-4" />
+            Add Map
+          </Button>
+        )}
+        <Button size="sm" onClick={openEditSheet}>
+          <Pencil className="mr-2 size-4" />
+          Edit
+        </Button>
+      </div>
 
       <div className="space-y-4">
         {/* POI Info Card */}
@@ -800,7 +802,16 @@ function POIDetailPage() {
             </div>
           </div>
           <SheetFooter>
-            <div className="flex w-full gap-2">
+            <div className="flex w-full items-center gap-2">
+              <Button
+                variant="destructive"
+                size="sm"
+                className="mr-auto"
+                onClick={() => { setEditSheetOpen(false); setDeleteConfirmOpen(true) }}
+              >
+                <Trash2 className="mr-2 size-4" />
+                Delete
+              </Button>
               <Button variant="outline" onClick={() => setEditSheetOpen(false)}>
                 Cancel
               </Button>
@@ -1100,15 +1111,15 @@ function POIDetailMap({ gameMap, poiMaps, parentPoiId }: { gameMap: import('@dom
   const activeMap = poiMaps[activeMapIndex] ?? gameMap
 
   return (
-    <Card className="overflow-hidden">
+    <div className="overflow-hidden rounded-lg border">
       {poiMaps.length > 1 && (
-        <div className="flex items-center gap-1 px-3 pt-3">
+        <div className="flex items-center gap-1 px-2 py-1 border-b bg-muted/30">
           {poiMaps.map((m, i) => (
             <Button
               key={m.id}
               variant={i === activeMapIndex ? 'secondary' : 'ghost'}
               size="sm"
-              className="text-xs"
+              className="text-xs h-7"
               onClick={() => setActiveMapIndex(i)}
             >
               {m.name}
@@ -1116,10 +1127,8 @@ function POIDetailMap({ gameMap, poiMaps, parentPoiId }: { gameMap: import('@dom
           ))}
         </div>
       )}
-      <CardContent className="p-0">
-        <InteractiveMap gameMap={activeMap} className="h-[300px] md:h-[500px]" parentPoiId={parentPoiId} />
-      </CardContent>
-    </Card>
+      <InteractiveMap gameMap={activeMap} className="h-[300px] md:h-[500px]" parentPoiId={parentPoiId} hideMapName />
+    </div>
   )
 }
 

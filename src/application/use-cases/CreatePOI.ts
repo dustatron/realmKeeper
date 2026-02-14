@@ -14,6 +14,7 @@ export interface CreatePOIInput {
   tags?: string[]
   position?: { x: number; y: number } | null
   mapRef?: string | null
+  markerColor?: string | null
 }
 
 export async function executeCreatePOI(
@@ -33,6 +34,7 @@ export async function executeCreatePOI(
     tags: input.tags ?? [],
     position: input.position ?? null,
     mapRef: input.mapRef ?? null,
+    markerColor: input.markerColor ?? null,
     createdAt: now,
     updatedAt: now,
   }

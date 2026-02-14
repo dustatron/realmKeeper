@@ -202,6 +202,16 @@ db.version(6).stores(storesV6).upgrade(async (tx) => {
 // v7: Add gameMaps table + mapRef index on pois
 db.version(7).stores(stores)
 
+// v8: Add markerColor to POIs
+db.version(8).stores(stores).upgrade(async (tx) => {
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.markerColor === undefined) {
+      await tx.table('pois').put({ ...poi, markerColor: null })
+    }
+  }
+})
+
 // Seed system configs on first DB creation
 db.on('populate', (tx) => {
   seedDatabase(tx)

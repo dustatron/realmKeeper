@@ -24,6 +24,10 @@ import { createRoot } from 'react-dom/client'
 
 export type MapMode = 'view' | 'place-poi' | 'draw-path'
 
+export interface MapViewerHandle {
+  zoomToFit: () => void
+}
+
 interface MapViewerProps {
   map: GameMap
   pois: POI[]
@@ -31,6 +35,9 @@ interface MapViewerProps {
   mode: MapMode
   selectedPoiId?: string | null
   showLabels?: boolean
+  initialViewState?: { zoom: number; center: [number, number] }
+  onViewStateChange?: (zoom: number, center: [number, number]) => void
+  onReady?: (handle: MapViewerHandle) => void
   onPoiClick?: (poi: POI) => void
   onMapClick?: (position: { x: number; y: number }) => void
   onPoiDrag?: (poiId: string, position: { x: number; y: number }) => void
@@ -52,11 +59,14 @@ const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }
   other: MapPin,
 }
 
-function MarkerIcon({ type, name, hasOwnMaps }: { type: PoiType; name: string; hasOwnMaps?: boolean }) {
+function MarkerIcon({ type, name, color, hasOwnMaps, showLabel }: { type: PoiType; name: string; color?: string | null; hasOwnMaps?: boolean; showLabel?: boolean }) {
   const Icon = POI_TYPE_ICONS[type] || MapPin
   return (
     <div className="group relative flex flex-col items-center cursor-pointer">
-      <div className="relative flex items-center justify-center size-9 rounded-full bg-primary text-primary-foreground shadow-md border-2 border-background hover:scale-110 transition-transform">
+      <div
+        className={`relative flex items-center justify-center size-9 rounded-full shadow-md border-2 border-background hover:scale-110 transition-transform ${color ? '' : 'bg-primary text-primary-foreground'}`}
+        style={color ? { backgroundColor: color, color: '#fff' } : undefined}
+      >
         <Icon className="size-4" />
         {hasOwnMaps && (
           <div className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full bg-blue-500 border border-background flex items-center justify-center">
@@ -64,7 +74,7 @@ function MarkerIcon({ type, name, hasOwnMaps }: { type: PoiType; name: string; h
           </div>
         )}
       </div>
-      <div className="map-marker-label absolute top-full mt-1 px-1.5 py-0.5 bg-popover text-popover-foreground text-xs rounded shadow-sm border whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+      <div className={`map-marker-label absolute top-full mt-1 px-1.5 py-0.5 bg-popover text-popover-foreground text-xs rounded shadow-sm border whitespace-nowrap ${showLabel ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100 transition-opacity pointer-events-none z-10`}>
         {name}
       </div>
     </div>
@@ -78,6 +88,9 @@ export function MapViewer({
   mode,
   selectedPoiId,
   showLabels,
+  initialViewState,
+  onViewStateChange,
+  onReady,
   onPoiClick,
   onMapClick,
   onPoiDrag,
@@ -85,6 +98,8 @@ export function MapViewer({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map())
+  const markerRootsRef = useRef<Map<string, ReturnType<typeof createRoot>>>(new Map())
+  const markerDataRef = useRef<Map<string, { type: string; name: string; color: string | null; showLabel: boolean }>>(new Map())
   const imageUrlRef = useRef<string | null>(null)
   const [mapReady, setMapReady] = useState(false)
 
@@ -153,8 +168,8 @@ export function MapViewer({
           },
         ],
       },
-      center: [0, 0],
-      zoom: 1,
+      center: initialViewState?.center ?? [0, 0],
+      zoom: initialViewState?.zoom ?? 1,
       maxBounds: [
         [Math.max(swLng - 20, -180), Math.max(swLat - 20, -85)],
         [Math.min(neLng + 20, 180), Math.min(neLat + 20, 85)],
@@ -166,6 +181,19 @@ export function MapViewer({
 
     mapInstance.on('load', () => {
       setMapReady(true)
+      onReady?.({
+        zoomToFit: () => {
+          mapInstance.fitBounds(
+            [[swLng, swLat], [neLng, neLat]],
+            { padding: 20, duration: 300 }
+          )
+        },
+      })
+    })
+
+    mapInstance.on('moveend', () => {
+      const c = mapInstance.getCenter()
+      onViewStateChange?.(mapInstance.getZoom(), [c.lng, c.lat])
     })
 
     mapRef.current = mapInstance
@@ -173,6 +201,8 @@ export function MapViewer({
     return () => {
       markersRef.current.forEach((m) => m.remove())
       markersRef.current.clear()
+      markerRootsRef.current.clear()
+      markerDataRef.current.clear()
       mapInstance.remove()
       if (imageUrlRef.current) {
         URL.revokeObjectURL(imageUrlRef.current)
@@ -223,6 +253,8 @@ export function MapViewer({
       if (!currentIds.has(id)) {
         marker.remove()
         markersRef.current.delete(id)
+        markerRootsRef.current.delete(id)
+        markerDataRef.current.delete(id)
       }
     })
 
@@ -235,6 +267,13 @@ export function MapViewer({
       if (existing) {
         existing.setLngLat([lng, lat])
         existing.setDraggable(mode === 'place-poi')
+        // Re-render if type, name, or color changed
+        const prev = markerDataRef.current.get(poi.id)
+        if (prev && (prev.type !== poi.type || prev.name !== poi.name || prev.color !== (poi.markerColor ?? null) || prev.showLabel !== !!showLabels)) {
+          const root = markerRootsRef.current.get(poi.id)
+          root?.render(<MarkerIcon type={poi.type} name={poi.name} color={poi.markerColor} showLabel={showLabels} />)
+          markerDataRef.current.set(poi.id, { type: poi.type, name: poi.name, color: poi.markerColor ?? null, showLabel: !!showLabels })
+        }
         return
       }
 
@@ -242,7 +281,9 @@ export function MapViewer({
       const el = document.createElement('div')
       el.className = 'map-marker-container'
       const root = createRoot(el)
-      root.render(<MarkerIcon type={poi.type} name={poi.name} />)
+      root.render(<MarkerIcon type={poi.type} name={poi.name} color={poi.markerColor} showLabel={showLabels} />)
+      markerRootsRef.current.set(poi.id, root)
+      markerDataRef.current.set(poi.id, { type: poi.type, name: poi.name, color: poi.markerColor ?? null, showLabel: !!showLabels })
 
       const marker = new maplibregl.Marker({
         element: el,
@@ -265,7 +306,7 @@ export function MapViewer({
 
       markersRef.current.set(poi.id, marker)
     })
-  }, [pois, mapReady, mode, pxToLngLat, lngLatToPx, onPoiClick, onPoiDrag])
+  }, [pois, mapReady, mode, showLabels, pxToLngLat, lngLatToPx, onPoiClick, onPoiDrag])
 
   // Render path lines
   useEffect(() => {
@@ -331,9 +372,6 @@ export function MapViewer({
   }, [selectedPoiId])
 
   return (
-    <div className={`w-full h-full min-h-[200px] relative ${showLabels ? 'map-show-labels' : ''}`}>
-      <style>{`.map-show-labels .map-marker-label { opacity: 1 !important; }`}</style>
-      <div ref={containerRef} className="w-full h-full" />
-    </div>
+    <div ref={containerRef} className="w-full h-full min-h-[200px]" />
   )
 }

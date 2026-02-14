@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useContainer } from '~/ui/hooks/useContainer'
@@ -10,7 +10,7 @@ import { executeRemovePOIFromMap } from '@application/use-cases/RemovePOIFromMap
 import { executeCreatePOI } from '@application/use-cases/CreatePOI'
 import { executeCreatePath } from '@application/use-cases/CreatePath'
 import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
-import { MapViewer, type MapMode } from '~/components/map/MapViewer'
+import { MapViewer, type MapMode, type MapViewerHandle } from '~/components/map/MapViewer'
 import { MapToolbar } from '~/components/map/MapToolbar'
 import { POIPlacementSheet } from '~/components/map/POIPlacementSheet'
 import { Button } from '~/components/ui/button'
@@ -83,9 +83,11 @@ interface InteractiveMapProps {
   className?: string
   /** If set, new POIs created from the map will be children of this POI */
   parentPoiId?: string | null
+  /** Hide the map name in the toolbar */
+  hideMapName?: boolean
 }
 
-export function InteractiveMap({ gameMap, className, parentPoiId }: InteractiveMapProps) {
+export function InteractiveMap({ gameMap, className, parentPoiId, hideMapName }: InteractiveMapProps) {
   const navigate = useNavigate()
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const container = useContainer()
@@ -94,8 +96,12 @@ export function InteractiveMap({ gameMap, className, parentPoiId }: InteractiveM
   const allPois = useRealmPOIs(activeRealmId)
   const regions = useRegions(activeRealmId)
 
+  const mapHandleRef = useRef<MapViewerHandle | null>(null)
+  const showLabels = useUIStore((s) => s.mapShowLabels)
+  const setShowLabels = useUIStore((s) => s.setMapShowLabels)
+  const savedViewState = useUIStore((s) => s.mapViewStates[gameMap.id])
+  const setMapViewState = useUIStore((s) => s.setMapViewState)
   const [mode, setMode] = useState<MapMode>('view')
-  const [showLabels, setShowLabels] = useState(false)
   const [placementSheetOpen, setPlacementSheetOpen] = useState(false)
   const [selectedPoiForPlacement, setSelectedPoiForPlacement] = useState<POI | null>(null)
   const [poiPopup, setPoiPopup] = useState<POI | null>(null)
@@ -265,13 +271,13 @@ export function InteractiveMap({ gameMap, className, parentPoiId }: InteractiveM
       )}
 
       <MapToolbar
-        mapName={gameMap.name}
+        mapName={hideMapName ? undefined : gameMap.name}
         mode={mode}
         showLabels={showLabels}
         onModeChange={handleModeChange}
-        onToggleLabels={() => setShowLabels((v) => !v)}
+        onToggleLabels={() => setShowLabels(!showLabels)}
         onUpload={() => {}}
-        onZoomToFit={() => {}}
+        onZoomToFit={() => mapHandleRef.current?.zoomToFit()}
       />
 
       <div className="flex-1 relative">
@@ -281,7 +287,10 @@ export function InteractiveMap({ gameMap, className, parentPoiId }: InteractiveM
           paths={pathsOnMap}
           mode={mode}
           showLabels={showLabels}
+          initialViewState={savedViewState}
+          onViewStateChange={(zoom, center) => setMapViewState(gameMap.id, zoom, center)}
           selectedPoiId={selectedPoiForPlacement?.id}
+          onReady={(handle) => { mapHandleRef.current = handle }}
           onPoiClick={handlePoiClick}
           onMapClick={handleMapClick}
           onPoiDrag={handlePoiDrag}
@@ -308,6 +317,10 @@ export function InteractiveMap({ gameMap, className, parentPoiId }: InteractiveM
         onChangeType={async (poi, newType) => {
           await executeUpdatePOI({ ...poi, type: newType }, { poiRepo: container.poiRepo })
           setPoiPopup({ ...poi, type: newType })
+        }}
+        onChangeColor={async (poi, color) => {
+          await executeUpdatePOI({ ...poi, markerColor: color }, { poiRepo: container.poiRepo })
+          setPoiPopup({ ...poi, markerColor: color })
         }}
       />
 
@@ -421,18 +434,35 @@ export function InteractiveMap({ gameMap, className, parentPoiId }: InteractiveM
 
 // ─── POI Popup Dialog (shows when clicking a marker) ─────────────────
 
+const MARKER_COLORS = [
+  null, // default/theme
+  '#ef4444', // red
+  '#f97316', // orange
+  '#eab308', // yellow
+  '#22c55e', // green
+  '#06b6d4', // cyan
+  '#3b82f6', // blue
+  '#8b5cf6', // violet
+  '#ec4899', // pink
+  '#78716c', // stone
+  '#1e293b', // slate
+  '#ffffff', // white
+]
+
 function POIPopupDialog({
   poi,
   onClose,
   onNavigateToPoi,
   onNavigateToMap,
   onChangeType,
+  onChangeColor,
 }: {
   poi: POI | null
   onClose: () => void
   onNavigateToPoi: (poiId: string) => void
   onNavigateToMap: (mapId: string) => void
   onChangeType: (poi: POI, newType: PoiType) => void
+  onChangeColor: (poi: POI, color: string | null) => void
 }) {
   const poiMaps = usePOIMaps(poi?.id ?? null)
 
@@ -475,6 +505,30 @@ function POIPopupDialog({
                   </button>
                 )
               })}
+            </div>
+          </div>
+
+          {/* Color picker */}
+          <div>
+            <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">Color</h4>
+            <div className="flex flex-wrap gap-1">
+              {MARKER_COLORS.map((c) => (
+                <button
+                  key={c ?? 'default'}
+                  className={`size-6 rounded-full border-2 transition-transform hover:scale-110 ${
+                    (poi.markerColor ?? null) === c
+                      ? 'border-foreground scale-110'
+                      : 'border-transparent'
+                  }`}
+                  style={c ? { backgroundColor: c } : undefined}
+                  onClick={() => onChangeColor(poi, c)}
+                  title={c ?? 'Default'}
+                >
+                  {!c && (
+                    <span className="flex items-center justify-center size-full rounded-full bg-primary text-primary-foreground text-[9px] font-bold">A</span>
+                  )}
+                </button>
+              ))}
             </div>
           </div>
 

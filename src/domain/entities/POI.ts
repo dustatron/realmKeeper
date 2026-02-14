@@ -12,6 +12,7 @@ export interface POI {
   tags: string[]
   position: { x: number; y: number } | null
   mapRef: string | null
+  markerColor: string | null
   createdAt: number
   updatedAt: number
 }
