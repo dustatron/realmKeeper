@@ -1,4 +1,5 @@
 import type { PoiType } from '@shared/constants'
+import type { Service } from '@domain/value-objects/Service'
 
 export interface POI {
   id: string
@@ -13,6 +14,12 @@ export interface POI {
   position: { x: number; y: number } | null
   mapRef: string | null
   markerColor: string | null
+  readAloud: string
+  gmNotes: string
+  trouble: string
+  mood: string
+  sensory: string
+  services: Service[]
   createdAt: number
   updatedAt: number
 }

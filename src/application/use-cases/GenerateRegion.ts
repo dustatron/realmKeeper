@@ -52,6 +52,12 @@ function makePoi(regionId: string, name: string, type: PoiType, description: str
     position: null,
     mapRef: null,
     markerColor: null,
+    readAloud: '',
+    gmNotes: '',
+    trouble: '',
+    mood: '',
+    sensory: '',
+    services: [],
     createdAt: now,
     updatedAt: now,
   }

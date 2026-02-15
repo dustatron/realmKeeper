@@ -1,6 +1,7 @@
 import type { IPOIRepository } from '@application/ports/IPOIRepository'
 import type { POI } from '@domain/entities/POI'
 import type { PoiType } from '@shared/constants'
+import type { Service } from '@domain/value-objects/Service'
 import { newId } from '@shared/ulid'
 
 export interface CreatePOIInput {
@@ -15,6 +16,12 @@ export interface CreatePOIInput {
   position?: { x: number; y: number } | null
   mapRef?: string | null
   markerColor?: string | null
+  readAloud?: string
+  gmNotes?: string
+  trouble?: string
+  mood?: string
+  sensory?: string
+  services?: Service[]
 }
 
 export async function executeCreatePOI(
@@ -35,6 +42,12 @@ export async function executeCreatePOI(
     position: input.position ?? null,
     mapRef: input.mapRef ?? null,
     markerColor: input.markerColor ?? null,
+    readAloud: input.readAloud ?? '',
+    gmNotes: input.gmNotes ?? '',
+    trouble: input.trouble ?? '',
+    mood: input.mood ?? '',
+    sensory: input.sensory ?? '',
+    services: input.services ?? [],
     createdAt: now,
     updatedAt: now,
   }

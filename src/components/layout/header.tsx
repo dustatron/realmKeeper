@@ -24,7 +24,7 @@ function usePageTitle(): string | null {
   }
 
   // Fallback for detail routes
-  if (path.startsWith('/realms/pois/')) return 'POIs'
+  if (path.startsWith('/realms/pois/')) return 'Locations'
   if (path.startsWith('/realms/npcs/')) return 'NPCs'
   if (path.startsWith('/realms/factions/')) return 'Factions'
   if (path.startsWith('/realms/maps/')) return 'Maps'

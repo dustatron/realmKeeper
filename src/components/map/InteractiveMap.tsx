@@ -97,6 +97,7 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId }: Inter
   const poisOnMap = usePOIsOnMap(gameMap.id)
   const pathsOnMap = usePathsOnMap(gameMap.id)
   const allPois = useRealmPOIs(activeRealmId)
+  const isRealmMap = !gameMap.ownerPoiId
   const regions = useRegions(activeRealmId)
 
   const mapHandleRef = useRef<MapViewerHandle | null>(null)
@@ -317,6 +318,7 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId }: Inter
         mode={mode}
         showLabels={showLabels}
         showRegions={showRegions}
+        hideRegionControls={!isRealmMap}
         onModeChange={handleModeChange}
         onToggleLabels={() => setShowLabels(!showLabels)}
         onToggleRegions={() => setShowRegions(!showRegions)}
@@ -329,7 +331,7 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId }: Inter
           map={gameMap}
           pois={poisOnMap}
           paths={pathsOnMap}
-          regions={regions}
+          regions={isRealmMap ? regions : undefined}
           mode={mode}
           showLabels={showLabels}
           showRegions={showRegions}

@@ -162,7 +162,7 @@ function RegionDetailPage() {
     if (!region) return
     setHeaderTitle(
       <div className="flex items-center gap-1.5 text-sm">
-        <Link to="/realms/regions" className="text-muted-foreground hover:text-foreground">Regions</Link>
+        <Link to="/realms/locations/regions" className="text-muted-foreground hover:text-foreground">Regions</Link>
         <ChevronRight className="size-3 text-muted-foreground" />
         <span className="font-medium">{region.name}</span>
       </div>

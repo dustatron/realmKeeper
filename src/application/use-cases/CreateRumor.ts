@@ -1,0 +1,35 @@
+import type { IRumorRepository } from '@application/ports/IRumorRepository'
+import type { Rumor } from '@domain/entities/Rumor'
+import { newId } from '@shared/ulid'
+
+export interface CreateRumorInput {
+  poiId?: string | null
+  regionId?: string | null
+  realmId: string
+  text: string
+  source?: string
+  isQuestHook?: boolean
+  tags?: string[]
+}
+
+export async function executeCreateRumor(
+  input: CreateRumorInput,
+  deps: { rumorRepo: IRumorRepository }
+): Promise<Rumor> {
+  const now = Date.now()
+  const rumor: Rumor = {
+    id: newId(),
+    poiId: input.poiId ?? null,
+    regionId: input.regionId ?? null,
+    realmId: input.realmId,
+    text: input.text,
+    source: input.source ?? '',
+    isUsed: false,
+    isQuestHook: input.isQuestHook ?? false,
+    tags: input.tags ?? [],
+    createdAt: now,
+    updatedAt: now,
+  }
+  await deps.rumorRepo.create(rumor)
+  return rumor
+}

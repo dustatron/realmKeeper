@@ -15,6 +15,7 @@ interface MapToolbarProps {
   mode: MapMode
   showLabels: boolean
   showRegions: boolean
+  hideRegionControls?: boolean
   onModeChange: (mode: MapMode) => void
   onToggleLabels: () => void
   onToggleRegions: () => void
@@ -26,6 +27,7 @@ export function MapToolbar({
   mode,
   showLabels,
   showRegions,
+  hideRegionControls,
   onModeChange,
   onToggleLabels,
   onToggleRegions,
@@ -58,21 +60,23 @@ export function MapToolbar({
         <Button
           variant={mode === 'draw-path' ? 'secondary' : 'ghost'}
           size="sm"
-          className="rounded-none border-r"
+          className={hideRegionControls ? 'rounded-l-none' : 'rounded-none border-r'}
           onClick={() => onModeChange('draw-path')}
           title="Draw path mode"
         >
           <Route className="size-4" />
         </Button>
-        <Button
-          variant={mode === 'draw-region' ? 'secondary' : 'ghost'}
-          size="sm"
-          className="rounded-l-none"
-          onClick={() => onModeChange('draw-region')}
-          title="Draw region boundary"
-        >
-          <Hexagon className="size-4" />
-        </Button>
+        {!hideRegionControls && (
+          <Button
+            variant={mode === 'draw-region' ? 'secondary' : 'ghost'}
+            size="sm"
+            className="rounded-l-none"
+            onClick={() => onModeChange('draw-region')}
+            title="Draw region boundary"
+          >
+            <Hexagon className="size-4" />
+          </Button>
+        )}
       </div>
 
       <Button
@@ -84,14 +88,16 @@ export function MapToolbar({
         <Tag className="size-4" />
       </Button>
 
-      <Button
-        variant={showRegions ? 'secondary' : 'outline'}
-        size="sm"
-        onClick={onToggleRegions}
-        title={showRegions ? 'Hide regions' : 'Show regions'}
-      >
-        <Layers className="size-4" />
-      </Button>
+      {!hideRegionControls && (
+        <Button
+          variant={showRegions ? 'secondary' : 'outline'}
+          size="sm"
+          onClick={onToggleRegions}
+          title={showRegions ? 'Hide regions' : 'Show regions'}
+        >
+          <Layers className="size-4" />
+        </Button>
+      )}
 
       <Button variant="outline" size="sm" onClick={onZoomToFit} title="Zoom to fit">
         <Maximize className="size-4" />

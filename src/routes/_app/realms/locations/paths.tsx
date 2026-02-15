@@ -12,7 +12,6 @@ import { calculateTravelTime } from '@application/use-cases/CalculateTravelTime'
 import type { Path } from '@domain/entities/Path'
 import type { TerrainType, PathType } from '@shared/constants'
 import { TERRAIN_TYPES, PATH_TYPES } from '@shared/constants'
-import { PageHeader } from '~/components/shared/PageHeader'
 import { EmptyState } from '~/components/shared/EmptyState'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import {
@@ -49,7 +48,7 @@ import {
 import { Badge } from '~/components/ui/badge'
 import { Route as RouteIcon, Plus, Pencil, Trash2, Clock } from 'lucide-react'
 
-export const Route = createFileRoute('/_app/realms/paths')({
+export const Route = createFileRoute('/_app/realms/locations/paths')({
   component: PathsPage,
 })
 
@@ -181,39 +180,27 @@ function PathsPage() {
   }
 
   if (!activeRealmId) {
-    return (
-      <div>
-        <PageHeader title="Paths" description="Travel routes between points of interest." />
-        <EmptyState icon={RouteIcon} title="Select a realm first" />
-      </div>
-    )
+    return <EmptyState icon={RouteIcon} title="Select a realm first" />
   }
 
   if (pois.length === 0) {
     return (
-      <div className="space-y-4">
-        <PageHeader title="Paths" description="Travel routes between points of interest." />
-        <EmptyState
-          icon={RouteIcon}
-          title="Create POIs first before adding paths"
-          description="Paths connect points of interest"
-        />
-      </div>
+      <EmptyState
+        icon={RouteIcon}
+        title="Create POIs first before adding paths"
+        description="Paths connect points of interest"
+      />
     )
   }
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Paths"
-        description="Travel routes between points of interest."
-        actions={
-          <Button onClick={openCreateDialog}>
-            <Plus className="mr-2 size-4" />
-            New Path
-          </Button>
-        }
-      />
+      <div className="flex justify-end">
+        <Button onClick={openCreateDialog}>
+          <Plus className="mr-2 size-4" />
+          New Path
+        </Button>
+      </div>
 
       {/* Path Cards Grid */}
       {realmPaths.length === 0 ? (
