@@ -33,7 +33,10 @@
       "WebFetch(domain:hexbinder.vercel.app)",
       "Bash(npx playwright:*)",
       "WebFetch(domain:tanstack.com)",
-      "WebFetch(domain:v3.nitro.build)"
+      "WebFetch(domain:v3.nitro.build)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh api:*)"
     ]
   }
 }

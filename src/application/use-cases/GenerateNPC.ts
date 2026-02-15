@@ -108,6 +108,12 @@ export async function executeGenerateNPC(
   ].filter(Boolean)
   const motivation = motivations.join('. ')
 
+  // Want — a side quest hook based on personality
+  const wantParts: string[] = []
+  if (vice) wantParts.push(`Needs help dealing with a problem caused by their ${vice.toLowerCase()} nature`)
+  else if (virtue) wantParts.push(`Seeks someone ${virtue.toLowerCase()} enough to help with a personal matter`)
+  const want = wantParts[0] ?? ''
+
   // Tags from physical traits
   const tags: string[] = []
   if (physique) tags.push(physique.toLowerCase())
@@ -128,7 +134,9 @@ export async function executeGenerateNPC(
     motivation,
     appearance,
     voice,
+    want,
     tags,
+    imageUrl: null,
     systemBlock: block,
     createdAt: now,
     updatedAt: now,

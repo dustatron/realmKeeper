@@ -7,6 +7,7 @@ import { useRegion, useRegions } from '~/ui/hooks/useRegions'
 import { usePOIBreadcrumb } from '~/ui/hooks/usePOIBreadcrumb'
 import { usePOIChildren } from '~/ui/hooks/usePOIChildren'
 import { useNPCsByPoi } from '~/ui/hooks/useNPCsByPoi'
+import { useNPCsByPoiIds } from '~/ui/hooks/useNPCsByPoiIds'
 import { useFactionPresencesByPoi } from '~/ui/hooks/useFactionPresences'
 import { useResolvedPaths } from '~/ui/hooks/useResolvedPaths'
 import { usePOIMaps } from '~/ui/hooks/useGameMaps'
@@ -26,6 +27,7 @@ import { executeDeletePOIEvent } from '@application/use-cases/DeletePOIEvent'
 import { executeCreateNPC } from '@application/use-cases/CreateNPC'
 import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import { executeCreateGameMap } from '@application/use-cases/CreateGameMap'
+import { executeDeleteGameMap } from '@application/use-cases/DeleteGameMap'
 import { executeCreateRumor } from '@application/use-cases/CreateRumor'
 import { executeUpdateRumor } from '@application/use-cases/UpdateRumor'
 import { executeDeleteRumor } from '@application/use-cases/DeleteRumor'
@@ -93,6 +95,7 @@ import {
   ChevronRight,
   CalendarClock,
   MapPinned,
+  X,
 } from 'lucide-react'
 import { POI_TYPES, POI_EVENT_TYPES, SEASONS, type PoiType, type POIEventType, type Season } from '@shared/constants'
 import type { NoticeType } from '@shared/constants'
@@ -130,6 +133,7 @@ function POIDetailPage() {
   const breadcrumb = usePOIBreadcrumb(poiId)
   const children = usePOIChildren(poiId)
   const npcs = useNPCsByPoi(poiId)
+  const childNPCs = useNPCsByPoiIds(children.map((c) => c.id))
   const factionPresences = useFactionPresencesByPoi(poiId)
   const paths = useResolvedPaths(poiId)
   const poiEvents = useLiveQuery(
@@ -181,6 +185,7 @@ function POIDetailPage() {
     return () => setHeaderTitle(null)
   }, [poi, region, breadcrumb, setHeaderTitle])
 
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
   const [mapUploadDialogOpen, setMapUploadDialogOpen] = useState(false)
   const [editSheetOpen, setEditSheetOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -364,7 +369,9 @@ function POIDetailPage() {
       motivation: '',
       appearance: '',
       voice: '',
+      want: '',
       tags: [],
+      imageUrl: null,
       systemBlock: defaultSystemBlock,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -472,7 +479,7 @@ function POIDetailPage() {
 
   // Shared map section
   const mapSection = poiMaps.length > 0 ? (
-    <POIDetailMap gameMap={poiMaps[0]} poiMaps={poiMaps} parentPoiId={poiId} />
+    <POIDetailMap gameMap={poiMaps[0]} poiMaps={poiMaps} parentPoiId={poiId} highlightPoiId={selectedChildId} />
   ) : null
 
   // Template selection
@@ -484,6 +491,9 @@ function POIDetailPage() {
             poi={poi}
             children={children}
             npcs={npcs}
+            childNPCs={childNPCs}
+            selectedChildId={selectedChildId}
+            onSelectChild={setSelectedChildId}
             factionPresences={factionPresences}
             rumors={rumors}
             notices={notices}
@@ -516,6 +526,7 @@ function POIDetailPage() {
             onRollEncounter={handleRollEncounter}
             onSaveEncounterTable={handleSaveEncounterTable}
             onCreateChild={openCreateChildDialog}
+            onCreateNPC={openCreateNPC}
             mapSection={mapSection}
           />
         )
@@ -527,6 +538,7 @@ function POIDetailPage() {
             children={children}
             npcs={npcs}
             onCreateChild={openCreateChildDialog}
+            onCreateNPC={openCreateNPC}
             mapSection={mapSection}
           />
         )
@@ -540,6 +552,7 @@ function POIDetailPage() {
             paths={paths}
             poiEvents={poiEvents}
             onCreateChild={openCreateChildDialog}
+            onCreateNPC={openCreateNPC}
             mapSection={mapSection}
           />
         )
@@ -617,12 +630,12 @@ function POIDetailPage() {
 
       {/* Edit Sheet */}
       <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
-        <SheetContent className="overflow-y-auto">
+        <SheetContent className="sm:max-w-lg overflow-y-auto p-6">
           <SheetHeader>
             <SheetTitle>Edit Point of Interest</SheetTitle>
           </SheetHeader>
           <div className="space-y-4 py-4">
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="edit-name">Name *</Label>
               <Input
                 id="edit-name"
@@ -631,7 +644,7 @@ function POIDetailPage() {
                 placeholder="Name of the POI"
               />
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="edit-description">Description</Label>
               <Textarea
                 id="edit-description"
@@ -642,7 +655,7 @@ function POIDetailPage() {
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="edit-type">Type</Label>
                 <Select
                   value={editForm.type}
@@ -656,7 +669,7 @@ function POIDetailPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="edit-subtype">Subtype Label</Label>
                 <Input
                   id="edit-subtype"
@@ -667,7 +680,7 @@ function POIDetailPage() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="edit-mood">Mood</Label>
                 <Input
                   id="edit-mood"
@@ -676,7 +689,7 @@ function POIDetailPage() {
                   placeholder="prosperous, fearful, lawless..."
                 />
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="edit-floor">Floor</Label>
                 <Input
                   id="edit-floor"
@@ -690,7 +703,7 @@ function POIDetailPage() {
                 />
               </div>
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="edit-trouble">Trouble</Label>
               <Input
                 id="edit-trouble"
@@ -699,7 +712,7 @@ function POIDetailPage() {
                 placeholder="Current tension or conflict..."
               />
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="edit-readaloud">Read Aloud</Label>
               <Textarea
                 id="edit-readaloud"
@@ -709,7 +722,7 @@ function POIDetailPage() {
                 rows={3}
               />
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="edit-sensory">Sensory Details</Label>
               <Input
                 id="edit-sensory"
@@ -718,7 +731,7 @@ function POIDetailPage() {
                 placeholder="Sights, sounds, smells..."
               />
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="edit-gmnotes">GM Notes</Label>
               <Textarea
                 id="edit-gmnotes"
@@ -728,7 +741,7 @@ function POIDetailPage() {
                 rows={3}
               />
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label>Services</Label>
               <ServicesList
                 services={editForm.services}
@@ -736,7 +749,7 @@ function POIDetailPage() {
                 onChange={(services) => setEditForm((f) => ({ ...f, services }))}
               />
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label>Tags</Label>
               <TagInput
                 tags={editForm.tags}
@@ -762,14 +775,14 @@ function POIDetailPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Create Child Dialog */}
-      <Dialog open={createChildDialogOpen} onOpenChange={setCreateChildDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add Child Location</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
+      {/* Create Child Sheet */}
+      <Sheet open={createChildDialogOpen} onOpenChange={setCreateChildDialogOpen}>
+        <SheetContent side="right" className="sm:max-w-lg overflow-y-auto p-6">
+          <SheetHeader>
+            <SheetTitle>Add Child Location</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5">
               <Label htmlFor="child-name">Name *</Label>
               <Input
                 id="child-name"
@@ -778,7 +791,7 @@ function POIDetailPage() {
                 placeholder="Name of the location"
               />
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="child-description">Description</Label>
               <Textarea
                 id="child-description"
@@ -789,7 +802,7 @@ function POIDetailPage() {
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="child-type">Type</Label>
                 <Select
                   value={createChildForm.type}
@@ -803,7 +816,7 @@ function POIDetailPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="child-subtype">Subtype Label</Label>
                 <Input
                   id="child-subtype"
@@ -813,7 +826,7 @@ function POIDetailPage() {
                 />
               </div>
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="child-floor">Floor (Optional)</Label>
               <Input
                 id="child-floor"
@@ -826,7 +839,7 @@ function POIDetailPage() {
                 placeholder="e.g., 1, 2, -1"
               />
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label>Tags</Label>
               <TagInput
                 tags={createChildForm.tags}
@@ -834,12 +847,12 @@ function POIDetailPage() {
               />
             </div>
           </div>
-          <DialogFooter>
+          <SheetFooter>
             <Button variant="outline" onClick={() => setCreateChildDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleCreateChild} disabled={!createChildForm.name.trim()}>Create</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       {/* Create Event Dialog */}
       <Dialog open={createEventDialogOpen} onOpenChange={setCreateEventDialogOpen}>
@@ -976,28 +989,61 @@ function POIDetailPage() {
   )
 }
 
-function POIDetailMap({ gameMap, poiMaps, parentPoiId }: { gameMap: import('@domain/entities/GameMap').GameMap; poiMaps: import('@domain/entities/GameMap').GameMap[]; parentPoiId: string }) {
+function POIDetailMap({ gameMap, poiMaps, parentPoiId, highlightPoiId }: { gameMap: import('@domain/entities/GameMap').GameMap; poiMaps: import('@domain/entities/GameMap').GameMap[]; parentPoiId: string; highlightPoiId?: string | null }) {
   const [activeMapIndex, setActiveMapIndex] = useState(0)
-  const activeMap = poiMaps[activeMapIndex] ?? gameMap
+  const container = useContainer()
+  const [deletingMapId, setDeletingMapId] = useState<string | null>(null)
+
+  // Clamp index if maps array shrinks
+  const clampedIndex = Math.min(activeMapIndex, poiMaps.length - 1)
+  const activeMap = poiMaps[clampedIndex] ?? gameMap
+
+  const handleDeleteMap = async () => {
+    if (!deletingMapId) return
+    await executeDeleteGameMap(deletingMapId, { gameMapRepo: container.gameMapRepo, poiRepo: container.poiRepo })
+    setDeletingMapId(null)
+    // Reset to first tab if current was deleted
+    if (poiMaps[clampedIndex]?.id === deletingMapId) {
+      setActiveMapIndex(0)
+    }
+  }
 
   return (
     <div className="overflow-hidden rounded-lg border">
-      {poiMaps.length > 1 && (
+      {poiMaps.length > 0 && (
         <div className="flex items-center gap-1 px-2 py-1 border-b bg-muted/30">
           {poiMaps.map((m, i) => (
-            <Button
-              key={m.id}
-              variant={i === activeMapIndex ? 'secondary' : 'ghost'}
-              size="sm"
-              className="text-xs h-7"
-              onClick={() => setActiveMapIndex(i)}
-            >
-              {m.name}
-            </Button>
+            <span key={m.id} className="flex items-center">
+              <Button
+                variant={i === clampedIndex ? 'secondary' : 'ghost'}
+                size="sm"
+                className="text-xs h-7 pr-1"
+                onClick={() => setActiveMapIndex(i)}
+              >
+                {m.name}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                onClick={(e) => { e.stopPropagation(); setDeletingMapId(m.id) }}
+              >
+                <X className="size-3" />
+              </Button>
+            </span>
           ))}
         </div>
       )}
-      <InteractiveMap gameMap={activeMap} className="h-[300px] md:h-[500px]" parentPoiId={parentPoiId} />
+      <InteractiveMap key={activeMap.id} gameMap={activeMap} className="h-[300px] md:h-[500px]" parentPoiId={parentPoiId} highlightPoiId={highlightPoiId} />
+      <ConfirmDialog
+        open={deletingMapId !== null}
+        onOpenChange={(open) => !open && setDeletingMapId(null)}
+        title="Remove Map"
+        description="Remove this map from the location? POIs placed on it will be unlinked."
+        confirmLabel="Remove"
+        variant="destructive"
+        onConfirm={handleDeleteMap}
+      />
     </div>
   )
 }

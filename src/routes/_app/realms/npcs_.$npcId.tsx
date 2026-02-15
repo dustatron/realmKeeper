@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNPC } from '~/ui/hooks/useNPCs'
 import { useFaction, useFactions } from '~/ui/hooks/useFactions'
 import { useRegion, useRegions } from '~/ui/hooks/useRegions'
@@ -9,12 +9,14 @@ import { useSystemConfig } from '~/ui/hooks/useSystemConfigs'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { executeUpdateNPC } from '@application/use-cases/UpdateNPC'
+import { executeDeleteNPC } from '@application/use-cases/DeleteNPC'
 import { NPCEditSheet } from '~/components/shared/NPCEditSheet'
+import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
-import { ArrowLeft, Heart, Shield, Skull, Swords, Package, Sparkles, Handshake, Pencil, MapPin } from 'lucide-react'
+import { ArrowLeft, Heart, Shield, Skull, Swords, Package, Sparkles, Handshake, Pencil, MapPin, ImageIcon, ChevronUp, ChevronDown } from 'lucide-react'
 import type { NPC } from '@domain/entities/NPC'
 import type { Faction } from '@domain/entities/Faction'
 
@@ -43,12 +45,44 @@ function NPCDetailPage() {
   const pois = useRealmPOIs(activeRealmId)
   const container = useContainer()
 
+  // Build POI breadcrumb: walk parentPoiId chain from npc's poi up to root
+  const poiBreadcrumb = useMemo(() => {
+    if (!poi || pois.length === 0) return []
+    const poiMap = new Map(pois.map((p) => [p.id, p]))
+    const chain: typeof pois = []
+    let current: typeof pois[number] | null = poi
+    while (current) {
+      chain.unshift(current)
+      current = current.parentPoiId ? poiMap.get(current.parentPoiId) ?? null : null
+    }
+    return chain
+  }, [poi, pois])
+
   const [editingNPC, setEditingNPC] = useState<NPC | null>(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
   const handleSaveNPC = async () => {
     if (!editingNPC) return
     await executeUpdateNPC(editingNPC, { npcRepo: container.npcRepo })
     setEditingNPC(null)
+  }
+
+  const handleDeleteNPC = async () => {
+    if (!npc) return
+    await executeDeleteNPC(npc.id, { npcRepo: container.npcRepo })
+    setDeleteConfirmOpen(false)
+    setEditingNPC(null)
+    window.history.back()
+  }
+
+  const adjustHp = async (delta: number) => {
+    if (!npc) return
+    const newHp = Math.max(0, Math.min(npc.systemBlock.maxHp, npc.systemBlock.hp + delta))
+    if (newHp === npc.systemBlock.hp) return
+    await executeUpdateNPC(
+      { ...npc, systemBlock: { ...npc.systemBlock, hp: newHp }, updatedAt: Date.now() },
+      { npcRepo: container.npcRepo }
+    )
   }
 
   if (npc === undefined) {
@@ -90,7 +124,18 @@ function NPCDetailPage() {
       />
 
       <div className="space-y-4">
-        {/* Identity */}
+        {/* Portrait + Identity */}
+        <div className={npc.imageUrl ? 'grid gap-4 md:grid-cols-[1fr_2fr] items-stretch' : ''}>
+        {npc.imageUrl && (
+          <div className="h-full">
+            <img
+              src={npc.imageUrl}
+              alt={npc.name}
+              className="h-full w-full rounded-lg border object-cover"
+            />
+          </div>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Identity</CardTitle>
@@ -119,16 +164,24 @@ function NPCDetailPage() {
                 <span className="text-sm font-medium text-muted-foreground w-24 shrink-0 pt-0.5">
                   <MapPin className="size-3.5 inline mr-1" />Location
                 </span>
-                <div className="flex flex-wrap gap-1.5 items-center">
-                  {region && <Badge variant="secondary">{region.name}</Badge>}
-                  {poi && (
-                    <Link
-                      to="/realms/locations/pois"
-                      className="text-primary hover:underline text-sm"
-                    >
-                      {poi.name}
+                <div className="flex flex-wrap items-center gap-1 text-sm">
+                  {region && (
+                    <Link to="/realms/regions/$regionId" params={{ regionId: region.id }}>
+                      <Badge variant="secondary" className="hover:bg-secondary/80 cursor-pointer">{region.name}</Badge>
                     </Link>
                   )}
+                  {poiBreadcrumb.map((p, i) => (
+                    <span key={p.id} className="flex items-center gap-1">
+                      {(i > 0 || region) && <span className="text-muted-foreground">/</span>}
+                      <Link
+                        to="/realms/pois/$poiId"
+                        params={{ poiId: p.id }}
+                        className="text-primary hover:underline"
+                      >
+                        {p.name}
+                      </Link>
+                    </span>
+                  ))}
                 </div>
               </div>
             )}
@@ -136,6 +189,12 @@ function NPCDetailPage() {
               <div className="flex items-start gap-2">
                 <span className="text-sm font-medium text-muted-foreground w-24 shrink-0">Motivation</span>
                 <span className="text-sm">{npc.motivation}</span>
+              </div>
+            )}
+            {npc.want && (
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-muted-foreground w-24 shrink-0">Want</span>
+                <span className="text-sm">{npc.want}</span>
               </div>
             )}
             {npc.traits.length > 0 && (
@@ -167,61 +226,78 @@ function NPCDetailPage() {
               )}
               <Badge variant="outline">{npc.movementStatus.charAt(0).toUpperCase() + npc.movementStatus.slice(1)}</Badge>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Faction */}
-        <FactionBlurb faction={faction} />
-
-        {/* Stats */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Stats</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Stat values */}
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-              {sb.stats.map((stat) => {
-                const def = systemConfig?.statFields.find((f) => f.key === stat.key)
-                return (
-                  <div key={stat.key} className="rounded-md border p-2 text-center">
-                    <div className="text-xs font-medium text-muted-foreground uppercase">
-                      {def?.label ?? stat.key}
-                    </div>
-                    <div className="text-xl font-bold">{stat.value}</div>
-                    {stat.modifier !== undefined && (
-                      <div className="text-xs text-muted-foreground">
-                        {stat.modifier >= 0 ? '+' : ''}{stat.modifier}
+            {/* Stats table */}
+            <div className="rounded-md border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    {sb.stats.map((stat) => {
+                      const def = systemConfig?.statFields.find((f) => f.key === stat.key)
+                      return (
+                        <th key={stat.key} className="p-1.5 text-center text-xs font-medium text-muted-foreground uppercase">
+                          {def?.label ?? stat.key}
+                        </th>
+                      )
+                    })}
+                    <th className="p-1.5 text-center text-xs font-medium text-muted-foreground uppercase">
+                      <Heart className="size-3 inline text-red-500" /> HP
+                    </th>
+                    <th className="p-1.5 text-center text-xs font-medium text-muted-foreground uppercase">
+                      <Shield className="size-3 inline text-blue-500" /> {armorLabel}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    {sb.stats.map((stat) => (
+                      <td key={stat.key} className="p-1.5 text-center font-bold">
+                        {stat.value}
+                        {stat.modifier !== undefined && (
+                          <span className="text-xs font-normal text-muted-foreground ml-0.5">
+                            ({stat.modifier >= 0 ? '+' : ''}{stat.modifier})
+                          </span>
+                        )}
+                      </td>
+                    ))}
+                    <td className="p-1.5 text-center font-bold">
+                      <div className="inline-flex items-center gap-0.5">
+                        <button
+                          onClick={() => adjustHp(-1)}
+                          className="size-5 inline-flex items-center justify-center rounded hover:bg-muted-foreground/20 transition-colors text-muted-foreground"
+                        >
+                          <ChevronDown className="size-3.5" />
+                        </button>
+                        <span>{sb.hp}</span>
+                        <button
+                          onClick={() => adjustHp(1)}
+                          className="size-5 inline-flex items-center justify-center rounded hover:bg-muted-foreground/20 transition-colors text-muted-foreground"
+                        >
+                          <ChevronUp className="size-3.5" />
+                        </button>
                       </div>
-                    )}
-                  </div>
-                )
-              })}
+                    </td>
+                    <td className="p-1.5 text-center font-bold">{sb.armor}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
             {/* HP bar */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm">
-                <Heart className="size-4 text-red-500" />
-                <span className="font-medium">{hpLabel}: {sb.hp}/{sb.maxHp}</span>
-              </div>
-              <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary">
-                <div
-                  className={`h-full transition-all ${
-                    hpPercent > 50 ? 'bg-green-500' : hpPercent > 25 ? 'bg-yellow-500' : 'bg-red-500'
-                  }`}
-                  style={{ width: `${Math.max(0, Math.min(100, hpPercent))}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Armor */}
-            <div className="flex items-center gap-2 text-sm">
-              <Shield className="size-4 text-blue-500" />
-              <span className="font-medium">{armorLabel}: {sb.armor}</span>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+              <div
+                className={`h-full transition-all ${
+                  hpPercent > 50 ? 'bg-green-500' : hpPercent > 25 ? 'bg-yellow-500' : 'bg-red-500'
+                }`}
+                style={{ width: `${Math.max(0, Math.min(100, hpPercent))}%` }}
+              />
             </div>
           </CardContent>
         </Card>
+        </div>
+
+        {/* Faction */}
+        <FactionBlurb faction={faction} />
 
         {/* Attacks */}
         {sb.attacks.length > 0 && (
@@ -334,8 +410,19 @@ function NPCDetailPage() {
           onOpenChange={(open) => { if (!open) setEditingNPC(null) }}
           onSave={handleSaveNPC}
           onChange={setEditingNPC}
+          onDelete={() => { setEditingNPC(null); setDeleteConfirmOpen(true) }}
         />
       )}
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete NPC"
+        description={`Are you sure you want to delete "${npc.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={handleDeleteNPC}
+      />
     </div>
   )
 }

@@ -49,6 +49,8 @@ interface MapViewerProps {
   regions?: Region[]
   mode: MapMode
   selectedPoiId?: string | null
+  /** External highlight from sidebar card selection */
+  highlightPoiId?: string | null
   showLabels?: boolean
   showRegions?: boolean
   initialViewState?: { zoom: number; center: [number, number] }
@@ -106,6 +108,7 @@ export function MapViewer({
   regions,
   mode,
   selectedPoiId,
+  highlightPoiId,
   showLabels,
   showRegions,
   initialViewState,
@@ -750,17 +753,18 @@ export function MapViewer({
     }
   }, [drawingVertices, mapReady, mode, pxToLngLat])
 
-  // Highlight selected POI
+  // Highlight selected or externally highlighted POI
+  const activeHighlightId = selectedPoiId ?? highlightPoiId
   useEffect(() => {
     markersRef.current.forEach((marker, id) => {
       const el = marker.getElement()
-      if (id === selectedPoiId) {
+      if (id === activeHighlightId) {
         el.classList.add('ring-2', 'ring-primary', 'rounded-full')
       } else {
         el.classList.remove('ring-2', 'ring-primary', 'rounded-full')
       }
     })
-  }, [selectedPoiId])
+  }, [activeHighlightId])
 
   return (
     <div ref={containerRef} className="w-full h-full min-h-[200px]" />

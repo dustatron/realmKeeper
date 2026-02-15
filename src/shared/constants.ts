@@ -43,6 +43,7 @@ export type PathType = (typeof PATH_TYPES)[number]
 export const TERRAIN_TYPES = [
   'plains', 'forest', 'hills', 'mountain',
   'swamp', 'desert', 'coast', 'road',
+  'highlands', 'fields', 'wetlands',
 ] as const
 export type TerrainType = (typeof TERRAIN_TYPES)[number]
 

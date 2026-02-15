@@ -21,6 +21,7 @@ interface GenericTemplateProps {
   paths: ResolvedPath[]
   poiEvents: POIEvent[]
   onCreateChild: () => void
+  onCreateNPC: () => void
   mapSection: React.ReactNode
 }
 
@@ -32,6 +33,7 @@ export function GenericTemplate({
   paths,
   poiEvents,
   onCreateChild,
+  onCreateNPC,
   mapSection,
 }: GenericTemplateProps) {
   const hasContent = childPois.length > 0 || npcs.length > 0 || factionPresences.length > 0 || paths.length > 0
@@ -120,17 +122,23 @@ export function GenericTemplate({
       </div>
 
       {/* NPCs */}
-      {npcs.length > 0 && (
-        <div>
-          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-sm font-semibold flex items-center gap-2">
             <Users className="size-4" />
             NPCs ({npcs.length})
           </h4>
+          <Button size="sm" variant="outline" onClick={onCreateNPC}>
+            <Plus className="mr-1.5 size-3.5" />
+            Add NPC
+          </Button>
+        </div>
+        {npcs.length > 0 && (
           <div className="space-y-2">
             {npcs.map((npc) => <NPCMiniCard key={npc.id} npc={npc} />)}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Faction Presence */}
       {factionPresences.length > 0 && (

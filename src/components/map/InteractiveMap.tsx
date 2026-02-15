@@ -13,7 +13,6 @@ import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
 import { executeUpdateRegion } from '@application/use-cases/UpdateRegion'
 import { MapViewer, type MapMode, type MapViewerHandle } from '~/components/map/MapViewer'
 import { MapToolbar } from '~/components/map/MapToolbar'
-import { POIPlacementSheet } from '~/components/map/POIPlacementSheet'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
 import { Input } from '~/components/ui/input'
@@ -26,6 +25,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from '~/components/ui/dialog'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from '~/components/ui/sheet'
 import {
   Select,
   SelectContent,
@@ -51,6 +57,7 @@ import {
   Sparkles,
   MapPin,
   Trash2,
+  X,
 } from 'lucide-react'
 import {
   POI_TYPES,
@@ -88,9 +95,11 @@ interface InteractiveMapProps {
   style?: React.CSSProperties
   /** If set, new POIs created from the map will be children of this POI */
   parentPoiId?: string | null
+  /** External highlight (e.g. from a sidebar card selection) */
+  highlightPoiId?: string | null
 }
 
-export function InteractiveMap({ gameMap, className, style, parentPoiId }: InteractiveMapProps) {
+export function InteractiveMap({ gameMap, className, style, parentPoiId, highlightPoiId }: InteractiveMapProps) {
   const navigate = useNavigate()
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const container = useContainer()
@@ -108,7 +117,6 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId }: Inter
   const savedViewState = useUIStore((s) => s.mapViewStates[gameMap.id])
   const setMapViewState = useUIStore((s) => s.setMapViewState)
   const [mode, setMode] = useState<MapMode>('view')
-  const [placementSheetOpen, setPlacementSheetOpen] = useState(false)
   const [selectedPoiForPlacement, setSelectedPoiForPlacement] = useState<POI | null>(null)
   const [poiPopup, setPoiPopup] = useState<POI | null>(null)
   const [regionPopup, setRegionPopup] = useState<Region | null>(null)
@@ -116,10 +124,16 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId }: Inter
   // Create POI state
   const [createPoiDialogOpen, setCreatePoiDialogOpen] = useState(false)
   const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null)
-  const [createPoiForm, setCreatePoiForm] = useState({
+  const defaultPoiType: PoiType = parentPoiId ? 'building' : 'settlement'
+  const [createPoiForm, setCreatePoiForm] = useState<{
+    name: string
+    description: string
+    type: PoiType
+    regionId: string
+  }>({
     name: '',
     description: '',
-    type: 'settlement' as PoiType,
+    type: defaultPoiType,
     regionId: '',
   })
 
@@ -174,7 +188,7 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId }: Inter
         setCreatePoiForm({
           name: '',
           description: '',
-          type: 'settlement',
+          type: defaultPoiType,
           regionId: regions[0]?.id ?? '',
         })
         setCreatePoiDialogOpen(true)
@@ -199,17 +213,6 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId }: Inter
     },
     [container.poiRepo],
   )
-
-  const handleOpenCreatePoiDialog = () => {
-    setCreatePoiForm({
-      name: '',
-      description: '',
-      type: 'settlement',
-      regionId: regions[0]?.id ?? '',
-    })
-    setPendingPosition(null)
-    setCreatePoiDialogOpen(true)
-  }
 
   const handleCreatePoi = async () => {
     if (!createPoiForm.name.trim() || !createPoiForm.regionId) return
@@ -257,10 +260,8 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId }: Inter
 
   const handleModeChange = (newMode: MapMode) => {
     setMode(newMode)
-    if (newMode === 'place-poi') {
-      setPlacementSheetOpen(true)
-    } else {
-      setPlacementSheetOpen(false)
+    if (newMode !== 'place-poi') {
+      setCreatePoiDialogOpen(false)
       setSelectedPoiForPlacement(null)
     }
     if (newMode !== 'draw-path') {
@@ -338,6 +339,7 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId }: Inter
           initialViewState={savedViewState}
           onViewStateChange={(zoom, center) => setMapViewState(gameMap.id, zoom, center)}
           selectedPoiId={selectedPoiForPlacement?.id}
+          highlightPoiId={highlightPoiId}
           onReady={(handle) => { mapHandleRef.current = handle }}
           onPoiClick={handlePoiClick}
           onMapClick={handleMapClick}
@@ -346,17 +348,6 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId }: Inter
           onRegionClick={setRegionPopup}
         />
       </div>
-
-      <POIPlacementSheet
-        open={placementSheetOpen}
-        onOpenChange={setPlacementSheetOpen}
-        placedPois={poisOnMap}
-        unplacedPois={unplacedPois}
-        onSelectPoi={setSelectedPoiForPlacement}
-        onRemovePoi={handleRemovePoi}
-        onCreatePoi={handleOpenCreatePoiDialog}
-        selectedPoiId={selectedPoiForPlacement?.id}
-      />
 
       {/* POI Popup Dialog */}
       <POIPopupDialog
@@ -372,6 +363,7 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId }: Inter
           await executeUpdatePOI({ ...poi, markerColor: color }, { poiRepo: container.poiRepo })
           setPoiPopup({ ...poi, markerColor: color })
         }}
+        onRemoveFromMap={handleRemovePoi}
       />
 
       {/* Region Popup Dialog */}
@@ -401,92 +393,140 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId }: Inter
         }}
       />
 
-      {/* Create POI Dialog */}
-      <Dialog open={createPoiDialogOpen} onOpenChange={setCreatePoiDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New POI</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="imap-poi-name">Name *</Label>
-              <Input
-                id="imap-poi-name"
-                value={createPoiForm.name}
-                onChange={(e) => setCreatePoiForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Name of the location"
-                autoFocus
-              />
-            </div>
-            <div>
-              <Label htmlFor="imap-poi-desc">Description</Label>
-              <Textarea
-                id="imap-poi-desc"
-                value={createPoiForm.description}
-                onChange={(e) => setCreatePoiForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Describe this location..."
-                rows={2}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+      {/* Place & Create POI Sheet */}
+      <Sheet open={createPoiDialogOpen} onOpenChange={setCreatePoiDialogOpen}>
+        <SheetContent side="right" className="w-96 sm:max-w-lg p-6 overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{mode === 'place-poi' ? 'Place POIs' : 'Create New POI'}</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-6 py-4">
+            {/* Unplaced POIs — select one to place on map */}
+            {unplacedPois.length > 0 && (
               <div>
-                <Label>Type</Label>
-                <Select value={createPoiForm.type} onValueChange={(v) => setCreatePoiForm((f) => ({ ...f, type: v as PoiType }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {POI_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <h4 className="text-sm font-semibold mb-2 text-muted-foreground">
+                  Unplaced ({unplacedPois.length})
+                </h4>
+                <div className="space-y-1">
+                  {unplacedPois.map((uPoi) => {
+                    const UIcon = POI_TYPE_ICONS[uPoi.type]
+                    return (
+                      <button
+                        key={uPoi.id}
+                        className={`w-full flex items-center gap-2 rounded-md p-2 text-left hover:bg-accent transition-colors ${
+                          selectedPoiForPlacement?.id === uPoi.id ? 'bg-accent ring-1 ring-primary' : ''
+                        }`}
+                        onClick={async () => {
+                          if (pendingPosition) {
+                            await executePlacePOIOnMap(
+                              { poiId: uPoi.id, mapId: gameMap.id, position: pendingPosition },
+                              { poiRepo: container.poiRepo },
+                            )
+                            setPendingPosition(null)
+                            setCreatePoiDialogOpen(false)
+                          } else {
+                            setSelectedPoiForPlacement(uPoi)
+                            if (mode !== 'place-poi') setMode('place-poi')
+                          }
+                        }}
+                      >
+                        <UIcon className="size-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm truncate flex-1">{uPoi.name}</span>
+                        <Badge variant="outline" className="text-xs shrink-0">{uPoi.type}</Badge>
+                      </button>
+                    )
+                  })}
+                </div>
+                {selectedPoiForPlacement && (
+                  <p className="text-xs text-muted-foreground mt-2">Click the map to place "{selectedPoiForPlacement.name}"</p>
+                )}
+              </div>
+            )}
+
+            {/* Divider */}
+            {unplacedPois.length > 0 && <div className="border-t" />}
+
+            {/* Create new POI form */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-semibold">Create New POI</h4>
+              <div>
+                <Label htmlFor="imap-poi-name">Name *</Label>
+                <Input
+                  id="imap-poi-name"
+                  value={createPoiForm.name}
+                  onChange={(e) => setCreatePoiForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="Name of the location"
+                />
               </div>
               <div>
-                <Label>Region *</Label>
-                <Select value={createPoiForm.regionId} onValueChange={(v) => setCreatePoiForm((f) => ({ ...f, regionId: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {regions.map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="imap-poi-desc">Description</Label>
+                <Textarea
+                  id="imap-poi-desc"
+                  value={createPoiForm.description}
+                  onChange={(e) => setCreatePoiForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="Describe this location..."
+                  rows={2}
+                />
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Type</Label>
+                  <Select value={createPoiForm.type} onValueChange={(v) => setCreatePoiForm((f) => ({ ...f, type: v as PoiType }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {POI_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Region *</Label>
+                  <Select value={createPoiForm.regionId} onValueChange={(v) => setCreatePoiForm((f) => ({ ...f, regionId: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {regions.map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {pendingPosition && (
+                <p className="text-xs text-muted-foreground">
+                  Will be placed at ({Math.round(pendingPosition.x)}, {Math.round(pendingPosition.y)})
+                </p>
+              )}
+              {!pendingPosition && (
+                <p className="text-xs text-muted-foreground">After creating, click the map to place it.</p>
+              )}
             </div>
-            {pendingPosition && (
-              <p className="text-xs text-muted-foreground">
-                Will be placed at ({Math.round(pendingPosition.x)}, {Math.round(pendingPosition.y)})
-              </p>
-            )}
-            {!pendingPosition && (
-              <p className="text-xs text-muted-foreground">After creating, click the map to place it.</p>
-            )}
           </div>
-          <DialogFooter>
+          <SheetFooter>
             <Button variant="outline" onClick={() => { setCreatePoiDialogOpen(false); setPendingPosition(null) }}>Cancel</Button>
             <Button onClick={handleCreatePoi} disabled={!createPoiForm.name.trim() || !createPoiForm.regionId}>Create</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       {/* Create Path Dialog */}
       <Dialog open={pathDialogOpen} onOpenChange={(open) => {
         if (!open) { setPathDialogOpen(false); setDrawPathFrom(null); setDrawPathTo(null) }
       }}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg p-6">
           <DialogHeader><DialogTitle>Create Path</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="text-sm">
               <span className="font-medium">{drawPathFrom?.name}</span>{' → '}<span className="font-medium">{drawPathTo?.name}</span>
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label>Name</Label>
               <Input value={pathForm.name} onChange={(e) => setPathForm((f) => ({ ...f, name: e.target.value }))} placeholder={`${drawPathFrom?.name ?? ''} → ${drawPathTo?.name ?? ''}`} />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="space-y-1.5">
                 <Label>Type</Label>
                 <Select value={pathForm.type} onValueChange={(v) => setPathForm((f) => ({ ...f, type: v as PathType }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{PATH_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label>Terrain</Label>
                 <Select value={pathForm.terrain} onValueChange={(v) => setPathForm((f) => ({ ...f, terrain: v as TerrainType }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -494,7 +534,7 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId }: Inter
                 </Select>
               </div>
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label>Travel Time (watches)</Label>
               <Input type="number" min="1" value={pathForm.baseTravelWatches} onChange={(e) => setPathForm((f) => ({ ...f, baseTravelWatches: parseInt(e.target.value) || 1 }))} />
             </div>
@@ -564,6 +604,7 @@ function POIPopupDialog({
   onNavigateToMap,
   onChangeType,
   onChangeColor,
+  onRemoveFromMap,
 }: {
   poi: POI | null
   onClose: () => void
@@ -571,6 +612,7 @@ function POIPopupDialog({
   onNavigateToMap: (mapId: string) => void
   onChangeType: (poi: POI, newType: PoiType) => void
   onChangeColor: (poi: POI, color: string | null) => void
+  onRemoveFromMap: (poiId: string) => void
 }) {
   const poiMaps = usePOIMaps(poi?.id ?? null)
 
@@ -663,6 +705,18 @@ function POIPopupDialog({
           )}
         </div>
         <DialogFooter>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="mr-auto"
+            onClick={() => {
+              onRemoveFromMap(poi.id)
+              onClose()
+            }}
+          >
+            <MapPinned className="mr-2 size-4" />
+            Unplace
+          </Button>
           <Button variant="outline" size="sm" onClick={onClose}>
             Close
           </Button>

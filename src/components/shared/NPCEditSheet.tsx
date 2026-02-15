@@ -24,7 +24,8 @@ import {
 import { Switch } from '~/components/ui/switch'
 import { ScrollArea } from '~/components/ui/scroll-area'
 import { TagInput } from '~/components/shared/TagInput'
-import { Plus, Trash2, Sparkles } from 'lucide-react'
+import { Plus, Trash2, Sparkles, ImageIcon, X } from 'lucide-react'
+import { useRef } from 'react'
 
 export interface NPCEditSheetProps {
   npc: NPC
@@ -36,6 +37,7 @@ export interface NPCEditSheetProps {
   onOpenChange: (open: boolean) => void
   onSave: () => void
   onChange: (npc: NPC) => void
+  onDelete?: () => void
   onGenerate?: () => void
   isGenerating?: boolean
 }
@@ -50,9 +52,23 @@ export function NPCEditSheet({
   onOpenChange,
   onSave,
   onChange,
+  onDelete,
   onGenerate,
   isGenerating,
 }: NPCEditSheetProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      onChange({ ...npc, imageUrl: reader.result as string })
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
   const updateField = (field: keyof NPC, value: any) => {
     onChange({ ...npc, [field]: value })
   }
@@ -140,6 +156,54 @@ export function NPCEditSheet({
                 />
               </div>
 
+              {/* Image */}
+              <div className="space-y-2">
+                <Label>Portrait</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
+                {npc.imageUrl ? (
+                  <div className="relative inline-block">
+                    <img
+                      src={npc.imageUrl}
+                      alt={npc.name}
+                      className="max-h-40 rounded-md border object-cover"
+                    />
+                    <div className="absolute top-1 right-1 flex gap-1">
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="size-6"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <ImageIcon className="size-3" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="size-6"
+                        onClick={() => onChange({ ...npc, imageUrl: null })}
+                      >
+                        <X className="size-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <ImageIcon className="mr-1.5 size-3.5" />
+                    Add Image
+                  </Button>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea
@@ -187,6 +251,16 @@ export function NPCEditSheet({
                   value={npc.voice}
                   onChange={(e) => updateField('voice', e.target.value)}
                   placeholder="How they speak"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="want">Want</Label>
+                <Input
+                  id="want"
+                  value={npc.want}
+                  onChange={(e) => updateField('want', e.target.value)}
+                  placeholder="Side quest hook — what they'd pay adventurers to do"
                 />
               </div>
 
@@ -492,11 +566,19 @@ export function NPCEditSheet({
           </div>
         </ScrollArea>
 
-        <div className="flex shrink-0 justify-end gap-2 border-t px-4 pt-4 pb-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={onSave}>Save</Button>
+        <div className="flex shrink-0 items-center gap-2 border-t px-4 pt-4 pb-4">
+          {onDelete && (
+            <Button variant="destructive" size="sm" onClick={onDelete} className="mr-auto">
+              <Trash2 className="mr-2 size-4" />
+              Delete
+            </Button>
+          )}
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={onSave}>Save</Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

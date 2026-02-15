@@ -18,8 +18,8 @@ export function getSidebarData(_realmId?: string): { navGroups: NavGroup[] } {
         title: 'Overview',
         items: [
           { title: 'Dashboard', url: '/realms', icon: LayoutDashboard },
-          { title: 'Calendar', url: '/realms/calendar', icon: Scroll },
           { title: 'Maps', url: '/realms/maps', icon: MapPinned },
+          { title: 'Calendar', url: '/realms/calendar', icon: Scroll },
         ],
       },
       {
