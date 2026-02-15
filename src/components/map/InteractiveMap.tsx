@@ -124,10 +124,16 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
   // Create POI state
   const [createPoiDialogOpen, setCreatePoiDialogOpen] = useState(false)
   const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null)
-  const [createPoiForm, setCreatePoiForm] = useState({
+  const defaultPoiType: PoiType = parentPoiId ? 'building' : 'settlement'
+  const [createPoiForm, setCreatePoiForm] = useState<{
+    name: string
+    description: string
+    type: PoiType
+    regionId: string
+  }>({
     name: '',
     description: '',
-    type: 'settlement' as PoiType,
+    type: defaultPoiType,
     regionId: '',
   })
 
@@ -182,7 +188,7 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
         setCreatePoiForm({
           name: '',
           description: '',
-          type: 'settlement',
+          type: defaultPoiType,
           regionId: regions[0]?.id ?? '',
         })
         setCreatePoiDialogOpen(true)
