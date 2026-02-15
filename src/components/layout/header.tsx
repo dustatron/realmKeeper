@@ -2,6 +2,7 @@ import { useRouterState } from '@tanstack/react-router'
 import { Separator } from '~/components/ui/separator'
 import { SidebarTrigger } from '~/components/ui/sidebar'
 import { ThemeSwitch } from './theme-switch'
+import { CloudAuth } from './cloud-auth'
 import { getSidebarData } from './sidebar-data'
 import { isNavCollapsible } from './types'
 import { useUIStore } from '~/ui/stores/uiStore'
@@ -49,6 +50,7 @@ export function Header() {
         ) : null}
       </div>
       <div className="ml-auto flex items-center gap-2">
+        <CloudAuth />
         <ThemeSwitch />
       </div>
     </header>

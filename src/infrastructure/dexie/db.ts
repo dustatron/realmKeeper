@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
+import dexieCloud from 'dexie-cloud-addon'
 import type { SystemConfig } from '@domain/entities/SystemConfig'
 import type { Realm } from '@domain/entities/Realm'
 import type { Region } from '@domain/entities/Region'
@@ -20,9 +21,14 @@ import type { Notice } from '@domain/entities/Notice'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
 import { seedDatabase } from './seed'
 
-const db = new Dexie('RealmKeeperDB') as Dexie & {
+const cloudUrl = import.meta.env.VITE_DEXIE_CLOUD_URL as string | undefined
+
+// dexie-cloud-addon augments the Dexie interface with its own `realms` table
+// (for access control), which collides with our app `realms` table.
+// Omit cloud's `realms` so our EntityTable<Realm> takes precedence.
+type AppDB = Omit<Dexie, 'realms'> & {
   systemConfigs: EntityTable<SystemConfig, 'id'>
-  realms: EntityTable<Realm, 'id'>
+  worlds: EntityTable<Realm, 'id'>
   regions: EntityTable<Region, 'id'>
   factions: EntityTable<Faction, 'id'>
   npcs: EntityTable<NPC, 'id'>
@@ -43,9 +49,13 @@ const db = new Dexie('RealmKeeperDB') as Dexie & {
   encounterTables: EntityTable<EncounterTable, 'id'>
 }
 
+const db = new Dexie('RealmKeeperDB', {
+  addons: cloudUrl ? [dexieCloud] : [],
+}) as unknown as AppDB
+
 const storesV5 = {
   systemConfigs: 'id',
-  realms: 'id, systemId',
+  worlds: 'id, systemId',
   regions: 'id, realmId',
   factions: 'id, realmId, status, isParty',
   npcs: 'id, realmId, factionId, regionId, *tags',
@@ -62,7 +72,7 @@ const storesV5 = {
 
 const storesV6 = {
   systemConfigs: 'id',
-  realms: 'id, systemId',
+  worlds: 'id, systemId',
   regions: 'id, realmId',
   factions: 'id, realmId, status, isParty',
   npcs: 'id, realmId, factionId, regionId, poiId, *tags',
@@ -92,6 +102,7 @@ const stores = {
   encounterTables: 'id, ownerPoiId, ownerRegionId, realmId',
 }
 
+
 db.version(1).stores(storesV5)
 
 db.version(2).stores(storesV5).upgrade((tx) => {
@@ -111,20 +122,20 @@ db.version(3).stores(storesV5).upgrade(async (tx) => {
 
 // v4: Add completedThroughDay to realms
 db.version(4).stores(storesV5).upgrade(async (tx) => {
-  const realms = await tx.table('realms').toArray()
+  const realms = await tx.table('worlds').toArray()
   for (const realm of realms) {
     if (realm.completedThroughDay === undefined) {
-      await tx.table('realms').put({ ...realm, completedThroughDay: -1 })
+      await tx.table('worlds').put({ ...realm, completedThroughDay: -1 })
     }
   }
 })
 
 // v5: Add daysPerWeek + watchesPerDay to realms
 db.version(5).stores(storesV5).upgrade(async (tx) => {
-  const realms = await tx.table('realms').toArray()
+  const realms = await tx.table('worlds').toArray()
   for (const realm of realms) {
     if (realm.daysPerWeek === undefined || realm.watchesPerDay === undefined) {
-      await tx.table('realms').put({
+      await tx.table('worlds').put({
         ...realm,
         daysPerWeek: realm.daysPerWeek ?? 7,
         watchesPerDay: realm.watchesPerDay ?? 3,
@@ -179,10 +190,10 @@ db.version(6).stores(storesV6).upgrade(async (tx) => {
   }
 
   // Realms: convert currentWatch from string to number
-  const realms = await tx.table('realms').toArray()
+  const realms = await tx.table('worlds').toArray()
   for (const realm of realms) {
     if (typeof realm.currentWatch === 'string') {
-      await tx.table('realms').put({
+      await tx.table('worlds').put({
         ...realm,
         currentWatch: watchNameToNumber[realm.currentWatch] ?? 1,
       })
@@ -309,9 +320,27 @@ db.version(15).stores(stores).upgrade(async (tx) => {
   }
 })
 
+// v16: Migrate data from old `realms` table → `worlds` (Dexie Cloud reserves `realms`)
+db.version(16).stores(stores).upgrade(async (tx) => {
+  try {
+    const old = await tx.table('realms').toArray()
+    if (old.length > 0) await tx.table('worlds').bulkPut(old)
+  } catch {
+    // No old `realms` table — fresh install or already migrated
+  }
+})
+
 // Seed system configs on first DB creation
 db.on('populate', (tx) => {
   seedDatabase(tx)
 })
+
+// Configure Dexie Cloud sync when URL is provided
+if (cloudUrl) {
+  db.cloud.configure({
+    databaseUrl: cloudUrl,
+    requireAuth: false, // allow offline-first usage, login is optional
+  })
+}
 
 export { db }
