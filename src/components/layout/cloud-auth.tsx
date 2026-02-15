@@ -5,11 +5,8 @@ import { Button } from '~/components/ui/button'
 
 const cloudEnabled = !!import.meta.env.VITE_DEXIE_CLOUD_URL
 
-export function CloudAuth() {
-  const currentUser = useObservable(cloudEnabled ? db.cloud.currentUser : undefined)
-
-  if (!cloudEnabled) return null
-
+function CloudAuthInner() {
+  const currentUser = useObservable(db.cloud.currentUser)
   const isLoggedIn = currentUser?.isLoggedIn
 
   if (isLoggedIn) {
@@ -43,4 +40,9 @@ export function CloudAuth() {
       <span className="sr-only">Login to sync</span>
     </Button>
   )
+}
+
+export function CloudAuth() {
+  if (!cloudEnabled) return null
+  return <CloudAuthInner />
 }

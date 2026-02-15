@@ -28,7 +28,7 @@ const cloudUrl = import.meta.env.VITE_DEXIE_CLOUD_URL as string | undefined
 // Omit cloud's `realms` so our EntityTable<Realm> takes precedence.
 type AppDB = Omit<Dexie, 'realms'> & {
   systemConfigs: EntityTable<SystemConfig, 'id'>
-  realms: EntityTable<Realm, 'id'>
+  worlds: EntityTable<Realm, 'id'>
   regions: EntityTable<Region, 'id'>
   factions: EntityTable<Faction, 'id'>
   npcs: EntityTable<NPC, 'id'>
@@ -55,7 +55,7 @@ const db = new Dexie('RealmKeeperDB', {
 
 const storesV5 = {
   systemConfigs: 'id',
-  realms: 'id, systemId',
+  worlds: 'id, systemId',
   regions: 'id, realmId',
   factions: 'id, realmId, status, isParty',
   npcs: 'id, realmId, factionId, regionId, *tags',
@@ -72,7 +72,7 @@ const storesV5 = {
 
 const storesV6 = {
   systemConfigs: 'id',
-  realms: 'id, systemId',
+  worlds: 'id, systemId',
   regions: 'id, realmId',
   factions: 'id, realmId, status, isParty',
   npcs: 'id, realmId, factionId, regionId, poiId, *tags',
@@ -121,20 +121,20 @@ db.version(3).stores(storesV5).upgrade(async (tx) => {
 
 // v4: Add completedThroughDay to realms
 db.version(4).stores(storesV5).upgrade(async (tx) => {
-  const realms = await tx.table('realms').toArray()
+  const realms = await tx.table('worlds').toArray()
   for (const realm of realms) {
     if (realm.completedThroughDay === undefined) {
-      await tx.table('realms').put({ ...realm, completedThroughDay: -1 })
+      await tx.table('worlds').put({ ...realm, completedThroughDay: -1 })
     }
   }
 })
 
 // v5: Add daysPerWeek + watchesPerDay to realms
 db.version(5).stores(storesV5).upgrade(async (tx) => {
-  const realms = await tx.table('realms').toArray()
+  const realms = await tx.table('worlds').toArray()
   for (const realm of realms) {
     if (realm.daysPerWeek === undefined || realm.watchesPerDay === undefined) {
-      await tx.table('realms').put({
+      await tx.table('worlds').put({
         ...realm,
         daysPerWeek: realm.daysPerWeek ?? 7,
         watchesPerDay: realm.watchesPerDay ?? 3,
@@ -189,10 +189,10 @@ db.version(6).stores(storesV6).upgrade(async (tx) => {
   }
 
   // Realms: convert currentWatch from string to number
-  const realms = await tx.table('realms').toArray()
+  const realms = await tx.table('worlds').toArray()
   for (const realm of realms) {
     if (typeof realm.currentWatch === 'string') {
-      await tx.table('realms').put({
+      await tx.table('worlds').put({
         ...realm,
         currentWatch: watchNameToNumber[realm.currentWatch] ?? 1,
       })

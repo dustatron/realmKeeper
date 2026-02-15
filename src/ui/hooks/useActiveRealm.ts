@@ -5,7 +5,7 @@ import { useUIStore } from '~/ui/stores/uiStore'
 export function useActiveRealm() {
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const realm = useLiveQuery(
-    () => (activeRealmId ? db.realms.get(activeRealmId) : undefined),
+    () => (activeRealmId ? db.worlds.get(activeRealmId) : undefined),
     [activeRealmId]
   )
   return realm

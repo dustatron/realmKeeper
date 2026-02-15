@@ -57,7 +57,7 @@ export const Route = createFileRoute('/_app/realms/')({
 function RealmsPage() {
   const navigate = useNavigate()
   const container = useContainer()
-  const rawRealms = useLiveQuery(() => db.realms.toArray())
+  const rawRealms = useLiveQuery(() => db.worlds.toArray())
   const realmsLoaded = rawRealms !== undefined
   const realms = rawRealms ?? []
   const systemConfigs = useSystemConfigs()
