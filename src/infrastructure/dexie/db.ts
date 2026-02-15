@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
+import dexieCloud from 'dexie-cloud-addon'
 import type { SystemConfig } from '@domain/entities/SystemConfig'
 import type { Realm } from '@domain/entities/Realm'
 import type { Region } from '@domain/entities/Region'
@@ -20,7 +21,12 @@ import type { Notice } from '@domain/entities/Notice'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
 import { seedDatabase } from './seed'
 
-const db = new Dexie('RealmKeeperDB') as Dexie & {
+const cloudUrl = import.meta.env.VITE_DEXIE_CLOUD_URL as string | undefined
+
+// dexie-cloud-addon augments the Dexie interface with its own `realms` table
+// (for access control), which collides with our app `realms` table.
+// Omit cloud's `realms` so our EntityTable<Realm> takes precedence.
+type AppDB = Omit<Dexie, 'realms'> & {
   systemConfigs: EntityTable<SystemConfig, 'id'>
   realms: EntityTable<Realm, 'id'>
   regions: EntityTable<Region, 'id'>
@@ -42,6 +48,10 @@ const db = new Dexie('RealmKeeperDB') as Dexie & {
   notices: EntityTable<Notice, 'id'>
   encounterTables: EntityTable<EncounterTable, 'id'>
 }
+
+const db = new Dexie('RealmKeeperDB', {
+  addons: cloudUrl ? [dexieCloud] : [],
+}) as unknown as AppDB
 
 const storesV5 = {
   systemConfigs: 'id',
@@ -313,5 +323,13 @@ db.version(15).stores(stores).upgrade(async (tx) => {
 db.on('populate', (tx) => {
   seedDatabase(tx)
 })
+
+// Configure Dexie Cloud sync when URL is provided
+if (cloudUrl) {
+  db.cloud.configure({
+    databaseUrl: cloudUrl,
+    requireAuth: false, // allow offline-first usage, login is optional
+  })
+}
 
 export { db }

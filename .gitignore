@@ -12,3 +12,5 @@ dist
 routeTree.gen.ts
 .tanstack
 package-lock.json
+dexie-cloud.json
+dexie-cloud.key
