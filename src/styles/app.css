@@ -6,15 +6,22 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: var(--color-border);
+    outline-color: var(--color-ring);
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
   html {
-    @apply overflow-x-hidden;
+    overflow-x: hidden;
   }
   body {
-    @apply min-h-svh w-full bg-background text-foreground has-[div[data-variant='inset']]:bg-sidebar;
+    min-height: 100svh;
+    width: 100%;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+  body:has(div[data-variant='inset']) {
+    background-color: var(--color-sidebar);
   }
 
   body[data-scroll-locked] {

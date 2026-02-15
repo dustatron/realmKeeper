@@ -1,0 +1,13 @@
+export interface Rumor {
+  id: string
+  poiId: string | null
+  regionId: string | null
+  realmId: string
+  text: string
+  source: string
+  isUsed: boolean
+  isQuestHook: boolean
+  tags: string[]
+  createdAt: number
+  updatedAt: number
+}

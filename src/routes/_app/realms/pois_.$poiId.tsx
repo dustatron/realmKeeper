@@ -2,15 +2,17 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
-import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
+import { usePOI } from '~/ui/hooks/usePOIs'
 import { useRegion } from '~/ui/hooks/useRegions'
 import { usePOIBreadcrumb } from '~/ui/hooks/usePOIBreadcrumb'
 import { usePOIChildren } from '~/ui/hooks/usePOIChildren'
 import { useNPCsByPoi } from '~/ui/hooks/useNPCsByPoi'
 import { useFactionPresencesByPoi } from '~/ui/hooks/useFactionPresences'
-import { useFaction } from '~/ui/hooks/useFactions'
-import { usePathsByPoi } from '~/ui/hooks/usePaths'
+import { useResolvedPaths } from '~/ui/hooks/useResolvedPaths'
 import { usePOIMaps } from '~/ui/hooks/useGameMaps'
+import { useRumorsByPoi } from '~/ui/hooks/useRumors'
+import { useNoticesByPoi } from '~/ui/hooks/useNotices'
+import { useEncounterTable } from '~/ui/hooks/useEncounterTable'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
@@ -19,13 +21,26 @@ import { executeCreatePOI } from '@application/use-cases/CreatePOI'
 import { executeCreatePOIEvent } from '@application/use-cases/CreatePOIEvent'
 import { executeDeletePOIEvent } from '@application/use-cases/DeletePOIEvent'
 import { executeCreateGameMap } from '@application/use-cases/CreateGameMap'
+import { executeCreateRumor } from '@application/use-cases/CreateRumor'
+import { executeUpdateRumor } from '@application/use-cases/UpdateRumor'
+import { executeDeleteRumor } from '@application/use-cases/DeleteRumor'
+import { executeCreateNotice } from '@application/use-cases/CreateNotice'
+import { executeUpdateNotice } from '@application/use-cases/UpdateNotice'
+import { executeDeleteNotice } from '@application/use-cases/DeleteNotice'
+import { executeCreateEncounterTable } from '@application/use-cases/CreateEncounterTable'
+import { executeUpdateEncounterTable } from '@application/use-cases/UpdateEncounterTable'
+import { executeRollEncounter } from '@application/use-cases/RollEncounter'
 import { MapUploadDialog } from '~/components/map/MapUploadDialog'
 import { InteractiveMap } from '~/components/map/InteractiveMap'
+import { ServicesList } from '~/components/shared/ServicesList'
 
-import { EmptyState } from '~/components/shared/EmptyState'
+import { SettlementTemplate } from '~/components/poi-templates/SettlementTemplate'
+import { DungeonTemplate } from '~/components/poi-templates/DungeonTemplate'
+import { BuildingTemplate } from '~/components/poi-templates/BuildingTemplate'
+import { GenericTemplate } from '~/components/poi-templates/GenericTemplate'
+
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { TagInput } from '~/components/shared/TagInput'
-import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -57,15 +72,13 @@ import {
   Trash2,
   Plus,
   MapPin,
-  Users,
-  Flag,
-  Route as RouteIcon,
   Building2,
   Home,
   DoorOpen,
   Castle,
   Skull,
   TreePine,
+  Flag,
   Landmark,
   LayoutGrid,
   Map,
@@ -74,11 +87,12 @@ import {
   ChevronRight,
   CalendarClock,
   MapPinned,
-  ExternalLink,
 } from 'lucide-react'
 import { POI_TYPES, POI_EVENT_TYPES, SEASONS, type PoiType, type POIEventType, type Season } from '@shared/constants'
+import type { NoticeType } from '@shared/constants'
 import type { POI } from '@domain/entities/POI'
-import type { POIEvent } from '@domain/entities/POIEvent'
+import type { Service } from '@domain/value-objects/Service'
+import type { EncounterTable } from '@domain/entities/EncounterTable'
 
 export const Route = createFileRoute('/_app/realms/pois_/$poiId')({
   component: POIDetailPage,
@@ -108,16 +122,19 @@ function POIDetailPage() {
   const children = usePOIChildren(poiId)
   const npcs = useNPCsByPoi(poiId)
   const factionPresences = useFactionPresencesByPoi(poiId)
-  const paths = usePathsByPoi(poiId)
+  const paths = useResolvedPaths(poiId)
   const poiEvents = useLiveQuery(
     () => (poiId ? db.poiEvents.where('poiId').equals(poiId).toArray() : []),
     [poiId]
   ) ?? []
   const poiMaps = usePOIMaps(poiId)
+  const rumors = useRumorsByPoi(poiId)
+  const notices = useNoticesByPoi(poiId)
+  const encounterTable = useEncounterTable(poiId, poi?.regionId ?? null, null)
   const container = useContainer()
   const setHeaderTitle = useUIStore((s) => s.setHeaderTitle)
 
-  // Set breadcrumb in site header
+  // Breadcrumb in site header
   useEffect(() => {
     if (!poi) return
     setHeaderTitle(
@@ -166,6 +183,12 @@ function POIDetailPage() {
     subtypeLabel: '',
     floor: null as number | null,
     tags: [] as string[],
+    readAloud: '',
+    gmNotes: '',
+    trouble: '',
+    mood: '',
+    sensory: '',
+    services: [] as Service[],
   })
 
   const [createChildForm, setCreateChildForm] = useState({
@@ -191,54 +214,6 @@ function POIDetailPage() {
     tags: [] as string[],
   })
 
-  const openCreateEventDialog = () => {
-    setEventForm({
-      name: '',
-      description: '',
-      type: 'festival',
-      season: 'spring',
-      day: 1,
-      year: null,
-      watch: null,
-      recurring: false,
-      durationWatches: 1,
-      effects: '',
-      tags: [],
-    })
-    setCreateEventDialogOpen(true)
-  }
-
-  const handleCreateEvent = async () => {
-    if (!poi || !region || !eventForm.name.trim()) return
-    await executeCreatePOIEvent(
-      {
-        poiId: poi.id,
-        realmId: region.realmId,
-        name: eventForm.name,
-        description: eventForm.description,
-        type: eventForm.type,
-        trigger: {
-          year: eventForm.recurring ? null : eventForm.year,
-          season: eventForm.season,
-          day: eventForm.day,
-          watch: eventForm.watch,
-        },
-        recurring: eventForm.recurring,
-        durationWatches: eventForm.durationWatches,
-        effects: eventForm.effects,
-        tags: eventForm.tags,
-      },
-      { poiEventRepo: container.poiEventRepo }
-    )
-    setCreateEventDialogOpen(false)
-  }
-
-  const handleDeleteEvent = async () => {
-    if (!deletingEventId) return
-    await executeDeletePOIEvent(deletingEventId, { poiEventRepo: container.poiEventRepo })
-    setDeletingEventId(null)
-  }
-
   const openEditSheet = () => {
     if (!poi) return
     setEditForm({
@@ -250,20 +225,14 @@ function POIDetailPage() {
       subtypeLabel: poi.subtypeLabel ?? '',
       floor: poi.floor,
       tags: poi.tags,
+      readAloud: poi.readAloud,
+      gmNotes: poi.gmNotes,
+      trouble: poi.trouble,
+      mood: poi.mood,
+      sensory: poi.sensory,
+      services: poi.services,
     })
     setEditSheetOpen(true)
-  }
-
-  const openCreateChildDialog = () => {
-    setCreateChildForm({
-      name: '',
-      description: '',
-      type: 'building',
-      subtypeLabel: '',
-      floor: null,
-      tags: [],
-    })
-    setCreateChildDialogOpen(true)
   }
 
   const handleEdit = async () => {
@@ -279,6 +248,12 @@ function POIDetailPage() {
         subtypeLabel: editForm.subtypeLabel || null,
         floor: editForm.floor,
         tags: editForm.tags,
+        readAloud: editForm.readAloud,
+        gmNotes: editForm.gmNotes,
+        trouble: editForm.trouble,
+        mood: editForm.mood,
+        sensory: editForm.sensory,
+        services: editForm.services,
       },
       { poiRepo: container.poiRepo }
     )
@@ -289,8 +264,12 @@ function POIDetailPage() {
     if (!poi) return
     await executeDeletePOI(poi.id, { poiRepo: container.poiRepo })
     setDeleteConfirmOpen(false)
-    // Navigate back
     window.history.back()
+  }
+
+  const openCreateChildDialog = () => {
+    setCreateChildForm({ name: '', description: '', type: 'building', subtypeLabel: '', floor: null, tags: [] })
+    setCreateChildDialogOpen(true)
   }
 
   const handleCreateChild = async () => {
@@ -311,36 +290,99 @@ function POIDetailPage() {
     setCreateChildDialogOpen(false)
   }
 
+  const openCreateEventDialog = () => {
+    setEventForm({ name: '', description: '', type: 'festival', season: 'spring', day: 1, year: null, watch: null, recurring: false, durationWatches: 1, effects: '', tags: [] })
+    setCreateEventDialogOpen(true)
+  }
+
+  const handleCreateEvent = async () => {
+    if (!poi || !region || !eventForm.name.trim()) return
+    await executeCreatePOIEvent(
+      {
+        poiId: poi.id,
+        realmId: region.realmId,
+        name: eventForm.name,
+        description: eventForm.description,
+        type: eventForm.type,
+        trigger: { year: eventForm.recurring ? null : eventForm.year, season: eventForm.season, day: eventForm.day, watch: eventForm.watch },
+        recurring: eventForm.recurring,
+        durationWatches: eventForm.durationWatches,
+        effects: eventForm.effects,
+        tags: eventForm.tags,
+      },
+      { poiEventRepo: container.poiEventRepo }
+    )
+    setCreateEventDialogOpen(false)
+  }
+
+  const handleDeleteEvent = async () => {
+    if (!deletingEventId) return
+    await executeDeletePOIEvent(deletingEventId, { poiEventRepo: container.poiEventRepo })
+    setDeletingEventId(null)
+  }
+
   const handleUploadMap = async (data: { name: string; imageBlob: Blob; width: number; height: number }) => {
     if (!poi) return
-    await executeCreateGameMap(
-      { ...data, ownerPoiId: poi.id },
-      { gameMapRepo: container.gameMapRepo }
+    await executeCreateGameMap({ ...data, ownerPoiId: poi.id }, { gameMapRepo: container.gameMapRepo })
+  }
+
+  // Rumor handlers
+  const handleCreateRumor = async (input: { text: string; source: string; isQuestHook: boolean }) => {
+    if (!poi || !region) return
+    await executeCreateRumor(
+      { poiId: poi.id, regionId: poi.regionId, realmId: region.realmId, ...input },
+      { rumorRepo: container.rumorRepo }
     )
   }
 
-  const getPoiTypeColor = (type: PoiType): 'default' | 'secondary' | 'destructive' | 'outline' => {
-    switch (type) {
-      case 'settlement':
-        return 'default'
-      case 'dungeon':
-        return 'destructive'
-      case 'landmark':
-        return 'secondary'
-      default:
-        return 'outline'
-    }
+  const handleToggleRumorUsed = async (rumor: import('@domain/entities/Rumor').Rumor) => {
+    await executeUpdateRumor({ ...rumor, isUsed: !rumor.isUsed }, { rumorRepo: container.rumorRepo })
   }
 
-  // Group children by floor if any have floor values
-  const childrenByFloor = children.reduce((acc, child) => {
-    const floor = child.floor ?? 'unspecified'
-    if (!acc[floor]) acc[floor] = []
-    acc[floor].push(child)
-    return acc
-  }, {} as Record<string | number, POI[]>)
+  const handleDeleteRumor = async (id: string) => {
+    await executeDeleteRumor(id, { rumorRepo: container.rumorRepo })
+  }
 
-  const hasFloors = children.some((c) => c.floor !== null)
+  // Notice handlers
+  const handleCreateNotice = async (input: { title: string; description: string; type: NoticeType; reward: string }) => {
+    if (!poi || !region) return
+    await executeCreateNotice(
+      { poiId: poi.id, regionId: poi.regionId, realmId: region.realmId, ...input },
+      { noticeRepo: container.noticeRepo }
+    )
+  }
+
+  const handleToggleNoticeUsed = async (notice: import('@domain/entities/Notice').Notice) => {
+    await executeUpdateNotice({ ...notice, isUsed: !notice.isUsed }, { noticeRepo: container.noticeRepo })
+  }
+
+  const handleDeleteNotice = async (id: string) => {
+    await executeDeleteNotice(id, { noticeRepo: container.noticeRepo })
+  }
+
+  // Encounter handlers
+  const handleRollEncounter = async () => {
+    if (!poi || !region) throw new Error('No POI/region')
+    return executeRollEncounter(
+      { poiId: poi.id, regionId: poi.regionId, realmId: region.realmId },
+      { encounterTableRepo: container.encounterTableRepo }
+    )
+  }
+
+  const handleSaveEncounterTable = async (entries: Pick<EncounterTable, 'creature' | 'signOmen' | 'loss' | 'npc' | 'discovery' | 'treasure'>) => {
+    if (!poi || !region) return
+    if (encounterTable) {
+      await executeUpdateEncounterTable(
+        { ...encounterTable, ...entries },
+        { encounterTableRepo: container.encounterTableRepo }
+      )
+    } else {
+      await executeCreateEncounterTable(
+        { ownerPoiId: poi.id, realmId: region.realmId, ...entries },
+        { encounterTableRepo: container.encounterTableRepo }
+      )
+    }
+  }
 
   if (poi === undefined) {
     return <div className="py-8 text-center text-muted-foreground">Loading...</div>
@@ -352,370 +394,147 @@ function POIDetailPage() {
 
   const Icon = POI_TYPE_ICONS[poi.type]
 
+  // Shared map section
+  const mapSection = poiMaps.length > 0 ? (
+    <POIDetailMap gameMap={poiMaps[0]} poiMaps={poiMaps} parentPoiId={poiId} />
+  ) : null
+
+  // Template selection
+  const renderTemplate = () => {
+    switch (poi.type) {
+      case 'settlement':
+        return (
+          <SettlementTemplate
+            poi={poi}
+            children={children}
+            npcs={npcs}
+            factionPresences={factionPresences}
+            paths={paths}
+            rumors={rumors}
+            notices={notices}
+            encounterTable={encounterTable}
+            poiMaps={poiMaps}
+            onToggleRumorUsed={handleToggleRumorUsed}
+            onCreateRumor={handleCreateRumor}
+            onDeleteRumor={handleDeleteRumor}
+            onToggleNoticeUsed={handleToggleNoticeUsed}
+            onCreateNotice={handleCreateNotice}
+            onDeleteNotice={handleDeleteNotice}
+            onRollEncounter={handleRollEncounter}
+            onSaveEncounterTable={handleSaveEncounterTable}
+            onCreateChild={openCreateChildDialog}
+            mapSection={mapSection}
+          />
+        )
+      case 'dungeon':
+        return (
+          <DungeonTemplate
+            poi={poi}
+            children={children}
+            npcs={npcs}
+            factionPresences={factionPresences}
+            encounterTable={encounterTable}
+            onRollEncounter={handleRollEncounter}
+            onSaveEncounterTable={handleSaveEncounterTable}
+            onCreateChild={openCreateChildDialog}
+            mapSection={mapSection}
+          />
+        )
+      case 'building':
+      case 'interior':
+        return (
+          <BuildingTemplate
+            poi={poi}
+            children={children}
+            npcs={npcs}
+            onCreateChild={openCreateChildDialog}
+            mapSection={mapSection}
+          />
+        )
+      default:
+        return (
+          <GenericTemplate
+            poi={poi}
+            children={children}
+            npcs={npcs}
+            factionPresences={factionPresences}
+            paths={paths}
+            poiEvents={poiEvents}
+            onCreateChild={openCreateChildDialog}
+            mapSection={mapSection}
+          />
+        )
+    }
+  }
+
   return (
     <div className="space-y-4">
-      {/* Map — topmost element */}
-      {poiMaps.length > 0 && (
-        <POIDetailMap gameMap={poiMaps[0]} poiMaps={poiMaps} parentPoiId={poiId} />
-      )}
-
-      {/* Action buttons */}
+      {/* Action bar */}
       <div className="flex items-center gap-2">
         <span className="flex items-center gap-2 mr-auto">
           <Icon className="size-5" />
           <span className="font-medium">{poi.name}</span>
+          <Badge variant="outline" className="text-xs">{poi.type}</Badge>
         </span>
-        {poiMaps.length > 0 ? (
-          <Button size="sm" variant="outline" onClick={() => setMapUploadDialogOpen(true)}>
-            <MapPinned className="mr-2 size-4" />
-            Edit Map
-          </Button>
-        ) : (
-          <Button size="sm" variant="outline" onClick={() => setMapUploadDialogOpen(true)}>
-            <MapPinned className="mr-2 size-4" />
-            Add Map
-          </Button>
-        )}
+        <Button size="sm" variant="outline" onClick={() => setMapUploadDialogOpen(true)}>
+          <MapPinned className="mr-2 size-4" />
+          {poiMaps.length > 0 ? 'Edit Map' : 'Add Map'}
+        </Button>
         <Button size="sm" onClick={openEditSheet}>
           <Pencil className="mr-2 size-4" />
           Edit
         </Button>
       </div>
 
-      <div className="space-y-4">
-        {/* POI Info Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Location Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-muted-foreground w-24">Type</span>
-              <Badge variant={getPoiTypeColor(poi.type)}>{poi.type}</Badge>
-              {poi.subtypeLabel && (
-                <Badge variant="outline">{poi.subtypeLabel}</Badge>
-              )}
-            </div>
-            {poi.floor !== null && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground w-24">Floor</span>
-                <Badge variant="outline">Floor {poi.floor}</Badge>
-              </div>
-            )}
-            {poi.description && (
-              <div>
-                <span className="text-sm font-medium text-muted-foreground">Description</span>
-                <p className="text-sm mt-1 whitespace-pre-wrap">{poi.description}</p>
-              </div>
-            )}
-            {poi.tags.length > 0 && (
-              <div className="flex items-start gap-2">
-                <span className="text-sm font-medium text-muted-foreground w-24 pt-0.5">Tags</span>
-                <div className="flex flex-wrap gap-1">
-                  {poi.tags.map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Template content */}
+      {renderTemplate()}
 
-        {/* What's Here Panel */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">What's Here</CardTitle>
-              <Button size="sm" variant="outline" onClick={openCreateChildDialog}>
-                <Plus className="mr-2 size-4" />
-                Add Location
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Child Locations */}
-            {children.length > 0 ? (
-              <div>
-                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <MapPin className="size-4" />
-                  Child Locations ({children.length})
-                </h4>
-                {hasFloors ? (
-                  <div className="space-y-4">
-                    {Object.entries(childrenByFloor)
-                      .sort(([a], [b]) => {
-                        if (a === 'unspecified') return 1
-                        if (b === 'unspecified') return -1
-                        return Number(b) - Number(a)
-                      })
-                      .map(([floor, floorChildren]) => (
-                        <div key={floor}>
-                          <div className="text-xs font-medium text-muted-foreground mb-2">
-                            {floor === 'unspecified' ? 'Unspecified Floor' : `Floor ${floor}`}
-                          </div>
-                          <div className="grid gap-2 sm:grid-cols-2">
-                            {floorChildren.map((child) => {
-                              const ChildIcon = POI_TYPE_ICONS[child.type]
-                              return (
-                                <Link
-                                  key={child.id}
-                                  to="/realms/pois/$poiId"
-                                  params={{ poiId: child.id }}
-                                  className="block"
-                                >
-                                  <div className="flex items-center gap-2 rounded-md border p-2 hover:bg-accent transition-colors">
-                                    <ChildIcon className="size-4 text-muted-foreground shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-sm font-medium truncate">{child.name}</div>
-                                      {child.subtypeLabel && (
-                                        <div className="text-xs text-muted-foreground truncate">
-                                          {child.subtypeLabel}
-                                        </div>
-                                      )}
-                                    </div>
-                                    <Badge variant="outline" className="text-xs">
-                                      {child.type}
-                                    </Badge>
-                                  </div>
-                                </Link>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      ))}
+      {/* Events section (shared across all templates) */}
+      {poiEvents.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              <CalendarClock className="size-4" />
+              Events ({poiEvents.length})
+            </h4>
+            <Button size="sm" variant="outline" onClick={openCreateEventDialog}>
+              <Plus className="mr-1.5 size-3.5" />
+              Add Event
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {poiEvents.map((event) => (
+              <div key={event.id} className="flex items-start gap-2 rounded-md border p-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{event.name}</span>
+                    <Badge variant="outline" className="text-xs">{event.type}</Badge>
+                    {event.isActive && <Badge className="text-xs bg-green-600">Active</Badge>}
+                    {event.recurring && <Badge variant="secondary" className="text-xs">Recurring</Badge>}
                   </div>
-                ) : (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {children.map((child) => {
-                      const ChildIcon = POI_TYPE_ICONS[child.type]
-                      return (
-                        <Link
-                          key={child.id}
-                          to="/realms/pois/$poiId"
-                          params={{ poiId: child.id }}
-                          className="block"
-                        >
-                          <div className="flex items-center gap-2 rounded-md border p-2 hover:bg-accent transition-colors">
-                            <ChildIcon className="size-4 text-muted-foreground shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium truncate">{child.name}</div>
-                              {child.subtypeLabel && (
-                                <div className="text-xs text-muted-foreground truncate">
-                                  {child.subtypeLabel}
-                                </div>
-                              )}
-                            </div>
-                            <Badge variant="outline" className="text-xs">
-                              {child.type}
-                            </Badge>
-                          </div>
-                        </Link>
-                      )
-                    })}
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {event.trigger.season.charAt(0).toUpperCase() + event.trigger.season.slice(1)} Day {event.trigger.day}
+                    {event.trigger.year !== null && `, Year ${event.trigger.year}`}
+                    {event.trigger.watch !== null && `, Watch ${event.trigger.watch}`}
+                    {' · '}{event.durationWatches} watch{event.durationWatches !== 1 ? 'es' : ''}
                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground">
-                No child locations yet.
-              </div>
-            )}
-
-            {/* NPCs Present */}
-            {npcs.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <Users className="size-4" />
-                  NPCs Present ({npcs.length})
-                </h4>
-                <div className="space-y-2">
-                  {npcs.map((npc) => (
-                    <Link
-                      key={npc.id}
-                      to="/realms/npcs/$npcId"
-                      params={{ npcId: npc.id }}
-                      className="block"
-                    >
-                      <div className="flex items-center gap-2 rounded-md border p-2 hover:bg-accent transition-colors">
-                        <div className="flex-1">
-                          <div className="text-sm font-medium">{npc.name}</div>
-                          {npc.description && (
-                            <div className="text-xs text-muted-foreground line-clamp-1">
-                              {npc.description}
-                            </div>
-                          )}
-                        </div>
-                        {npc.lifeStatus !== 'alive' && (
-                          <Badge variant="destructive" className="text-xs">
-                            {npc.lifeStatus}
-                          </Badge>
-                        )}
-                      </div>
-                    </Link>
-                  ))}
+                  {event.description && (
+                    <div className="text-xs text-muted-foreground mt-1 line-clamp-1">{event.description}</div>
+                  )}
                 </div>
-              </div>
-            )}
-
-            {/* Faction Presence */}
-            {factionPresences.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <Flag className="size-4" />
-                  Faction Presence ({factionPresences.length})
-                </h4>
-                <div className="space-y-2">
-                  {factionPresences.map((presence) => (
-                    <FactionPresenceCard key={presence.id} presenceId={presence.factionId} type={presence.type} notes={presence.notes} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Connected Paths */}
-            {paths.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <RouteIcon className="size-4" />
-                  Connected Paths ({paths.length})
-                </h4>
-                <div className="space-y-2">
-                  {paths.map((path) => {
-                    const isFrom = path.fromPoiId === poi.id
-                    const otherPoiId = isFrom ? path.toPoiId : path.fromPoiId
-                    return (
-                      <div
-                        key={path.id}
-                        className="flex items-center gap-2 rounded-md border p-2"
-                      >
-                        <Badge variant="outline" className="text-xs">
-                          {path.type}
-                        </Badge>
-                        <div className="flex-1 text-sm">
-                          {isFrom ? 'To' : 'From'} POI {otherPoiId.slice(0, 8)}...
-                        </div>
-                        {path.baseTravelWatches && (
-                          <span className="text-xs text-muted-foreground">
-                            {path.baseTravelWatches} watches
-                          </span>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Maps */}
-            <div>
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <MapPinned className="size-4" />
-                Maps ({poiMaps.length})
-              </h4>
-              {poiMaps.length > 0 ? (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {poiMaps.map((m) => (
-                    <Link
-                      key={m.id}
-                      to="/realms/maps/$mapId"
-                      params={{ mapId: m.id }}
-                      className="block"
-                    >
-                      <div className="flex items-center gap-2 rounded-md border p-2 hover:bg-accent transition-colors">
-                        <MapPinned className="size-4 text-muted-foreground shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">{m.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {m.width} × {m.height}px
-                          </div>
-                        </div>
-                        <ExternalLink className="size-3 text-muted-foreground shrink-0" />
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-muted-foreground">No maps uploaded.</div>
-              )}
-              {poi.mapRef && (
-                <div className="mt-2">
-                  <Link
-                    to="/realms/maps/$mapId"
-                    params={{ mapId: poi.mapRef }}
-                    className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-                  >
-                    <MapPinned className="size-3.5" />
-                    View on parent map
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            {/* Events */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <CalendarClock className="size-4" />
-                  Events ({poiEvents.length})
-                </h4>
-                <Button size="sm" variant="outline" onClick={openCreateEventDialog}>
-                  <Plus className="mr-1.5 size-3.5" />
-                  Add Event
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="size-7 p-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => setDeletingEventId(event.id)}
+                >
+                  <Trash2 className="size-3.5" />
                 </Button>
               </div>
-              {poiEvents.length > 0 ? (
-                <div className="space-y-2">
-                  {poiEvents.map((event) => (
-                    <div
-                      key={event.id}
-                      className="flex items-start gap-2 rounded-md border p-2"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{event.name}</span>
-                          <Badge variant="outline" className="text-xs">{event.type}</Badge>
-                          {event.isActive && <Badge className="text-xs bg-green-600">Active</Badge>}
-                          {event.recurring && <Badge variant="secondary" className="text-xs">Recurring</Badge>}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {event.trigger.season.charAt(0).toUpperCase() + event.trigger.season.slice(1)} Day {event.trigger.day}
-                          {event.trigger.year !== null && `, Year ${event.trigger.year}`}
-                          {event.trigger.watch !== null && `, Watch ${event.trigger.watch}`}
-                          {' · '}{event.durationWatches} watch{event.durationWatches !== 1 ? 'es' : ''}
-                        </div>
-                        {event.description && (
-                          <div className="text-xs text-muted-foreground mt-1 line-clamp-1">{event.description}</div>
-                        )}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="size-7 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeletingEventId(event.id)}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-muted-foreground">No events scheduled.</div>
-              )}
-            </div>
-
-            {/* Empty State */}
-            {npcs.length === 0 && factionPresences.length === 0 && paths.length === 0 && children.length === 0 && poiEvents.length === 0 && (
-              <EmptyState
-                icon={MapPin}
-                title="Nothing here yet"
-                description="Add child locations, NPCs, or faction presences to populate this location"
-              />
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Edit Sheet */}
       <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
@@ -729,9 +548,7 @@ function POIDetailPage() {
               <Input
                 id="edit-name"
                 value={editForm.name}
-                onChange={(e) =>
-                  setEditForm((f) => ({ ...f, name: e.target.value }))
-                }
+                onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="Name of the POI"
               />
             </div>
@@ -740,9 +557,7 @@ function POIDetailPage() {
               <Textarea
                 id="edit-description"
                 value={editForm.description}
-                onChange={(e) =>
-                  setEditForm((f) => ({ ...f, description: e.target.value }))
-                }
+                onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
                 placeholder="Describe this location..."
                 rows={3}
               />
@@ -752,18 +567,12 @@ function POIDetailPage() {
                 <Label htmlFor="edit-type">Type</Label>
                 <Select
                   value={editForm.type}
-                  onValueChange={(value) =>
-                    setEditForm((f) => ({ ...f, type: value as PoiType }))
-                  }
+                  onValueChange={(value) => setEditForm((f) => ({ ...f, type: value as PoiType }))}
                 >
-                  <SelectTrigger id="edit-type">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger id="edit-type"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {POI_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -773,24 +582,79 @@ function POIDetailPage() {
                 <Input
                   id="edit-subtype"
                   value={editForm.subtypeLabel}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, subtypeLabel: e.target.value }))
-                  }
+                  onChange={(e) => setEditForm((f) => ({ ...f, subtypeLabel: e.target.value }))}
                   placeholder="e.g., Tavern, Tower"
                 />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-mood">Mood</Label>
+                <Input
+                  id="edit-mood"
+                  value={editForm.mood}
+                  onChange={(e) => setEditForm((f) => ({ ...f, mood: e.target.value }))}
+                  placeholder="prosperous, fearful, lawless..."
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-floor">Floor</Label>
+                <Input
+                  id="edit-floor"
+                  type="number"
+                  value={editForm.floor ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setEditForm((f) => ({ ...f, floor: val ? parseInt(val, 10) : null }))
+                  }}
+                  placeholder="e.g., 1, 2, -1"
+                />
+              </div>
+            </div>
             <div>
-              <Label htmlFor="edit-floor">Floor (Optional)</Label>
+              <Label htmlFor="edit-trouble">Trouble</Label>
               <Input
-                id="edit-floor"
-                type="number"
-                value={editForm.floor ?? ''}
-                onChange={(e) => {
-                  const val = e.target.value
-                  setEditForm((f) => ({ ...f, floor: val ? parseInt(val, 10) : null }))
-                }}
-                placeholder="e.g., 1, 2, -1"
+                id="edit-trouble"
+                value={editForm.trouble}
+                onChange={(e) => setEditForm((f) => ({ ...f, trouble: e.target.value }))}
+                placeholder="Current tension or conflict..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-readaloud">Read Aloud</Label>
+              <Textarea
+                id="edit-readaloud"
+                value={editForm.readAloud}
+                onChange={(e) => setEditForm((f) => ({ ...f, readAloud: e.target.value }))}
+                placeholder="Player-facing description to read aloud..."
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-sensory">Sensory Details</Label>
+              <Input
+                id="edit-sensory"
+                value={editForm.sensory}
+                onChange={(e) => setEditForm((f) => ({ ...f, sensory: e.target.value }))}
+                placeholder="Sights, sounds, smells..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-gmnotes">GM Notes</Label>
+              <Textarea
+                id="edit-gmnotes"
+                value={editForm.gmNotes}
+                onChange={(e) => setEditForm((f) => ({ ...f, gmNotes: e.target.value }))}
+                placeholder="Secrets, hidden info..."
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label>Services</Label>
+              <ServicesList
+                services={editForm.services}
+                editable
+                onChange={(services) => setEditForm((f) => ({ ...f, services }))}
               />
             </div>
             <div>
@@ -812,12 +676,8 @@ function POIDetailPage() {
                 <Trash2 className="mr-2 size-4" />
                 Delete
               </Button>
-              <Button variant="outline" onClick={() => setEditSheetOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleEdit} disabled={!editForm.name.trim()}>
-                Save
-              </Button>
+              <Button variant="outline" onClick={() => setEditSheetOpen(false)}>Cancel</Button>
+              <Button onClick={handleEdit} disabled={!editForm.name.trim()}>Save</Button>
             </div>
           </SheetFooter>
         </SheetContent>
@@ -835,9 +695,7 @@ function POIDetailPage() {
               <Input
                 id="child-name"
                 value={createChildForm.name}
-                onChange={(e) =>
-                  setCreateChildForm((f) => ({ ...f, name: e.target.value }))
-                }
+                onChange={(e) => setCreateChildForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="Name of the location"
               />
             </div>
@@ -846,9 +704,7 @@ function POIDetailPage() {
               <Textarea
                 id="child-description"
                 value={createChildForm.description}
-                onChange={(e) =>
-                  setCreateChildForm((f) => ({ ...f, description: e.target.value }))
-                }
+                onChange={(e) => setCreateChildForm((f) => ({ ...f, description: e.target.value }))}
                 placeholder="Describe this location..."
                 rows={3}
               />
@@ -858,18 +714,12 @@ function POIDetailPage() {
                 <Label htmlFor="child-type">Type</Label>
                 <Select
                   value={createChildForm.type}
-                  onValueChange={(value) =>
-                    setCreateChildForm((f) => ({ ...f, type: value as PoiType }))
-                  }
+                  onValueChange={(value) => setCreateChildForm((f) => ({ ...f, type: value as PoiType }))}
                 >
-                  <SelectTrigger id="child-type">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger id="child-type"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {POI_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -879,9 +729,7 @@ function POIDetailPage() {
                 <Input
                   id="child-subtype"
                   value={createChildForm.subtypeLabel}
-                  onChange={(e) =>
-                    setCreateChildForm((f) => ({ ...f, subtypeLabel: e.target.value }))
-                  }
+                  onChange={(e) => setCreateChildForm((f) => ({ ...f, subtypeLabel: e.target.value }))}
                   placeholder="e.g., Tavern, Tower"
                 />
               </div>
@@ -908,12 +756,8 @@ function POIDetailPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateChildDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateChild} disabled={!createChildForm.name.trim()}>
-              Create
-            </Button>
+            <Button variant="outline" onClick={() => setCreateChildDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateChild} disabled={!createChildForm.name.trim()}>Create</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -927,53 +771,28 @@ function POIDetailPage() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="event-name">Name *</Label>
-              <Input
-                id="event-name"
-                value={eventForm.name}
-                onChange={(e) => setEventForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Event name"
-              />
+              <Input id="event-name" value={eventForm.name} onChange={(e) => setEventForm((f) => ({ ...f, name: e.target.value }))} placeholder="Event name" />
             </div>
             <div>
               <Label htmlFor="event-description">Description</Label>
-              <Textarea
-                id="event-description"
-                value={eventForm.description}
-                onChange={(e) => setEventForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="What happens..."
-                rows={2}
-              />
+              <Textarea id="event-description" value={eventForm.description} onChange={(e) => setEventForm((f) => ({ ...f, description: e.target.value }))} placeholder="What happens..." rows={2} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="event-type">Event Type</Label>
-                <Select
-                  value={eventForm.type}
-                  onValueChange={(v) => setEventForm((f) => ({ ...f, type: v as POIEventType }))}
-                >
-                  <SelectTrigger id="event-type">
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={eventForm.type} onValueChange={(v) => setEventForm((f) => ({ ...f, type: v as POIEventType }))}>
+                  <SelectTrigger id="event-type"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {POI_EVENT_TYPES.map((t) => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
-                    ))}
+                    {POI_EVENT_TYPES.map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label htmlFor="event-season">Season</Label>
-                <Select
-                  value={eventForm.season}
-                  onValueChange={(v) => setEventForm((f) => ({ ...f, season: v as Season }))}
-                >
-                  <SelectTrigger id="event-season">
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={eventForm.season} onValueChange={(v) => setEventForm((f) => ({ ...f, season: v as Season }))}>
+                  <SelectTrigger id="event-season"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {SEASONS.map((s) => (
-                      <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
-                    ))}
+                    {SEASONS.map((s) => (<SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
@@ -981,91 +800,41 @@ function POIDetailPage() {
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="event-day">Day</Label>
-                <Input
-                  id="event-day"
-                  type="number"
-                  min="1"
-                  value={eventForm.day}
-                  onChange={(e) => setEventForm((f) => ({ ...f, day: parseInt(e.target.value) || 1 }))}
-                />
+                <Input id="event-day" type="number" min="1" value={eventForm.day} onChange={(e) => setEventForm((f) => ({ ...f, day: parseInt(e.target.value) || 1 }))} />
               </div>
               <div>
                 <Label htmlFor="event-year">Year</Label>
-                <Input
-                  id="event-year"
-                  type="number"
-                  min="1"
-                  value={eventForm.year ?? ''}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    setEventForm((f) => ({ ...f, year: v ? parseInt(v) : null }))
-                  }}
-                  placeholder="Any"
-                />
+                <Input id="event-year" type="number" min="1" value={eventForm.year ?? ''} onChange={(e) => { const v = e.target.value; setEventForm((f) => ({ ...f, year: v ? parseInt(v) : null })) }} placeholder="Any" />
               </div>
               <div>
                 <Label htmlFor="event-watch">Watch</Label>
-                <Input
-                  id="event-watch"
-                  type="number"
-                  min="1"
-                  value={eventForm.watch ?? ''}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    setEventForm((f) => ({ ...f, watch: v ? parseInt(v) : null }))
-                  }}
-                  placeholder="All day"
-                />
+                <Input id="event-watch" type="number" min="1" value={eventForm.watch ?? ''} onChange={(e) => { const v = e.target.value; setEventForm((f) => ({ ...f, watch: v ? parseInt(v) : null })) }} placeholder="All day" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="event-duration">Duration (watches)</Label>
-                <Input
-                  id="event-duration"
-                  type="number"
-                  min="1"
-                  value={eventForm.durationWatches}
-                  onChange={(e) => setEventForm((f) => ({ ...f, durationWatches: parseInt(e.target.value) || 1 }))}
-                />
+                <Input id="event-duration" type="number" min="1" value={eventForm.durationWatches} onChange={(e) => setEventForm((f) => ({ ...f, durationWatches: parseInt(e.target.value) || 1 }))} />
               </div>
               <div className="flex items-end pb-2">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={eventForm.recurring}
-                    onChange={(e) => setEventForm((f) => ({ ...f, recurring: e.target.checked }))}
-                    className="rounded"
-                  />
+                  <input type="checkbox" checked={eventForm.recurring} onChange={(e) => setEventForm((f) => ({ ...f, recurring: e.target.checked }))} className="rounded" />
                   Recurring
                 </label>
               </div>
             </div>
             <div>
               <Label htmlFor="event-effects">Effects / GM Notes</Label>
-              <Textarea
-                id="event-effects"
-                value={eventForm.effects}
-                onChange={(e) => setEventForm((f) => ({ ...f, effects: e.target.value }))}
-                placeholder="Mechanical effects, NPC reactions..."
-                rows={2}
-              />
+              <Textarea id="event-effects" value={eventForm.effects} onChange={(e) => setEventForm((f) => ({ ...f, effects: e.target.value }))} placeholder="Mechanical effects, NPC reactions..." rows={2} />
             </div>
             <div>
               <Label>Tags</Label>
-              <TagInput
-                tags={eventForm.tags}
-                onChange={(tags) => setEventForm((f) => ({ ...f, tags }))}
-              />
+              <TagInput tags={eventForm.tags} onChange={(tags) => setEventForm((f) => ({ ...f, tags }))} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateEventDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateEvent} disabled={!eventForm.name.trim()}>
-              Create Event
-            </Button>
+            <Button variant="outline" onClick={() => setCreateEventDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateEvent} disabled={!eventForm.name.trim()}>Create Event</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1081,7 +850,7 @@ function POIDetailPage() {
         onConfirm={handleDeleteEvent}
       />
 
-      {/* Delete Confirm Dialog */}
+      {/* Delete POI Confirm */}
       <ConfirmDialog
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
@@ -1129,41 +898,5 @@ function POIDetailMap({ gameMap, poiMaps, parentPoiId }: { gameMap: import('@dom
       )}
       <InteractiveMap gameMap={activeMap} className="h-[300px] md:h-[500px]" parentPoiId={parentPoiId} />
     </div>
-  )
-}
-
-function FactionPresenceCard({ presenceId, type, notes }: { presenceId: string; type: string; notes: string }) {
-  const faction = useFaction(presenceId)
-
-  if (!faction) return null
-
-  const typeColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-    controls: 'default',
-    operates: 'secondary',
-    contests: 'destructive',
-    patrols: 'outline',
-    hidden: 'outline',
-  }
-
-  return (
-    <Link
-      to="/realms/factions/$factionId"
-      params={{ factionId: faction.id }}
-      className="block"
-    >
-      <div className="flex items-start gap-2 rounded-md border p-2 hover:bg-accent transition-colors">
-        <div className="flex-1">
-          <div className="text-sm font-medium">{faction.name}</div>
-          <div className="flex items-center gap-2 mt-1">
-            <Badge variant={typeColors[type] ?? 'outline'} className="text-xs">
-              {type}
-            </Badge>
-          </div>
-          {notes && (
-            <div className="text-xs text-muted-foreground mt-1">{notes}</div>
-          )}
-        </div>
-      </div>
-    </Link>
   )
 }

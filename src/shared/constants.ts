@@ -61,3 +61,9 @@ export const POI_EVENT_TYPES = [
   'supernatural', 'custom',
 ] as const
 export type POIEventType = (typeof POI_EVENT_TYPES)[number]
+
+export const NOTICE_TYPES = ['bounty', 'job', 'warning', 'announcement', 'request'] as const
+export type NoticeType = (typeof NOTICE_TYPES)[number]
+
+export const ENCOUNTER_CATEGORIES = ['creature', 'signOmen', 'loss', 'npc', 'discovery', 'treasure'] as const
+export type EncounterCategory = (typeof ENCOUNTER_CATEGORIES)[number]

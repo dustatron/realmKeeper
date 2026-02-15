@@ -14,6 +14,9 @@ import { SystemConfigRepository } from '@infrastructure/dexie/repositories/Syste
 import { FactionPresenceRepository } from '@infrastructure/dexie/repositories/FactionPresenceRepository'
 import { POIEventRepository } from '@infrastructure/dexie/repositories/POIEventRepository'
 import { GameMapRepository } from '@infrastructure/dexie/repositories/GameMapRepository'
+import { RumorRepository } from '@infrastructure/dexie/repositories/RumorRepository'
+import { NoticeRepository } from '@infrastructure/dexie/repositories/NoticeRepository'
+import { EncounterTableRepository } from '@infrastructure/dexie/repositories/EncounterTableRepository'
 import { EventBus } from '@infrastructure/event-bus/EventBus'
 
 export function createContainer() {
@@ -34,6 +37,9 @@ export function createContainer() {
     factionPresenceRepo: new FactionPresenceRepository(),
     poiEventRepo: new POIEventRepository(),
     gameMapRepo: new GameMapRepository(),
+    rumorRepo: new RumorRepository(),
+    noticeRepo: new NoticeRepository(),
+    encounterTableRepo: new EncounterTableRepository(),
     eventBus: new EventBus(),
   } as const
 }

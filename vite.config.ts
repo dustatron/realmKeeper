@@ -3,6 +3,7 @@ import { defineConfig } from 'vite'
 import tsConfigPaths from 'vite-tsconfig-paths'
 import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { nitro } from 'nitro/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
@@ -20,6 +21,7 @@ export default defineConfig({
         enabled: true,
       },
     }),
+    nitro(),
     viteReact(),
     VitePWA({
       registerType: 'prompt',

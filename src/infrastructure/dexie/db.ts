@@ -15,6 +15,9 @@ import type { RollHistory } from '@domain/entities/RollHistory'
 import type { FactionPresence } from '@domain/entities/FactionPresence'
 import type { POIEvent } from '@domain/entities/POIEvent'
 import type { GameMap } from '@domain/entities/GameMap'
+import type { Rumor } from '@domain/entities/Rumor'
+import type { Notice } from '@domain/entities/Notice'
+import type { EncounterTable } from '@domain/entities/EncounterTable'
 import { seedDatabase } from './seed'
 
 const db = new Dexie('RealmKeeperDB') as Dexie & {
@@ -35,6 +38,9 @@ const db = new Dexie('RealmKeeperDB') as Dexie & {
   factionPresences: EntityTable<FactionPresence, 'id'>
   poiEvents: EntityTable<POIEvent, 'id'>
   gameMaps: EntityTable<GameMap, 'id'>
+  rumors: EntityTable<Rumor, 'id'>
+  notices: EntityTable<Notice, 'id'>
+  encounterTables: EntityTable<EncounterTable, 'id'>
 }
 
 const storesV5 = {
@@ -73,10 +79,17 @@ const storesV6 = {
   poiEvents: 'id, poiId, realmId, type, isActive, [realmId+isActive]',
 }
 
-const stores = {
+const storesV7 = {
   ...storesV6,
   pois: 'id, regionId, parentPoiId, type, mapRef',
   gameMaps: 'id, ownerRealmId, ownerPoiId',
+}
+
+const stores = {
+  ...storesV7,
+  rumors: 'id, poiId, regionId, realmId, isUsed',
+  notices: 'id, poiId, regionId, realmId, type, isUsed',
+  encounterTables: 'id, ownerPoiId, ownerRegionId, realmId',
 }
 
 db.version(1).stores(storesV5)
@@ -200,10 +213,10 @@ db.version(6).stores(storesV6).upgrade(async (tx) => {
 })
 
 // v7: Add gameMaps table + mapRef index on pois
-db.version(7).stores(stores)
+db.version(7).stores(storesV7)
 
 // v8: Add markerColor to POIs
-db.version(8).stores(stores).upgrade(async (tx) => {
+db.version(8).stores(storesV7).upgrade(async (tx) => {
   const pois = await tx.table('pois').toArray()
   for (const poi of pois) {
     if (poi.markerColor === undefined) {
@@ -213,7 +226,7 @@ db.version(8).stores(stores).upgrade(async (tx) => {
 })
 
 // v9: Add leaderNpcId to factions
-db.version(9).stores(stores).upgrade(async (tx) => {
+db.version(9).stores(storesV7).upgrade(async (tx) => {
   const factions = await tx.table('factions').toArray()
   for (const f of factions) {
     if (f.leaderNpcId === undefined) {
@@ -223,7 +236,7 @@ db.version(9).stores(stores).upgrade(async (tx) => {
 })
 
 // v10: Add features/dangers/settlements/resources to regions
-db.version(10).stores(stores).upgrade(async (tx) => {
+db.version(10).stores(storesV7).upgrade(async (tx) => {
   const regions = await tx.table('regions').toArray()
   for (const r of regions) {
     if (r.features === undefined) {
@@ -239,7 +252,7 @@ db.version(10).stores(stores).upgrade(async (tx) => {
 })
 
 // v11: Add boundary to regions
-db.version(11).stores(stores).upgrade(async (tx) => {
+db.version(11).stores(storesV7).upgrade(async (tx) => {
   const regions = await tx.table('regions').toArray()
   for (const r of regions) {
     if (r.boundary === undefined) {
@@ -249,11 +262,29 @@ db.version(11).stores(stores).upgrade(async (tx) => {
 })
 
 // v12: Add color to regions
-db.version(12).stores(stores).upgrade(async (tx) => {
+db.version(12).stores(storesV7).upgrade(async (tx) => {
   const regions = await tx.table('regions').toArray()
   for (const r of regions) {
     if (r.color === undefined) {
       await tx.table('regions').put({ ...r, color: null })
+    }
+  }
+})
+
+// v13: Add rumors, notices, encounterTables tables + new POI play fields
+db.version(13).stores(stores).upgrade(async (tx) => {
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.readAloud === undefined) {
+      await tx.table('pois').put({
+        ...poi,
+        readAloud: '',
+        gmNotes: '',
+        trouble: '',
+        mood: '',
+        sensory: '',
+        services: [],
+      })
     }
   }
 })
