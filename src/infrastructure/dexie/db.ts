@@ -102,6 +102,7 @@ const stores = {
   encounterTables: 'id, ownerPoiId, ownerRegionId, realmId',
 }
 
+
 db.version(1).stores(storesV5)
 
 db.version(2).stores(storesV5).upgrade((tx) => {
@@ -316,6 +317,16 @@ db.version(15).stores(stores).upgrade(async (tx) => {
     if (npc.want === undefined) {
       await tx.table('npcs').put({ ...npc, want: '' })
     }
+  }
+})
+
+// v16: Migrate data from old `realms` table → `worlds` (Dexie Cloud reserves `realms`)
+db.version(16).stores(stores).upgrade(async (tx) => {
+  try {
+    const old = await tx.table('realms').toArray()
+    if (old.length > 0) await tx.table('worlds').bulkPut(old)
+  } catch {
+    // No old `realms` table — fresh install or already migrated
   }
 })
 
