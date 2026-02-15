@@ -21,6 +21,7 @@ interface DungeonTemplateProps {
   onRollEncounter: () => Promise<{ category: EncounterCategory; categoryRoll: number; result: string }>
   onSaveEncounterTable?: (entries: Pick<EncounterTable, 'creature' | 'signOmen' | 'loss' | 'npc' | 'discovery' | 'treasure'>) => void
   onCreateChild: () => void
+  onCreateNPC: () => void
   mapSection: React.ReactNode
 }
 
@@ -33,6 +34,7 @@ export function DungeonTemplate({
   onRollEncounter,
   onSaveEncounterTable,
   onCreateChild,
+  onCreateNPC,
   mapSection,
 }: DungeonTemplateProps) {
   return (
@@ -121,6 +123,16 @@ export function DungeonTemplate({
 
         {/* Denizens tab */}
         <TabsContent value="denizens" className="space-y-4 pt-3">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              <Users className="size-4" />
+              Denizens ({npcs.length})
+            </h4>
+            <Button size="sm" variant="outline" onClick={onCreateNPC}>
+              <Plus className="mr-1.5 size-3.5" />
+              Add NPC
+            </Button>
+          </div>
           {npcs.length > 0 ? (
             <div className="space-y-2">
               {npcs.map((npc) => <NPCMiniCard key={npc.id} npc={npc} />)}

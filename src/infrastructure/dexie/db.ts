@@ -289,6 +289,26 @@ db.version(13).stores(stores).upgrade(async (tx) => {
   }
 })
 
+// v14: Add imageUrl to NPCs
+db.version(14).stores(stores).upgrade(async (tx) => {
+  const npcs = await tx.table('npcs').toArray()
+  for (const npc of npcs) {
+    if (npc.imageUrl === undefined) {
+      await tx.table('npcs').put({ ...npc, imageUrl: null })
+    }
+  }
+})
+
+// v15: Add want to NPCs
+db.version(15).stores(stores).upgrade(async (tx) => {
+  const npcs = await tx.table('npcs').toArray()
+  for (const npc of npcs) {
+    if (npc.want === undefined) {
+      await tx.table('npcs').put({ ...npc, want: '' })
+    }
+  }
+})
+
 // Seed system configs on first DB creation
 db.on('populate', (tx) => {
   seedDatabase(tx)

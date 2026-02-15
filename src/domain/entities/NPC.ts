@@ -15,7 +15,9 @@ export interface NPC {
   motivation: string
   appearance: string
   voice: string
+  want: string
   tags: string[]
+  imageUrl: string | null
   systemBlock: SystemBlock
   createdAt: number
   updatedAt: number

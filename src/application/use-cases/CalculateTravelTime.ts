@@ -17,7 +17,14 @@ export function calculateTravelTime(input: TravelTimeInput): number {
       multiplier *= 1.5
       break
     case 'desert':
+    case 'highlands':
       multiplier *= 1.5
+      break
+    case 'wetlands':
+      multiplier *= 2.0
+      break
+    case 'fields':
+      multiplier *= 1.0
       break
     case 'road':
       multiplier *= 0.75

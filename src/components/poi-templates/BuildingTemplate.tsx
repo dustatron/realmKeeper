@@ -14,6 +14,7 @@ interface BuildingTemplateProps {
   children: POI[]
   npcs: NPC[]
   onCreateChild: () => void
+  onCreateNPC: () => void
   mapSection: React.ReactNode
 }
 
@@ -22,6 +23,7 @@ export function BuildingTemplate({
   children: childPois,
   npcs,
   onCreateChild,
+  onCreateNPC,
   mapSection,
 }: BuildingTemplateProps) {
   return (
@@ -115,6 +117,16 @@ export function BuildingTemplate({
 
         {/* NPCs */}
         <TabsContent value="npcs" className="space-y-2 pt-3">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              <Users className="size-4" />
+              NPCs ({npcs.length})
+            </h4>
+            <Button size="sm" variant="outline" onClick={onCreateNPC}>
+              <Plus className="mr-1.5 size-3.5" />
+              Add NPC
+            </Button>
+          </div>
           {npcs.length > 0 ? (
             npcs.map((npc) => <NPCMiniCard key={npc.id} npc={npc} />)
           ) : (

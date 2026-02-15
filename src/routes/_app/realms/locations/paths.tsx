@@ -407,12 +407,12 @@ function PathsPage() {
 
       {/* Edit Sheet */}
       <Sheet open={!!editingPath} onOpenChange={(open) => !open && setEditingPath(null)}>
-        <SheetContent className="overflow-y-auto">
+        <SheetContent className="sm:max-w-lg overflow-y-auto p-6">
           <SheetHeader>
             <SheetTitle>Edit Path</SheetTitle>
           </SheetHeader>
           <div className="space-y-4 py-4">
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="edit-name">Name *</Label>
               <Input
                 id="edit-name"
@@ -423,7 +423,7 @@ function PathsPage() {
                 placeholder="Name of the path"
               />
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="edit-description">Description</Label>
               <Textarea
                 id="edit-description"
@@ -436,7 +436,7 @@ function PathsPage() {
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="edit-from">From POI *</Label>
                 <Select
                   value={editForm.fromPoiId}
@@ -456,7 +456,7 @@ function PathsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="edit-to">To POI *</Label>
                 <Select
                   value={editForm.toPoiId}
@@ -478,7 +478,7 @@ function PathsPage() {
               </div>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="edit-watches">Travel Watches *</Label>
                 <Input
                   id="edit-watches"
@@ -493,7 +493,7 @@ function PathsPage() {
                   }
                 />
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="edit-type">Path Type</Label>
                 <Select
                   value={editForm.type}
@@ -513,7 +513,7 @@ function PathsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="edit-terrain">Terrain</Label>
                 <Select
                   value={editForm.terrain}
