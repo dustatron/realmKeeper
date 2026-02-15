@@ -2,9 +2,8 @@ import { Link } from '@tanstack/react-router'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '~/components/ui/tabs'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
-import { MapPin, Users, MessageSquare, Dices, Plus, Flag } from 'lucide-react'
+import { MapPin, MessageSquare, Dices, Plus, CalendarClock, Trash2, Users } from 'lucide-react'
 import { NPCMiniCard } from '~/components/shared/NPCMiniCard'
-import { PathCard } from '~/components/shared/PathCard'
 import { RumorList } from '~/components/shared/RumorList'
 import { NoticeBoard } from '~/components/shared/NoticeBoard'
 import { EncounterTableUI } from '~/components/shared/EncounterTableUI'
@@ -16,7 +15,7 @@ import type { Rumor } from '@domain/entities/Rumor'
 import type { Notice } from '@domain/entities/Notice'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
 import type { FactionPresence } from '@domain/entities/FactionPresence'
-import type { ResolvedPath } from '~/ui/hooks/useResolvedPaths'
+import type { POIEvent } from '@domain/entities/POIEvent'
 import type { GameMap } from '@domain/entities/GameMap'
 import type { EncounterCategory, NoticeType } from '@shared/constants'
 import { useFaction } from '~/ui/hooks/useFactions'
@@ -26,10 +25,10 @@ interface SettlementTemplateProps {
   children: POI[]
   npcs: NPC[]
   factionPresences: FactionPresence[]
-  paths: ResolvedPath[]
   rumors: Rumor[]
   notices: Notice[]
   encounterTable: EncounterTable | null | undefined
+  poiEvents: POIEvent[]
   poiMaps: GameMap[]
   onToggleRumorUsed: (rumor: Rumor) => void
   onCreateRumor: (input: { text: string; source: string; isQuestHook: boolean }) => void
@@ -40,6 +39,9 @@ interface SettlementTemplateProps {
   onRollEncounter: () => Promise<{ category: EncounterCategory; categoryRoll: number; result: string }>
   onSaveEncounterTable?: (entries: Pick<EncounterTable, 'creature' | 'signOmen' | 'loss' | 'npc' | 'discovery' | 'treasure'>) => void
   onCreateChild: () => void
+  onCreateNPC: () => void
+  onCreateEvent: () => void
+  onDeleteEvent: (id: string) => void
   mapSection: React.ReactNode
 }
 
@@ -48,10 +50,10 @@ export function SettlementTemplate({
   children: childPois,
   npcs,
   factionPresences,
-  paths,
   rumors,
   notices,
   encounterTable,
+  poiEvents,
   onToggleRumorUsed,
   onCreateRumor,
   onDeleteRumor,
@@ -61,6 +63,9 @@ export function SettlementTemplate({
   onRollEncounter,
   onSaveEncounterTable,
   onCreateChild,
+  onCreateNPC,
+  onCreateEvent,
+  onDeleteEvent,
   mapSection,
 }: SettlementTemplateProps) {
   // Aggregate services from child POIs + this POI
@@ -71,7 +76,7 @@ export function SettlementTemplate({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
+      {/* Header — badges + factions */}
       <div>
         <div className="flex items-center gap-2 flex-wrap">
           {poi.mood && <Badge variant="secondary" className="text-xs">{poi.mood}</Badge>}
@@ -82,6 +87,15 @@ export function SettlementTemplate({
         </div>
         {poi.trouble && (
           <p className="text-sm text-amber-600 mt-1">{poi.trouble}</p>
+        )}
+
+        {/* Factions present */}
+        {factionPresences.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap mt-2">
+            {factionPresences.map((fp) => (
+              <FactionChip key={fp.id} presence={fp} />
+            ))}
+          </div>
         )}
       </div>
 
@@ -101,11 +115,7 @@ export function SettlementTemplate({
         <TabsList variant="line" className="w-full">
           <TabsTrigger value="locations">
             <MapPin className="size-4" />
-            Locations ({childPois.length})
-          </TabsTrigger>
-          <TabsTrigger value="npcs">
-            <Users className="size-4" />
-            NPCs ({npcs.length})
+            Locations & NPCs
           </TabsTrigger>
           <TabsTrigger value="rumors">
             <MessageSquare className="size-4" />
@@ -115,52 +125,61 @@ export function SettlementTemplate({
             <Dices className="size-4" />
             Encounters
           </TabsTrigger>
+          <TabsTrigger value="events">
+            <CalendarClock className="size-4" />
+            Events ({poiEvents.length})
+          </TabsTrigger>
         </TabsList>
 
-        {/* Locations tab */}
-        <TabsContent value="locations" className="space-y-4 pt-3">
-          {/* Map */}
-          {mapSection}
-
-          {/* Key Locations */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-semibold">Key Locations</h4>
-              <Button size="sm" variant="outline" onClick={onCreateChild}>
-                <Plus className="mr-1.5 size-3.5" />
-                Add Location
-              </Button>
+        {/* Locations & NPCs tab */}
+        <TabsContent value="locations" className="space-y-6 pt-3">
+          {/* Map + Key Locations — 2-col on desktop */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Left: Map */}
+            <div>
+              {mapSection}
             </div>
-            {childPois.length > 0 ? (
-              <div className="space-y-1">
-                {childPois.map((child) => (
-                  <Link
-                    key={child.id}
-                    to="/realms/pois/$poiId"
-                    params={{ poiId: child.id }}
-                    className="block"
-                  >
-                    <div className="flex items-center gap-2 rounded-md border p-2 hover:bg-accent transition-colors">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium">{child.name}</div>
-                        {child.services.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-0.5">
-                            {child.services.map((s, i) => (
-                              <span key={i} className="text-xs text-muted-foreground">
-                                {s.name}{s.cost ? ` (${s.cost})` : ''}{i < child.services.length - 1 ? ' · ' : ''}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <Badge variant="outline" className="text-xs shrink-0">{child.type}</Badge>
-                    </div>
-                  </Link>
-                ))}
+
+            {/* Right: Location cards */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-semibold">Key Locations</h4>
+                <Button size="sm" variant="outline" onClick={onCreateChild}>
+                  <Plus className="mr-1.5 size-3.5" />
+                  Add Location
+                </Button>
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No locations yet.</p>
-            )}
+              {childPois.length > 0 ? (
+                <div className="space-y-1">
+                  {childPois.map((child) => (
+                    <Link
+                      key={child.id}
+                      to="/realms/pois/$poiId"
+                      params={{ poiId: child.id }}
+                      className="block"
+                    >
+                      <div className="flex items-center gap-2 rounded-md border p-2 hover:bg-accent transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium">{child.name}</div>
+                          {child.services.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-0.5">
+                              {child.services.map((s, i) => (
+                                <span key={i} className="text-xs text-muted-foreground">
+                                  {s.name}{s.cost ? ` (${s.cost})` : ''}{i < child.services.length - 1 ? ' · ' : ''}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <Badge variant="outline" className="text-xs shrink-0">{child.type}</Badge>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No locations yet.</p>
+              )}
+            </div>
           </div>
 
           {/* Aggregate Services */}
@@ -171,41 +190,26 @@ export function SettlementTemplate({
             </div>
           )}
 
-          {/* Faction Presence */}
-          {factionPresences.length > 0 && (
-            <div>
-              <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                <Flag className="size-4" />
-                Faction Presence ({factionPresences.length})
+          {/* NPCs */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <Users className="size-4" />
+                NPCs ({npcs.length})
               </h4>
-              <div className="space-y-1">
-                {factionPresences.map((fp) => (
-                  <FactionPresenceBadge key={fp.id} presence={fp} />
-                ))}
-              </div>
+              <Button size="sm" variant="outline" onClick={onCreateNPC}>
+                <Plus className="mr-1.5 size-3.5" />
+                Add NPC
+              </Button>
             </div>
-          )}
-
-          {/* Paths */}
-          {paths.length > 0 && (
-            <div>
-              <h4 className="text-sm font-semibold mb-2">Connected Paths</h4>
-              <div className="space-y-1">
-                {paths.map((path) => (
-                  <PathCard key={path.id} path={path} currentPoiId={poi.id} />
-                ))}
+            {npcs.length > 0 ? (
+              <div className="space-y-2">
+                {npcs.map((npc) => <NPCMiniCard key={npc.id} npc={npc} />)}
               </div>
-            </div>
-          )}
-        </TabsContent>
-
-        {/* NPCs tab */}
-        <TabsContent value="npcs" className="space-y-2 pt-3">
-          {npcs.length > 0 ? (
-            npcs.map((npc) => <NPCMiniCard key={npc.id} npc={npc} />)
-          ) : (
-            <p className="text-sm text-muted-foreground">No NPCs present.</p>
-          )}
+            ) : (
+              <p className="text-sm text-muted-foreground">No NPCs present.</p>
+            )}
+          </div>
         </TabsContent>
 
         {/* Rumors & Notices tab */}
@@ -232,22 +236,67 @@ export function SettlementTemplate({
             onSave={onSaveEncounterTable}
           />
         </TabsContent>
+
+        {/* Events tab */}
+        <TabsContent value="events" className="pt-3">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold">Events</h4>
+            <Button size="sm" variant="outline" onClick={onCreateEvent}>
+              <Plus className="mr-1.5 size-3.5" />
+              Add Event
+            </Button>
+          </div>
+          {poiEvents.length > 0 ? (
+            <div className="space-y-2">
+              {poiEvents.map((event) => (
+                <div key={event.id} className="flex items-start gap-2 rounded-md border p-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{event.name}</span>
+                      <Badge variant="outline" className="text-xs">{event.type}</Badge>
+                      {event.isActive && <Badge className="text-xs bg-green-600">Active</Badge>}
+                      {event.recurring && <Badge variant="secondary" className="text-xs">Recurring</Badge>}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {event.trigger.season.charAt(0).toUpperCase() + event.trigger.season.slice(1)} Day {event.trigger.day}
+                      {event.trigger.year !== null && `, Year ${event.trigger.year}`}
+                      {event.trigger.watch !== null && `, Watch ${event.trigger.watch}`}
+                      {' · '}{event.durationWatches} watch{event.durationWatches !== 1 ? 'es' : ''}
+                    </div>
+                    {event.description && (
+                      <div className="text-xs text-muted-foreground mt-1 line-clamp-1">{event.description}</div>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="size-7 p-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => onDeleteEvent(event.id)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No events scheduled.</p>
+          )}
+        </TabsContent>
       </Tabs>
     </div>
   )
 }
 
-function FactionPresenceBadge({ presence }: { presence: FactionPresence }) {
+function FactionChip({ presence }: { presence: FactionPresence }) {
   const faction = useFaction(presence.factionId)
   if (!faction) return null
 
   return (
-    <Link to="/realms/factions/$factionId" params={{ factionId: faction.id }} className="block">
-      <div className="flex items-center gap-2 rounded-md border p-2 hover:bg-accent transition-colors">
-        <span className="text-sm font-medium">{faction.name}</span>
-        <Badge variant="outline" className="text-xs">{presence.type}</Badge>
-        {presence.notes && <span className="text-xs text-muted-foreground">{presence.notes}</span>}
-      </div>
+    <Link to="/realms/factions/$factionId" params={{ factionId: faction.id }}>
+      <Badge variant="outline" className="text-xs gap-1 hover:bg-accent cursor-pointer">
+        {faction.name}
+        <span className="text-muted-foreground">· {presence.type}</span>
+      </Badge>
     </Link>
   )
 }

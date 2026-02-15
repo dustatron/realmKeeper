@@ -2,14 +2,17 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
-import { usePOI } from '~/ui/hooks/usePOIs'
-import { useRegion } from '~/ui/hooks/useRegions'
+import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
+import { useRegion, useRegions } from '~/ui/hooks/useRegions'
 import { usePOIBreadcrumb } from '~/ui/hooks/usePOIBreadcrumb'
 import { usePOIChildren } from '~/ui/hooks/usePOIChildren'
 import { useNPCsByPoi } from '~/ui/hooks/useNPCsByPoi'
 import { useFactionPresencesByPoi } from '~/ui/hooks/useFactionPresences'
 import { useResolvedPaths } from '~/ui/hooks/useResolvedPaths'
 import { usePOIMaps } from '~/ui/hooks/useGameMaps'
+import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
+import { useSystemConfig } from '~/ui/hooks/useSystemConfigs'
+import { useFactions } from '~/ui/hooks/useFactions'
 import { useRumorsByPoi } from '~/ui/hooks/useRumors'
 import { useNoticesByPoi } from '~/ui/hooks/useNotices'
 import { useEncounterTable } from '~/ui/hooks/useEncounterTable'
@@ -20,6 +23,8 @@ import { executeDeletePOI } from '@application/use-cases/DeletePOI'
 import { executeCreatePOI } from '@application/use-cases/CreatePOI'
 import { executeCreatePOIEvent } from '@application/use-cases/CreatePOIEvent'
 import { executeDeletePOIEvent } from '@application/use-cases/DeletePOIEvent'
+import { executeCreateNPC } from '@application/use-cases/CreateNPC'
+import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import { executeCreateGameMap } from '@application/use-cases/CreateGameMap'
 import { executeCreateRumor } from '@application/use-cases/CreateRumor'
 import { executeUpdateRumor } from '@application/use-cases/UpdateRumor'
@@ -30,6 +35,7 @@ import { executeDeleteNotice } from '@application/use-cases/DeleteNotice'
 import { executeCreateEncounterTable } from '@application/use-cases/CreateEncounterTable'
 import { executeUpdateEncounterTable } from '@application/use-cases/UpdateEncounterTable'
 import { executeRollEncounter } from '@application/use-cases/RollEncounter'
+import { NPCEditSheet } from '~/components/shared/NPCEditSheet'
 import { MapUploadDialog } from '~/components/map/MapUploadDialog'
 import { InteractiveMap } from '~/components/map/InteractiveMap'
 import { ServicesList } from '~/components/shared/ServicesList'
@@ -91,8 +97,11 @@ import {
 import { POI_TYPES, POI_EVENT_TYPES, SEASONS, type PoiType, type POIEventType, type Season } from '@shared/constants'
 import type { NoticeType } from '@shared/constants'
 import type { POI } from '@domain/entities/POI'
+import type { NPC } from '@domain/entities/NPC'
+import type { SystemBlock } from '@domain/value-objects/SystemBlock'
 import type { Service } from '@domain/value-objects/Service'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
+import { newId } from '@shared/ulid'
 
 export const Route = createFileRoute('/_app/realms/pois_/$poiId')({
   component: POIDetailPage,
@@ -131,6 +140,11 @@ function POIDetailPage() {
   const rumors = useRumorsByPoi(poiId)
   const notices = useNoticesByPoi(poiId)
   const encounterTable = useEncounterTable(poiId, poi?.regionId ?? null, null)
+  const realm = useActiveRealm()
+  const systemConfig = useSystemConfig(realm?.systemId ?? null)
+  const factions = useFactions(realm?.id ?? null)
+  const regions = useRegions(realm?.id ?? null)
+  const allPois = useRealmPOIs(realm?.id ?? null)
   const container = useContainer()
   const setHeaderTitle = useUIStore((s) => s.setHeaderTitle)
 
@@ -173,6 +187,9 @@ function POIDetailPage() {
   const [createChildDialogOpen, setCreateChildDialogOpen] = useState(false)
   const [createEventDialogOpen, setCreateEventDialogOpen] = useState(false)
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null)
+  const [editingNPC, setEditingNPC] = useState<NPC | null>(null)
+  const [npcEditOpen, setNpcEditOpen] = useState(false)
+  const [isGeneratingNPC, setIsGeneratingNPC] = useState(false)
 
   const [editForm, setEditForm] = useState({
     name: '',
@@ -321,6 +338,65 @@ function POIDetailPage() {
     setDeletingEventId(null)
   }
 
+  const openCreateNPC = () => {
+    if (!realm || !systemConfig) return
+    const defaultSystemBlock: SystemBlock = {
+      stats: systemConfig.statFields.map((f: { key: string }) => ({ key: f.key, value: 10 })),
+      hp: 1,
+      maxHp: 1,
+      armor: 0,
+      attacks: [],
+      inventory: [],
+      abilities: [],
+      notes: '',
+    }
+    const npc: NPC = {
+      id: newId(),
+      realmId: realm.id,
+      name: '',
+      factionId: null,
+      regionId: poi?.regionId ?? null,
+      poiId: poiId,
+      lifeStatus: 'alive',
+      movementStatus: 'present',
+      description: '',
+      traits: [],
+      motivation: '',
+      appearance: '',
+      voice: '',
+      tags: [],
+      systemBlock: defaultSystemBlock,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+    setEditingNPC(npc)
+    setNpcEditOpen(true)
+  }
+
+  const handleSaveNPC = async () => {
+    if (!editingNPC) return
+    await executeCreateNPC(editingNPC, { npcRepo: container.npcRepo })
+    setEditingNPC(null)
+    setNpcEditOpen(false)
+  }
+
+  const handleGenerateNPC = async () => {
+    if (!realm || !systemConfig || !poi) return
+    setIsGeneratingNPC(true)
+    try {
+      const generated = await executeGenerateNPC(
+        { realmId: realm.id, systemConfig, regionId: poi.regionId },
+        { tableRepo: container.tableRepo }
+      )
+      // Preserve the POI context
+      generated.poiId = poi.id
+      generated.regionId = poi.regionId
+      setEditingNPC(generated)
+    } finally {
+      setIsGeneratingNPC(false)
+    }
+  }
+
   const handleUploadMap = async (data: { name: string; imageBlob: Blob; width: number; height: number }) => {
     if (!poi) return
     await executeCreateGameMap({ ...data, ownerPoiId: poi.id }, { gameMapRepo: container.gameMapRepo })
@@ -409,10 +485,10 @@ function POIDetailPage() {
             children={children}
             npcs={npcs}
             factionPresences={factionPresences}
-            paths={paths}
             rumors={rumors}
             notices={notices}
             encounterTable={encounterTable}
+            poiEvents={poiEvents}
             poiMaps={poiMaps}
             onToggleRumorUsed={handleToggleRumorUsed}
             onCreateRumor={handleCreateRumor}
@@ -423,6 +499,9 @@ function POIDetailPage() {
             onRollEncounter={handleRollEncounter}
             onSaveEncounterTable={handleSaveEncounterTable}
             onCreateChild={openCreateChildDialog}
+            onCreateNPC={openCreateNPC}
+            onCreateEvent={openCreateEventDialog}
+            onDeleteEvent={(id) => setDeletingEventId(id)}
             mapSection={mapSection}
           />
         )
@@ -489,8 +568,8 @@ function POIDetailPage() {
       {/* Template content */}
       {renderTemplate()}
 
-      {/* Events section (shared across all templates) */}
-      {poiEvents.length > 0 && (
+      {/* Events section (shared across non-settlement templates) */}
+      {poi.type !== 'settlement' && poiEvents.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold flex items-center gap-2">
@@ -871,6 +950,28 @@ function POIDetailPage() {
         onOpenChange={setMapUploadDialogOpen}
         onUpload={handleUploadMap}
       />
+
+      {/* NPC Edit Sheet */}
+      {editingNPC && (
+        <NPCEditSheet
+          npc={editingNPC}
+          systemConfig={systemConfig}
+          factions={factions}
+          regions={regions}
+          pois={allPois}
+          open={npcEditOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingNPC(null)
+              setNpcEditOpen(false)
+            }
+          }}
+          onSave={handleSaveNPC}
+          onChange={setEditingNPC}
+          onGenerate={handleGenerateNPC}
+          isGenerating={isGeneratingNPC}
+        />
+      )}
     </div>
   )
 }

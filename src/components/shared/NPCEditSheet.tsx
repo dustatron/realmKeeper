@@ -24,7 +24,7 @@ import {
 import { Switch } from '~/components/ui/switch'
 import { ScrollArea } from '~/components/ui/scroll-area'
 import { TagInput } from '~/components/shared/TagInput'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Sparkles } from 'lucide-react'
 
 export interface NPCEditSheetProps {
   npc: NPC
@@ -36,6 +36,8 @@ export interface NPCEditSheetProps {
   onOpenChange: (open: boolean) => void
   onSave: () => void
   onChange: (npc: NPC) => void
+  onGenerate?: () => void
+  isGenerating?: boolean
 }
 
 export function NPCEditSheet({
@@ -48,6 +50,8 @@ export function NPCEditSheet({
   onOpenChange,
   onSave,
   onChange,
+  onGenerate,
+  isGenerating,
 }: NPCEditSheetProps) {
   const updateField = (field: keyof NPC, value: any) => {
     onChange({ ...npc, [field]: value })
@@ -111,7 +115,15 @@ export function NPCEditSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl flex flex-col h-full">
         <SheetHeader>
-          <SheetTitle>{npc.name || 'New NPC'}</SheetTitle>
+          <div className="flex items-center justify-between">
+            <SheetTitle>{npc.name || 'New NPC'}</SheetTitle>
+            {onGenerate && (
+              <Button size="sm" variant="outline" onClick={onGenerate} disabled={isGenerating}>
+                <Sparkles className="mr-1.5 size-3.5" />
+                {isGenerating ? 'Generating...' : 'Auto Generate'}
+              </Button>
+            )}
+          </div>
         </SheetHeader>
 
         <ScrollArea className="flex-1 min-h-0">
