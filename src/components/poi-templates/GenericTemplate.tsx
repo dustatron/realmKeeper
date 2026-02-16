@@ -23,6 +23,7 @@ interface GenericTemplateProps {
   onCreateChild: () => void
   onCreateNPC: () => void
   mapSection: React.ReactNode
+  notesSection?: React.ReactNode
 }
 
 export function GenericTemplate({
@@ -35,6 +36,7 @@ export function GenericTemplate({
   onCreateChild,
   onCreateNPC,
   mapSection,
+  notesSection,
 }: GenericTemplateProps) {
   const hasContent = childPois.length > 0 || npcs.length > 0 || factionPresences.length > 0 || paths.length > 0
 
@@ -167,6 +169,14 @@ export function GenericTemplate({
               <PathCard key={path.id} path={path} currentPoiId={poi.id} />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Notes */}
+      {notesSection && (
+        <div>
+          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">Notes</h4>
+          {notesSection}
         </div>
       )}
 

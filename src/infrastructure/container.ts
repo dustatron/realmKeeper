@@ -17,6 +17,7 @@ import { GameMapRepository } from '@infrastructure/dexie/repositories/GameMapRep
 import { RumorRepository } from '@infrastructure/dexie/repositories/RumorRepository'
 import { NoticeRepository } from '@infrastructure/dexie/repositories/NoticeRepository'
 import { EncounterTableRepository } from '@infrastructure/dexie/repositories/EncounterTableRepository'
+import { EntityNoteRepository } from '@infrastructure/dexie/repositories/EntityNoteRepository'
 import { EventBus } from '@infrastructure/event-bus/EventBus'
 
 export function createContainer() {
@@ -40,6 +41,7 @@ export function createContainer() {
     rumorRepo: new RumorRepository(),
     noticeRepo: new NoticeRepository(),
     encounterTableRepo: new EncounterTableRepository(),
+    entityNoteRepo: new EntityNoteRepository(),
     eventBus: new EventBus(),
   } as const
 }

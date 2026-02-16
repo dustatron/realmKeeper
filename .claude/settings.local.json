@@ -39,7 +39,8 @@
       "Bash(gh api:*)",
       "WebFetch(domain:dexie.org)",
       "Bash(npm install:*)",
-      "Bash(npx dexie-cloud:*)"
+      "Bash(npx dexie-cloud:*)",
+      "Bash(npx vite build:*)"
     ]
   }
 }

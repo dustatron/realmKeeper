@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '~/components/ui/tabs'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
-import { MapPin, Users, Dices, Plus, Flag } from 'lucide-react'
+import { MapPin, Users, Dices, Plus, Flag, FileText } from 'lucide-react'
 import { NPCMiniCard } from '~/components/shared/NPCMiniCard'
 import { EncounterTableUI } from '~/components/shared/EncounterTableUI'
 import { ReadAloudBlock } from '~/components/shared/ReadAloudBlock'
@@ -23,6 +23,7 @@ interface DungeonTemplateProps {
   onCreateChild: () => void
   onCreateNPC: () => void
   mapSection: React.ReactNode
+  notesSection?: React.ReactNode
 }
 
 export function DungeonTemplate({
@@ -36,6 +37,7 @@ export function DungeonTemplate({
   onCreateChild,
   onCreateNPC,
   mapSection,
+  notesSection,
 }: DungeonTemplateProps) {
   return (
     <div className="space-y-4">
@@ -78,6 +80,10 @@ export function DungeonTemplate({
           <TabsTrigger value="encounters">
             <Dices className="size-4" />
             Encounters
+          </TabsTrigger>
+          <TabsTrigger value="notes">
+            <FileText className="size-4" />
+            Notes
           </TabsTrigger>
         </TabsList>
 
@@ -166,6 +172,11 @@ export function DungeonTemplate({
             onRoll={onRollEncounter}
             onSave={onSaveEncounterTable}
           />
+        </TabsContent>
+
+        {/* Notes tab */}
+        <TabsContent value="notes" className="pt-3">
+          {notesSection}
         </TabsContent>
       </Tabs>
     </div>

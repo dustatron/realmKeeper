@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '~/components/ui/tabs'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
-import { MapPin, Users, Lock, Plus } from 'lucide-react'
+import { MapPin, Users, Lock, Plus, FileText } from 'lucide-react'
 import { NPCMiniCard } from '~/components/shared/NPCMiniCard'
 import { ServicesList } from '~/components/shared/ServicesList'
 import { ReadAloudBlock } from '~/components/shared/ReadAloudBlock'
@@ -16,6 +16,7 @@ interface BuildingTemplateProps {
   onCreateChild: () => void
   onCreateNPC: () => void
   mapSection: React.ReactNode
+  notesSection?: React.ReactNode
 }
 
 export function BuildingTemplate({
@@ -25,6 +26,7 @@ export function BuildingTemplate({
   onCreateChild,
   onCreateNPC,
   mapSection,
+  notesSection,
 }: BuildingTemplateProps) {
   return (
     <div className="space-y-4">
@@ -62,6 +64,10 @@ export function BuildingTemplate({
           <TabsTrigger value="secrets">
             <Lock className="size-4" />
             Secrets
+          </TabsTrigger>
+          <TabsTrigger value="notes">
+            <FileText className="size-4" />
+            Notes
           </TabsTrigger>
         </TabsList>
 
@@ -150,6 +156,11 @@ export function BuildingTemplate({
               <p className="text-sm text-amber-600">{poi.trouble}</p>
             </div>
           )}
+        </TabsContent>
+
+        {/* Notes tab */}
+        <TabsContent value="notes" className="pt-3">
+          {notesSection}
         </TabsContent>
       </Tabs>
     </div>

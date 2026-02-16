@@ -4,6 +4,7 @@ import {
   MapPinned,
   NotebookPen,
   Scroll,
+  Search,
   Settings,
   Swords,
   TableProperties,
@@ -35,6 +36,7 @@ export function getSidebarData(_worldId?: string): { navGroups: NavGroup[] } {
         items: [
           { title: 'Tables', url: '/realms/tables', icon: TableProperties },
           { title: 'Notes', url: '/realms/notes', icon: NotebookPen },
+          { title: 'Search', url: '/realms/search', icon: Search },
           { title: 'Settings', url: '/realms/settings', icon: Settings },
         ],
       },
