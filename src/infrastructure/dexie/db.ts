@@ -19,6 +19,7 @@ import type { GameMap } from '@domain/entities/GameMap'
 import type { Rumor } from '@domain/entities/Rumor'
 import type { Notice } from '@domain/entities/Notice'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
+import type { EntityNote } from '@domain/entities/EntityNote'
 import { seedDatabase } from './seed'
 
 const cloudUrl = import.meta.env.VITE_DEXIE_CLOUD_URL as string | undefined
@@ -47,6 +48,7 @@ type AppDB = Omit<Dexie, 'realms'> & {
   rumors: EntityTable<Rumor, 'id'>
   notices: EntityTable<Notice, 'id'>
   encounterTables: EntityTable<EncounterTable, 'id'>
+  entityNotes: EntityTable<EntityNote, 'id'>
 }
 
 const db = new Dexie('RealmKeeperDB', {
@@ -126,6 +128,11 @@ const stores = {
   rumors: 'id, poiId, regionId, worldId, isUsed',
   notices: 'id, poiId, regionId, worldId, type, isUsed',
   encounterTables: 'id, ownerPoiId, ownerRegionId, worldId',
+}
+
+const storesV18 = {
+  ...stores,
+  entityNotes: 'id, ownerType, ownerId, worldId, [ownerType+ownerId]',
 }
 
 
@@ -370,6 +377,25 @@ db.version(17).stores(stores).upgrade(async (tx) => {
         const { realmId, ...rest } = row
         await tx.table(tableName).put({ ...rest, worldId: realmId })
       }
+    }
+  }
+})
+
+// v18: Add entityNotes table
+db.version(18).stores(storesV18)
+
+// v19: Add imageUrl to POIs and Regions
+db.version(19).stores(storesV18).upgrade(async (tx) => {
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.imageUrl === undefined) {
+      await tx.table('pois').put({ ...poi, imageUrl: null })
+    }
+  }
+  const regions = await tx.table('regions').toArray()
+  for (const r of regions) {
+    if (r.imageUrl === undefined) {
+      await tx.table('regions').put({ ...r, imageUrl: null })
     }
   }
 })

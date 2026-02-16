@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { Badge } from '~/components/ui/badge'
 import { MapPin } from 'lucide-react'
+import { CloudinaryImage } from '~/components/shared/CloudinaryImage'
 import type { NPC } from '@domain/entities/NPC'
 
 interface NPCMiniCardProps {
@@ -17,9 +18,10 @@ export function NPCMiniCard({ npc, poiName }: NPCMiniCardProps) {
     >
       <div className="rounded-md border hover:bg-accent transition-colors flex overflow-hidden">
         {npc.imageUrl && (
-          <img
+          <CloudinaryImage
             src={npc.imageUrl}
             alt={npc.name}
+            width={64}
             className="w-16 h-auto object-cover shrink-0"
           />
         )}

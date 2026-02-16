@@ -16,7 +16,8 @@ import { PageHeader } from '~/components/shared/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
-import { ArrowLeft, Heart, Shield, Skull, Swords, Package, Sparkles, Handshake, Pencil, MapPin, ImageIcon, ChevronUp, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Heart, Shield, Skull, Swords, Package, Sparkles, Handshake, Pencil, MapPin, ChevronUp, ChevronDown } from 'lucide-react'
+import { CloudinaryImage } from '~/components/shared/CloudinaryImage'
 import type { NPC } from '@domain/entities/NPC'
 import type { Faction } from '@domain/entities/Faction'
 
@@ -128,9 +129,10 @@ function NPCDetailPage() {
         <div className={npc.imageUrl ? 'grid gap-4 md:grid-cols-[1fr_2fr] items-stretch' : ''}>
         {npc.imageUrl && (
           <div className="h-full">
-            <img
+            <CloudinaryImage
               src={npc.imageUrl}
               alt={npc.name}
+              width={400}
               className="h-full w-full rounded-lg border object-cover"
             />
           </div>

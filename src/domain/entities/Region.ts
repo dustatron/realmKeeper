@@ -10,6 +10,7 @@ export interface Region {
   resources: string[]
   boundary: { x: number; y: number }[] | null
   color: string | null
+  imageUrl: string | null
   createdAt: number
   updatedAt: number
 }

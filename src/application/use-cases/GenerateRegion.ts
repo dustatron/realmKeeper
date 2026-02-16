@@ -58,6 +58,7 @@ function makePoi(regionId: string, name: string, type: PoiType, description: str
     mood: '',
     sensory: '',
     services: [],
+    imageUrl: null,
     createdAt: now,
     updatedAt: now,
   }
@@ -169,6 +170,7 @@ export async function executeGenerateRegion(
     resources,
     boundary: null,
     color: null,
+    imageUrl: null,
     createdAt: now,
     updatedAt: now,
   }

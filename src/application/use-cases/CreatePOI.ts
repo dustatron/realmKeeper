@@ -48,6 +48,7 @@ export async function executeCreatePOI(
     mood: input.mood ?? '',
     sensory: input.sensory ?? '',
     services: input.services ?? [],
+    imageUrl: null,
     createdAt: now,
     updatedAt: now,
   }

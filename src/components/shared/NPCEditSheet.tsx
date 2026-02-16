@@ -25,8 +25,8 @@ import { Switch } from '~/components/ui/switch'
 import { ScrollArea } from '~/components/ui/scroll-area'
 import { TagInput } from '~/components/shared/TagInput'
 import { NPC_RACES, type NPCRace } from '@shared/constants'
-import { Plus, Trash2, Sparkles, ImageIcon, X } from 'lucide-react'
-import { useRef } from 'react'
+import { Plus, Trash2, Sparkles } from 'lucide-react'
+import { ImagePicker } from '~/components/shared/ImagePicker'
 
 export interface NPCEditSheetProps {
   npc: NPC
@@ -57,19 +57,6 @@ export function NPCEditSheet({
   onGenerate,
   isGenerating,
 }: NPCEditSheetProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      onChange({ ...npc, imageUrl: reader.result as string })
-    }
-    reader.readAsDataURL(file)
-    e.target.value = ''
-  }
-
   const updateField = (field: keyof NPC, value: any) => {
     onChange({ ...npc, [field]: value })
   }
@@ -177,49 +164,11 @@ export function NPCEditSheet({
               {/* Image */}
               <div className="space-y-2">
                 <Label>Portrait</Label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageUpload}
+                <ImagePicker
+                  imageUrl={npc.imageUrl}
+                  onImageChange={(url) => onChange({ ...npc, imageUrl: url })}
+                  label="Portrait"
                 />
-                {npc.imageUrl ? (
-                  <div className="relative inline-block">
-                    <img
-                      src={npc.imageUrl}
-                      alt={npc.name}
-                      className="max-h-40 rounded-md border object-cover"
-                    />
-                    <div className="absolute top-1 right-1 flex gap-1">
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        className="size-6"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <ImageIcon className="size-3" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        className="size-6"
-                        onClick={() => onChange({ ...npc, imageUrl: null })}
-                      >
-                        <X className="size-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <ImageIcon className="mr-1.5 size-3.5" />
-                    Add Image
-                  </Button>
-                )}
               </div>
 
               <div className="space-y-2">
