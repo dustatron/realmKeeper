@@ -1,60 +1,78 @@
-import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
-import ReactMarkdown from 'react-markdown'
-import { markdownOptions } from '~/shared/markdown'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '~/components/ui/tabs'
-import { Badge } from '~/components/ui/badge'
-import { Button } from '~/components/ui/button'
+import { useState } from "react";
+import { Link } from "@tanstack/react-router";
+import ReactMarkdown from "react-markdown";
+import { markdownOptions } from "~/shared/markdown";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
 import {
-  MapPin, Users, Dices, Plus, FileText, Lock,
-  ExternalLink, CalendarClock, Trash2, Navigation, LinkIcon,
-} from 'lucide-react'
-import { NPCMiniCard } from '~/components/shared/NPCMiniCard'
-import { FactionChip } from '~/components/shared/FactionChip'
-import { NPCSearchDrawer } from '~/components/shared/NPCSearchDrawer'
-import { SensoryBlock } from '~/components/shared/SensoryBlock'
-import { ReadAloudBlock } from '~/components/shared/ReadAloudBlock'
-import { AtAGlancePanel } from '~/components/shared/AtAGlancePanel'
-import { LocationSeedEditor } from '~/components/shared/LocationSeedEditor'
-import { EncounterTableUI } from '~/components/shared/EncounterTableUI'
-import { RumorList } from '~/components/shared/RumorList'
-import { ServicesList } from '~/components/shared/ServicesList'
-import { PathCard } from '~/components/shared/PathCard'
-import { EmptyState } from '~/components/shared/EmptyState'
-import { POI_TYPE_ICONS } from '@shared/poi-icons'
-import type { POI } from '@domain/entities/POI'
-import type { NPC } from '@domain/entities/NPC'
-import type { FactionPresence } from '@domain/entities/FactionPresence'
-import type { ResolvedPath } from '~/ui/hooks/useResolvedPaths'
-import type { POIEvent } from '@domain/entities/POIEvent'
-import type { EncounterTable } from '@domain/entities/EncounterTable'
-import type { Rumor } from '@domain/entities/Rumor'
-import type { LocationSeed } from '@domain/value-objects/LocationSeed'
-import type { EncounterCategory } from '@shared/constants'
+  MapPin,
+  Users,
+  Dices,
+  Plus,
+  FileText,
+  Lock,
+  ExternalLink,
+  CalendarClock,
+  Trash2,
+  Navigation,
+  LinkIcon,
+} from "lucide-react";
+import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
+import { FactionChip } from "~/components/shared/FactionChip";
+import { NPCSearchDrawer } from "~/components/shared/NPCSearchDrawer";
+import { SensoryBlock } from "~/components/shared/SensoryBlock";
+import { ReadAloudBlock } from "~/components/shared/ReadAloudBlock";
+import { AtAGlancePanel } from "~/components/shared/AtAGlancePanel";
+import { LocationSeedEditor } from "~/components/shared/LocationSeedEditor";
+import { EncounterTableUI } from "~/components/shared/EncounterTableUI";
+import { RumorList } from "~/components/shared/RumorList";
+import { ServicesList } from "~/components/shared/ServicesList";
+import { PathCard } from "~/components/shared/PathCard";
+import { EmptyState } from "~/components/shared/EmptyState";
+import { POI_TYPE_ICONS } from "@shared/poi-icons";
+import type { POI } from "@domain/entities/POI";
+import type { NPC } from "@domain/entities/NPC";
+import type { FactionPresence } from "@domain/entities/FactionPresence";
+import type { ResolvedPath } from "~/ui/hooks/useResolvedPaths";
+import type { POIEvent } from "@domain/entities/POIEvent";
+import type { EncounterTable } from "@domain/entities/EncounterTable";
+import type { Rumor } from "@domain/entities/Rumor";
+import type { LocationSeed } from "@domain/value-objects/LocationSeed";
+import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
 
 interface GenericTemplateProps {
-  poi: POI
-  children: POI[]
-  npcs: NPC[]
-  factionPresences: FactionPresence[]
-  paths: ResolvedPath[]
-  poiEvents: POIEvent[]
-  encounterTable: EncounterTable | null | undefined
-  rumors: Rumor[]
-  onRollEncounter: () => Promise<{ category: EncounterCategory; categoryRoll: number; result: string }>
-  onSaveEncounterTable?: (entries: Pick<EncounterTable, 'creature' | 'signOmen' | 'loss' | 'npc' | 'discovery' | 'treasure'>) => void
-  onCreateRumor: (input: { text: string; source: string; isQuestHook: boolean }) => void
-  onToggleRumorUsed: (rumor: Rumor) => void
-  onDeleteRumor: (id: string) => void
-  allWorldNPCs: NPC[]
-  onCreateChild: () => void
-  onCreateNPC: () => void
-  onLinkNPC: (npcId: string) => void
-  onCreateEvent: () => void
-  onDeleteEvent: (id: string) => void
-  onUpdateLocationSeed: (seed: LocationSeed) => void
-  mapSection: React.ReactNode
-  notesSection?: React.ReactNode
+  poi: POI;
+  children: POI[];
+  npcs: NPC[];
+  factionPresences: FactionPresence[];
+  paths: ResolvedPath[];
+  poiEvents: POIEvent[];
+  encounterTable: EncounterTable | null | undefined;
+  rumors: Rumor[];
+  onRollEncounter: () => Promise<RollEncounterResult>;
+  onSaveEncounterTable?: (
+    entries: Pick<
+      EncounterTable,
+      "creature" | "signOmen" | "loss" | "npc" | "discovery" | "treasure"
+    >,
+  ) => void;
+  onCreateRumor: (input: {
+    text: string;
+    source: string;
+    isQuestHook: boolean;
+  }) => void;
+  onToggleRumorUsed: (rumor: Rumor) => void;
+  onDeleteRumor: (id: string) => void;
+  allWorldNPCs: NPC[];
+  onCreateChild: () => void;
+  onCreateNPC: () => void;
+  onLinkNPC: (npcId: string) => void;
+  onCreateEvent: () => void;
+  onDeleteEvent: (id: string) => void;
+  onUpdateLocationSeed: (seed: LocationSeed) => void;
+  mapSection: React.ReactNode;
+  notesSection?: React.ReactNode;
 }
 
 export function GenericTemplate({
@@ -81,19 +99,31 @@ export function GenericTemplate({
   mapSection,
   notesSection,
 }: GenericTemplateProps) {
-  const activeEvents = poiEvents.filter((e) => e.isActive).length
-  const [linkNPCOpen, setLinkNPCOpen] = useState(false)
+  const activeEvents = poiEvents.filter((e) => e.isActive).length;
+  const [linkNPCOpen, setLinkNPCOpen] = useState(false);
 
   return (
     <div className="space-y-4">
       {/* Header badges */}
       <div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="outline" className="text-xs">{poi.type}</Badge>
-          {poi.subtypeLabel && <Badge variant="secondary" className="text-xs">{poi.subtypeLabel}</Badge>}
-          {poi.floor !== null && <Badge variant="outline" className="text-xs">Floor {poi.floor}</Badge>}
+          <Badge variant="outline" className="text-xs">
+            {poi.type}
+          </Badge>
+          {poi.subtypeLabel && (
+            <Badge variant="secondary" className="text-xs">
+              {poi.subtypeLabel}
+            </Badge>
+          )}
+          {poi.floor !== null && (
+            <Badge variant="outline" className="text-xs">
+              Floor {poi.floor}
+            </Badge>
+          )}
           {poi.tags.map((tag) => (
-            <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
+            <Badge key={tag} variant="outline" className="text-xs">
+              {tag}
+            </Badge>
           ))}
         </div>
       </div>
@@ -142,7 +172,9 @@ export function GenericTemplate({
           {/* Description */}
           {poi.description && (
             <div className="prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown {...markdownOptions}>{poi.description}</ReactMarkdown>
+              <ReactMarkdown {...markdownOptions}>
+                {poi.description}
+              </ReactMarkdown>
             </div>
           )}
 
@@ -167,7 +199,7 @@ export function GenericTemplate({
             {childPois.length > 0 ? (
               <div className="space-y-2">
                 {childPois.map((child) => {
-                  const ChildIcon = POI_TYPE_ICONS[child.type]
+                  const ChildIcon = POI_TYPE_ICONS[child.type];
                   return (
                     <Link
                       key={child.id}
@@ -178,29 +210,53 @@ export function GenericTemplate({
                       <div className="rounded-md border p-3 hover:bg-accent transition-colors space-y-1.5">
                         <div className="flex items-center gap-2">
                           <ChildIcon className="size-4 shrink-0 text-muted-foreground" />
-                          <span className="text-sm font-medium">{child.name}</span>
+                          <span className="text-sm font-medium">
+                            {child.name}
+                          </span>
                           {child.subtypeLabel && (
-                            <Badge variant="secondary" className="text-xs shrink-0">{child.subtypeLabel}</Badge>
+                            <Badge
+                              variant="secondary"
+                              className="text-xs shrink-0"
+                            >
+                              {child.subtypeLabel}
+                            </Badge>
                           )}
                           <span className="ml-auto flex items-center gap-1.5">
-                            <Badge variant="outline" className="text-xs shrink-0">{child.type}</Badge>
+                            <Badge
+                              variant="outline"
+                              className="text-xs shrink-0"
+                            >
+                              {child.type}
+                            </Badge>
                             <ExternalLink className="size-3.5 text-muted-foreground" />
                           </span>
                         </div>
                         {child.description && (
-                          <p className="text-xs text-muted-foreground line-clamp-2">{child.description}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {child.description}
+                          </p>
                         )}
                         {(child.mood || child.services.length > 0) && (
                           <div className="flex items-center gap-1 flex-wrap">
-                            {child.mood && <Badge variant="secondary" className="text-xs">{child.mood}</Badge>}
+                            {child.mood && (
+                              <Badge variant="secondary" className="text-xs">
+                                {child.mood}
+                              </Badge>
+                            )}
                             {child.services.map((s, i) => (
-                              <Badge key={i} variant="outline" className="text-xs font-normal">{s.name}</Badge>
+                              <Badge
+                                key={i}
+                                variant="outline"
+                                className="text-xs font-normal"
+                              >
+                                {s.name}
+                              </Badge>
                             ))}
                           </div>
                         )}
                       </div>
                     </Link>
-                  )
+                  );
                 })}
               </div>
             ) : (
@@ -225,7 +281,11 @@ export function GenericTemplate({
               Denizens ({npcs.length})
             </h4>
             <div className="flex items-center gap-1.5">
-              <Button size="sm" variant="outline" onClick={() => setLinkNPCOpen(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setLinkNPCOpen(true)}
+              >
                 <LinkIcon className="mr-1.5 size-3.5" />
                 Link NPC
               </Button>
@@ -237,10 +297,14 @@ export function GenericTemplate({
           </div>
           {npcs.length > 0 ? (
             <div className="space-y-2">
-              {npcs.map((npc) => <NPCMiniCard key={npc.id} npc={npc} />)}
+              {npcs.map((npc) => (
+                <NPCMiniCard key={npc.id} npc={npc} />
+              ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No denizens present.</p>
+            <p className="text-sm text-muted-foreground">
+              No denizens present.
+            </p>
           )}
 
           {factionPresences.length > 0 && (
@@ -262,7 +326,7 @@ export function GenericTemplate({
             onRoll={onRollEncounter}
             onSave={onSaveEncounterTable}
           />
-          {poi.type === 'ruin' && (
+          {poi.type === "ruin" && (
             <RumorList
               rumors={rumors}
               onToggleUsed={onToggleRumorUsed}
@@ -301,9 +365,13 @@ export function GenericTemplate({
           {/* GM Notes */}
           {poi.gmNotes && (
             <details className="rounded-md border p-3" open>
-              <summary className="text-sm font-medium cursor-pointer">GM Notes</summary>
+              <summary className="text-sm font-medium cursor-pointer">
+                GM Notes
+              </summary>
               <div className="prose prose-sm dark:prose-invert max-w-none mt-2">
-                <ReactMarkdown {...markdownOptions}>{poi.gmNotes}</ReactMarkdown>
+                <ReactMarkdown {...markdownOptions}>
+                  {poi.gmNotes}
+                </ReactMarkdown>
               </div>
             </details>
           )}
@@ -323,22 +391,43 @@ export function GenericTemplate({
             {poiEvents.length > 0 ? (
               <div className="space-y-2">
                 {poiEvents.map((event) => (
-                  <div key={event.id} className="flex items-start gap-2 rounded-md border p-2">
+                  <div
+                    key={event.id}
+                    className="flex items-start gap-2 rounded-md border p-2"
+                  >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{event.name}</span>
-                        <Badge variant="outline" className="text-xs">{event.type}</Badge>
-                        {event.isActive && <Badge className="text-xs bg-green-600">Active</Badge>}
-                        {event.recurring && <Badge variant="secondary" className="text-xs">Recurring</Badge>}
+                        <span className="text-sm font-medium">
+                          {event.name}
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          {event.type}
+                        </Badge>
+                        {event.isActive && (
+                          <Badge className="text-xs bg-green-600">Active</Badge>
+                        )}
+                        {event.recurring && (
+                          <Badge variant="secondary" className="text-xs">
+                            Recurring
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground mt-0.5">
-                        {event.trigger.season.charAt(0).toUpperCase() + event.trigger.season.slice(1)} Day {event.trigger.day}
-                        {event.trigger.year !== null && `, Year ${event.trigger.year}`}
-                        {event.trigger.watch !== null && `, Watch ${event.trigger.watch}`}
-                        {' \u00B7 '}{event.durationWatches} watch{event.durationWatches !== 1 ? 'es' : ''}
+                        {event.trigger.season.charAt(0).toUpperCase() +
+                          event.trigger.season.slice(1)}{" "}
+                        Day {event.trigger.day}
+                        {event.trigger.year !== null &&
+                          `, Year ${event.trigger.year}`}
+                        {event.trigger.watch !== null &&
+                          `, Watch ${event.trigger.watch}`}
+                        {" \u00B7 "}
+                        {event.durationWatches} watch
+                        {event.durationWatches !== 1 ? "es" : ""}
                       </div>
                       {event.description && (
-                        <div className="text-xs text-muted-foreground mt-1 line-clamp-1">{event.description}</div>
+                        <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                          {event.description}
+                        </div>
                       )}
                     </div>
                     <Button
@@ -353,7 +442,9 @@ export function GenericTemplate({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No events scheduled.</p>
+              <p className="text-sm text-muted-foreground">
+                No events scheduled.
+              </p>
             )}
           </div>
 
@@ -377,10 +468,10 @@ export function GenericTemplate({
         allNPCs={allWorldNPCs}
         excludeNpcIds={npcs.map((n) => n.id)}
         onSelect={(npcId) => {
-          onLinkNPC(npcId)
-          setLinkNPCOpen(false)
+          onLinkNPC(npcId);
+          setLinkNPCOpen(false);
         }}
       />
     </div>
-  )
+  );
 }

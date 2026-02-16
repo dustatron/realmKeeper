@@ -40,13 +40,20 @@ interface EncounterTableUIProps {
   onSave?: (entries: SavePayload) => void;
 }
 
-interface EditRow {
-  type: "builtin";
-  category: EncounterCategory;
-  label: string;
-  text: string;
-  disabled: boolean;
-}
+type EditRow =
+  | {
+      type: "builtin";
+      category: EncounterCategory;
+      label: string;
+      text: string;
+      disabled: boolean;
+    }
+  | {
+      type: "custom";
+      id: string;
+      label: string;
+      text: string;
+    };
 
 export function EncounterTableUI({
   table,

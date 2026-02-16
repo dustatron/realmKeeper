@@ -35,7 +35,8 @@ import type { EncounterTable } from "@domain/entities/EncounterTable";
 import type { FactionPresence } from "@domain/entities/FactionPresence";
 import type { POIEvent } from "@domain/entities/POIEvent";
 import type { GameMap } from "@domain/entities/GameMap";
-import type { EncounterCategory, NoticeType } from "@shared/constants";
+import type { NoticeType } from "@shared/constants";
+import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
 
 interface SettlementTemplateProps {
   poi: POI;
@@ -66,11 +67,7 @@ interface SettlementTemplateProps {
     reward: string;
   }) => void;
   onDeleteNotice: (id: string) => void;
-  onRollEncounter: () => Promise<{
-    category: EncounterCategory;
-    categoryRoll: number;
-    result: string;
-  }>;
+  onRollEncounter: () => Promise<RollEncounterResult>;
   onSaveEncounterTable?: (
     entries: Pick<
       EncounterTable,
@@ -493,7 +490,9 @@ export function SettlementTemplate({
               <ReactMarkdown {...markdownOptions}>{poi.gmNotes}</ReactMarkdown>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No GM notes recorded.</p>
+            <p className="text-sm text-muted-foreground">
+              No GM notes recorded.
+            </p>
           )}
         </TabsContent>
 
@@ -505,4 +504,3 @@ export function SettlementTemplate({
     </div>
   );
 }
-
