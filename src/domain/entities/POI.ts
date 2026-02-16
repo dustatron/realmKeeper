@@ -20,6 +20,7 @@ export interface POI {
   mood: string
   sensory: string
   services: Service[]
+  imageUrl: string | null
   createdAt: number
   updatedAt: number
 }

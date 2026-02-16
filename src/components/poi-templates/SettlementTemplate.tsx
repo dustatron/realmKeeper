@@ -12,6 +12,7 @@ import {
   Trash2,
   Users,
   ExternalLink,
+  FileText,
   Building2,
   Home,
   DoorOpen,
@@ -84,6 +85,7 @@ interface SettlementTemplateProps {
   onCreateEvent: () => void
   onDeleteEvent: (id: string) => void
   mapSection: React.ReactNode
+  notesSection?: React.ReactNode
 }
 
 export function SettlementTemplate({
@@ -111,6 +113,7 @@ export function SettlementTemplate({
   onCreateEvent,
   onDeleteEvent,
   mapSection,
+  notesSection,
 }: SettlementTemplateProps) {
   // Group child NPCs by their poiId
   const npcsByPoiId = useMemo(() => {
@@ -195,6 +198,10 @@ export function SettlementTemplate({
           <TabsTrigger value="events">
             <CalendarClock className="size-4" />
             Events ({poiEvents.length})
+          </TabsTrigger>
+          <TabsTrigger value="notes">
+            <FileText className="size-4" />
+            Notes
           </TabsTrigger>
         </TabsList>
 
@@ -400,6 +407,11 @@ export function SettlementTemplate({
           ) : (
             <p className="text-sm text-muted-foreground">No events scheduled.</p>
           )}
+        </TabsContent>
+
+        {/* Notes tab */}
+        <TabsContent value="notes" className="pt-3">
+          {notesSection}
         </TabsContent>
       </Tabs>
     </div>

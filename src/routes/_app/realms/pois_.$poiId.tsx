@@ -46,6 +46,9 @@ import { SettlementTemplate } from '~/components/poi-templates/SettlementTemplat
 import { DungeonTemplate } from '~/components/poi-templates/DungeonTemplate'
 import { BuildingTemplate } from '~/components/poi-templates/BuildingTemplate'
 import { GenericTemplate } from '~/components/poi-templates/GenericTemplate'
+import { NotesPanel } from '~/components/shared/NotesPanel'
+import { ImagePicker } from '~/components/shared/ImagePicker'
+import { CloudinaryImage } from '~/components/shared/CloudinaryImage'
 
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { TagInput } from '~/components/shared/TagInput'
@@ -211,6 +214,7 @@ function POIDetailPage() {
     mood: '',
     sensory: '',
     services: [] as Service[],
+    imageUrl: null as string | null,
   })
 
   const [createChildForm, setCreateChildForm] = useState({
@@ -253,6 +257,7 @@ function POIDetailPage() {
       mood: poi.mood,
       sensory: poi.sensory,
       services: poi.services,
+      imageUrl: poi.imageUrl,
     })
     setEditSheetOpen(true)
   }
@@ -276,6 +281,7 @@ function POIDetailPage() {
         mood: editForm.mood,
         sensory: editForm.sensory,
         services: editForm.services,
+        imageUrl: editForm.imageUrl,
       },
       { poiRepo: container.poiRepo }
     )
@@ -477,6 +483,11 @@ function POIDetailPage() {
 
   const Icon = POI_TYPE_ICONS[poi.type]
 
+  // Notes section
+  const notesSection = region ? (
+    <NotesPanel ownerType="poi" ownerId={poiId} worldId={region.worldId} />
+  ) : null
+
   // Shared map section
   const mapSection = poiMaps.length > 0 ? (
     <POIDetailMap gameMap={poiMaps[0]} poiMaps={poiMaps} parentPoiId={poiId} highlightPoiId={selectedChildId} />
@@ -513,6 +524,7 @@ function POIDetailPage() {
             onCreateEvent={openCreateEventDialog}
             onDeleteEvent={(id) => setDeletingEventId(id)}
             mapSection={mapSection}
+            notesSection={notesSection}
           />
         )
       case 'dungeon':
@@ -528,6 +540,7 @@ function POIDetailPage() {
             onCreateChild={openCreateChildDialog}
             onCreateNPC={openCreateNPC}
             mapSection={mapSection}
+            notesSection={notesSection}
           />
         )
       case 'building':
@@ -540,6 +553,7 @@ function POIDetailPage() {
             onCreateChild={openCreateChildDialog}
             onCreateNPC={openCreateNPC}
             mapSection={mapSection}
+            notesSection={notesSection}
           />
         )
       default:
@@ -554,6 +568,7 @@ function POIDetailPage() {
             onCreateChild={openCreateChildDialog}
             onCreateNPC={openCreateNPC}
             mapSection={mapSection}
+            notesSection={notesSection}
           />
         )
     }
@@ -561,6 +576,16 @@ function POIDetailPage() {
 
   return (
     <div className="space-y-4">
+      {/* POI Image */}
+      {poi.imageUrl && (
+        <CloudinaryImage
+          src={poi.imageUrl}
+          alt={poi.name}
+          width={800}
+          className="w-full max-h-64 rounded-lg border object-cover"
+        />
+      )}
+
       {/* Action bar */}
       <div className="flex items-center gap-2">
         <span className="flex items-center gap-2 mr-auto">
@@ -652,6 +677,13 @@ function POIDetailPage() {
                 onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
                 placeholder="Describe this location..."
                 rows={3}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Image</Label>
+              <ImagePicker
+                imageUrl={editForm.imageUrl}
+                onImageChange={(url) => setEditForm((f) => ({ ...f, imageUrl: url }))}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">

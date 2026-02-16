@@ -17,6 +17,11 @@ import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import { executeCreateNPC } from '@application/use-cases/CreateNPC'
 import { executeCreatePOIEvent } from '@application/use-cases/CreatePOIEvent'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
+import { NotesPanel } from '~/components/shared/NotesPanel'
+import { WysiwygEditor } from '~/components/shared/WysiwygEditor'
+import { ImagePicker } from '~/components/shared/ImagePicker'
+import { CloudinaryImage } from '~/components/shared/CloudinaryImage'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '~/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
@@ -25,7 +30,7 @@ import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '~/components/ui/sheet'
+import { ArrowLeft } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '~/components/ui/dialog'
 import {
   ChevronRight,
@@ -38,6 +43,7 @@ import {
   Swords,
   Plus,
   Dices,
+  FileText,
   Building2,
   Home,
   DoorOpen,
@@ -51,13 +57,14 @@ import {
   Tent,
   Sparkles,
 } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { POI_TYPES, POI_EVENT_TYPES, SEASONS, type PoiType, type POIEventType, type Season } from '@shared/constants'
 import type { POIEvent } from '@domain/entities/POIEvent'
 
 export const Route = createFileRoute('/_app/realms/regions_/$regionId')({
   component: RegionDetailPage,
+  validateSearch: (search: Record<string, unknown>): { edit?: boolean } => ({
+    ...(search.edit === 'true' || search.edit === true ? { edit: true } : {}),
+  }),
 })
 
 const TERRAIN_OPTIONS = ['plains', 'forest', 'hills', 'mountain', 'swamp', 'desert', 'coast', 'road', 'tundra', 'other'] as const
@@ -89,6 +96,8 @@ function RegionDetailPage() {
   const container = useContainer()
   const setHeaderTitle = useUIStore((s) => s.setHeaderTitle)
 
+  const { edit: editFromSearch } = Route.useSearch()
+
   const [editSheetOpen, setEditSheetOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [createPoiOpen, setCreatePoiOpen] = useState(false)
@@ -102,6 +111,7 @@ function RegionDetailPage() {
     name: '',
     description: '',
     terrain: 'plains' as string,
+    imageUrl: null as string | null,
   })
 
   const [poiForm, setPoiForm] = useState({ name: '', type: 'settlement' as PoiType })
@@ -157,6 +167,19 @@ function RegionDetailPage() {
 
   const topLevelPOIs = useMemo(() => pois.filter(p => p.parentPoiId === null), [pois])
 
+  // Auto-open edit mode from ?edit=true search param
+  useEffect(() => {
+    if (editFromSearch && region && !editSheetOpen) {
+      setEditForm({
+        name: region.name,
+        description: region.description,
+        terrain: region.terrain || 'plains',
+        imageUrl: region.imageUrl,
+      })
+      setEditSheetOpen(true)
+    }
+  }, [editFromSearch, region?.id])
+
   // Set breadcrumb in site header
   useEffect(() => {
     if (!region) return
@@ -176,6 +199,7 @@ function RegionDetailPage() {
       name: region.name,
       description: region.description,
       terrain: region.terrain || 'plains',
+      imageUrl: region.imageUrl,
     })
     setEditSheetOpen(true)
   }
@@ -183,7 +207,7 @@ function RegionDetailPage() {
   const handleEdit = async () => {
     if (!region || !editForm.name.trim()) return
     await executeUpdateRegion(
-      { ...region, name: editForm.name, description: editForm.description, terrain: editForm.terrain },
+      { ...region, name: editForm.name, description: editForm.description, terrain: editForm.terrain, imageUrl: editForm.imageUrl },
       { regionRepo: container.regionRepo }
     )
     setEditSheetOpen(false)
@@ -271,6 +295,91 @@ function RegionDetailPage() {
     return <div className="py-8 text-center text-muted-foreground">Region not found.</div>
   }
 
+  if (editSheetOpen) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setEditSheetOpen(false)}>
+            <ArrowLeft className="mr-1.5 size-4" />
+            Back
+          </Button>
+          <span className="font-medium mr-auto">Edit Region</span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => { setEditSheetOpen(false); setDeleteConfirmOpen(true) }}
+          >
+            <Trash2 className="mr-2 size-4" />
+            Delete
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setEditSheetOpen(false)}>
+            Cancel
+          </Button>
+          <Button size="sm" onClick={handleEdit} disabled={!editForm.name.trim()}>
+            Save
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-name">Name *</Label>
+            <Input
+              id="edit-name"
+              value={editForm.name}
+              onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="Region name"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-terrain">Terrain</Label>
+            <Select
+              value={editForm.terrain}
+              onValueChange={(value) => setEditForm((f) => ({ ...f, terrain: value }))}
+            >
+              <SelectTrigger id="edit-terrain">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TERRAIN_OPTIONS.map((terrain) => (
+                  <SelectItem key={terrain} value={terrain}>
+                    {terrain.charAt(0).toUpperCase() + terrain.slice(1)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Description</Label>
+          <WysiwygEditor
+            content={editForm.description}
+            onChange={(html) => setEditForm((f) => ({ ...f, description: html }))}
+            placeholder="Describe this region..."
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Image</Label>
+          <ImagePicker
+            imageUrl={editForm.imageUrl}
+            onImageChange={(url) => setEditForm((f) => ({ ...f, imageUrl: url }))}
+          />
+        </div>
+
+        <ConfirmDialog
+          open={deleteConfirmOpen}
+          onOpenChange={setDeleteConfirmOpen}
+          title="Delete Region"
+          description="Are you sure you want to delete this region? This action cannot be undone."
+          confirmLabel="Delete"
+          variant="destructive"
+          onConfirm={handleDelete}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       {/* Action bar */}
@@ -288,82 +397,108 @@ function RegionDetailPage() {
         </Button>
       </div>
 
-      <div className="space-y-4">
-        {/* Description */}
-        {region.description && (
-          <Card>
-            <CardContent className="pt-5">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                className="prose prose-sm dark:prose-invert max-w-none"
-              >
-                {region.description}
-              </ReactMarkdown>
-            </CardContent>
-          </Card>
-        )}
+      {/* Tabs layout */}
+      <Tabs defaultValue="overview">
+        <TabsList variant="line" className="w-full">
+          <TabsTrigger value="overview">
+            <Compass className="size-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="locations">
+            <MapPin className="size-4" />
+            Locations ({topLevelPOIs.length})
+          </TabsTrigger>
+          <TabsTrigger value="npcs">
+            <Users className="size-4" />
+            NPCs ({npcs.length})
+          </TabsTrigger>
+          <TabsTrigger value="factions">
+            <Swords className="size-4" />
+            Factions ({factions.length})
+          </TabsTrigger>
+          <TabsTrigger value="events">
+            <CalendarClock className="size-4" />
+            Events ({poiEvents.length})
+          </TabsTrigger>
+          <TabsTrigger value="notes">
+            <FileText className="size-4" />
+            Notes
+          </TabsTrigger>
+        </TabsList>
 
-        {/* POIs section */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <MapPin className="size-4" />
-              Points of Interest ({topLevelPOIs.length})
-            </CardTitle>
+        {/* Overview tab */}
+        <TabsContent value="overview" className="pt-3">
+          {region.imageUrl && (
+            <CloudinaryImage
+              src={region.imageUrl}
+              alt={region.name}
+              width={800}
+              className="w-full max-h-64 rounded-lg border object-cover mb-4"
+            />
+          )}
+          {region.description ? (
+            <div
+              className="tiptap prose prose-sm dark:prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: region.description }}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">No description.</p>
+          )}
+        </TabsContent>
+
+        {/* Locations tab */}
+        <TabsContent value="locations" className="pt-3">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold">Points of Interest</h4>
             <Button variant="outline" size="sm" className="h-7" onClick={() => setCreatePoiOpen(true)}>
               <Plus className="mr-1.5 size-3.5" />
               Add
             </Button>
-          </CardHeader>
-          <CardContent>
-            {topLevelPOIs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No points of interest.</p>
-            ) : (
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {topLevelPOIs.map((poi) => {
-                  const Icon = POI_TYPE_ICONS[poi.type]
-                  return (
-                    <Link
-                      key={poi.id}
-                      to="/realms/pois/$poiId"
-                      params={{ poiId: poi.id }}
-                      className="block"
-                    >
-                      <Card className="cursor-pointer transition-colors hover:bg-accent h-full">
-                        <CardHeader className="pb-2">
-                          <div className="flex items-start gap-2">
-                            <Icon className="size-4 text-muted-foreground shrink-0 mt-0.5" />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium truncate">{poi.name}</div>
-                              <Badge variant="outline" className="text-xs mt-1">
-                                {poi.type}
-                              </Badge>
-                            </div>
+          </div>
+          {topLevelPOIs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No points of interest.</p>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {topLevelPOIs.map((poi) => {
+                const Icon = POI_TYPE_ICONS[poi.type]
+                return (
+                  <Link
+                    key={poi.id}
+                    to="/realms/pois/$poiId"
+                    params={{ poiId: poi.id }}
+                    className="block"
+                  >
+                    <Card className="cursor-pointer transition-colors hover:bg-accent h-full">
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start gap-2">
+                          <Icon className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">{poi.name}</div>
+                            <Badge variant="outline" className="text-xs mt-1">
+                              {poi.type}
+                            </Badge>
                           </div>
-                        </CardHeader>
-                        {poi.description && (
-                          <CardContent className="pt-0">
-                            <p className="text-xs text-muted-foreground line-clamp-2">
-                              {poi.description}
-                            </p>
-                          </CardContent>
-                        )}
-                      </Card>
-                    </Link>
-                  )
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                        </div>
+                      </CardHeader>
+                      {poi.description && (
+                        <CardContent className="pt-0">
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {poi.description}
+                          </p>
+                        </CardContent>
+                      )}
+                    </Card>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </TabsContent>
 
-        {/* NPCs section */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="size-4" />
-              NPCs ({npcs.length})
-            </CardTitle>
+        {/* NPCs tab */}
+        <TabsContent value="npcs" className="pt-3">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold">NPCs</h4>
             <Button
               variant="outline"
               size="sm"
@@ -374,45 +509,40 @@ function RegionDetailPage() {
               <Dices className="mr-1.5 size-3.5" />
               {isGeneratingNPC ? '...' : 'Generate'}
             </Button>
-          </CardHeader>
-          <CardContent>
-            {npcs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No NPCs in this region.</p>
-            ) : (
-              <div className="space-y-1">
-                {npcs.map((npc) => (
-                  <div key={npc.id} className="flex items-center justify-between py-1">
-                    <Link
-                      to="/realms/npcs/$npcId"
-                      params={{ npcId: npc.id }}
-                      className="text-sm text-primary hover:underline font-medium"
-                    >
-                      {npc.name}
-                    </Link>
-                    <div className="flex items-center gap-1">
-                      {npc.traits.slice(0, 2).map((trait) => (
-                        <Badge key={trait} variant="secondary" className="text-xs">{trait}</Badge>
-                      ))}
-                      {npc.lifeStatus !== 'alive' && (
-                        <Badge variant="destructive" className="text-xs">
-                          {npc.lifeStatus.charAt(0).toUpperCase() + npc.lifeStatus.slice(1)}
-                        </Badge>
-                      )}
-                    </div>
+          </div>
+          {npcs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No NPCs in this region.</p>
+          ) : (
+            <div className="space-y-1">
+              {npcs.map((npc) => (
+                <div key={npc.id} className="flex items-center justify-between py-1">
+                  <Link
+                    to="/realms/npcs/$npcId"
+                    params={{ npcId: npc.id }}
+                    className="text-sm text-primary hover:underline font-medium"
+                  >
+                    {npc.name}
+                  </Link>
+                  <div className="flex items-center gap-1">
+                    {npc.traits.slice(0, 2).map((trait) => (
+                      <Badge key={trait} variant="secondary" className="text-xs">{trait}</Badge>
+                    ))}
+                    {npc.lifeStatus !== 'alive' && (
+                      <Badge variant="destructive" className="text-xs">
+                        {npc.lifeStatus.charAt(0).toUpperCase() + npc.lifeStatus.slice(1)}
+                      </Badge>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
-        {/* Factions section */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Swords className="size-4" />
-              Factions ({factions.length})
-            </CardTitle>
+        {/* Factions tab */}
+        <TabsContent value="factions" className="pt-3">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold">Factions</h4>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-7">
@@ -425,50 +555,45 @@ function RegionDetailPage() {
                 <DropdownMenuItem onClick={() => setAssignFactionOpen(true)}>Assign Existing</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </CardHeader>
-          <CardContent>
-            {factions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No factions in this region.</p>
-            ) : (
-              <div className="space-y-1">
-                {factions.map((faction) => (
-                  <div key={faction.id} className="flex items-center justify-between py-1">
-                    <Link
-                      to="/realms/factions/$factionId"
-                      params={{ factionId: faction.id }}
-                      className="text-sm text-primary hover:underline font-medium"
+          </div>
+          {factions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No factions in this region.</p>
+          ) : (
+            <div className="space-y-1">
+              {factions.map((faction) => (
+                <div key={faction.id} className="flex items-center justify-between py-1">
+                  <Link
+                    to="/realms/factions/$factionId"
+                    params={{ factionId: faction.id }}
+                    className="text-sm text-primary hover:underline font-medium"
+                  >
+                    {faction.name}
+                  </Link>
+                  <div className="flex items-center gap-1">
+                    {faction.type && (
+                      <Badge variant="outline" className="text-xs">{faction.type}</Badge>
+                    )}
+                    <Badge
+                      className={`text-xs ${
+                        faction.status === 'active' ? 'bg-green-600' :
+                        faction.status === 'dormant' ? 'bg-yellow-600' :
+                        faction.status === 'disbanded' ? 'bg-orange-600' :
+                        faction.status === 'destroyed' ? 'bg-red-600' : 'bg-gray-600'
+                      }`}
                     >
-                      {faction.name}
-                    </Link>
-                    <div className="flex items-center gap-1">
-                      {faction.type && (
-                        <Badge variant="outline" className="text-xs">{faction.type}</Badge>
-                      )}
-                      <Badge
-                        className={`text-xs ${
-                          faction.status === 'active' ? 'bg-green-600' :
-                          faction.status === 'dormant' ? 'bg-yellow-600' :
-                          faction.status === 'disbanded' ? 'bg-orange-600' :
-                          faction.status === 'destroyed' ? 'bg-red-600' : 'bg-gray-600'
-                        }`}
-                      >
-                        {faction.status.charAt(0).toUpperCase() + faction.status.slice(1)}
-                      </Badge>
-                    </div>
+                      {faction.status.charAt(0).toUpperCase() + faction.status.slice(1)}
+                    </Badge>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
-        {/* Events section */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <CalendarClock className="size-4" />
-              Events ({poiEvents.length})
-            </CardTitle>
+        {/* Events tab */}
+        <TabsContent value="events" className="pt-3">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold">Events</h4>
             <Button
               variant="outline"
               size="sm"
@@ -482,111 +607,49 @@ function RegionDetailPage() {
               <Plus className="mr-1.5 size-3.5" />
               Add
             </Button>
-          </CardHeader>
-          <CardContent>
-            {poiEvents.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No events scheduled.</p>
-            ) : (
-              <div className="space-y-2">
-                {poiEvents.map((event) => {
-                  const eventPoi = pois.find(p => p.id === event.poiId)
-                  return (
-                    <div
-                      key={event.id}
-                      className="flex items-start gap-2 rounded-md border p-2"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{event.name}</span>
-                          <Badge variant="outline" className="text-xs">{event.type}</Badge>
-                          {event.isActive && <Badge className="text-xs bg-green-600">Active</Badge>}
-                        </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          {eventPoi && (
-                            <span className="text-xs text-muted-foreground">at {eventPoi.name}</span>
-                          )}
-                          {event.description && (
-                            <span className="text-xs text-muted-foreground line-clamp-1">
-                              — {event.description}
-                            </span>
-                          )}
-                        </div>
+          </div>
+          {poiEvents.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No events scheduled.</p>
+          ) : (
+            <div className="space-y-2">
+              {poiEvents.map((event) => {
+                const eventPoi = pois.find(p => p.id === event.poiId)
+                return (
+                  <div
+                    key={event.id}
+                    className="flex items-start gap-2 rounded-md border p-2"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{event.name}</span>
+                        <Badge variant="outline" className="text-xs">{event.type}</Badge>
+                        {event.isActive && <Badge className="text-xs bg-green-600">Active</Badge>}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        {eventPoi && (
+                          <span className="text-xs text-muted-foreground">at {eventPoi.name}</span>
+                        )}
+                        {event.description && (
+                          <span className="text-xs text-muted-foreground line-clamp-1">
+                            — {event.description}
+                          </span>
+                        )}
                       </div>
                     </div>
-                  )
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </TabsContent>
 
-      {/* Edit Sheet */}
-      <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
-        <SheetContent className="overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Edit Region</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label htmlFor="edit-name">Name *</Label>
-              <Input
-                id="edit-name"
-                value={editForm.name}
-                onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Region name"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-terrain">Terrain</Label>
-              <Select
-                value={editForm.terrain}
-                onValueChange={(value) => setEditForm((f) => ({ ...f, terrain: value }))}
-              >
-                <SelectTrigger id="edit-terrain">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TERRAIN_OPTIONS.map((terrain) => (
-                    <SelectItem key={terrain} value={terrain}>
-                      {terrain.charAt(0).toUpperCase() + terrain.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={editForm.description}
-                onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Describe this region..."
-                rows={4}
-              />
-            </div>
-          </div>
-          <SheetFooter>
-            <div className="flex w-full items-center gap-2">
-              <Button
-                variant="destructive"
-                size="sm"
-                className="mr-auto"
-                onClick={() => { setEditSheetOpen(false); setDeleteConfirmOpen(true) }}
-              >
-                <Trash2 className="mr-2 size-4" />
-                Delete
-              </Button>
-              <Button variant="outline" onClick={() => setEditSheetOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleEdit} disabled={!editForm.name.trim()}>
-                Save
-              </Button>
-            </div>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+        {/* Notes tab */}
+        <TabsContent value="notes" className="pt-3">
+          <NotesPanel ownerType="region" ownerId={regionId} worldId={region.worldId} />
+        </TabsContent>
+      </Tabs>
+
+
 
       {/* Create POI Dialog */}
       <Dialog open={createPoiOpen} onOpenChange={setCreatePoiOpen}>

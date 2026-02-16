@@ -10,14 +10,22 @@ import { useUIStore } from '~/ui/stores/uiStore'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { executeUpdateNPC } from '@application/use-cases/UpdateNPC'
 import { executeDeleteNPC } from '@application/use-cases/DeleteNPC'
-import { NPCEditSheet } from '~/components/shared/NPCEditSheet'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { PageHeader } from '~/components/shared/PageHeader'
+import { TagInput } from '~/components/shared/TagInput'
+import { ImagePicker } from '~/components/shared/ImagePicker'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
-import { ArrowLeft, Heart, Shield, Skull, Swords, Package, Sparkles, Handshake, Pencil, MapPin, ImageIcon, ChevronUp, ChevronDown } from 'lucide-react'
+import { Input } from '~/components/ui/input'
+import { Label } from '~/components/ui/label'
+import { Textarea } from '~/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
+import { ArrowLeft, Heart, Shield, Skull, Swords, Package, Sparkles, Handshake, Pencil, MapPin, ChevronUp, ChevronDown, Trash2, Plus } from 'lucide-react'
+import { CloudinaryImage } from '~/components/shared/CloudinaryImage'
+import { NPC_RACES, type NPCRace } from '@shared/constants'
 import type { NPC } from '@domain/entities/NPC'
+import type { SystemBlock, Attack, InventoryItem } from '@domain/value-objects/SystemBlock'
 import type { Faction } from '@domain/entities/Faction'
 
 export const Route = createFileRoute('/_app/realms/npcs_/$npcId')({
@@ -98,6 +106,514 @@ function NPCDetailPage() {
   const hpLabel = systemConfig?.hpLabel ?? 'HP'
   const armorLabel = systemConfig?.armorLabel ?? 'Armor'
 
+  // --- Inline edit helpers ---
+  const updateField = (field: keyof NPC, value: any) => {
+    if (!editingNPC) return
+    setEditingNPC({ ...editingNPC, [field]: value })
+  }
+
+  const updateSystemBlock = (updates: Partial<SystemBlock>) => {
+    if (!editingNPC) return
+    setEditingNPC({
+      ...editingNPC,
+      systemBlock: { ...editingNPC.systemBlock, ...updates },
+    })
+  }
+
+  const updateStat = (key: string, value: number) => {
+    if (!editingNPC) return
+    const stats = editingNPC.systemBlock.stats.map((s) =>
+      s.key === key ? { ...s, value } : s
+    )
+    updateSystemBlock({ stats })
+  }
+
+  const addAttack = () => {
+    if (!editingNPC) return
+    updateSystemBlock({
+      attacks: [...editingNPC.systemBlock.attacks, { name: '', damage: '', description: '' }],
+    })
+  }
+
+  const updateAttack = (index: number, updates: Partial<Attack>) => {
+    if (!editingNPC) return
+    const attacks = editingNPC.systemBlock.attacks.map((a, i) =>
+      i === index ? { ...a, ...updates } : a
+    )
+    updateSystemBlock({ attacks })
+  }
+
+  const removeAttack = (index: number) => {
+    if (!editingNPC) return
+    updateSystemBlock({
+      attacks: editingNPC.systemBlock.attacks.filter((_, i) => i !== index),
+    })
+  }
+
+  const addInventoryItem = () => {
+    if (!editingNPC) return
+    updateSystemBlock({
+      inventory: [...editingNPC.systemBlock.inventory, { name: '', slots: 1, description: '' }],
+    })
+  }
+
+  const updateInventoryItem = (index: number, updates: Partial<InventoryItem>) => {
+    if (!editingNPC) return
+    const inventory = editingNPC.systemBlock.inventory.map((item, i) =>
+      i === index ? { ...item, ...updates } : item
+    )
+    updateSystemBlock({ inventory })
+  }
+
+  const removeInventoryItem = (index: number) => {
+    if (!editingNPC) return
+    updateSystemBlock({
+      inventory: editingNPC.systemBlock.inventory.filter((_, i) => i !== index),
+    })
+  }
+
+  // --- Inline Edit Mode ---
+  if (editingNPC && systemConfig) {
+    const editSb = editingNPC.systemBlock
+    const editHpPercent = editSb.maxHp > 0 ? (editSb.hp / editSb.maxHp) * 100 : 0
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setEditingNPC(null)}>
+            <ArrowLeft className="mr-1.5 size-4" />
+            Back
+          </Button>
+          <span className="font-medium mr-auto">Edit NPC</span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => { setEditingNPC(null); setDeleteConfirmOpen(true) }}
+          >
+            <Trash2 className="mr-2 size-4" />
+            Delete
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setEditingNPC(null)}>
+            Cancel
+          </Button>
+          <Button size="sm" onClick={handleSaveNPC} disabled={!editingNPC.name.trim()}>
+            Save
+          </Button>
+        </div>
+
+        {/* Basic Info */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="name">Name *</Label>
+              <Input
+                id="name"
+                value={editingNPC.name}
+                onChange={(e) => updateField('name', e.target.value)}
+                placeholder="NPC name"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="race">Race</Label>
+              <Select
+                value={editingNPC.race ?? 'human'}
+                onValueChange={(v) => updateField('race', v as NPCRace)}
+              >
+                <SelectTrigger id="race">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {NPC_RACES.map((r) => (
+                    <SelectItem key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Portrait</Label>
+            <ImagePicker
+              imageUrl={editingNPC.imageUrl}
+              onImageChange={(url) => setEditingNPC({ ...editingNPC, imageUrl: url })}
+              label="Portrait"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={editingNPC.description}
+              onChange={(e) => updateField('description', e.target.value)}
+              placeholder="NPC description"
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Traits</Label>
+            <TagInput
+              tags={editingNPC.traits}
+              onChange={(traits) => updateField('traits', traits)}
+              placeholder="Add trait..."
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="motivation">Motivation</Label>
+              <Input
+                id="motivation"
+                value={editingNPC.motivation}
+                onChange={(e) => updateField('motivation', e.target.value)}
+                placeholder="What drives this character?"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="want">Want</Label>
+              <Input
+                id="want"
+                value={editingNPC.want}
+                onChange={(e) => updateField('want', e.target.value)}
+                placeholder="Side quest hook"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="appearance">Appearance</Label>
+              <Input
+                id="appearance"
+                value={editingNPC.appearance}
+                onChange={(e) => updateField('appearance', e.target.value)}
+                placeholder="Physical description"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="voice">Voice</Label>
+              <Input
+                id="voice"
+                value={editingNPC.voice}
+                onChange={(e) => updateField('voice', e.target.value)}
+                placeholder="How they speak"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Tags</Label>
+            <TagInput
+              tags={editingNPC.tags}
+              onChange={(tags) => updateField('tags', tags)}
+              placeholder="Add tag..."
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="faction">Faction</Label>
+              <Select
+                value={editingNPC.factionId ?? 'none'}
+                onValueChange={(v) => updateField('factionId', v === 'none' ? null : v)}
+              >
+                <SelectTrigger id="faction">
+                  <SelectValue placeholder="Select faction" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {factions.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="region">Region</Label>
+              <Select
+                value={editingNPC.regionId ?? 'none'}
+                onValueChange={(v) => updateField('regionId', v === 'none' ? null : v)}
+              >
+                <SelectTrigger id="region">
+                  <SelectValue placeholder="Select region" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {regions.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="poi">POI</Label>
+              <Select
+                value={editingNPC.poiId ?? 'none'}
+                onValueChange={(v) => updateField('poiId', v === 'none' ? null : v)}
+              >
+                <SelectTrigger id="poi">
+                  <SelectValue placeholder="Select POI" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {pois.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="lifeStatus">Life Status</Label>
+              <Select
+                value={editingNPC.lifeStatus}
+                onValueChange={(v) => updateField('lifeStatus', v)}
+              >
+                <SelectTrigger id="lifeStatus">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="alive">Alive</SelectItem>
+                  <SelectItem value="dead">Dead</SelectItem>
+                  <SelectItem value="undead">Undead</SelectItem>
+                  <SelectItem value="ghost">Ghost</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="movementStatus">Movement Status</Label>
+              <Select
+                value={editingNPC.movementStatus}
+                onValueChange={(v) => updateField('movementStatus', v)}
+              >
+                <SelectTrigger id="movementStatus">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="present">Present</SelectItem>
+                  <SelectItem value="traveling">Traveling</SelectItem>
+                  <SelectItem value="missing">Missing</SelectItem>
+                  <SelectItem value="captured">Captured</SelectItem>
+                  <SelectItem value="hiding">Hiding</SelectItem>
+                  <SelectItem value="escaping">Escaping</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        {/* System Block */}
+        <div className="space-y-4 border-t pt-4">
+          <h3 className="font-semibold">System Stats</h3>
+
+          {systemConfig.hasLevel && (
+            <div className="space-y-1.5">
+              <Label htmlFor="level">Level</Label>
+              <Input
+                id="level"
+                type="number"
+                min={1}
+                value={editSb.level ?? 1}
+                onChange={(e) => updateSystemBlock({ level: parseInt(e.target.value) || 1 })}
+              />
+            </div>
+          )}
+          {systemConfig.hasClass && (
+            <div className="space-y-1.5">
+              <Label htmlFor="className">Class</Label>
+              <Input
+                id="className"
+                value={editSb.className ?? ''}
+                onChange={(e) => updateSystemBlock({ className: e.target.value })}
+                placeholder="Fighter, Thief, Priest, Wizard..."
+              />
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-4">
+            {editSb.stats.map((stat) => {
+              const statDef = systemConfig.statFields.find((f: any) => f.key === stat.key)
+              return (
+                <div key={stat.key} className="space-y-1.5">
+                  <Label htmlFor={`stat-${stat.key}`}>
+                    {statDef?.label ?? stat.key}
+                    {stat.modifier !== undefined && ` (${stat.modifier >= 0 ? '+' : ''}${stat.modifier})`}
+                  </Label>
+                  <Input
+                    id={`stat-${stat.key}`}
+                    type="number"
+                    value={stat.value}
+                    onChange={(e) => updateStat(stat.key, parseInt(e.target.value) || 0)}
+                  />
+                </div>
+              )
+            })}
+          </div>
+
+          {/* HP */}
+          <div className="space-y-1.5">
+            <Label>
+              {systemConfig.hpLabel ?? 'HP'}: {editSb.hp}/{editSb.maxHp}
+            </Label>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+              <div
+                className={`h-full transition-all ${
+                  editHpPercent > 50 ? 'bg-green-500' : editHpPercent > 25 ? 'bg-yellow-500' : 'bg-red-500'
+                }`}
+                style={{ width: `${Math.max(0, Math.min(100, editHpPercent))}%` }}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="hp">Current HP</Label>
+                <Input
+                  id="hp"
+                  type="number"
+                  value={editSb.hp}
+                  onChange={(e) => updateSystemBlock({ hp: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="maxHp">Max HP</Label>
+                <Input
+                  id="maxHp"
+                  type="number"
+                  value={editSb.maxHp}
+                  onChange={(e) => updateSystemBlock({ maxHp: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Armor */}
+          <div className="space-y-1.5">
+            <Label htmlFor="armor">{systemConfig.armorLabel ?? 'Armor'}</Label>
+            <Input
+              id="armor"
+              type="number"
+              value={editSb.armor}
+              onChange={(e) => updateSystemBlock({ armor: parseInt(e.target.value) || 0 })}
+            />
+          </div>
+
+          {/* Attacks */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Attacks</Label>
+              <Button size="sm" variant="outline" onClick={addAttack}>
+                <Plus className="mr-1 size-3" />
+                Add
+              </Button>
+            </div>
+            {editSb.attacks.map((attack, i) => (
+              <Card key={i}>
+                <CardContent className="space-y-2 pt-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <Input
+                      placeholder="Attack name"
+                      value={attack.name}
+                      onChange={(e) => updateAttack(i, { name: e.target.value })}
+                    />
+                    <Button size="sm" variant="ghost" onClick={() => removeAttack(i)}>
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                  <Input
+                    placeholder="Damage"
+                    value={attack.damage}
+                    onChange={(e) => updateAttack(i, { damage: e.target.value })}
+                  />
+                  <Input
+                    placeholder="Description"
+                    value={attack.description}
+                    onChange={(e) => updateAttack(i, { description: e.target.value })}
+                  />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Inventory */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Inventory</Label>
+              <Button size="sm" variant="outline" onClick={addInventoryItem}>
+                <Plus className="mr-1 size-3" />
+                Add
+              </Button>
+            </div>
+            {editSb.inventory.map((item, i) => (
+              <Card key={i}>
+                <CardContent className="space-y-2 pt-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <Input
+                      placeholder="Item name"
+                      value={item.name}
+                      onChange={(e) => updateInventoryItem(i, { name: e.target.value })}
+                    />
+                    <Button size="sm" variant="ghost" onClick={() => removeInventoryItem(i)}>
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Input
+                      type="number"
+                      placeholder="Slots"
+                      value={item.slots}
+                      onChange={(e) => updateInventoryItem(i, { slots: parseInt(e.target.value) || 1 })}
+                    />
+                    <Input
+                      className="col-span-2"
+                      placeholder="Description"
+                      value={item.description}
+                      onChange={(e) => updateInventoryItem(i, { description: e.target.value })}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Abilities */}
+          <div className="space-y-1.5">
+            <Label>Abilities</Label>
+            <TagInput
+              tags={editSb.abilities}
+              onChange={(abilities) => updateSystemBlock({ abilities })}
+              placeholder="Add ability..."
+            />
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-1.5">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              value={editSb.notes}
+              onChange={(e) => updateSystemBlock({ notes: e.target.value })}
+              placeholder="System-specific notes"
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <ConfirmDialog
+          open={deleteConfirmOpen}
+          onOpenChange={setDeleteConfirmOpen}
+          title="Delete NPC"
+          description={`Are you sure you want to delete "${npc.name}"? This action cannot be undone.`}
+          confirmLabel="Delete"
+          variant="destructive"
+          onConfirm={handleDeleteNPC}
+        />
+      </div>
+    )
+  }
+
+  // --- Detail View ---
   return (
     <div className="space-y-6">
       <PageHeader
@@ -128,9 +644,10 @@ function NPCDetailPage() {
         <div className={npc.imageUrl ? 'grid gap-4 md:grid-cols-[1fr_2fr] items-stretch' : ''}>
         {npc.imageUrl && (
           <div className="h-full">
-            <img
+            <CloudinaryImage
               src={npc.imageUrl}
               alt={npc.name}
+              width={400}
               className="h-full w-full rounded-lg border object-cover"
             />
           </div>
@@ -257,7 +774,7 @@ function NPCDetailPage() {
                 <thead>
                   <tr className="border-b bg-muted/50">
                     {sb.stats.map((stat) => {
-                      const def = systemConfig?.statFields.find((f) => f.key === stat.key)
+                      const def = systemConfig?.statFields.find((f: any) => f.key === stat.key)
                       return (
                         <th key={stat.key} className="p-1.5 text-center text-xs font-medium text-muted-foreground uppercase">
                           {def?.label ?? stat.key}
@@ -422,21 +939,6 @@ function NPCDetailPage() {
           </Card>
         )}
       </div>
-
-      {editingNPC && systemConfig && (
-        <NPCEditSheet
-          npc={editingNPC}
-          systemConfig={systemConfig}
-          factions={factions}
-          regions={regions}
-          pois={pois}
-          open={!!editingNPC}
-          onOpenChange={(open) => { if (!open) setEditingNPC(null) }}
-          onSave={handleSaveNPC}
-          onChange={setEditingNPC}
-          onDelete={() => { setEditingNPC(null); setDeleteConfirmOpen(true) }}
-        />
-      )}
 
       <ConfirmDialog
         open={deleteConfirmOpen}

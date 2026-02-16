@@ -79,6 +79,7 @@ export async function executeImportRealm(
       dangers: (regionData.dangers as string[]) ?? [],
       settlements: (regionData.settlements as string[]) ?? [],
       resources: (regionData.resources as string[]) ?? [],
+      imageUrl: (regionData.imageUrl as string) ?? null,
     } as Parameters<typeof deps.regionRepo.create>[0])
   }
 
@@ -156,6 +157,7 @@ export async function executeImportRealm(
       id: remap(p.id),
       regionId: remap(p.regionId),
       parentPoiId: poiData.parentPoiId ? remap(poiData.parentPoiId as string) : null,
+      imageUrl: (poiData.imageUrl as string) ?? null,
     } as Parameters<typeof deps.poiRepo.create>[0])
   }
 
