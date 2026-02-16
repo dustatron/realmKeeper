@@ -1,24 +1,24 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
 
-export function useRecentWeather(realmId: string | null, limit = 7) {
+export function useRecentWeather(worldId: string | null, limit = 7) {
   return useLiveQuery(
-    () => realmId
+    () => worldId
       ? db.weatherHistory
-          .where('realmId')
-          .equals(realmId)
+          .where('worldId')
+          .equals(worldId)
           .toArray()
           .then((w) => w.sort((a, b) => b.createdAt - a.createdAt).slice(0, limit))
       : [],
-    [realmId, limit]
+    [worldId, limit]
   ) ?? []
 }
 
-export function useAllWeather(realmId: string | null) {
+export function useAllWeather(worldId: string | null) {
   return useLiveQuery(
-    () => realmId
-      ? db.weatherHistory.where('realmId').equals(realmId).toArray()
+    () => worldId
+      ? db.weatherHistory.where('worldId').equals(worldId).toArray()
       : [],
-    [realmId]
+    [worldId]
   ) ?? []
 }

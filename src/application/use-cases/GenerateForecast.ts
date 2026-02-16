@@ -18,10 +18,10 @@ const FORECAST_DAYS = 7
  * Skips days that already have weather. Chains severity for catastrophic upgrades.
  */
 export async function executeGenerateForecast(
-  realmId: string,
+  worldId: string,
   deps: GenerateForecastDeps
 ): Promise<number> {
-  const realm = await deps.realmRepo.getById(realmId)
+  const realm = await deps.realmRepo.getById(worldId)
   if (!realm) return 0
 
   let cursor: WorldDateTime = {
@@ -32,7 +32,7 @@ export async function executeGenerateForecast(
   }
 
   // Get the most recent weather to chain severity
-  const recent = await deps.weatherRepo.getRecent(realmId, 1)
+  const recent = await deps.weatherRepo.getRecent(worldId, 1)
   let prevSeverity: WeatherSeverity | null = recent.length > 0 ? recent[0].severity : null
 
   let generated = 0
@@ -41,7 +41,7 @@ export async function executeGenerateForecast(
     cursor = advanceDay(cursor, realm.daysPerSeason)
 
     // Check if weather already exists for this day
-    const existing = await deps.weatherRepo.getByDate(realmId, cursor.year, cursor.season, cursor.day)
+    const existing = await deps.weatherRepo.getByDate(worldId, cursor.year, cursor.season, cursor.day)
     if (existing.length > 0) {
       prevSeverity = existing[existing.length - 1].severity
       continue
@@ -51,7 +51,7 @@ export async function executeGenerateForecast(
 
     await deps.weatherRepo.create({
       id: newId(),
-      realmId,
+      worldId,
       year: cursor.year,
       season: cursor.season,
       day: cursor.day,

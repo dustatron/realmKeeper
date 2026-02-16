@@ -118,7 +118,7 @@ function CalendarPage() {
   const events = useLiveQuery(
     async () => {
       if (!activeRealmId) return []
-      return await db.poiEvents.where('realmId').equals(activeRealmId).toArray()
+      return await db.poiEvents.where('worldId').equals(activeRealmId).toArray()
     },
     [activeRealmId]
   ) ?? []
@@ -324,7 +324,7 @@ function CalendarPage() {
     await executeCreatePOIEvent(
       {
         poiId: createForm.poiId,
-        realmId: activeRealmId,
+        worldId: activeRealmId,
         name: createForm.name,
         description: createForm.description,
         type: createForm.type,
@@ -491,7 +491,7 @@ function CalendarPage() {
           onMarkWeekComplete={handleMarkWeekComplete}
           canGoPrev={pageStartKey > day1Key}
           canGoNext={pageStartKey < maxStartKey}
-          realmId={activeRealmId!}
+          worldId={activeRealmId!}
         />
       )}
 

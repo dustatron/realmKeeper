@@ -1,13 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
 
-export function useFactions(realmId: string | null) {
+export function useFactions(worldId: string | null) {
   return useLiveQuery(
-    () => realmId
-      ? db.factions.where('realmId').equals(realmId).toArray()
+    () => worldId
+      ? db.factions.where('worldId').equals(worldId).toArray()
           .then((factions) => factions.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)))
       : [],
-    [realmId]
+    [worldId]
   ) ?? []
 }
 
@@ -18,20 +18,20 @@ export function useFaction(id: string | null) {
   )
 }
 
-export function usePartyFaction(realmId: string | null) {
+export function usePartyFaction(worldId: string | null) {
   return useLiveQuery(
-    () => realmId
-      ? db.factions.where('realmId').equals(realmId).filter((f) => f.isParty).first()
+    () => worldId
+      ? db.factions.where('worldId').equals(worldId).filter((f) => f.isParty).first()
       : undefined,
-    [realmId]
+    [worldId]
   )
 }
 
-export function useActiveFactions(realmId: string | null) {
+export function useActiveFactions(worldId: string | null) {
   return useLiveQuery(
-    () => realmId
-      ? db.factions.where('realmId').equals(realmId).filter((f) => f.status === 'active' && !f.isParty).toArray()
+    () => worldId
+      ? db.factions.where('worldId').equals(worldId).filter((f) => f.status === 'active' && !f.isParty).toArray()
       : [],
-    [realmId]
+    [worldId]
   ) ?? []
 }

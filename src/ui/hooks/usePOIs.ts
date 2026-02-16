@@ -15,15 +15,15 @@ export function usePOI(id: string | null) {
   )
 }
 
-export function useRealmPOIs(realmId: string | null) {
+export function useRealmPOIs(worldId: string | null) {
   return useLiveQuery(
     async () => {
-      if (!realmId) return []
-      const regions = await db.regions.where('realmId').equals(realmId).toArray()
+      if (!worldId) return []
+      const regions = await db.regions.where('worldId').equals(worldId).toArray()
       const regionIds = regions.map((r) => r.id)
       if (regionIds.length === 0) return []
       return db.pois.where('regionId').anyOf(regionIds).toArray()
     },
-    [realmId]
+    [worldId]
   ) ?? []
 }

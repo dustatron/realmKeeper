@@ -24,6 +24,7 @@ import {
 import { Switch } from '~/components/ui/switch'
 import { ScrollArea } from '~/components/ui/scroll-area'
 import { TagInput } from '~/components/shared/TagInput'
+import { NPC_RACES, type NPCRace } from '@shared/constants'
 import { Plus, Trash2, Sparkles, ImageIcon, X } from 'lucide-react'
 import { useRef } from 'react'
 
@@ -154,6 +155,23 @@ export function NPCEditSheet({
                   onChange={(e) => updateField('name', e.target.value)}
                   placeholder="NPC name"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="race">Race</Label>
+                <Select
+                  value={npc.race ?? 'human'}
+                  onValueChange={(v) => updateField('race', v as NPCRace)}
+                >
+                  <SelectTrigger id="race">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NPC_RACES.map((r) => (
+                      <SelectItem key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Image */}
@@ -375,6 +393,31 @@ export function NPCEditSheet({
             {/* System Block */}
             <div className="space-y-4 border-t pt-4">
               <h3 className="font-semibold">System Stats</h3>
+
+              {/* Level & Class */}
+              {systemConfig.hasLevel && (
+                <div className="space-y-2">
+                  <Label htmlFor="level">Level</Label>
+                  <Input
+                    id="level"
+                    type="number"
+                    min={1}
+                    value={npc.systemBlock.level ?? 1}
+                    onChange={(e) => updateSystemBlock({ level: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+              )}
+              {systemConfig.hasClass && (
+                <div className="space-y-2">
+                  <Label htmlFor="className">Class</Label>
+                  <Input
+                    id="className"
+                    value={npc.systemBlock.className ?? ''}
+                    onChange={(e) => updateSystemBlock({ className: e.target.value })}
+                    placeholder="Fighter, Thief, Priest, Wizard..."
+                  />
+                </div>
+              )}
 
               {/* Stats */}
               <div className="grid grid-cols-2 gap-4">

@@ -15,8 +15,8 @@ export class EncounterTableRepository implements IEncounterTableRepository {
     return db.encounterTables.where('ownerRegionId').equals(regionId).first()
   }
 
-  async getByRealmId(realmId: string): Promise<EncounterTable[]> {
-    return db.encounterTables.where('realmId').equals(realmId).toArray()
+  async getByRealmId(worldId: string): Promise<EncounterTable[]> {
+    return db.encounterTables.where('worldId').equals(worldId).toArray()
   }
 
   async create(table: EncounterTable): Promise<void> {

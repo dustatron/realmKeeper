@@ -7,8 +7,8 @@ export class NPCRepository implements INPCRepository {
     return db.npcs.get(id)
   }
 
-  async getByRealmId(realmId: string): Promise<NPC[]> {
-    return db.npcs.where('realmId').equals(realmId).toArray()
+  async getByRealmId(worldId: string): Promise<NPC[]> {
+    return db.npcs.where('worldId').equals(worldId).toArray()
   }
 
   async getByFactionId(factionId: string): Promise<NPC[]> {
@@ -23,11 +23,11 @@ export class NPCRepository implements INPCRepository {
     return db.npcs.where('poiId').equals(poiId).toArray()
   }
 
-  async getByTag(realmId: string, tag: string): Promise<NPC[]> {
+  async getByTag(worldId: string, tag: string): Promise<NPC[]> {
     return db.npcs
       .where('tags')
       .equals(tag)
-      .filter((npc) => npc.realmId === realmId)
+      .filter((npc) => npc.worldId === worldId)
       .toArray()
   }
 

@@ -143,9 +143,9 @@ function RealmsPage() {
     }
   }
 
-  const handleExportRealm = async (realmId: string) => {
+  const handleExportRealm = async (worldId: string) => {
     try {
-      const data = await executeExportRealm(realmId, {
+      const data = await executeExportRealm(worldId, {
         realmRepo: container.realmRepo,
         regionRepo: container.regionRepo,
         factionRepo: container.factionRepo,
@@ -211,15 +211,15 @@ function RealmsPage() {
     event.target.value = ''
   }
 
-  const handleRealmClick = (realmId: string) => {
-    setActiveRealmId(realmId)
+  const handleRealmClick = (worldId: string) => {
+    setActiveRealmId(worldId)
     navigate({ to: '/realms' })
   }
 
-  const openEditRealm = (realmId: string) => {
-    const realm = realms.find((r) => r.id === realmId)
+  const openEditRealm = (worldId: string) => {
+    const realm = realms.find((r) => r.id === worldId)
     if (!realm) return
-    setEditTarget(realmId)
+    setEditTarget(worldId)
     setEditName(realm.name)
     setEditDesc(realm.description)
   }
@@ -318,7 +318,7 @@ function RealmsPage() {
 
   // Show dashboard when a realm is active and confirmed to exist
   if (activeRealmId && realmsLoaded && realms.some((r) => r.id === activeRealmId)) {
-    return <Dashboard realmId={activeRealmId} />
+    return <Dashboard worldId={activeRealmId} />
   }
 
   if (realms.length === 0) {

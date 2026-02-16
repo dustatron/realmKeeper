@@ -1,6 +1,6 @@
 export interface RollHistory {
   id: string
-  realmId: string
+  worldId: string
   tableId: string
   tableName: string
   result: string

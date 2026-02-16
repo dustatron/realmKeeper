@@ -27,7 +27,7 @@ import {
 import type { Season } from '@shared/constants'
 
 interface DashboardProps {
-  realmId: string
+  worldId: string
 }
 
 const SEASON_COLORS: Record<Season, string> = {
@@ -53,21 +53,21 @@ const WEATHER_SEVERITY_COLORS: Record<string, string> = {
   extreme: 'bg-red-500/10 text-red-700 border-red-500/20',
 }
 
-export function Dashboard({ realmId }: DashboardProps) {
+export function Dashboard({ worldId }: DashboardProps) {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const container = useContainer()
   const realm = useActiveRealm()
 
   // Live updates
-  const recentEvents = useTimeline(realmId, 5)
-  const recentWeather = useRecentWeather(realmId, 3)
+  const recentEvents = useTimeline(worldId, 5)
+  const recentWeather = useRecentWeather(worldId, 3)
 
   useEffect(() => {
     let mounted = true
     setLoading(true)
 
-    executeGetDashboardData(realmId, {
+    executeGetDashboardData(worldId, {
       realmRepo: container.realmRepo,
       factionRepo: container.factionRepo,
       npcRepo: container.npcRepo,
@@ -83,7 +83,7 @@ export function Dashboard({ realmId }: DashboardProps) {
     return () => {
       mounted = false
     }
-  }, [realmId, container])
+  }, [worldId, container])
 
   if (loading || !data || !realm) {
     return (

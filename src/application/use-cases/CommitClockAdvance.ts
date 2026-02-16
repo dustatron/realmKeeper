@@ -16,12 +16,12 @@ export interface CommitClockAdvanceDeps {
 }
 
 export async function executeCommitClockAdvance(
-  realmId: string,
+  worldId: string,
   unit: ClockAdvanceUnit,
   preview: AdvanceClockPreview,
   deps: CommitClockAdvanceDeps
 ): Promise<void> {
-  const realm = await deps.realmRepo.getById(realmId)
+  const realm = await deps.realmRepo.getById(worldId)
   if (!realm) return
 
   // Update realm's current date/time
@@ -40,7 +40,7 @@ export async function executeCommitClockAdvance(
   if (preview.weather) {
     await deps.weatherRepo.create({
       id: newId(),
-      realmId,
+      worldId,
       year: dt.year,
       season: dt.season,
       day: dt.day,
@@ -52,7 +52,7 @@ export async function executeCommitClockAdvance(
 
     deps.eventBus.publish(
       createWeatherRolledEvent(
-        realmId,
+        worldId,
         preview.weather.condition,
         preview.weather.severity,
         dt.season,
@@ -68,7 +68,7 @@ export async function executeCommitClockAdvance(
   // Log clock advance as world event
   await deps.worldEventRepo.create({
     id: newId(),
-    realmId,
+    worldId,
     year: dt.year,
     season: dt.season,
     day: dt.day,
@@ -81,6 +81,6 @@ export async function executeCommitClockAdvance(
   })
 
   deps.eventBus.publish(
-    createClockAdvancedEvent(realmId, unit, preview.previousDateTime, preview.newDateTime, [])
+    createClockAdvancedEvent(worldId, unit, preview.previousDateTime, preview.newDateTime, [])
   )
 }

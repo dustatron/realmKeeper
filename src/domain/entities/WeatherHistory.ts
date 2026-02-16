@@ -2,7 +2,7 @@ import type { Season } from '@shared/constants'
 
 export interface WeatherHistory {
   id: string
-  realmId: string
+  worldId: string
   year: number
   season: Season
   day: number

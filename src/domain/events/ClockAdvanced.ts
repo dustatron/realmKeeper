@@ -4,7 +4,7 @@ import type { ClockAdvanceUnit, ClockTrigger } from '@domain/services/ClockEngin
 export interface ClockAdvancedEvent {
   type: 'clock_advanced'
   payload: {
-    realmId: string
+    worldId: string
     unit: ClockAdvanceUnit
     previousDateTime: WorldDateTime
     newDateTime: WorldDateTime
@@ -14,7 +14,7 @@ export interface ClockAdvancedEvent {
 }
 
 export function createClockAdvancedEvent(
-  realmId: string,
+  worldId: string,
   unit: ClockAdvanceUnit,
   previousDateTime: WorldDateTime,
   newDateTime: WorldDateTime,
@@ -22,7 +22,7 @@ export function createClockAdvancedEvent(
 ): ClockAdvancedEvent {
   return {
     type: 'clock_advanced',
-    payload: { realmId, unit, previousDateTime, newDateTime, triggers },
+    payload: { worldId, unit, previousDateTime, newDateTime, triggers },
     timestamp: Date.now(),
   }
 }

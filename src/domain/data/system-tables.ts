@@ -1,12 +1,13 @@
 import type { TableDef, TableSet } from '@domain/entities/TableDef'
 import { cairnTableSets, cairnTableDefs } from './cairn-tables'
+import { shadowdarkTableSets, shadowdarkTableDefs } from './shadowdark-tables'
 
 // ---------------------------------------------------------------------------
 // Aggregate all system tables (add more systems here later)
 // ---------------------------------------------------------------------------
 
-const allSystemSets: TableSet[] = [...cairnTableSets]
-const allSystemDefs: TableDef[] = [...cairnTableDefs]
+const allSystemSets: TableSet[] = [...cairnTableSets, ...shadowdarkTableSets]
+const allSystemDefs: TableDef[] = [...cairnTableDefs, ...shadowdarkTableDefs]
 
 // Pre-built lookup maps for O(1) access
 const defById = new Map<string, TableDef>(allSystemDefs.map((d) => [d.id, d]))

@@ -15,8 +15,8 @@ export class RumorRepository implements IRumorRepository {
     return db.rumors.where('regionId').equals(regionId).toArray()
   }
 
-  async getByRealmId(realmId: string): Promise<Rumor[]> {
-    return db.rumors.where('realmId').equals(realmId).toArray()
+  async getByRealmId(worldId: string): Promise<Rumor[]> {
+    return db.rumors.where('worldId').equals(worldId).toArray()
   }
 
   async create(rumor: Rumor): Promise<void> {

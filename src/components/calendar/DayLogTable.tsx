@@ -23,7 +23,7 @@ interface DayLogTableProps {
   onMarkWeekComplete: () => void;
   canGoPrev: boolean;
   canGoNext: boolean;
-  realmId: string;
+  worldId: string;
 }
 
 export function DayLogTable({
@@ -35,7 +35,7 @@ export function DayLogTable({
   onMarkWeekComplete,
   canGoPrev,
   canGoNext,
-  realmId,
+  worldId,
 }: DayLogTableProps) {
   return (
     <div className="space-y-0">
@@ -109,7 +109,7 @@ export function DayLogTable({
               <DayLogRow
                 key={entry.dayKey}
                 entry={entry}
-                realmId={realmId}
+                worldId={worldId}
                 showSeasonDivider={showSeasonDivider}
                 onMarkComplete={onMarkDayComplete}
               />

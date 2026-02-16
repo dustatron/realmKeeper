@@ -1,6 +1,6 @@
 export interface Region {
   id: string
-  realmId: string
+  worldId: string
   name: string
   description: string
   terrain: string

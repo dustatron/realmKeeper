@@ -129,7 +129,7 @@ function RegionDetailPage() {
   const factions = useLiveQuery(
     async () => {
       if (!regionId) return []
-      const basedHere = await db.factions.where('realmId').equals(region?.realmId ?? '').toArray()
+      const basedHere = await db.factions.where('worldId').equals(region?.worldId ?? '').toArray()
       const regionFactions = basedHere.filter(f => f.regionId === regionId)
 
       if (poiIds.length === 0) return regionFactions
@@ -141,7 +141,7 @@ function RegionDetailPage() {
       const presenceFactions = await db.factions.where('id').anyOf(presenceOnlyIds).toArray()
       return [...regionFactions, ...presenceFactions]
     },
-    [regionId, region?.realmId, poiIds.join(',')]
+    [regionId, region?.worldId, poiIds.join(',')]
   ) ?? []
 
   // Realm factions not already in this region (for "assign existing" dialog)
@@ -149,7 +149,7 @@ function RegionDetailPage() {
   const unassignedFactions = useLiveQuery(
     async () => {
       if (!realm) return []
-      const all = await db.factions.where('realmId').equals(realm.id).toArray()
+      const all = await db.factions.where('worldId').equals(realm.id).toArray()
       return all.filter(f => f.regionId !== regionId && !factionIds.has(f.id))
     },
     [realm?.id, regionId, [...factionIds].join(',')]
@@ -212,7 +212,7 @@ function RegionDetailPage() {
     setIsGeneratingNPC(true)
     try {
       const npc = await executeGenerateNPC(
-        { realmId: realm.id, systemConfig, regionId: region.id },
+        { worldId: realm.id, systemConfig, regionId: region.id },
         { tableRepo: container.tableRepo }
       )
       await executeCreateNPC(npc, { npcRepo: container.npcRepo })
@@ -225,7 +225,7 @@ function RegionDetailPage() {
   const handleCreateFaction = async () => {
     if (!realm || !factionForm.name.trim()) return
     const faction = await executeCreateFaction(
-      { realmId: realm.id, name: factionForm.name.trim(), type: factionForm.type || undefined },
+      { worldId: realm.id, name: factionForm.name.trim(), type: factionForm.type || undefined },
       { factionRepo: container.factionRepo }
     )
     // Set the faction's regionId
@@ -249,7 +249,7 @@ function RegionDetailPage() {
     await executeCreatePOIEvent(
       {
         poiId: eventForm.poiId,
-        realmId: realm.id,
+        worldId: realm.id,
         name: eventForm.name.trim(),
         description: eventForm.description,
         type: eventForm.type,

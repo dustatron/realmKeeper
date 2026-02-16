@@ -26,7 +26,7 @@ const ACTION_TYPE_LABELS: Record<FactionActionType, string> = {
 }
 
 export async function executeConfirmFactionTurn(
-  realmId: string,
+  worldId: string,
   suggestions: FactionTurnSuggestion[],
   date: { year: number; season: Season; day: number; watch: Watch },
   deps: ConfirmFactionTurnDeps
@@ -36,9 +36,9 @@ export async function executeConfirmFactionTurn(
 
   if (allChanges.length > 0) {
     // Get current relationships
-    const factions = await deps.factionRepo.getByRealmId(realmId)
+    const factions = await deps.factionRepo.getByRealmId(worldId)
     const factionIds = factions.map((f) => f.id)
-    const relationships = await deps.relationshipRepo.getAllForRealm(realmId, factionIds)
+    const relationships = await deps.relationshipRepo.getAllForRealm(worldId, factionIds)
 
     // Apply changes
     const updated = applyRelationshipChanges(relationships, allChanges)
@@ -130,7 +130,7 @@ export async function executeConfirmFactionTurn(
 
     const event: WorldEvent = {
       id: newId(),
-      realmId,
+      worldId,
       year: date.year,
       season: date.season,
       day: date.day,
@@ -144,5 +144,5 @@ export async function executeConfirmFactionTurn(
     await deps.worldEventRepo.create(event)
   }
 
-  deps.eventBus.publish(createFactionTurnConfirmedEvent(realmId, suggestions))
+  deps.eventBus.publish(createFactionTurnConfirmedEvent(worldId, suggestions))
 }

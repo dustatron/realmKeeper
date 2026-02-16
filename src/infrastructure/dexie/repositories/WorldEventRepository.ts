@@ -8,12 +8,12 @@ export class WorldEventRepository implements IWorldEventRepository {
     return db.worldEvents.get(id)
   }
 
-  async getByRealmId(realmId: string): Promise<WorldEvent[]> {
-    return db.worldEvents.where('realmId').equals(realmId).toArray()
+  async getByRealmId(worldId: string): Promise<WorldEvent[]> {
+    return db.worldEvents.where('worldId').equals(worldId).toArray()
   }
 
   async getByDate(
-    realmId: string,
+    worldId: string,
     year: number,
     season: Season,
     day: number
@@ -21,14 +21,14 @@ export class WorldEventRepository implements IWorldEventRepository {
     return db.worldEvents
       .where('[year+season+day]')
       .equals([year, season, day])
-      .filter((e) => e.realmId === realmId)
+      .filter((e) => e.worldId === worldId)
       .toArray()
   }
 
-  async getRecent(realmId: string, limit: number): Promise<WorldEvent[]> {
+  async getRecent(worldId: string, limit: number): Promise<WorldEvent[]> {
     const all = await db.worldEvents
-      .where('realmId')
-      .equals(realmId)
+      .where('worldId')
+      .equals(worldId)
       .toArray()
     return all.sort((a, b) => b.createdAt - a.createdAt).slice(0, limit)
   }

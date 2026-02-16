@@ -3,7 +3,7 @@ import type { Region } from '@domain/entities/Region'
 import { newId } from '@shared/ulid'
 
 export interface CreateRegionInput {
-  realmId: string
+  worldId: string
   name: string
   description?: string
   terrain?: string
@@ -17,7 +17,7 @@ export async function executeCreateRegion(
   const now = Date.now()
   const region: Region = {
     id: newId(),
-    realmId: input.realmId,
+    worldId: input.worldId,
     name: input.name,
     description: input.description ?? '',
     terrain: input.terrain ?? '',

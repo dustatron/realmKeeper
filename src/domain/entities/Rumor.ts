@@ -2,7 +2,7 @@ export interface Rumor {
   id: string
   poiId: string | null
   regionId: string | null
-  realmId: string
+  worldId: string
   text: string
   source: string
   isUsed: boolean

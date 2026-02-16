@@ -322,7 +322,7 @@ function POIDetailPage() {
     await executeCreatePOIEvent(
       {
         poiId: poi.id,
-        realmId: region.realmId,
+        worldId: region.worldId,
         name: eventForm.name,
         description: eventForm.description,
         type: eventForm.type,
@@ -357,7 +357,7 @@ function POIDetailPage() {
     }
     const npc: NPC = {
       id: newId(),
-      realmId: realm.id,
+      worldId: realm.id,
       name: '',
       factionId: null,
       regionId: poi?.regionId ?? null,
@@ -392,7 +392,7 @@ function POIDetailPage() {
     setIsGeneratingNPC(true)
     try {
       const generated = await executeGenerateNPC(
-        { realmId: realm.id, systemConfig, regionId: poi.regionId },
+        { worldId: realm.id, systemConfig, regionId: poi.regionId },
         { tableRepo: container.tableRepo }
       )
       // Preserve the POI context
@@ -413,7 +413,7 @@ function POIDetailPage() {
   const handleCreateRumor = async (input: { text: string; source: string; isQuestHook: boolean }) => {
     if (!poi || !region) return
     await executeCreateRumor(
-      { poiId: poi.id, regionId: poi.regionId, realmId: region.realmId, ...input },
+      { poiId: poi.id, regionId: poi.regionId, worldId: region.worldId, ...input },
       { rumorRepo: container.rumorRepo }
     )
   }
@@ -430,7 +430,7 @@ function POIDetailPage() {
   const handleCreateNotice = async (input: { title: string; description: string; type: NoticeType; reward: string }) => {
     if (!poi || !region) return
     await executeCreateNotice(
-      { poiId: poi.id, regionId: poi.regionId, realmId: region.realmId, ...input },
+      { poiId: poi.id, regionId: poi.regionId, worldId: region.worldId, ...input },
       { noticeRepo: container.noticeRepo }
     )
   }
@@ -447,7 +447,7 @@ function POIDetailPage() {
   const handleRollEncounter = async () => {
     if (!poi || !region) throw new Error('No POI/region')
     return executeRollEncounter(
-      { poiId: poi.id, regionId: poi.regionId, realmId: region.realmId },
+      { poiId: poi.id, regionId: poi.regionId, worldId: region.worldId },
       { encounterTableRepo: container.encounterTableRepo }
     )
   }
@@ -461,7 +461,7 @@ function POIDetailPage() {
       )
     } else {
       await executeCreateEncounterTable(
-        { ownerPoiId: poi.id, realmId: region.realmId, ...entries },
+        { ownerPoiId: poi.id, worldId: region.worldId, ...entries },
         { encounterTableRepo: container.encounterTableRepo }
       )
     }

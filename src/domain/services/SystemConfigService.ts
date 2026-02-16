@@ -66,3 +66,21 @@ export function rollHp(
   const roll = rollDice(config.hpFormula)
   return Math.max(1, roll.total)
 }
+
+// Roll HP for a given level — rolls HP die once per level, sums results
+export function rollHpForLevel(
+  config: SystemConfig,
+  rollDice: (notation: string) => DiceResult,
+  level: number,
+  conModifier?: number
+): number {
+  const die = config.hpFormula === 'class_die+con_mod' ? '1d4' : config.hpFormula
+  let total = 0
+  for (let i = 0; i < level; i++) {
+    total += rollDice(die).total
+  }
+  if (conModifier !== undefined) {
+    total += conModifier * level
+  }
+  return Math.max(1, total)
+}

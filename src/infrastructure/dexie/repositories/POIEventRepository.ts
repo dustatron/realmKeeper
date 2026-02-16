@@ -11,14 +11,14 @@ export class POIEventRepository implements IPOIEventRepository {
     return db.poiEvents.where('poiId').equals(poiId).toArray()
   }
 
-  async getByRealmId(realmId: string): Promise<POIEvent[]> {
-    return db.poiEvents.where('realmId').equals(realmId).toArray()
+  async getByRealmId(worldId: string): Promise<POIEvent[]> {
+    return db.poiEvents.where('worldId').equals(worldId).toArray()
   }
 
-  async getActive(realmId: string): Promise<POIEvent[]> {
+  async getActive(worldId: string): Promise<POIEvent[]> {
     return db.poiEvents
-      .where('[realmId+isActive]')
-      .equals([realmId, 1])
+      .where('[worldId+isActive]')
+      .equals([worldId, 1])
       .toArray()
   }
 

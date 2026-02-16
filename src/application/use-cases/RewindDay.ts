@@ -22,10 +22,10 @@ export interface RewindDayResult {
  * Returns null if already at Day 1 Year 1.
  */
 export async function executeRewindDay(
-  realmId: string,
+  worldId: string,
   deps: RewindDayDeps
 ): Promise<RewindDayResult | null> {
-  const realm = await deps.realmRepo.getById(realmId)
+  const realm = await deps.realmRepo.getById(worldId)
   if (!realm) return null
 
   const current: WorldDateTime = {
@@ -42,7 +42,7 @@ export async function executeRewindDay(
 
   // Delete weather for current day
   const weatherForDay = await deps.weatherRepo.getByDate(
-    realmId, current.year, current.season, current.day
+    worldId, current.year, current.season, current.day
   )
   for (const w of weatherForDay) {
     await deps.weatherRepo.delete(w.id)
@@ -50,7 +50,7 @@ export async function executeRewindDay(
 
   // Delete generated events for current day (keep gm_notes)
   const eventsForDay = await deps.worldEventRepo.getByDate(
-    realmId, current.year, current.season, current.day
+    worldId, current.year, current.season, current.day
   )
   const generatedEvents = eventsForDay.filter((e) => e.type !== 'gm_note')
   for (const e of generatedEvents) {

@@ -5,7 +5,7 @@ import type { EncounterTable } from '@domain/entities/EncounterTable'
 export function useEncounterTable(
   poiId: string | null,
   regionId: string | null,
-  _realmId: string | null
+  _worldId: string | null
 ): EncounterTable | undefined | null {
   return useLiveQuery(
     async () => {

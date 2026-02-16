@@ -1,10 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
 
-export function useNPCs(realmId: string | null) {
+export function useNPCs(worldId: string | null) {
   return useLiveQuery(
-    () => (realmId ? db.npcs.where('realmId').equals(realmId).toArray() : []),
-    [realmId]
+    () => (worldId ? db.npcs.where('worldId').equals(worldId).toArray() : []),
+    [worldId]
   ) ?? []
 }
 

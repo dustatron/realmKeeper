@@ -1,14 +1,15 @@
 import type { SystemConfig } from '@domain/entities/SystemConfig'
 import type { NPC } from '@domain/entities/NPC'
 import type { ITableRepository } from '@application/ports/ITableRepository'
-import { rollStats, rollHp, buildDefaultSystemBlock } from '@domain/services/SystemConfigService'
+import { rollStats, rollHpForLevel, buildDefaultSystemBlock } from '@domain/services/SystemConfigService'
 import { rollOnTable } from '@domain/services/RandomTableEngine'
 import { runTableChain } from '@domain/services/TableChainRunner'
 import { rollDice } from '@shared/dice'
 import { newId } from '@shared/ulid'
+import { NPC_RACES, type NPCRace } from '@shared/constants'
 
 export interface GenerateNPCInput {
-  realmId: string
+  worldId: string
   systemConfig: SystemConfig
   factionId?: string
   regionId?: string
@@ -29,32 +30,49 @@ export async function executeGenerateNPC(
   const block = buildDefaultSystemBlock(systemConfig)
   block.stats = stats
 
-  // Roll HP
+  // Level & class for systems that support them
+  const sdClasses = ['Fighter', 'Priest', 'Thief', 'Wizard'] as const
+  if (systemConfig.hasLevel) {
+    block.level = rollDice('1d4').total
+  }
+  if (systemConfig.hasClass) {
+    block.className = sdClasses[Math.floor(Math.random() * sdClasses.length)]
+  }
+
+  // Roll HP (scale by level if applicable)
   const conMod = stats.find((s) => s.key === 'con')?.modifier
-  block.hp = rollHp(systemConfig, rollDice, conMod)
+  const level = block.level ?? 1
+  block.hp = rollHpForLevel(systemConfig, rollDice, level, conMod)
   block.maxHp = block.hp
 
-  // Roll name from naming tables
+  // Roll on all tables for this system (used for names + traits)
+  const allTables = await deps.tableRepo.getTablesBySystemId(systemConfig.id)
+
+  // Pick a random race (weighted toward human)
+  const rollableRaces: NPCRace[] = ['human', 'human', 'human', 'human', 'elf', 'dwarf', 'halfling', 'half-orc', 'half-elf', 'goblin']
+  const race: NPCRace = rollableRaces[Math.floor(Math.random() * rollableRaces.length)]
+
+  // Roll name — discover tables by race + gender tags
   let name = 'Unnamed NPC'
-  if (systemConfig.namingTableIds.length > 0) {
-    const nameTableIds = systemConfig.namingTableIds
-    // Pick a random first-name table (male or female), surname is always last
-    const firstNameTableId =
-      nameTableIds[Math.floor(Math.random() * Math.min(nameTableIds.length - 1, nameTableIds.length))]
-    const surnameTableId = nameTableIds.length > 1 ? nameTableIds[nameTableIds.length - 1] : null
+  {
+    const gender = Math.random() < 0.5 ? 'female' : 'male'
+    // Try race-specific table first, fall back to generic human
+    let firstNameTable = allTables.find((t) =>
+      t.tags.includes('name') && t.tags.includes(gender) && t.tags.includes(race)
+    )
+    if (!firstNameTable) {
+      firstNameTable = allTables.find((t) =>
+        t.tags.includes('name') && t.tags.includes(gender) && !NPC_RACES.some((r) => t.tags.includes(r))
+      )
+    }
+    const surnameTable = allTables.find((t) => t.tags.includes('name') && t.tags.includes('surname'))
 
-    const tableIds = surnameTableId ? [firstNameTableId, surnameTableId] : [firstNameTableId]
-    const tables = await Promise.all(tableIds.map((id) => deps.tableRepo.getTableById(id)))
-    const validTables = tables.filter((t): t is NonNullable<typeof t> => t != null)
-
-    if (validTables.length > 0) {
-      const chain = runTableChain(validTables, rollDice)
+    const nameTables = [firstNameTable, surnameTable].filter(Boolean) as typeof allTables
+    if (nameTables.length > 0) {
+      const chain = runTableChain(nameTables, rollDice)
       name = Object.values(chain.summary).join(' ')
     }
   }
-
-  // Roll on trait tables for this system
-  const allTables = await deps.tableRepo.getTablesBySystemId(systemConfig.id)
 
   // Helper: roll on a table matching a tag, return the text or null
   const rollByTag = (tag: string): string | null => {
@@ -122,8 +140,9 @@ export async function executeGenerateNPC(
   const now = Date.now()
   return {
     id: newId(),
-    realmId: input.realmId,
+    worldId: input.worldId,
     name,
+    race,
     factionId: input.factionId ?? null,
     regionId: input.regionId ?? null,
     poiId: null,

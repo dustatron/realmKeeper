@@ -2,9 +2,9 @@ import type { IWorldEventRepository } from '@application/ports/IWorldEventReposi
 import type { WorldEvent } from '@domain/entities/WorldEvent'
 
 export async function executeGetTimeline(
-  realmId: string,
+  worldId: string,
   limit: number,
   deps: { worldEventRepo: IWorldEventRepository }
 ): Promise<WorldEvent[]> {
-  return deps.worldEventRepo.getRecent(realmId, limit)
+  return deps.worldEventRepo.getRecent(worldId, limit)
 }

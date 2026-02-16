@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import type { NavGroup } from './types'
 
-export function getSidebarData(_realmId?: string): { navGroups: NavGroup[] } {
+export function getSidebarData(_worldId?: string): { navGroups: NavGroup[] } {
   return {
     navGroups: [
       {

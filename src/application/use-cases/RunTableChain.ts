@@ -15,7 +15,7 @@ export interface RunTableChainDeps {
 
 export async function executeRunTableChain(
   tableIds: string[],
-  realmId: string | undefined,
+  worldId: string | undefined,
   deps: RunTableChainDeps
 ): Promise<ChainResult | null> {
   // Fetch all tables
@@ -31,7 +31,7 @@ export async function executeRunTableChain(
   for (const result of chainResult.results) {
     await deps.rollHistoryRepo.create({
       id: newId(),
-      realmId: realmId ?? '',
+      worldId: worldId ?? '',
       tableId: result.tableId,
       tableName: result.tableName,
       result: result.entry.text,
@@ -47,7 +47,7 @@ export async function executeRunTableChain(
         result.entry.text,
         result.diceResult.rolls,
         result.diceResult.total,
-        realmId
+        worldId
       )
     )
   }

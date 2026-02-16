@@ -1,10 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
 
-export function useRegions(realmId: string | null) {
+export function useRegions(worldId: string | null) {
   return useLiveQuery(
-    () => (realmId ? db.regions.where('realmId').equals(realmId).toArray() : []),
-    [realmId]
+    () => (worldId ? db.regions.where('worldId').equals(worldId).toArray() : []),
+    [worldId]
   ) ?? []
 }
 

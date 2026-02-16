@@ -3,7 +3,7 @@ import type { RealmNote } from '@domain/entities/RealmNote'
 import { newId } from '@shared/ulid'
 
 export interface CreateRealmNoteInput {
-  realmId: string
+  worldId: string
   title: string
   content?: string
 }
@@ -12,11 +12,11 @@ export async function executeCreateRealmNote(
   input: CreateRealmNoteInput,
   deps: { realmNoteRepo: IRealmNoteRepository }
 ): Promise<RealmNote> {
-  const existing = await deps.realmNoteRepo.getByRealmId(input.realmId)
+  const existing = await deps.realmNoteRepo.getByRealmId(input.worldId)
   const now = Date.now()
   const note: RealmNote = {
     id: newId(),
-    realmId: input.realmId,
+    worldId: input.worldId,
     title: input.title,
     content: input.content ?? '',
     isMain: false,

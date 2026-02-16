@@ -4,13 +4,13 @@ import { newId } from '@shared/ulid'
 
 export async function executeInitializeRelationships(
   newFactionId: string,
-  realmId: string,
+  worldId: string,
   deps: {
     factionRepo: IFactionRepository
     relationshipRepo: IFactionRelationshipRepository
   }
 ): Promise<void> {
-  const factions = await deps.factionRepo.getByRealmId(realmId)
+  const factions = await deps.factionRepo.getByRealmId(worldId)
   const others = factions.filter((f) => f.id !== newFactionId)
   const now = Date.now()
 

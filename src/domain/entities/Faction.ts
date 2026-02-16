@@ -23,7 +23,7 @@ export interface Obstacle {
 
 export interface Faction {
   id: string
-  realmId: string
+  worldId: string
   name: string
   description: string
   type: string

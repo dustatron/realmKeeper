@@ -15,8 +15,8 @@ export class NoticeRepository implements INoticeRepository {
     return db.notices.where('regionId').equals(regionId).toArray()
   }
 
-  async getByRealmId(realmId: string): Promise<Notice[]> {
-    return db.notices.where('realmId').equals(realmId).toArray()
+  async getByRealmId(worldId: string): Promise<Notice[]> {
+    return db.notices.where('worldId').equals(worldId).toArray()
   }
 
   async create(notice: Notice): Promise<void> {

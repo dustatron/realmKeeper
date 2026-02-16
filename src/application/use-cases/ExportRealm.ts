@@ -86,20 +86,20 @@ function blobToBase64(blob: Blob): Promise<string> {
 }
 
 export async function executeExportRealm(
-  realmId: string,
+  worldId: string,
   deps: ExportRealmDeps
 ): Promise<RealmExport | null> {
-  const realm = await deps.realmRepo.getById(realmId)
+  const realm = await deps.realmRepo.getById(worldId)
   if (!realm) return null
 
-  const regions = await deps.regionRepo.getByRealmId(realmId)
-  const factions = await deps.factionRepo.getByRealmId(realmId)
-  const npcs = await deps.npcRepo.getByRealmId(realmId)
+  const regions = await deps.regionRepo.getByRealmId(worldId)
+  const factions = await deps.factionRepo.getByRealmId(worldId)
+  const npcs = await deps.npcRepo.getByRealmId(worldId)
   const factionIds = factions.map((f) => f.id)
-  const relationships = await deps.relationshipRepo.getAllForRealm(realmId, factionIds)
-  const worldEvents = await deps.worldEventRepo.getByRealmId(realmId)
-  const weatherHistory = await deps.weatherRepo.getRecent(realmId, 9999)
-  const realmNotes = await deps.realmNoteRepo.getByRealmId(realmId)
+  const relationships = await deps.relationshipRepo.getAllForRealm(worldId, factionIds)
+  const worldEvents = await deps.worldEventRepo.getByRealmId(worldId)
+  const weatherHistory = await deps.weatherRepo.getRecent(worldId, 9999)
+  const realmNotes = await deps.realmNoteRepo.getByRealmId(worldId)
 
   // POIs per region, paths per POI (deduplicated)
   const allPois = await Promise.all(regions.map((r) => deps.poiRepo.getByRegionId(r.id)))
@@ -113,10 +113,10 @@ export async function executeExportRealm(
   // Faction presences and POI events per POI
   const flatPois = allPois.flat()
   const allPresences = await Promise.all(flatPois.map((p) => deps.factionPresenceRepo.getByPoiId(p.id)))
-  const poiEvents = await deps.poiEventRepo.getByRealmId(realmId)
+  const poiEvents = await deps.poiEventRepo.getByRealmId(worldId)
 
   // Game maps — realm-owned + POI-owned
-  const realmMaps = await deps.gameMapRepo.getByRealmId(realmId)
+  const realmMaps = await deps.gameMapRepo.getByRealmId(worldId)
   const poiMapArrays = await Promise.all(flatPois.map((p) => deps.gameMapRepo.getByPoiId(p.id)))
   const allMaps = [...realmMaps, ...poiMapArrays.flat()]
   const mapDedup = new Map<string, GameMap>()

@@ -26,17 +26,17 @@ export interface GetDashboardDataDeps {
 }
 
 export async function executeGetDashboardData(
-  realmId: string,
+  worldId: string,
   deps: GetDashboardDataDeps
 ): Promise<DashboardData | null> {
-  const realm = await deps.realmRepo.getById(realmId)
+  const realm = await deps.realmRepo.getById(worldId)
   if (!realm) return null
 
-  const factions = await deps.factionRepo.getByRealmId(realmId)
+  const factions = await deps.factionRepo.getByRealmId(worldId)
   const activeFactions = factions.filter((f) => f.status === 'active' && !f.isParty)
-  const npcs = await deps.npcRepo.getByRealmId(realmId)
-  const recentEvents = await deps.worldEventRepo.getRecent(realmId, 10)
-  const recentWeather = await deps.weatherRepo.getRecent(realmId, 1)
+  const npcs = await deps.npcRepo.getByRealmId(worldId)
+  const recentEvents = await deps.worldEventRepo.getRecent(worldId, 10)
+  const recentWeather = await deps.weatherRepo.getRecent(worldId, 1)
 
   return {
     realm,

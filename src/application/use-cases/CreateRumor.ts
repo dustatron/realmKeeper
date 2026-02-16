@@ -5,7 +5,7 @@ import { newId } from '@shared/ulid'
 export interface CreateRumorInput {
   poiId?: string | null
   regionId?: string | null
-  realmId: string
+  worldId: string
   text: string
   source?: string
   isQuestHook?: boolean
@@ -21,7 +21,7 @@ export async function executeCreateRumor(
     id: newId(),
     poiId: input.poiId ?? null,
     regionId: input.regionId ?? null,
-    realmId: input.realmId,
+    worldId: input.worldId,
     text: input.text,
     source: input.source ?? '',
     isUsed: false,
