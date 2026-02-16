@@ -8,7 +8,7 @@ import { rollDice } from '@shared/dice'
 import { newId } from '@shared/ulid'
 
 export interface GenerateFactionInput {
-  realmId: string
+  worldId: string
   systemConfig: SystemConfig
 }
 
@@ -160,7 +160,7 @@ export async function executeGenerateFaction(
   const agentNpcs: NPC[] = []
   for (let i = 0; i < numAgents; i++) {
     const npc = await executeGenerateNPC(
-      { realmId: input.realmId, systemConfig: input.systemConfig, factionId },
+      { worldId: input.worldId, systemConfig: input.systemConfig, factionId },
       deps
     )
     agentNpcs.push(npc)
@@ -172,7 +172,7 @@ export async function executeGenerateFaction(
 
   const faction: Faction = {
     id: factionId,
-    realmId: input.realmId,
+    worldId: input.worldId,
     name: traits.length > 0 ? `${traits[0]} ${type}`.trim() : type || 'New Faction',
     description: descriptionParts.join(' '),
     type,

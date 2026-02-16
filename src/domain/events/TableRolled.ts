@@ -6,7 +6,7 @@ export interface TableRolledEvent {
     resultText: string
     rolls: number[]
     total: number
-    realmId?: string
+    worldId?: string
   }
   timestamp: number
 }
@@ -17,11 +17,11 @@ export function createTableRolledEvent(
   resultText: string,
   rolls: number[],
   total: number,
-  realmId?: string
+  worldId?: string
 ): TableRolledEvent {
   return {
     type: 'table_rolled',
-    payload: { tableId, tableName, resultText, rolls, total, realmId },
+    payload: { tableId, tableName, resultText, rolls, total, worldId },
     timestamp: Date.now(),
   }
 }

@@ -65,7 +65,7 @@ function NotesPage() {
     setCreating(true)
     try {
       const note = await executeCreateRealmNote(
-        { realmId: activeRealmId, title: newNoteTitle.trim() },
+        { worldId: activeRealmId, title: newNoteTitle.trim() },
         { realmNoteRepo: container.realmNoteRepo }
       )
       setSelectedNoteId(note.id)

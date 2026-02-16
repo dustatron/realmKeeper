@@ -5,7 +5,7 @@ import { newId } from '@shared/ulid'
 
 export interface CreatePOIEventInput {
   poiId: string
-  realmId: string
+  worldId: string
   name: string
   description?: string
   type: POIEventType
@@ -29,7 +29,7 @@ export async function executeCreatePOIEvent(
   const event: POIEvent = {
     id: newId(),
     poiId: input.poiId,
-    realmId: input.realmId,
+    worldId: input.worldId,
     name: input.name,
     description: input.description ?? '',
     type: input.type,

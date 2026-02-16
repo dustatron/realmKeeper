@@ -5,36 +5,15 @@ import { useNPCs } from '~/ui/hooks/useNPCs'
 import { useFactions } from '~/ui/hooks/useFactions'
 import { useRegions } from '~/ui/hooks/useRegions'
 import { useRealmPOIs } from '~/ui/hooks/usePOIs'
-import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
-import { useSystemConfig } from '~/ui/hooks/useSystemConfigs'
 import { useContainer } from '~/ui/hooks/useContainer'
-import { executeCreateNPC } from '@application/use-cases/CreateNPC'
-import { executeUpdateNPC } from '@application/use-cases/UpdateNPC'
 import { executeDeleteNPC } from '@application/use-cases/DeleteNPC'
-import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
-import type { NPC } from '@domain/entities/NPC'
-import type { SystemBlock } from '@domain/value-objects/SystemBlock'
 import type { LifeStatus } from '@shared/constants'
-import { newId } from '@shared/ulid'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { EmptyState } from '~/components/shared/EmptyState'
 import { FilterBar } from '~/components/shared/FilterBar'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
-import { TagInput } from '~/components/shared/TagInput'
-import { NPCEditSheet } from '~/components/shared/NPCEditSheet'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '~/components/ui/dialog'
-import { Card, CardContent } from '~/components/ui/card'
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '~/components/ui/table'
 import { Button } from '~/components/ui/button'
-import { Input } from '~/components/ui/input'
-import { Label } from '~/components/ui/label'
-import { Textarea } from '~/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -43,8 +22,7 @@ import {
   SelectValue,
 } from '~/components/ui/select'
 import { Badge } from '~/components/ui/badge'
-import { Switch } from '~/components/ui/switch'
-import { Users, Plus, Pencil, Trash2, Dices, Skull } from 'lucide-react'
+import { Users, Plus, Trash2, Skull } from 'lucide-react'
 
 export const Route = createFileRoute('/_app/realms/npcs')({
   component: NPCsPage,
@@ -52,111 +30,25 @@ export const Route = createFileRoute('/_app/realms/npcs')({
 
 function NPCsPage() {
   const activeRealmId = useUIStore((s) => s.activeRealmId)
-  const realm = useActiveRealm()
   const npcs = useNPCs(activeRealmId)
   const factions = useFactions(activeRealmId)
   const regions = useRegions(activeRealmId)
   const pois = useRealmPOIs(activeRealmId)
-  const systemConfig = useSystemConfig(realm?.systemId ?? null)
   const container = useContainer()
 
   const [search, setSearch] = useState('')
   const [factionFilter, setFactionFilter] = useState<string>('all')
   const [lifeStatusFilter, setLifeStatusFilter] = useState<LifeStatus | 'all'>('all')
-  const [editingNPC, setEditingNPC] = useState<NPC | null>(null)
-  const [showCreate, setShowCreate] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
-  const [isGenerating, setIsGenerating] = useState(false)
 
   const filteredNPCs = useMemo(() => {
     return npcs.filter((npc) => {
-      // Search filter
-      if (search && !npc.name.toLowerCase().includes(search.toLowerCase())) {
-        return false
-      }
-      // Faction filter
-      if (factionFilter !== 'all' && npc.factionId !== factionFilter) {
-        return false
-      }
-      // Life status filter
-      if (lifeStatusFilter !== 'all' && npc.lifeStatus !== lifeStatusFilter) {
-        return false
-      }
+      if (search && !npc.name.toLowerCase().includes(search.toLowerCase())) return false
+      if (factionFilter !== 'all' && npc.factionId !== factionFilter) return false
+      if (lifeStatusFilter !== 'all' && npc.lifeStatus !== lifeStatusFilter) return false
       return true
     })
   }, [npcs, search, factionFilter, lifeStatusFilter])
-
-  const handleGenerateNPC = async () => {
-    if (!activeRealmId || !systemConfig) return
-    setIsGenerating(true)
-    try {
-      // Auto-select faction/region: use filter if set, otherwise pick a random one
-      const autoFactionId = factionFilter !== 'all'
-        ? factionFilter
-        : factions.length > 0
-          ? factions[Math.floor(Math.random() * factions.length)].id
-          : undefined
-      const autoRegionId = regions.length > 0
-        ? regions[Math.floor(Math.random() * regions.length)].id
-        : undefined
-      const npc = await executeGenerateNPC(
-        { realmId: activeRealmId, systemConfig, factionId: autoFactionId, regionId: autoRegionId },
-        { tableRepo: container.tableRepo }
-      )
-      setEditingNPC(npc)
-    } finally {
-      setIsGenerating(false)
-    }
-  }
-
-  const handleCreateNew = () => {
-    if (!activeRealmId || !systemConfig) return
-    const defaultSystemBlock: SystemBlock = {
-      stats: systemConfig.statFields.map((f) => ({ key: f.key, value: 10 })),
-      hp: 1,
-      maxHp: 1,
-      armor: 0,
-      attacks: [],
-      inventory: [],
-      abilities: [],
-      notes: '',
-    }
-    const newNPC: NPC = {
-      id: newId(),
-      realmId: activeRealmId,
-      name: '',
-      factionId: null,
-      regionId: null,
-      poiId: null,
-      lifeStatus: 'alive',
-      movementStatus: 'present',
-      description: '',
-      traits: [],
-      motivation: '',
-      appearance: '',
-      voice: '',
-      want: '',
-      tags: [],
-      imageUrl: null,
-      systemBlock: defaultSystemBlock,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    }
-    setEditingNPC(newNPC)
-    setShowCreate(true)
-  }
-
-  const handleSaveNPC = async () => {
-    if (!editingNPC) return
-    const isNew = !npcs.find((n) => n.id === editingNPC.id)
-    if (isNew) {
-      await executeCreateNPC(editingNPC, { npcRepo: container.npcRepo })
-    } else {
-      await executeUpdateNPC(editingNPC, { npcRepo: container.npcRepo })
-    }
-    setEditingNPC(null)
-    setShowCreate(false)
-  }
 
   const handleDeleteNPC = async () => {
     if (!deleteTarget) return
@@ -177,35 +69,18 @@ function NPCsPage() {
     )
   }
 
-  if (!systemConfig) {
-    return (
-      <div>
-        <PageHeader title="NPCs" description="Create and manage non-player characters." />
-        <EmptyState
-          icon={Users}
-          title="Loading..."
-          description="Loading system configuration."
-        />
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="NPCs"
         description="Create and manage non-player characters."
         actions={
-          <div className="flex gap-2">
-            <Button onClick={handleGenerateNPC} variant="outline" disabled={isGenerating}>
-              <Dices className="mr-2 size-4" />
-              {isGenerating ? 'Generating...' : 'Generate NPC'}
-            </Button>
-            <Button onClick={handleCreateNew}>
+          <Link to="/realms/npcs/new">
+            <Button>
               <Plus className="mr-2 size-4" />
-              New NPC
+              Create NPC
             </Button>
-          </div>
+          </Link>
         }
       />
 
@@ -215,10 +90,12 @@ function NPCsPage() {
           title="No NPCs yet"
           description="Generate or create your first NPC."
           action={
-            <Button onClick={handleGenerateNPC} disabled={isGenerating}>
-              <Dices className="mr-2 size-4" />
-              {isGenerating ? 'Generating...' : 'Generate NPC'}
-            </Button>
+            <Link to="/realms/npcs/new">
+              <Button>
+                <Plus className="mr-2 size-4" />
+                Create NPC
+              </Button>
+            </Link>
           }
         />
       ) : (
@@ -262,7 +139,7 @@ function NPCsPage() {
                 <TableHead className="text-center">HP</TableHead>
                 <TableHead className="text-center">Armor</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-20"></TableHead>
+                <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -271,10 +148,7 @@ function NPCsPage() {
                 const region = regions.find((r) => r.id === npc.regionId)
                 const poi = pois.find((p) => p.id === npc.poiId)
                 return (
-                  <TableRow
-                    key={npc.id}
-                    className="hover:bg-muted/50"
-                  >
+                  <TableRow key={npc.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">
                       <Link
                         to="/realms/npcs/$npcId"
@@ -333,14 +207,9 @@ function NPCsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" className="size-7" onClick={(e) => { e.stopPropagation(); setEditingNPC(npc) }}>
-                          <Pencil className="size-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="size-7" onClick={(e) => { e.stopPropagation(); setDeleteTarget(npc.id) }}>
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
+                      <Button size="icon" variant="ghost" className="size-7" onClick={(e) => { e.stopPropagation(); setDeleteTarget(npc.id) }}>
+                        <Trash2 className="size-3.5" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 )
@@ -348,25 +217,6 @@ function NPCsPage() {
             </TableBody>
           </Table>
         </>
-      )}
-
-      {editingNPC && (
-        <NPCEditSheet
-          npc={editingNPC}
-          systemConfig={systemConfig}
-          factions={factions}
-          regions={regions}
-          pois={pois}
-          open={!!editingNPC}
-          onOpenChange={(open) => {
-            if (!open) {
-              setEditingNPC(null)
-              setShowCreate(false)
-            }
-          }}
-          onSave={handleSaveNPC}
-          onChange={setEditingNPC}
-        />
       )}
 
       <ConfirmDialog
@@ -381,4 +231,3 @@ function NPCsPage() {
     </div>
   )
 }
-

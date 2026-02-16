@@ -27,21 +27,21 @@ export interface DayLogEntry {
 }
 
 export function useDayLog(
-  realmId: string | null,
+  worldId: string | null,
   pageStartKey: number,
   pageSize: number
 ): DayLogEntry[] {
   const realm = useActiveRealm()
-  const allWeather = useAllWeather(realmId)
-  const allEvents = useAllEvents(realmId)
+  const allWeather = useAllWeather(worldId)
+  const allEvents = useAllEvents(worldId)
 
   // Load POI events for this realm
   const poiEvents = useLiveQuery(
     async () => {
-      if (!realmId) return []
-      return await db.poiEvents.where('realmId').equals(realmId).toArray()
+      if (!worldId) return []
+      return await db.poiEvents.where('worldId').equals(worldId).toArray()
     },
-    [realmId]
+    [worldId]
   ) ?? []
 
   return useMemo(() => {

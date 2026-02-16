@@ -4,7 +4,7 @@ export interface Notice {
   id: string
   poiId: string | null
   regionId: string | null
-  realmId: string
+  worldId: string
   title: string
   description: string
   type: NoticeType

@@ -141,6 +141,12 @@ function NPCDetailPage() {
             <CardTitle className="text-base">Identity</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {npc.race && npc.race !== 'human' && (
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-muted-foreground w-24 shrink-0">Race</span>
+                <Badge variant="secondary">{npc.race.charAt(0).toUpperCase() + npc.race.slice(1)}</Badge>
+              </div>
+            )}
             {npc.description && (
               <div>
                 <span className="text-sm font-medium text-muted-foreground">Description</span>
@@ -226,6 +232,24 @@ function NPCDetailPage() {
               )}
               <Badge variant="outline">{npc.movementStatus.charAt(0).toUpperCase() + npc.movementStatus.slice(1)}</Badge>
             </div>
+
+            {/* Level & Class */}
+            {(sb.level !== undefined || sb.className) && (
+              <div className="flex items-center gap-4">
+                {sb.level !== undefined && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-muted-foreground">Level</span>
+                    <span className="text-sm font-bold">{sb.level}</span>
+                  </div>
+                )}
+                {sb.className && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-muted-foreground">Class</span>
+                    <Badge variant="secondary">{sb.className}</Badge>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Stats table */}
             <div className="rounded-md border overflow-hidden">

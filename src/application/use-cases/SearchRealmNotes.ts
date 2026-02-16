@@ -2,11 +2,11 @@ import type { IRealmNoteRepository } from '@application/ports/IRealmNoteReposito
 import type { RealmNote } from '@domain/entities/RealmNote'
 
 export async function executeSearchRealmNotes(
-  realmId: string,
+  worldId: string,
   query: string,
   deps: { realmNoteRepo: IRealmNoteRepository }
 ): Promise<RealmNote[]> {
-  const notes = await deps.realmNoteRepo.getByRealmId(realmId)
+  const notes = await deps.realmNoteRepo.getByRealmId(worldId)
   if (!query) return notes
   const q = query.toLowerCase()
   return notes.filter(

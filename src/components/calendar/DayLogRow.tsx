@@ -39,7 +39,7 @@ const SEASON_COLORS: Record<string, string> = {
 
 interface DayLogRowProps {
   entry: DayLogEntry;
-  realmId: string;
+  worldId: string;
   showSeasonDivider: boolean;
   onMarkComplete: (dayKey: number) => void;
 }
@@ -195,7 +195,7 @@ const SEVERITY_COLORS: Record<string, string> = {
 
 export function DayLogRow({
   entry,
-  realmId,
+  worldId,
   showSeasonDivider,
   onMarkComplete,
 }: DayLogRowProps) {
@@ -378,7 +378,7 @@ export function DayLogRow({
         >
           <InlineGMNote
             existingNote={entry.gmNotes[0]}
-            realmId={realmId}
+            worldId={worldId}
             year={entry.year}
             season={entry.season}
             day={entry.day}

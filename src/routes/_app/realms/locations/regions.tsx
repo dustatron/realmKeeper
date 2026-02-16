@@ -83,7 +83,7 @@ function RegionsPage() {
   const handleCreate = async () => {
     if (!activeRealmId || !createName.trim()) return
     await executeCreateRegion(
-      { realmId: activeRealmId, name: createName.trim(), description: createDescription.trim(), terrain: createTerrain, color: nextAutoColor(regions) },
+      { worldId: activeRealmId, name: createName.trim(), description: createDescription.trim(), terrain: createTerrain, color: nextAutoColor(regions) },
       { regionRepo: container.regionRepo }
     )
     resetCreateForm()
@@ -117,7 +117,7 @@ function RegionsPage() {
       const results: GenerateRegionResult[] = []
       for (let i = 0; i < generateCount; i++) {
         const result = await executeGenerateRegion(
-          { realmId: activeRealmId, systemConfig },
+          { worldId: activeRealmId, systemConfig },
           { tableRepo: container.tableRepo }
         )
         results.push(result)
@@ -131,7 +131,7 @@ function RegionsPage() {
   const handleRerollOne = async (index: number) => {
     if (!activeRealmId || !systemConfig) return
     const result = await executeGenerateRegion(
-      { realmId: activeRealmId, systemConfig },
+      { worldId: activeRealmId, systemConfig },
       { tableRepo: container.tableRepo }
     )
     setBundles((prev) => prev.map((b, i) => (i === index ? result : b)))

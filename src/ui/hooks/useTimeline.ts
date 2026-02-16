@@ -1,26 +1,26 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
 
-export function useTimeline(realmId: string | null, limit = 50) {
+export function useTimeline(worldId: string | null, limit = 50) {
   return useLiveQuery(
-    () => realmId
+    () => worldId
       ? db.worldEvents
-          .where('realmId')
-          .equals(realmId)
+          .where('worldId')
+          .equals(worldId)
           .toArray()
           .then((events) =>
             events.sort((a, b) => b.createdAt - a.createdAt).slice(0, limit)
           )
       : [],
-    [realmId, limit]
+    [worldId, limit]
   ) ?? []
 }
 
-export function useAllEvents(realmId: string | null) {
+export function useAllEvents(worldId: string | null) {
   return useLiveQuery(
-    () => realmId
-      ? db.worldEvents.where('realmId').equals(realmId).toArray()
+    () => worldId
+      ? db.worldEvents.where('worldId').equals(worldId).toArray()
       : [],
-    [realmId]
+    [worldId]
   ) ?? []
 }

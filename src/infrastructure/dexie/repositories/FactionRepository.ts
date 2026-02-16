@@ -7,22 +7,22 @@ export class FactionRepository implements IFactionRepository {
     return db.factions.get(id)
   }
 
-  async getByRealmId(realmId: string): Promise<Faction[]> {
-    return db.factions.where('realmId').equals(realmId).toArray()
+  async getByRealmId(worldId: string): Promise<Faction[]> {
+    return db.factions.where('worldId').equals(worldId).toArray()
   }
 
-  async getPartyFaction(realmId: string): Promise<Faction | undefined> {
+  async getPartyFaction(worldId: string): Promise<Faction | undefined> {
     return db.factions
-      .where('realmId')
-      .equals(realmId)
+      .where('worldId')
+      .equals(worldId)
       .filter((f) => f.isParty)
       .first()
   }
 
-  async getActive(realmId: string): Promise<Faction[]> {
+  async getActive(worldId: string): Promise<Faction[]> {
     return db.factions
-      .where('realmId')
-      .equals(realmId)
+      .where('worldId')
+      .equals(worldId)
       .filter((f) => f.status === 'active')
       .toArray()
   }

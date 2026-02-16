@@ -4,7 +4,7 @@ import type { POIEventType } from '@shared/constants'
 export interface POIEvent {
   id: string
   poiId: string
-  realmId: string
+  worldId: string
   name: string
   description: string
   type: POIEventType

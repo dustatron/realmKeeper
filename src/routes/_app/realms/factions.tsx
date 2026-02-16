@@ -252,7 +252,7 @@ function FactionsPage() {
     setIsGenerating(true)
     try {
       const result = await executeGenerateFaction(
-        { realmId: activeRealmId, systemConfig },
+        { worldId: activeRealmId, systemConfig },
         { tableRepo: container.tableRepo }
       )
 

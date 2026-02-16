@@ -1,20 +1,20 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
 
-export function useRealmMaps(realmId: string | null) {
+export function useRealmMaps(worldId: string | null) {
   return useLiveQuery(
-    () => (realmId ? db.gameMaps.where('ownerRealmId').equals(realmId).sortBy('sortOrder') : []),
-    [realmId]
+    () => (worldId ? db.gameMaps.where('ownerRealmId').equals(worldId).sortBy('sortOrder') : []),
+    [worldId]
   ) ?? []
 }
 
 /** All maps in a realm: realm-owned + owned by POIs in that realm */
-export function useAllRealmMaps(realmId: string | null) {
+export function useAllRealmMaps(worldId: string | null) {
   return useLiveQuery(
     async () => {
-      if (!realmId) return []
-      const realmMaps = await db.gameMaps.where('ownerRealmId').equals(realmId).sortBy('sortOrder')
-      const regions = await db.regions.where('realmId').equals(realmId).toArray()
+      if (!worldId) return []
+      const realmMaps = await db.gameMaps.where('ownerRealmId').equals(worldId).sortBy('sortOrder')
+      const regions = await db.regions.where('worldId').equals(worldId).toArray()
       const regionIds = regions.map((r) => r.id)
       if (regionIds.length === 0) return realmMaps
       const pois = await db.pois.where('regionId').anyOf(regionIds).toArray()
@@ -23,7 +23,7 @@ export function useAllRealmMaps(realmId: string | null) {
       const poiMaps = await db.gameMaps.where('ownerPoiId').anyOf(poiIds).sortBy('sortOrder')
       return [...realmMaps, ...poiMaps]
     },
-    [realmId]
+    [worldId]
   ) ?? []
 }
 

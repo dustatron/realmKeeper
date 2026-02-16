@@ -7,14 +7,14 @@ export class RealmNoteRepository implements IRealmNoteRepository {
     return db.realmNotes.get(id)
   }
 
-  async getByRealmId(realmId: string): Promise<RealmNote[]> {
-    return db.realmNotes.where('realmId').equals(realmId).sortBy('sortOrder')
+  async getByRealmId(worldId: string): Promise<RealmNote[]> {
+    return db.realmNotes.where('worldId').equals(worldId).sortBy('sortOrder')
   }
 
-  async getMainNote(realmId: string): Promise<RealmNote | undefined> {
+  async getMainNote(worldId: string): Promise<RealmNote | undefined> {
     return db.realmNotes
-      .where('realmId')
-      .equals(realmId)
+      .where('worldId')
+      .equals(worldId)
       .filter((n) => n.isMain)
       .first()
   }

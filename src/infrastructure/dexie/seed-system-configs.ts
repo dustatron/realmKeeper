@@ -42,5 +42,9 @@ export const shadowdarkSystemConfig: SystemConfig = {
   armorLabel: 'AC',
   hpLabel: 'HP',
   hpFormula: 'class_die+con_mod',
-  namingTableIds: [],
+  namingTableIds: [
+    'table-sd-names-female',
+    'table-sd-names-male',
+    'table-sd-surnames',
+  ],
 }

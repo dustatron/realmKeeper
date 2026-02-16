@@ -3,7 +3,7 @@ import type { Faction } from '@domain/entities/Faction'
 import { newId } from '@shared/ulid'
 
 export interface CreateFactionInput {
-  realmId: string
+  worldId: string
   name: string
   description?: string
   type?: string
@@ -16,7 +16,7 @@ export async function executeCreateFaction(
   const now = Date.now()
   const faction: Faction = {
     id: newId(),
-    realmId: input.realmId,
+    worldId: input.worldId,
     name: input.name,
     description: input.description ?? '',
     type: input.type ?? '',

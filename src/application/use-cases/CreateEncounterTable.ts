@@ -5,7 +5,7 @@ import { newId } from '@shared/ulid'
 export interface CreateEncounterTableInput {
   ownerPoiId?: string | null
   ownerRegionId?: string | null
-  realmId: string
+  worldId: string
   creature?: string[]
   signOmen?: string[]
   loss?: string[]
@@ -23,7 +23,7 @@ export async function executeCreateEncounterTable(
     id: newId(),
     ownerPoiId: input.ownerPoiId ?? null,
     ownerRegionId: input.ownerRegionId ?? null,
-    realmId: input.realmId,
+    worldId: input.worldId,
     creature: input.creature ?? [],
     signOmen: input.signOmen ?? [],
     loss: input.loss ?? [],

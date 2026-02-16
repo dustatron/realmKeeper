@@ -7,8 +7,8 @@ export class GameMapRepository implements IGameMapRepository {
     return db.gameMaps.get(id)
   }
 
-  async getByRealmId(realmId: string): Promise<GameMap[]> {
-    return db.gameMaps.where('ownerRealmId').equals(realmId).sortBy('sortOrder')
+  async getByRealmId(worldId: string): Promise<GameMap[]> {
+    return db.gameMaps.where('ownerRealmId').equals(worldId).sortBy('sortOrder')
   }
 
   async getByPoiId(poiId: string): Promise<GameMap[]> {

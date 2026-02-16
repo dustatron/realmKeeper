@@ -106,7 +106,7 @@ function FactionDetailPage() {
     setIsAddingAgent(true)
     try {
       const npc = await executeGenerateNPC(
-        { realmId: activeRealmId, systemConfig, factionId: faction.id },
+        { worldId: activeRealmId, systemConfig, factionId: faction.id },
         { tableRepo: container.tableRepo }
       )
       await container.npcRepo.create(npc)

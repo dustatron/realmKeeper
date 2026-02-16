@@ -7,13 +7,13 @@ import { useContainer } from '~/ui/hooks/useContainer'
 
 interface InlineGMNoteProps {
   existingNote: WorldEvent | undefined
-  realmId: string
+  worldId: string
   year: number
   season: Season
   day: number
 }
 
-export function InlineGMNote({ existingNote, realmId, year, season, day }: InlineGMNoteProps) {
+export function InlineGMNote({ existingNote, worldId, year, season, day }: InlineGMNoteProps) {
   const container = useContainer()
   const [isEditing, setIsEditing] = useState(false)
   const [text, setText] = useState(existingNote?.description ?? '')
@@ -43,7 +43,7 @@ export function InlineGMNote({ existingNote, realmId, year, season, day }: Inlin
 
     const noteEvent: WorldEvent = {
       id: existingNote?.id ?? newId(),
-      realmId,
+      worldId,
       year,
       season,
       day,

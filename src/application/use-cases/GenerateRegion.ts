@@ -9,7 +9,7 @@ import type { TableDef } from '@domain/entities/TableDef'
 import type { PoiType } from '@shared/constants'
 
 export interface GenerateRegionInput {
-  realmId: string
+  worldId: string
   systemConfig: SystemConfig
 }
 
@@ -159,7 +159,7 @@ export async function executeGenerateRegion(
 
   const region: Region = {
     id: regionId,
-    realmId: input.realmId,
+    worldId: input.worldId,
     name,
     description: `${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} ${terrain.toLowerCase()} region.`,
     terrain: terrainCategory,

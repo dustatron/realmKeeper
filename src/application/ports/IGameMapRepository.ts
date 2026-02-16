@@ -2,7 +2,7 @@ import type { GameMap } from '@domain/entities/GameMap'
 
 export interface IGameMapRepository {
   getById(id: string): Promise<GameMap | undefined>
-  getByRealmId(realmId: string): Promise<GameMap[]>
+  getByRealmId(worldId: string): Promise<GameMap[]>
   getByPoiId(poiId: string): Promise<GameMap[]>
   create(gameMap: GameMap): Promise<void>
   update(gameMap: GameMap): Promise<void>

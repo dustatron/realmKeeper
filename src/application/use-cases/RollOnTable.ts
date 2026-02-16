@@ -15,7 +15,7 @@ export interface RollOnTableDeps {
 
 export async function executeRollOnTable(
   tableId: string,
-  realmId: string | undefined,
+  worldId: string | undefined,
   deps: RollOnTableDeps
 ): Promise<TableResult | null> {
   const table = await deps.tableRepo.getTableById(tableId)
@@ -26,7 +26,7 @@ export async function executeRollOnTable(
   // Persist roll history
   await deps.rollHistoryRepo.create({
     id: newId(),
-    realmId: realmId ?? '',
+    worldId: worldId ?? '',
     tableId: table.id,
     tableName: table.name,
     result: result.entry.text,
@@ -43,7 +43,7 @@ export async function executeRollOnTable(
       result.entry.text,
       result.diceResult.rolls,
       result.diceResult.total,
-      realmId
+      worldId
     )
   )
 

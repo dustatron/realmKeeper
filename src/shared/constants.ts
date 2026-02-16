@@ -47,6 +47,9 @@ export const TERRAIN_TYPES = [
 ] as const
 export type TerrainType = (typeof TERRAIN_TYPES)[number]
 
+export const NPC_RACES = ['human', 'elf', 'dwarf', 'halfling', 'half-orc', 'half-elf', 'goblin', 'other'] as const
+export type NPCRace = (typeof NPC_RACES)[number]
+
 export const NPC_LIFE_STATUSES = ['alive', 'dead', 'undead', 'ghost'] as const
 export type LifeStatus = (typeof NPC_LIFE_STATUSES)[number]
 

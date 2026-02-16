@@ -49,7 +49,7 @@ export async function executeCreateRealm(
   // Auto-create party faction
   await deps.factionRepo.create({
     id: newId(),
-    realmId: realm.id,
+    worldId: realm.id,
     name: 'The Party',
     description: 'Player characters',
     type: 'party',
@@ -71,7 +71,7 @@ export async function executeCreateRealm(
   // Auto-create main note
   await deps.realmNoteRepo.create({
     id: newId(),
-    realmId: realm.id,
+    worldId: realm.id,
     title: 'Realm Notes',
     content: `# ${realm.name}\n\nMain notes for your realm.`,
     isMain: true,

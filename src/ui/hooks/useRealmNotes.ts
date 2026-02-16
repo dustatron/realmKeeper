@@ -1,20 +1,20 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
 
-export function useRealmNotes(realmId: string | null) {
+export function useRealmNotes(worldId: string | null) {
   return useLiveQuery(
-    () => realmId
-      ? db.realmNotes.where('realmId').equals(realmId).sortBy('sortOrder')
+    () => worldId
+      ? db.realmNotes.where('worldId').equals(worldId).sortBy('sortOrder')
       : [],
-    [realmId]
+    [worldId]
   ) ?? []
 }
 
-export function useMainNote(realmId: string | null) {
+export function useMainNote(worldId: string | null) {
   return useLiveQuery(
-    () => realmId
-      ? db.realmNotes.where('realmId').equals(realmId).filter((n) => n.isMain).first()
+    () => worldId
+      ? db.realmNotes.where('worldId').equals(worldId).filter((n) => n.isMain).first()
       : undefined,
-    [realmId]
+    [worldId]
   )
 }

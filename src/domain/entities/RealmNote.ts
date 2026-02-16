@@ -1,6 +1,6 @@
 export interface RealmNote {
   id: string
-  realmId: string
+  worldId: string
   title: string
   content: string
   isMain: boolean

@@ -32,8 +32,8 @@ export function RealmSwitcher() {
   const displayName = activeRealm?.name ?? 'No Realm'
   const displaySystem = activeSystem?.name ?? activeRealm?.systemId ?? 'Create one to begin'
 
-  const handleRealmClick = (realmId: string) => {
-    setActiveRealmId(realmId)
+  const handleRealmClick = (worldId: string) => {
+    setActiveRealmId(worldId)
     navigate({ to: '/realms' })
   }
 

@@ -19,7 +19,7 @@ export interface RollEncounterResult {
 }
 
 export async function executeRollEncounter(
-  input: { poiId: string | null; regionId: string | null; realmId: string },
+  input: { poiId: string | null; regionId: string | null; worldId: string },
   deps: { encounterTableRepo: IEncounterTableRepository }
 ): Promise<RollEncounterResult> {
   const { total: categoryRoll } = rollDice('1d6')

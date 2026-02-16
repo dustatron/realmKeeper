@@ -10,15 +10,15 @@ export interface RelationshipMatrix {
 }
 
 export async function executeGetRelationshipMatrix(
-  realmId: string,
+  worldId: string,
   deps: {
     factionRepo: IFactionRepository
     relationshipRepo: IFactionRelationshipRepository
   }
 ): Promise<RelationshipMatrix> {
-  const factions = await deps.factionRepo.getByRealmId(realmId)
+  const factions = await deps.factionRepo.getByRealmId(worldId)
   const factionIds = factions.map((f) => f.id)
-  const relationships = await deps.relationshipRepo.getAllForRealm(realmId, factionIds)
+  const relationships = await deps.relationshipRepo.getAllForRealm(worldId, factionIds)
 
   const relMap = new Map<string, number>()
   for (const rel of relationships) {

@@ -7,8 +7,8 @@ export class RegionRepository implements IRegionRepository {
     return db.regions.get(id)
   }
 
-  async getByRealmId(realmId: string): Promise<Region[]> {
-    return db.regions.where('realmId').equals(realmId).toArray()
+  async getByRealmId(worldId: string): Promise<Region[]> {
+    return db.regions.where('worldId').equals(worldId).toArray()
   }
 
   async create(region: Region): Promise<void> {

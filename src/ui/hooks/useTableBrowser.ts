@@ -30,15 +30,15 @@ export function useTablesInSet(setId: string | null) {
   return dbTables
 }
 
-export function useRollHistory(realmId: string | null, limit = 20) {
+export function useRollHistory(worldId: string | null, limit = 20) {
   return useLiveQuery(
-    () => realmId
+    () => worldId
       ? db.rollHistory
-          .where('realmId')
-          .equals(realmId)
+          .where('worldId')
+          .equals(worldId)
           .toArray()
           .then((rolls) => rolls.sort((a, b) => b.timestamp - a.timestamp).slice(0, limit))
       : [],
-    [realmId, limit]
+    [worldId, limit]
   ) ?? []
 }

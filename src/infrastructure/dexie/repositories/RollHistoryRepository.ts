@@ -3,18 +3,18 @@ import type { IRollHistoryRepository } from '@application/ports/IRollHistoryRepo
 import type { RollHistory } from '@domain/entities/RollHistory'
 
 export class RollHistoryRepository implements IRollHistoryRepository {
-  async getByRealmId(realmId: string): Promise<RollHistory[]> {
-    return db.rollHistory.where('realmId').equals(realmId).toArray()
+  async getByRealmId(worldId: string): Promise<RollHistory[]> {
+    return db.rollHistory.where('worldId').equals(worldId).toArray()
   }
 
   async getByTableId(tableId: string): Promise<RollHistory[]> {
     return db.rollHistory.where('tableId').equals(tableId).toArray()
   }
 
-  async getRecent(realmId: string, limit: number): Promise<RollHistory[]> {
+  async getRecent(worldId: string, limit: number): Promise<RollHistory[]> {
     const all = await db.rollHistory
-      .where('realmId')
-      .equals(realmId)
+      .where('worldId')
+      .equals(worldId)
       .toArray()
     return all.sort((a, b) => b.timestamp - a.timestamp).slice(0, limit)
   }

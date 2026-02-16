@@ -27,7 +27,7 @@ export class FactionRelationshipRepository
   }
 
   async getAllForRealm(
-    _realmId: string,
+    _worldId: string,
     factionIds: string[]
   ): Promise<FactionRelationship[]> {
     return db.factionRelationships

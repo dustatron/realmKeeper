@@ -58,10 +58,10 @@ export async function executeImportRealm(
   }
 
   // Realm
-  const realmId = remap(data.realm.id)
+  const worldId = remap(data.realm.id)
   await deps.realmRepo.create({
     ...data.realm,
-    id: realmId,
+    id: worldId,
     daysPerWeek: data.realm.daysPerWeek ?? 7,
     watchesPerDay: data.realm.watchesPerDay ?? 3,
     completedThroughDay: data.realm.completedThroughDay ?? -1,
@@ -74,7 +74,7 @@ export async function executeImportRealm(
     await deps.regionRepo.create({
       ...r,
       id: remap(r.id),
-      realmId,
+      worldId,
       features: (regionData.features as string[]) ?? [],
       dangers: (regionData.dangers as string[]) ?? [],
       settlements: (regionData.settlements as string[]) ?? [],
@@ -87,7 +87,7 @@ export async function executeImportRealm(
     await deps.factionRepo.create({
       ...f,
       id: remap(f.id),
-      realmId,
+      worldId,
       agentNpcIds: f.agentNpcIds.map((id: string) => remap(id)),
       agendaGoals: f.agendaGoals.map((g) => ({ ...g, id: remap(g.id), timeframe: g.timeframe ?? 'long-term', progress: g.progress ?? 0, segments: g.segments ?? 4 })),
       advantages: f.advantages.map((a) => ({ ...a, id: remap(a.id) })),
@@ -105,7 +105,7 @@ export async function executeImportRealm(
     await deps.npcRepo.create({
       ...n,
       id: remap(n.id),
-      realmId,
+      worldId,
       factionId: n.factionId ? remap(n.factionId) : null,
       regionId: n.regionId ? remap(n.regionId) : null,
       // v1 had `location` string, v2 has `poiId` — default poiId to null for old exports
@@ -133,19 +133,19 @@ export async function executeImportRealm(
     await deps.worldEventRepo.create({
       ...e,
       id: remap(e.id),
-      realmId,
+      worldId,
       relatedEntityIds: e.relatedEntityIds.map((id: string) => remap(id)),
     })
   }
 
   // Weather
   for (const w of data.weatherHistory) {
-    await deps.weatherRepo.create({ ...w, id: remap(w.id), realmId })
+    await deps.weatherRepo.create({ ...w, id: remap(w.id), worldId })
   }
 
   // Notes
   for (const n of data.realmNotes) {
-    await deps.realmNoteRepo.create({ ...n, id: remap(n.id), realmId })
+    await deps.realmNoteRepo.create({ ...n, id: remap(n.id), worldId })
   }
 
   // POIs — remap parentPoiId for v2
@@ -192,7 +192,7 @@ export async function executeImportRealm(
       ...evt,
       id: remap(evt.id),
       poiId: remap(evt.poiId),
-      realmId,
+      worldId,
     })
   }
 
@@ -236,5 +236,5 @@ export async function executeImportRealm(
     }
   }
 
-  return realmId
+  return worldId
 }

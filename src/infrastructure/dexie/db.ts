@@ -53,6 +53,8 @@ const db = new Dexie('RealmKeeperDB', {
   addons: cloudUrl ? [dexieCloud] : [],
 }) as unknown as AppDB
 
+// Old store definitions use `realmId` — these must match the schema at that version
+// for Dexie's upgrade chain to work correctly.
 const storesV5 = {
   systemConfigs: 'id',
   worlds: 'id, systemId',
@@ -95,11 +97,35 @@ const storesV7 = {
   gameMaps: 'id, ownerRealmId, ownerPoiId',
 }
 
-const stores = {
+const storesV16 = {
   ...storesV7,
   rumors: 'id, poiId, regionId, realmId, isUsed',
   notices: 'id, poiId, regionId, realmId, type, isUsed',
   encounterTables: 'id, ownerPoiId, ownerRegionId, realmId',
+}
+
+// v17+: realmId → worldId to avoid collision with Dexie Cloud's reserved `realmId`
+const stores = {
+  systemConfigs: 'id',
+  worlds: 'id, systemId',
+  regions: 'id, worldId',
+  factions: 'id, worldId, status, isParty',
+  npcs: 'id, worldId, factionId, regionId, poiId, *tags',
+  factionRelationships: 'id, factionId, targetId, [factionId+targetId]',
+  pois: 'id, regionId, parentPoiId, type, mapRef',
+  paths: 'id, fromPoiId, toPoiId, [fromPoiId+toPoiId]',
+  realmNotes: 'id, worldId, isMain, sortOrder',
+  worldEvents: 'id, worldId, [year+season+day]',
+  weatherHistory: 'id, worldId, [year+season+day]',
+  tableSets: 'id, source, systemId',
+  tableDefs: 'id, setId, *tags, systemId',
+  rollHistory: 'id, worldId, tableId, timestamp',
+  factionPresences: 'id, factionId, poiId, [factionId+poiId]',
+  poiEvents: 'id, poiId, worldId, type, isActive, [worldId+isActive]',
+  gameMaps: 'id, ownerRealmId, ownerPoiId',
+  rumors: 'id, poiId, regionId, worldId, isUsed',
+  notices: 'id, poiId, regionId, worldId, type, isUsed',
+  encounterTables: 'id, ownerPoiId, ownerRegionId, worldId',
 }
 
 
@@ -283,7 +309,7 @@ db.version(12).stores(storesV7).upgrade(async (tx) => {
 })
 
 // v13: Add rumors, notices, encounterTables tables + new POI play fields
-db.version(13).stores(stores).upgrade(async (tx) => {
+db.version(13).stores(storesV16).upgrade(async (tx) => {
   const pois = await tx.table('pois').toArray()
   for (const poi of pois) {
     if (poi.readAloud === undefined) {
@@ -301,7 +327,7 @@ db.version(13).stores(stores).upgrade(async (tx) => {
 })
 
 // v14: Add imageUrl to NPCs
-db.version(14).stores(stores).upgrade(async (tx) => {
+db.version(14).stores(storesV16).upgrade(async (tx) => {
   const npcs = await tx.table('npcs').toArray()
   for (const npc of npcs) {
     if (npc.imageUrl === undefined) {
@@ -311,7 +337,7 @@ db.version(14).stores(stores).upgrade(async (tx) => {
 })
 
 // v15: Add want to NPCs
-db.version(15).stores(stores).upgrade(async (tx) => {
+db.version(15).stores(storesV16).upgrade(async (tx) => {
   const npcs = await tx.table('npcs').toArray()
   for (const npc of npcs) {
     if (npc.want === undefined) {
@@ -321,12 +347,30 @@ db.version(15).stores(stores).upgrade(async (tx) => {
 })
 
 // v16: Migrate data from old `realms` table → `worlds` (Dexie Cloud reserves `realms`)
-db.version(16).stores(stores).upgrade(async (tx) => {
+db.version(16).stores(storesV16).upgrade(async (tx) => {
   try {
     const old = await tx.table('realms').toArray()
     if (old.length > 0) await tx.table('worlds').bulkPut(old)
   } catch {
     // No old `realms` table — fresh install or already migrated
+  }
+})
+
+// v17: Rename realmId → worldId on all records (Dexie Cloud reserves `realmId`)
+db.version(17).stores(stores).upgrade(async (tx) => {
+  const tablesToMigrate = [
+    'regions', 'factions', 'npcs', 'realmNotes',
+    'worldEvents', 'weatherHistory', 'rollHistory',
+    'poiEvents', 'rumors', 'notices', 'encounterTables',
+  ]
+  for (const tableName of tablesToMigrate) {
+    const rows = await tx.table(tableName).toArray()
+    for (const row of rows) {
+      if ('realmId' in row && !('worldId' in row)) {
+        const { realmId, ...rest } = row
+        await tx.table(tableName).put({ ...rest, worldId: realmId })
+      }
+    }
   }
 })
 

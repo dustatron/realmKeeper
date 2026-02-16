@@ -4,7 +4,7 @@ import type { WeatherSeverity } from '@domain/services/WeatherEngine'
 export interface WeatherRolledEvent {
   type: 'weather_rolled'
   payload: {
-    realmId: string
+    worldId: string
     condition: string
     severity: WeatherSeverity
     season: Season
@@ -18,7 +18,7 @@ export interface WeatherRolledEvent {
 }
 
 export function createWeatherRolledEvent(
-  realmId: string,
+  worldId: string,
   condition: string,
   severity: WeatherSeverity,
   season: Season,
@@ -30,7 +30,7 @@ export function createWeatherRolledEvent(
 ): WeatherRolledEvent {
   return {
     type: 'weather_rolled',
-    payload: { realmId, condition, severity, season, year, day, watch, rolls, total },
+    payload: { worldId, condition, severity, season, year, day, watch, rolls, total },
     timestamp: Date.now(),
   }
 }

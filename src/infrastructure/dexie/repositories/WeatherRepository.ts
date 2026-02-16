@@ -9,7 +9,7 @@ export class WeatherRepository implements IWeatherRepository {
   }
 
   async getByDate(
-    realmId: string,
+    worldId: string,
     year: number,
     season: Season,
     day: number
@@ -17,14 +17,14 @@ export class WeatherRepository implements IWeatherRepository {
     return db.weatherHistory
       .where('[year+season+day]')
       .equals([year, season, day])
-      .filter((w) => w.realmId === realmId)
+      .filter((w) => w.worldId === worldId)
       .toArray()
   }
 
-  async getRecent(realmId: string, limit: number): Promise<WeatherHistory[]> {
+  async getRecent(worldId: string, limit: number): Promise<WeatherHistory[]> {
     const all = await db.weatherHistory
-      .where('realmId')
-      .equals(realmId)
+      .where('worldId')
+      .equals(worldId)
       .toArray()
     return all.sort((a, b) => b.createdAt - a.createdAt).slice(0, limit)
   }

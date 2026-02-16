@@ -268,7 +268,7 @@ function FactionEditPage() {
       const tempFactionId = isCreate ? newId() : factionId
       for (let i = 0; i < numAgents; i++) {
         const npc = await executeGenerateNPC(
-          { realmId: activeRealmId, systemConfig, factionId: tempFactionId },
+          { worldId: activeRealmId, systemConfig, factionId: tempFactionId },
           { tableRepo: container.tableRepo }
         )
         await container.npcRepo.create(npc)
@@ -323,7 +323,7 @@ function FactionEditPage() {
     setIsAddingAgent(true)
     try {
       const npc = await executeGenerateNPC(
-        { realmId: activeRealmId, systemConfig, factionId: isCreate ? undefined : factionId },
+        { worldId: activeRealmId, systemConfig, factionId: isCreate ? undefined : factionId },
         { tableRepo: container.tableRepo }
       )
       await container.npcRepo.create(npc)
@@ -353,7 +353,7 @@ function FactionEditPage() {
 
       if (isCreate) {
         const newFaction = await executeCreateFaction(
-          { realmId: activeRealmId, name: name.trim(), description: description.trim(), type: type.trim() },
+          { worldId: activeRealmId, name: name.trim(), description: description.trim(), type: type.trim() },
           { factionRepo: container.factionRepo }
         )
         await executeUpdateFaction(

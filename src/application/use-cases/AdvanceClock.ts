@@ -38,11 +38,11 @@ export interface AdvanceClockPreview {
 }
 
 export async function executeAdvanceClock(
-  realmId: string,
+  worldId: string,
   unit: ClockAdvanceUnit,
   deps: AdvanceClockDeps
 ): Promise<AdvanceClockPreview | null> {
-  const realm = await deps.realmRepo.getById(realmId)
+  const realm = await deps.realmRepo.getById(worldId)
   if (!realm) return null
 
   const current: WorldDateTime = {
@@ -64,7 +64,7 @@ export async function executeAdvanceClock(
   }
 
   if (triggers.some((t) => t.type === 'weather_roll')) {
-    const recentWeather = await deps.weatherRepo.getRecent(realmId, 1)
+    const recentWeather = await deps.weatherRepo.getRecent(worldId, 1)
     const previousSeverity = recentWeather.length > 0 ? recentWeather[0].severity : null
 
     preview.weather = rollWeather(
@@ -80,10 +80,10 @@ export async function executeAdvanceClock(
       (realm.factionTurnTrigger === 'week' && unit === 'week')
 
     if (shouldTrigger) {
-      const factions = await deps.factionRepo.getByRealmId(realmId)
-      const npcs = await deps.npcRepo.getByRealmId(realmId)
+      const factions = await deps.factionRepo.getByRealmId(worldId)
+      const npcs = await deps.npcRepo.getByRealmId(worldId)
       const factionIds = factions.map((f) => f.id)
-      const relationships = await deps.relationshipRepo.getAllForRealm(realmId, factionIds)
+      const relationships = await deps.relationshipRepo.getAllForRealm(worldId, factionIds)
 
       preview.factionTurnSuggestions = rollAllFactionTurns(
         factions, npcs, relationships, deps.rollDice
@@ -122,10 +122,10 @@ export interface AdvanceDayResult {
  * For week-triggered faction turns, call executeFactionTurns separately after the loop.
  */
 export async function executeAdvanceDay(
-  realmId: string,
+  worldId: string,
   deps: AdvanceDayDeps
 ): Promise<AdvanceDayResult | null> {
-  const realm = await deps.realmRepo.getById(realmId)
+  const realm = await deps.realmRepo.getById(worldId)
   if (!realm) return null
 
   const current: WorldDateTime = {
@@ -140,13 +140,13 @@ export async function executeAdvanceDay(
   const now = Date.now()
 
   // Roll + persist weather
-  const recentWeather = await deps.weatherRepo.getRecent(realmId, 1)
+  const recentWeather = await deps.weatherRepo.getRecent(worldId, 1)
   const previousSeverity = recentWeather.length > 0 ? recentWeather[0].severity : null
   const weather = rollWeather(newDateTime.season, previousSeverity, deps.rollDice)
 
   await deps.weatherRepo.create({
     id: newId(),
-    realmId,
+    worldId,
     year: newDateTime.year,
     season: newDateTime.season,
     day: newDateTime.day,
@@ -159,13 +159,13 @@ export async function executeAdvanceDay(
   // Roll + auto-apply faction turns (if trigger === 'day')
   let factionTurns: FactionTurnSuggestion[] = []
   if (realm.factionTurnTrigger === 'day') {
-    factionTurns = await executeFactionTurns(realmId, newDateTime, deps)
+    factionTurns = await executeFactionTurns(worldId, newDateTime, deps)
   }
 
   // Check POI events
   const poiEventRepo = deps.poiEventRepo
   if (poiEventRepo) {
-    const allEvents = await poiEventRepo.getByRealmId(realmId)
+    const allEvents = await poiEventRepo.getByRealmId(worldId)
 
     // Activate matching events
     for (const evt of allEvents) {
@@ -181,7 +181,7 @@ export async function executeAdvanceDay(
         // Create world event
         await deps.worldEventRepo.create({
           id: newId(),
-          realmId,
+          worldId,
           year: newDateTime.year,
           season: newDateTime.season,
           day: newDateTime.day,
@@ -215,10 +215,10 @@ export async function executeAdvanceDay(
   })
 
   // Publish events
-  deps.eventBus.publish(createClockAdvancedEvent(realmId, 'day', current, newDateTime, []))
+  deps.eventBus.publish(createClockAdvancedEvent(worldId, 'day', current, newDateTime, []))
   deps.eventBus.publish(
     createWeatherRolledEvent(
-      realmId, weather.condition, weather.severity,
+      worldId, weather.condition, weather.severity,
       newDateTime.season, newDateTime.year, newDateTime.day, newDateTime.watch,
       weather.diceResult.rolls, weather.diceResult.total
     )
@@ -229,19 +229,19 @@ export async function executeAdvanceDay(
 
 /** Roll + apply faction turns for the current date. Used for week-triggered turns. */
 export async function executeFactionTurns(
-  realmId: string,
+  worldId: string,
   dt: WorldDateTime,
   deps: AdvanceDayDeps
 ): Promise<FactionTurnSuggestion[]> {
-  const factions = await deps.factionRepo.getByRealmId(realmId)
-  const npcs = await deps.npcRepo.getByRealmId(realmId)
+  const factions = await deps.factionRepo.getByRealmId(worldId)
+  const npcs = await deps.npcRepo.getByRealmId(worldId)
   const factionIds = factions.map((f) => f.id)
-  const relationships = await deps.relationshipRepo.getAllForRealm(realmId, factionIds)
+  const relationships = await deps.relationshipRepo.getAllForRealm(worldId, factionIds)
 
   const suggestions = rollAllFactionTurns(factions, npcs, relationships, deps.rollDice)
 
   // Auto-apply all faction turns (no GM confirmation)
-  await executeConfirmFactionTurn(realmId, suggestions, dt, {
+  await executeConfirmFactionTurn(worldId, suggestions, dt, {
     factionRepo: deps.factionRepo,
     relationshipRepo: deps.relationshipRepo,
     worldEventRepo: deps.worldEventRepo,

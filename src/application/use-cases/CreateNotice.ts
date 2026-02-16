@@ -6,7 +6,7 @@ import { newId } from '@shared/ulid'
 export interface CreateNoticeInput {
   poiId?: string | null
   regionId?: string | null
-  realmId: string
+  worldId: string
   title: string
   description?: string
   type: NoticeType
@@ -24,7 +24,7 @@ export async function executeCreateNotice(
     id: newId(),
     poiId: input.poiId ?? null,
     regionId: input.regionId ?? null,
-    realmId: input.realmId,
+    worldId: input.worldId,
     title: input.title,
     description: input.description ?? '',
     type: input.type,

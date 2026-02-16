@@ -15,17 +15,17 @@ export interface ExecuteFactionTurnsDeps {
 }
 
 export async function executeExecuteFactionTurns(
-  realmId: string,
+  worldId: string,
   deps: ExecuteFactionTurnsDeps
 ): Promise<FactionTurnSuggestion[]> {
-  const factions = await deps.factionRepo.getByRealmId(realmId)
-  const npcs = await deps.npcRepo.getByRealmId(realmId)
+  const factions = await deps.factionRepo.getByRealmId(worldId)
+  const npcs = await deps.npcRepo.getByRealmId(worldId)
   const factionIds = factions.map((f) => f.id)
-  const relationships = await deps.relationshipRepo.getAllForRealm(realmId, factionIds)
+  const relationships = await deps.relationshipRepo.getAllForRealm(worldId, factionIds)
 
   const suggestions = rollAllFactionTurns(factions, npcs, relationships, deps.rollDice)
 
-  deps.eventBus.publish(createFactionTurnRolledEvent(realmId, suggestions))
+  deps.eventBus.publish(createFactionTurnRolledEvent(worldId, suggestions))
 
   return suggestions
 }
