@@ -19,6 +19,10 @@ const typeBadgeColors: Record<SearchableItem['type'], string> = {
   region: 'bg-green-500/15 text-green-700 dark:text-green-400',
   poi: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
   note: 'bg-purple-500/15 text-purple-700 dark:text-purple-400',
+  monster: 'bg-orange-500/15 text-orange-700 dark:text-orange-400',
+  spell: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-400',
+  magicItem: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
+  equipment: 'bg-slate-500/15 text-slate-700 dark:text-slate-400',
 }
 
 const typeLabels: Record<SearchableItem['type'], string> = {
@@ -27,6 +31,10 @@ const typeLabels: Record<SearchableItem['type'], string> = {
   region: 'Region',
   poi: 'POI',
   note: 'Note',
+  monster: 'Monster',
+  spell: 'Spell',
+  magicItem: 'Magic Item',
+  equipment: 'Equipment',
 }
 
 function SearchPage() {

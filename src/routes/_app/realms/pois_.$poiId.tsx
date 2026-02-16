@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
 import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
@@ -27,7 +27,6 @@ import { executeDeletePOIEvent } from '@application/use-cases/DeletePOIEvent'
 import { executeCreateNPC } from '@application/use-cases/CreateNPC'
 import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import { executeCreateGameMap } from '@application/use-cases/CreateGameMap'
-import { executeDeleteGameMap } from '@application/use-cases/DeleteGameMap'
 import { executeCreateRumor } from '@application/use-cases/CreateRumor'
 import { executeUpdateRumor } from '@application/use-cases/UpdateRumor'
 import { executeDeleteRumor } from '@application/use-cases/DeleteRumor'
@@ -39,7 +38,7 @@ import { executeUpdateEncounterTable } from '@application/use-cases/UpdateEncoun
 import { executeRollEncounter } from '@application/use-cases/RollEncounter'
 import { NPCEditSheet } from '~/components/shared/NPCEditSheet'
 import { MapUploadDialog } from '~/components/map/MapUploadDialog'
-import { InteractiveMap } from '~/components/map/InteractiveMap'
+import { MultiMapViewer } from '~/components/map/MultiMapViewer'
 import { ServicesList } from '~/components/shared/ServicesList'
 
 import { SettlementTemplate } from '~/components/poi-templates/SettlementTemplate'
@@ -99,6 +98,7 @@ import {
   CalendarClock,
   MapPinned,
   X,
+  Book,
 } from 'lucide-react'
 import { POI_TYPES, POI_EVENT_TYPES, SEASONS, type PoiType, type POIEventType, type Season } from '@shared/constants'
 import type { NoticeType } from '@shared/constants'
@@ -107,6 +107,8 @@ import type { NPC } from '@domain/entities/NPC'
 import type { SystemBlock } from '@domain/value-objects/SystemBlock'
 import type { Service } from '@domain/value-objects/Service'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
+import type { CompendiumRef } from '@domain/entities/Compendium'
+import { getCompendiumById, searchCompendium } from '@domain/data/compendium'
 import { newId } from '@shared/ulid'
 
 export const Route = createFileRoute('/_app/realms/pois_/$poiId')({
@@ -410,7 +412,7 @@ function POIDetailPage() {
     }
   }
 
-  const handleUploadMap = async (data: { name: string; imageBlob: Blob; width: number; height: number }) => {
+  const handleUploadMap = async (data: { name: string; imageUrl: string; width: number; height: number }) => {
     if (!poi) return
     await executeCreateGameMap({ ...data, ownerPoiId: poi.id }, { gameMapRepo: container.gameMapRepo })
   }
@@ -473,6 +475,14 @@ function POIDetailPage() {
     }
   }
 
+  const handleUpdateCompendiumRefs = async (refs: { monsterRefs: CompendiumRef[]; magicItemRefs: CompendiumRef[]; spellRefs: CompendiumRef[] }) => {
+    if (!poi) return
+    await executeUpdatePOI(
+      { ...poi, ...refs },
+      { poiRepo: container.poiRepo }
+    )
+  }
+
   if (poi === undefined) {
     return <div className="py-8 text-center text-muted-foreground">Loading...</div>
   }
@@ -490,7 +500,12 @@ function POIDetailPage() {
 
   // Shared map section
   const mapSection = poiMaps.length > 0 ? (
-    <POIDetailMap gameMap={poiMaps[0]} poiMaps={poiMaps} parentPoiId={poiId} highlightPoiId={selectedChildId} />
+    <MultiMapViewer
+      maps={poiMaps}
+      onUpload={handleUploadMap}
+      parentPoiId={poiId}
+      highlightPoiId={selectedChildId}
+    />
   ) : null
 
   // Template selection
@@ -605,6 +620,13 @@ function POIDetailPage() {
 
       {/* Template content */}
       {renderTemplate()}
+
+      {/* Compendium Refs */}
+      <CompendiumRefsSection
+        poi={poi}
+        systemId={realm?.systemId ?? null}
+        onUpdate={handleUpdateCompendiumRefs}
+      />
 
       {/* Events section (shared across non-settlement templates) */}
       {poi.type !== 'settlement' && poiEvents.length > 0 && (
@@ -1021,61 +1043,165 @@ function POIDetailPage() {
   )
 }
 
-function POIDetailMap({ gameMap, poiMaps, parentPoiId, highlightPoiId }: { gameMap: import('@domain/entities/GameMap').GameMap; poiMaps: import('@domain/entities/GameMap').GameMap[]; parentPoiId: string; highlightPoiId?: string | null }) {
-  const [activeMapIndex, setActiveMapIndex] = useState(0)
-  const container = useContainer()
-  const [deletingMapId, setDeletingMapId] = useState<string | null>(null)
+function CompendiumRefsSection({
+  poi,
+  systemId,
+  onUpdate,
+}: {
+  poi: POI
+  systemId: string | null
+  onUpdate: (refs: { monsterRefs: CompendiumRef[]; magicItemRefs: CompendiumRef[]; spellRefs: CompendiumRef[] }) => void
+}) {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchKind, setSearchKind] = useState<'monster' | 'spell' | 'magicItem'>('monster')
+  const [showSearch, setShowSearch] = useState(false)
 
-  // Clamp index if maps array shrinks
-  const clampedIndex = Math.min(activeMapIndex, poiMaps.length - 1)
-  const activeMap = poiMaps[clampedIndex] ?? gameMap
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim() || !systemId) return []
+    return searchCompendium(searchQuery, systemId, searchKind).slice(0, 10)
+  }, [searchQuery, systemId, searchKind])
 
-  const handleDeleteMap = async () => {
-    if (!deletingMapId) return
-    await executeDeleteGameMap(deletingMapId, { gameMapRepo: container.gameMapRepo, poiRepo: container.poiRepo })
-    setDeletingMapId(null)
-    // Reset to first tab if current was deleted
-    if (poiMaps[clampedIndex]?.id === deletingMapId) {
-      setActiveMapIndex(0)
-    }
+  const addRef = (id: string) => {
+    const refsKey = searchKind === 'monster' ? 'monsterRefs' : searchKind === 'spell' ? 'spellRefs' : 'magicItemRefs'
+    const currentRefs = poi[refsKey]
+    if (currentRefs.some((r) => r.id === id)) return
+    onUpdate({ monsterRefs: poi.monsterRefs, magicItemRefs: poi.magicItemRefs, spellRefs: poi.spellRefs, [refsKey]: [...currentRefs, { id }] })
+    setSearchQuery('')
+    setShowSearch(false)
+  }
+
+  const removeRef = (kind: 'monster' | 'spell' | 'magicItem', id: string) => {
+    const refsKey = kind === 'monster' ? 'monsterRefs' : kind === 'spell' ? 'spellRefs' : 'magicItemRefs'
+    onUpdate({
+      monsterRefs: poi.monsterRefs,
+      magicItemRefs: poi.magicItemRefs,
+      spellRefs: poi.spellRefs,
+      [refsKey]: poi[refsKey].filter((r) => r.id !== id),
+    })
+  }
+
+  const updateQuantity = (kind: 'monster' | 'spell' | 'magicItem', id: string, quantity: number | undefined) => {
+    const refsKey = kind === 'monster' ? 'monsterRefs' : kind === 'spell' ? 'spellRefs' : 'magicItemRefs'
+    onUpdate({
+      monsterRefs: poi.monsterRefs,
+      magicItemRefs: poi.magicItemRefs,
+      spellRefs: poi.spellRefs,
+      [refsKey]: poi[refsKey].map((r) => r.id === id ? { ...r, quantity } : r),
+    })
+  }
+
+  const allRefs = [
+    ...poi.monsterRefs.map((r) => ({ ...r, kind: 'monster' as const })),
+    ...poi.spellRefs.map((r) => ({ ...r, kind: 'spell' as const })),
+    ...poi.magicItemRefs.map((r) => ({ ...r, kind: 'magicItem' as const })),
+  ]
+
+  if (allRefs.length === 0 && !showSearch) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-semibold flex items-center gap-2">
+            <Book className="size-4" />
+            Compendium
+          </h4>
+          <Button size="sm" variant="outline" onClick={() => setShowSearch(true)}>
+            <Plus className="mr-1.5 size-3.5" />
+            Link Entry
+          </Button>
+        </div>
+        <p className="text-sm text-muted-foreground">No compendium entries linked.</p>
+      </div>
+    )
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border">
-      {poiMaps.length > 0 && (
-        <div className="flex items-center gap-1 px-2 py-1 border-b bg-muted/30">
-          {poiMaps.map((m, i) => (
-            <span key={m.id} className="flex items-center">
-              <Button
-                variant={i === clampedIndex ? 'secondary' : 'ghost'}
-                size="sm"
-                className="text-xs h-7 pr-1"
-                onClick={() => setActiveMapIndex(i)}
-              >
-                {m.name}
-              </Button>
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm font-semibold flex items-center gap-2">
+          <Book className="size-4" />
+          Compendium ({allRefs.length})
+        </h4>
+        <Button size="sm" variant="outline" onClick={() => setShowSearch(!showSearch)}>
+          <Plus className="mr-1.5 size-3.5" />
+          Link Entry
+        </Button>
+      </div>
+
+      {/* Search UI */}
+      {showSearch && (
+        <div className="space-y-2 mb-4 p-3 rounded-lg border bg-muted/30">
+          <div className="flex gap-2">
+            <Select value={searchKind} onValueChange={(v) => setSearchKind(v as any)}>
+              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="monster">Monsters</SelectItem>
+                <SelectItem value="spell">Spells</SelectItem>
+                <SelectItem value="magicItem">Magic Items</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search compendium..."
+              className="flex-1"
+            />
+          </div>
+          {searchResults.length > 0 && (
+            <div className="space-y-1">
+              {searchResults.map((entry) => (
+                <button
+                  key={entry.id}
+                  onClick={() => addRef(entry.id)}
+                  className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted flex items-center justify-between"
+                >
+                  <span>{entry.name}</span>
+                  <Badge variant="outline" className="text-xs">{entry.systemId.includes('cairn') ? 'Cairn' : 'SD'}</Badge>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Linked refs */}
+      <div className="space-y-1">
+        {allRefs.map((ref) => {
+          const entry = getCompendiumById(ref.id)
+          if (!entry) return null
+          const kindLabel = ref.kind === 'monster' ? 'Monster' : ref.kind === 'spell' ? 'Spell' : 'Magic Item'
+          const kindColor = ref.kind === 'monster' ? 'bg-orange-500/15 text-orange-700 dark:text-orange-400' : ref.kind === 'spell' ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-400' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+          const detailUrl = ref.kind === 'monster' ? '/realms/compendium/monsters/$monsterId' : ref.kind === 'spell' ? '/realms/compendium/spells/$spellId' : '/realms/compendium/magic-items/$itemId'
+          const detailParams = ref.kind === 'monster' ? { monsterId: ref.id } : ref.kind === 'spell' ? { spellId: ref.id } : { itemId: ref.id }
+
+          return (
+            <div key={ref.id} className="flex items-center gap-2 px-3 py-2 rounded-md border text-sm">
+              <Link to={detailUrl} params={detailParams} className="flex-1 flex items-center gap-2 hover:underline">
+                <Badge variant="outline" className={`text-xs ${kindColor}`}>{kindLabel}</Badge>
+                <span className="font-medium">{entry.name}</span>
+              </Link>
+              {ref.kind === 'monster' && (
+                <Input
+                  type="number"
+                  min="1"
+                  value={ref.quantity ?? ''}
+                  onChange={(e) => updateQuantity(ref.kind, ref.id, e.target.value ? parseInt(e.target.value) : undefined)}
+                  placeholder="qty"
+                  className="w-16 h-7 text-xs"
+                />
+              )}
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                onClick={(e) => { e.stopPropagation(); setDeletingMapId(m.id) }}
+                className="size-7 p-0 text-muted-foreground hover:text-destructive"
+                onClick={() => removeRef(ref.kind, ref.id)}
               >
-                <X className="size-3" />
+                <X className="size-3.5" />
               </Button>
-            </span>
-          ))}
-        </div>
-      )}
-      <InteractiveMap key={activeMap.id} gameMap={activeMap} className="h-[300px] md:h-[500px]" parentPoiId={parentPoiId} highlightPoiId={highlightPoiId} />
-      <ConfirmDialog
-        open={deletingMapId !== null}
-        onOpenChange={(open) => !open && setDeletingMapId(null)}
-        title="Remove Map"
-        description="Remove this map from the location? POIs placed on it will be unlinked."
-        confirmLabel="Remove"
-        variant="destructive"
-        onConfirm={handleDeleteMap}
-      />
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
+

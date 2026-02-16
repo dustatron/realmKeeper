@@ -59,6 +59,9 @@ function makePoi(regionId: string, name: string, type: PoiType, description: str
     sensory: '',
     services: [],
     imageUrl: null,
+    monsterRefs: [],
+    magicItemRefs: [],
+    spellRefs: [],
     createdAt: now,
     updatedAt: now,
   }

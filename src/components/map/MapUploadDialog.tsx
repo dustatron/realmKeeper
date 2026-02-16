@@ -9,12 +9,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from '~/components/ui/dialog'
-import { ImagePlus } from 'lucide-react'
+import { ImagePlus, Loader2 } from 'lucide-react'
+import { useImageUpload } from '~/ui/hooks/useImageUpload'
 
 interface MapUploadDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onUpload: (data: { name: string; imageBlob: Blob; width: number; height: number }) => void
+  onUpload: (data: { name: string; imageUrl: string; width: number; height: number }) => void
   defaultName?: string
 }
 
@@ -25,20 +26,21 @@ export function MapUploadDialog({
   defaultName = '',
 }: MapUploadDialogProps) {
   const [name, setName] = useState(defaultName)
-  const [imageBlob, setImageBlob] = useState<Blob | null>(null)
+  const [file, setFile] = useState<File | null>(null)
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { upload, uploading, error } = useImageUpload()
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const f = e.target.files?.[0]
+    if (!f) return
 
     // Create preview
-    const url = URL.createObjectURL(file)
+    const url = URL.createObjectURL(f)
     if (previewUrl) URL.revokeObjectURL(previewUrl)
     setPreviewUrl(url)
-    setImageBlob(file)
+    setFile(f)
 
     // Get dimensions
     const img = new Image()
@@ -49,17 +51,18 @@ export function MapUploadDialog({
 
     // Default name from filename if empty
     if (!name) {
-      const stem = file.name.replace(/\.[^.]+$/, '')
+      const stem = f.name.replace(/\.[^.]+$/, '')
       setName(stem)
     }
   }
 
-  const handleSubmit = () => {
-    if (!imageBlob || !dimensions || !name.trim()) return
-    onUpload({ name: name.trim(), imageBlob, ...dimensions })
+  const handleSubmit = async () => {
+    if (!file || !dimensions || !name.trim()) return
+    const imageUrl = await upload(file)
+    onUpload({ name: name.trim(), imageUrl, ...dimensions })
     // Reset
     setName('')
-    setImageBlob(null)
+    setFile(null)
     setDimensions(null)
     if (previewUrl) URL.revokeObjectURL(previewUrl)
     setPreviewUrl(null)
@@ -70,7 +73,7 @@ export function MapUploadDialog({
     if (!open) {
       if (previewUrl) URL.revokeObjectURL(previewUrl)
       setPreviewUrl(null)
-      setImageBlob(null)
+      setFile(null)
       setDimensions(null)
       setName(defaultName)
     }
@@ -116,6 +119,7 @@ export function MapUploadDialog({
                   variant="outline"
                   size="sm"
                   onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
                 >
                   Choose Different Image
                 </Button>
@@ -130,14 +134,15 @@ export function MapUploadDialog({
                 <span className="text-sm">Click to select an image</span>
               </button>
             )}
+            {error && <p className="text-sm text-destructive mt-1">{error}</p>}
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleClose(false)}>
+          <Button variant="outline" onClick={() => handleClose(false)} disabled={uploading}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={!imageBlob || !name.trim()}>
-            Upload
+          <Button onClick={handleSubmit} disabled={!file || !name.trim() || uploading}>
+            {uploading ? <><Loader2 className="mr-2 size-4 animate-spin" />Uploading…</> : 'Upload'}
           </Button>
         </DialogFooter>
       </DialogContent>

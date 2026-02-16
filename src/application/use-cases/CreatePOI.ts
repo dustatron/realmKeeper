@@ -49,6 +49,9 @@ export async function executeCreatePOI(
     sensory: input.sensory ?? '',
     services: input.services ?? [],
     imageUrl: null,
+    monsterRefs: [],
+    magicItemRefs: [],
+    spellRefs: [],
     createdAt: now,
     updatedAt: now,
   }

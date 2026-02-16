@@ -1,0 +1,416 @@
+[
+  {
+    "name": "ALTER SELF",
+    "slug": "ALTER SELF",
+    "description": "You magically change your physical form, gaining one feature that modifies your existing anatomy. For example, you can grow functional gills on your neck or bear claws on your fingers. This spell can't grow wings or limbs.",
+    "classes": ["witch"],
+    "duration": "5 rounds",
+    "range": "Self",
+    "tier": "2"
+  },
+  {
+    "name": "ANATHEMA",
+    "slug": "ANATHEMA",
+    "description": "All allies revile and abandon the creature you touch for 1 day. Each time you or your allies harm the target, its former allies may pass a DC 15 Wisdom check to end the effects of the spell.",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Close",
+    "tier": "5"
+  },
+  {
+    "name": "AUGURY",
+    "slug": "AUGURY",
+    "description": "You interpret the meaning of supernatural portents and omens. Ask the GM one question about a specific course of action. The CM says whether the action will lead to 'weal' or 'woe.'",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Self",
+    "tier": "2"
+  },
+  {
+    "name": "BEGUILE",
+    "slug": "BEGUILE",
+    "description": "You conjure a convincing visible and audible illusion within range. Creatures who perceive the illusion react to it as though it were real, although it can't cause actual harm. Touching the illusion instantly reveals its false nature. You may force a creature who interacts with the illusion to make a DC 15 Wisdom check. If the creature fails, it is enchanted by the illusion for the spell's duration and seeks to protect it.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "Near",
+    "tier": "4"
+  },
+  {
+    "name": "BOGBOIL",
+    "slug": "BOGBOIL",
+    "description": "You turn a near-sized cube of ground within range into a muddy, boiling bog of quicksand. A creature stuck in the bog can't move and must succeed on a Dexterity check vs. your spellcasting check to free itself.",
+    "classes": ["witch"],
+    "duration": "5 round",
+    "range": "Far",
+    "tier": "2"
+  },
+  {
+    "name": "BROOMSTICK",
+    "slug": "BROOMSTICK",
+    "description": "You conjure a flying broomstick in your hand. The broomstick's rider can fly a near distance each round and can hover in place.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "Self",
+    "tier": "3"
+  },
+  {
+    "name": "CACKLEROT",
+    "slug": "CACKLEROT",
+    "description": "One target you touch of LV 4 or less collapses helplessly with disturbing, pained laughter for the spell's duration.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "Close",
+    "tier": "2"
+  },
+  {
+    "name": "CAT'S EYE",
+    "slug": "CAT'S EYE",
+    "description": "Your irises grow to fill your eyes and your pupils turn into black, vertical slits. You can see invisible creatures and secret doors for the spell's duration.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "Self",
+    "tier": "2"
+  },
+  {
+    "name": "CAULDRON",
+    "slug": "CAULDRON",
+    "description": "You conjure a bubbling cauldron next to you. It can produce one of the following effects: • Any broken mundane item placed inside the cauldron is repaired. • A fat, croaking toad leaps out and follows your instructions for the next 3 rounds. • You can place up to 3 item slots of items inside the cauldron. The cauldron expels these items the next time you cast this spell (expelling items counts as the cauldron's single effect).",
+    "classes": ["witch"],
+    "duration": "1 round",
+    "range": "Close",
+    "tier": "1"
+  },
+  {
+    "name": "CHARM PERSON",
+    "slug": "CHARM PERSON",
+    "description": "You magically beguile one humanoid of level 2 or less within near range, who regards you as a friend for the duration. The spell ends if you or your allies do anything to hurt it that it notices. The target knows you magically enchanted it after the spell ends.",
+    "classes": ["witch"],
+    "duration": "1d8 days",
+    "range": "near",
+    "tier": "1"
+  },
+  {
+    "name": "CLOAK OF NIGHT",
+    "slug": "CLOAK OF NIGHT",
+    "description": "Your wrap yourself in a swirling cloak of shadows. For the spell's duration, your armor class becomes 17 (20 on a critical spellcasting check). You have advantage on Dexterity checks to sneak and hide for the spell's duration.",
+    "classes": ["witch"],
+    "duration": "8 rounds",
+    "range": "Self",
+    "tier": "4"
+  },
+  {
+    "name": "COVEN",
+    "slug": "COVEN",
+    "description": "You call upon the magic you share with your fellow witches. You regain the use of one tier 3 spell or lower that you can no longer cast for the day. After successfully casting this spell, you can't do so again until you complete a rest.",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Self",
+    "tier": "3"
+  },
+  {
+    "name": "CURSE",
+    "slug": "CURSE",
+    "description": "A creature you touch is afflicted by one of the following curses: • Hideous boils and warts • All food tastes of ash • Voice becomes shrill • Disturbing nightmares • Always lose at gambling • An ally turns into an enemy • Fear of something ordinary",
+    "classes": ["witch"],
+    "duration": "Permanent",
+    "range": "Close",
+    "tier": "4"
+  },
+  {
+    "name": "DIMENSION DOOR",
+    "slug": "DIMENSION DOOR",
+    "description": "You teleport yourself and up to one other willing creature within close to any point you can see.",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Self",
+    "tier": "4"
+  },
+  {
+    "name": "DIVINATION",
+    "slug": "DIVINATION",
+    "description": "You throw the divining bones or peer into the blackness between the stars, seeking a portent. You can ask the GM one yes or no question. The GM truthfully answers 'yes' or 'no.' If you cast this spell more than once in 24 hours, treat a failed spellcasting check for it as a critical failure instead.",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Self",
+    "tier": "3"
+  },
+  {
+    "name": "DREAMWALK",
+    "slug": "DREAMWALK",
+    "description": "You and any willing creatures you choose within close range step into the dream of a sleeping creature you name that is on your same plane. You and anyone traveling with you can step out of the creature, appearing next to it as if having teleported there.",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Close",
+    "tier": "5"
+  },
+  {
+    "name": "ENFEEBLE",
+    "slug": "ENFEEBLE",
+    "description": "A creature you touch has a random stat reduced to 3 (-4) for one week. Roll a do to determine which stat: 1. Strength, 2. Dexterity, 3. Constitution, 4. Intelligence, 5. Wisdom, 6. Charisma. If you fail the spellcasting check, you have a random stat reduced to 3 for a week instead.",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Close",
+    "tier": "5"
+  },
+  {
+    "name": "EYEBITE",
+    "slug": "EYEBITE",
+    "description": "One creature you target takes 1d4 damage, and it can't see you until the end of its next turn.",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Near",
+    "tier": "1"
+  },
+  {
+    "name": "FINGER OF DEATH",
+    "slug": "FINGER OF DEATH",
+    "description": "One creature you touch of LV 9 or less dies. Treat a failed spellcasting check for this spell as a critical failure, and roll the mishap with disadvantage.",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Close",
+    "tier": "5"
+  },
+  {
+    "name": "FOG",
+    "slug": "FOG",
+    "description": "A thick cloud of fog blooms in a close area around you, making you hard to see. The cloud moves with you. Attacks against creatures in the cloud have disadvantage.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "Close",
+    "tier": "1"
+  },
+  {
+    "name": "FROG RAIN",
+    "slug": "FROG RAIN",
+    "description": "A rain of indignant frogs pelts a near-sized cube around a point you can see within range. All creatures within the frog rain take 1d6 damage. Any surviving frogs hop away and disappear.",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Far",
+    "tier": "2"
+  },
+  {
+    "name": "GLASSBONES",
+    "slug": "GLASSBONES",
+    "description": "A creature you touch becomes fragile. It takes double damage for the spell's duration.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "Close",
+    "tier": "4"
+  },
+  {
+    "name": "HOWL",
+    "slug": "HOWL",
+    "description": "All enemies within near range of you must immediately make a morale check. This spell does not affect creatures that are immune to morale checks.",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Near",
+    "tier": "3"
+  },
+  {
+    "name": "HYPNOTIZE",
+    "slug": "HYPNOTIZE",
+    "description": "One creature of LV 3 or less that can see you is rendered stupefied. Breaking the creature's line of sight to you allows it to make a DC 15 Charisma check. On a success, the spell ends.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "Near",
+    "tier": "1"
+  },
+  {
+    "name": "INVISIBILITY",
+    "slug": "INVISIBILITY",
+    "description": "A creature you touch becomes invisible for the spell's duration. The spell ends if the target attacks or casts a spell.",
+    "classes": ["witch"],
+    "duration": "10 rounds",
+    "range": "Close",
+    "tier": "2"
+  },
+  {
+    "name": "MISTLETOE",
+    "slug": "MISTLETOE",
+    "description": "Two creatures you can see within near of you become enchanted with each other for 1d8 days. Each time one of the affected creatures takes damage, it may make a DC 15 Charisma check. On a success, the spell ends.",
+    "classes": ["witch"],
+    "duration": "1d8 days",
+    "range": "Near",
+    "tier": "3"
+  },
+  {
+    "name": "MOONBEAM",
+    "slug": "MOONBEAM",
+    "description": "A wavering ray of silvery moonlight strikes one creature within far. It takes 3d6 damage.",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Far",
+    "tier": "4"
+  },
+  {
+    "name": "MOTHER OF NIGHT",
+    "slug": "MOTHER OF NIGHT",
+    "description": "You beseech the Mother of Night to lend you power. Make a single wish, stating it as exactly as possible. Your wish occurs, as interpreted by the GM. If you fail this spellcasting check, the Mother of Night pulls you into The Nightfall for judgment. You can't cast this spell again until you appease her demands.",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Self",
+    "tier": "5"
+  },
+  {
+    "name": "NIGHTMARE",
+    "slug": "NIGHTMARE",
+    "description": "You visit the dreams of one sleeping creature, sending it heart-stopping nightmares. You can target a creature whose level is less than or equal to half your level rounded down (minimum 1). The target must be sleeping, and you must have seen it before in person. If you successfully focus on this spell for 3 rounds in a row, the creature dies of fright.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "On the same plane",
+    "tier": "4"
+  },
+  {
+    "name": "OAK, ASH, THORN",
+    "slug": "OAK, ASH, THORN",
+    "description": "For the spell's duration, faeries, demons, and devils can't attack you. These beings also can't possess, compel, or beguile you.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "Self",
+    "tier": "1"
+  },
+  {
+    "name": "PIN DOLL",
+    "slug": "PIN DOLL",
+    "description": "You pin a piece of hair or flesh taken from one creature to a small, burlap doll the spell conjures. On your turn while focusing on this spell, you can push a pin into the doll. Each time you do this, the creature who the hair or flesh belonged to takes 2d6 damage. After this spell ends, the piece of hair or flesh burns to ash.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "On the same plane",
+    "tier": "3"
+  },
+  {
+    "name": "POISON",
+    "slug": "POISON",
+    "description": "One worn or carried object you touch becomes toxic for the spell's duration. Any creature in contact with the object at the start of its turn takes 1d6 damage.",
+    "classes": ["witch"],
+    "duration": "5 rounds",
+    "range": "Close",
+    "tier": "2"
+  },
+  {
+    "name": "POLYMORPH",
+    "slug": "POLYMORPH",
+    "description": "You transform a creature you touch into another natural creature you choose of equal or smaller size. Any gear the target carries melds into its new form. The target gains the creature's physical stats and features, but it retains its non-physical stats and teatures. If the target goes to 0 hit points, it reverts to its true form at half its prior hit points. You can target any willing creature with this spell, or an unwilling creature whose level is less than or equal to half your level rounded down (min. 1).",
+    "classes": ["witch"],
+    "duration": "10 rounds",
+    "range": "Close",
+    "tier": "2"
+  },
+  {
+    "name": "PUPPET",
+    "slug": "PUPPET",
+    "description": "One humanoid creature of LV 2 or less you touch becomes ensnared by your movements. On your turn, the creature mimics all your movements. If mimicking you would cause the creature to directly harm itself or an ally, it can make a DC 15 Charisma check. On a success, it resists mimicking you.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "Close",
+    "tier": "1"
+  },
+  {
+    "name": "SCRYING",
+    "slug": "SCRYING",
+    "description": "You look into a crystal ball or reflecting pool, calling up images of a distant place. For the spell's duration, you can see and hear a creature or location you choose that is on the same plane. This spell is DC 18 to cast if you try to scry on a creature or location that is unfamiliar to you. Each round, creatures you view may make a Wisdom check vs. your last spellcasting check. On a success, they become aware of your magical observation.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "Self",
+    "tier": "2"
+  },
+  {
+    "name": "SHADOWDANCE",
+    "slug": "SHADOWDANCE",
+    "description": "You spin shadowstuff into a convincing visible and audible illusion at a point within near. The illusion can be as big as a person and can move within a near range of where it appeared. The illusion can't affect physical objects. Touching the illusion reveals its false nature.",
+    "classes": ["witch"],
+    "duration": "3 rounds",
+    "range": "Near",
+    "tier": "1"
+  },
+  {
+    "name": "SHAPECHANGE",
+    "slug": "SHAPECHANGE",
+    "description": "You transform yourself and any gear you carry into another natural creature you've seen of level 10 or less. You assume the creature's physical stats and features, but you retain your non-physical stats and features (including INT, WIS, and CHA). If you go to 0 HP while under the effects of this spell, you revert to your true form at 1 HP.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "Self",
+    "tier": "5"
+  },
+  {
+    "name": "SOUL JAR",
+    "slug": "SOUL JAR",
+    "description": "You transfer the soul of one creature you touch of LV 9 or less into a vessel, such as a jar. The creature's body becomes comatose, but it doesn't die. If the vessel opens or breaks, the creature's soul returns to its body. You can possess the empty body with your own spirit, taking control of it. Your body becomes comatose during this time. If the body dies while you possess it, your soul returns to your body.",
+    "classes": ["witch"],
+    "duration": "Permanent",
+    "range": "Close",
+    "tier": "5"
+  },
+  {
+    "name": "SPEAK WITH DEAD",
+    "slug": "SPEAK WITH DEAD",
+    "description": "A dead body you touch answers your questions in a distant, wheezing voice. You can ask the dead body up to three yes or no questions (one at a time). The GM truthfully answers 'yes' or 'no' to each. If you cast this spell more than once in 24 hours, treat a failed spellcasting check for it as a critical failure instead.",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Close",
+    "tier": "3"
+  },
+  {
+    "name": "SPIDERSILK",
+    "slug": "SPIDERSILK",
+    "description": "Sticky spidersilk covers your hands and feet. For the spell's duration, you can walk on vertical surfaces as easily as if it were flat ground.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "Self",
+    "tier": "2"
+  },
+  {
+    "name": "SWARM",
+    "slug": "SWARM",
+    "description": "A dense swarm of biting bats, rats, or locusts appears in a near-sized cube around a point you can see within range. All creatures that start their turn within the swarm take 2d6 damage and are blinded.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "Far",
+    "tier": "3"
+  },
+  {
+    "name": "TOADSTOOL",
+    "slug": "TOADSTOOL",
+    "description": "You conjure a plump, speckled toadstool in your hand. It disappears at the end of your next turn. A creature that eats the toadstool regains 1d6 hit points.",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Self",
+    "tier": "2"
+  },
+  {
+    "name": "VOID STARE",
+    "slug": "VOID STARE",
+    "description": "Your eyes turn black as you look into the dark between the stars. One creature of LV 6 or less you can see falls under your control. You decide its actions during its turn.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "Far",
+    "tier": "3"
+  },
+  {
+    "name": "WHISPER",
+    "slug": "WHISPER",
+    "description": "You whisper into another creature's ear, planting a false memory in its mind. You describe one brief, false memory that the target believes is true going forward. If you fail this spellcasting check, the GM chooses a short, false memory to plant in your mind instead.",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Close",
+    "tier": "3"
+  },
+  {
+    "name": "WILLOWMAN",
+    "slug": "WILLOWMAN",
+    "description": "You call upon the Willowman to appear in one creature's mind, filling it with supernatural terror. Choose one creature of LV 2 or less within range. That creature must immediately make a morale check. Even creatures that are not normally subject to morale checks (such as undead) must do so.",
+    "classes": ["witch"],
+    "duration": "Instant",
+    "range": "Near",
+    "tier": "1"
+  },
+  {
+    "name": "WITCHLIGHT",
+    "slug": "WITCHLIGHT",
+    "description": "You summon a floating marsh light that bobs in the air and casts light out to a close radius around it. The light can change colors and take on vague shapes. It can float up to a near distance on your turn.",
+    "classes": ["witch"],
+    "duration": "Focus",
+    "range": "Near",
+    "tier": "1"
+  }
+]

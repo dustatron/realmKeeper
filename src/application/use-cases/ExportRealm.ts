@@ -72,12 +72,18 @@ export interface RealmExport {
   gameMaps: GameMapExport[]
 }
 
-function blobToBase64(blob: Blob): Promise<string> {
+async function imageUrlToBase64(url: string): Promise<string> {
+  // data URL — extract raw base64 directly
+  if (url.startsWith('data:')) {
+    return url.split(',')[1] ?? ''
+  }
+  // Remote URL (Cloudinary etc.) — fetch and convert
+  const res = await fetch(url)
+  const blob = await res.blob()
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onloadend = () => {
       const result = reader.result as string
-      // Strip data URL prefix to store raw base64
       resolve(result.split(',')[1] ?? '')
     }
     reader.onerror = reject
@@ -128,7 +134,7 @@ export async function executeExportRealm(
       name: m.name,
       ownerRealmId: m.ownerRealmId,
       ownerPoiId: m.ownerPoiId,
-      imageBase64: await blobToBase64(m.imageBlob),
+      imageBase64: await imageUrlToBase64(m.imageUrl),
       width: m.width,
       height: m.height,
       sortOrder: m.sortOrder,

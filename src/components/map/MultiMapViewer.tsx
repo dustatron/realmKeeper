@@ -1,0 +1,135 @@
+import { useState } from 'react'
+import { useContainer } from '~/ui/hooks/useContainer'
+import { executeDeleteGameMap } from '@application/use-cases/DeleteGameMap'
+import { InteractiveMap } from '~/components/map/InteractiveMap'
+import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
+import { EmptyState } from '~/components/shared/EmptyState'
+import { MapUploadDialog } from '~/components/map/MapUploadDialog'
+import { Button } from '~/components/ui/button'
+import { MapPinned, Plus, Upload, X } from 'lucide-react'
+import type { GameMap } from '@domain/entities/GameMap'
+
+interface MultiMapViewerProps {
+  maps: GameMap[]
+  onUpload: (data: { name: string; imageUrl: string; width: number; height: number }) => void
+  /** CSS class for the InteractiveMap height */
+  className?: string
+  parentPoiId?: string | null
+  highlightPoiId?: string | null
+  emptyTitle?: string
+  emptyDescription?: string
+}
+
+export function MultiMapViewer({
+  maps,
+  onUpload,
+  className = 'h-[300px] md:h-[500px]',
+  parentPoiId,
+  highlightPoiId,
+  emptyTitle = 'No maps yet',
+  emptyDescription = 'Upload a map image to get started',
+}: MultiMapViewerProps) {
+  const container = useContainer()
+  const [activeMapIndex, setActiveMapIndex] = useState(0)
+  const [deletingMapId, setDeletingMapId] = useState<string | null>(null)
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
+
+  const clampedIndex = Math.min(activeMapIndex, Math.max(maps.length - 1, 0))
+  const activeMap = maps[clampedIndex] ?? null
+
+  const handleDeleteMap = async () => {
+    if (!deletingMapId) return
+    await executeDeleteGameMap(deletingMapId, {
+      gameMapRepo: container.gameMapRepo,
+      poiRepo: container.poiRepo,
+    })
+    if (maps[clampedIndex]?.id === deletingMapId) {
+      setActiveMapIndex(0)
+    }
+    setDeletingMapId(null)
+  }
+
+  if (!activeMap) {
+    return (
+      <>
+        <EmptyState
+          icon={MapPinned}
+          title={emptyTitle}
+          description={emptyDescription}
+          action={
+            <Button onClick={() => setUploadDialogOpen(true)}>
+              <Upload className="mr-2 size-4" />
+              Upload Map
+            </Button>
+          }
+        />
+        <MapUploadDialog
+          open={uploadDialogOpen}
+          onOpenChange={setUploadDialogOpen}
+          onUpload={onUpload}
+        />
+      </>
+    )
+  }
+
+  return (
+    <div className="overflow-hidden rounded-lg border">
+      {/* Tab bar */}
+      <div className="flex items-center gap-1 px-2 py-1 border-b bg-muted/30">
+        {maps.map((m, i) => (
+          <span key={m.id} className="flex items-center">
+            <Button
+              variant={i === clampedIndex ? 'secondary' : 'ghost'}
+              size="sm"
+              className="text-xs h-7 pr-1"
+              onClick={() => setActiveMapIndex(i)}
+            >
+              {m.name}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+              onClick={(e) => { e.stopPropagation(); setDeletingMapId(m.id) }}
+            >
+              <X className="size-3" />
+            </Button>
+          </span>
+        ))}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-xs h-7 text-muted-foreground"
+          onClick={() => setUploadDialogOpen(true)}
+        >
+          <Plus className="size-3 mr-1" />
+          Add
+        </Button>
+      </div>
+
+      <InteractiveMap
+        key={activeMap.id}
+        gameMap={activeMap}
+        className={className}
+        parentPoiId={parentPoiId ?? undefined}
+        highlightPoiId={highlightPoiId}
+      />
+
+      <ConfirmDialog
+        open={deletingMapId !== null}
+        onOpenChange={(open) => !open && setDeletingMapId(null)}
+        title="Remove Map"
+        description="Remove this map? POIs placed on it will be unlinked."
+        confirmLabel="Remove"
+        variant="destructive"
+        onConfirm={handleDeleteMap}
+      />
+
+      <MapUploadDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        onUpload={onUpload}
+      />
+    </div>
+  )
+}

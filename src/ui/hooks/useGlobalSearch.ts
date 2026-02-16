@@ -5,11 +5,18 @@ import { useFactions } from './useFactions'
 import { useRegions } from './useRegions'
 import { useRealmPOIs } from './usePOIs'
 import { useRealmNotes } from './useRealmNotes'
+import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
+import {
+  getMonstersBySystemId,
+  getSpellsBySystemId,
+  getMagicItemsBySystemId,
+  getEquipmentBySystemId,
+} from '@domain/data/compendium'
 
 export interface SearchableItem {
   id: string
   name: string
-  type: 'npc' | 'faction' | 'region' | 'poi' | 'note'
+  type: 'npc' | 'faction' | 'region' | 'poi' | 'note' | 'monster' | 'spell' | 'magicItem' | 'equipment'
   description: string
   url: string
   params: Record<string, string>
@@ -22,6 +29,7 @@ export function useGlobalSearch(worldId: string | null, query: string) {
   const regions = useRegions(worldId)
   const pois = useRealmPOIs(worldId)
   const notes = useRealmNotes(worldId)
+  const realm = useActiveRealm()
 
   const items = useMemo<SearchableItem[]>(() => {
     const result: SearchableItem[] = []
@@ -86,8 +94,59 @@ export function useGlobalSearch(worldId: string | null, query: string) {
       })
     }
 
+    // Compendium entries
+    if (realm?.systemId) {
+      for (const m of getMonstersBySystemId(realm.systemId)) {
+        result.push({
+          id: m.id,
+          name: m.name,
+          type: 'monster',
+          description: m.description,
+          url: '/realms/compendium/monsters/$monsterId',
+          params: { monsterId: m.id },
+          tags: [],
+        })
+      }
+
+      for (const s of getSpellsBySystemId(realm.systemId)) {
+        result.push({
+          id: s.id,
+          name: s.name,
+          type: 'spell',
+          description: s.description,
+          url: '/realms/compendium/spells/$spellId',
+          params: { spellId: s.id },
+          tags: [],
+        })
+      }
+
+      for (const i of getMagicItemsBySystemId(realm.systemId)) {
+        result.push({
+          id: i.id,
+          name: i.name,
+          type: 'magicItem',
+          description: i.description,
+          url: '/realms/compendium/magic-items/$itemId',
+          params: { itemId: i.id },
+          tags: [],
+        })
+      }
+
+      for (const e of getEquipmentBySystemId(realm.systemId)) {
+        result.push({
+          id: e.id,
+          name: e.name,
+          type: 'equipment',
+          description: e.description,
+          url: '/realms/compendium',
+          params: {},
+          tags: [],
+        })
+      }
+    }
+
     return result
-  }, [npcs, factions, regions, pois, notes])
+  }, [npcs, factions, regions, pois, notes, realm?.systemId])
 
   const fuse = useMemo(
     () =>

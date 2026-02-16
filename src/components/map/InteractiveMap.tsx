@@ -137,6 +137,9 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
     regionId: '',
   })
 
+  // Unplaced POI search
+  const [unplacedSearch, setUnplacedSearch] = useState('')
+
   // Draw-path state
   const [drawPathFrom, setDrawPathFrom] = useState<POI | null>(null)
   const [drawPathTo, setDrawPathTo] = useState<POI | null>(null)
@@ -406,8 +409,20 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
                 <h4 className="text-sm font-semibold mb-2 text-muted-foreground">
                   Unplaced ({unplacedPois.length})
                 </h4>
-                <div className="space-y-1">
-                  {unplacedPois.map((uPoi) => {
+                {unplacedPois.length > 5 && (
+                  <Input
+                    placeholder="Search POIs…"
+                    value={unplacedSearch}
+                    onChange={(e) => setUnplacedSearch(e.target.value)}
+                    className="mb-2 h-8 text-sm"
+                  />
+                )}
+                <div className="space-y-1 max-h-60 overflow-y-auto">
+                  {unplacedPois.filter((p) => {
+                    if (!unplacedSearch) return true
+                    const q = unplacedSearch.toLowerCase()
+                    return p.name.toLowerCase().includes(q) || p.type.toLowerCase().includes(q)
+                  }).map((uPoi) => {
                     const UIcon = POI_TYPE_ICONS[uPoi.type]
                     return (
                       <button
