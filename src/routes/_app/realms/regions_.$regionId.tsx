@@ -62,6 +62,9 @@ import type { POIEvent } from '@domain/entities/POIEvent'
 
 export const Route = createFileRoute('/_app/realms/regions_/$regionId')({
   component: RegionDetailPage,
+  validateSearch: (search: Record<string, unknown>): { edit?: boolean } => ({
+    ...(search.edit === 'true' || search.edit === true ? { edit: true } : {}),
+  }),
 })
 
 const TERRAIN_OPTIONS = ['plains', 'forest', 'hills', 'mountain', 'swamp', 'desert', 'coast', 'road', 'tundra', 'other'] as const
@@ -92,6 +95,8 @@ function RegionDetailPage() {
   const npcs = useNPCsByRegion(regionId)
   const container = useContainer()
   const setHeaderTitle = useUIStore((s) => s.setHeaderTitle)
+
+  const { edit: editFromSearch } = Route.useSearch()
 
   const [editSheetOpen, setEditSheetOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -161,6 +166,19 @@ function RegionDetailPage() {
   ) ?? []
 
   const topLevelPOIs = useMemo(() => pois.filter(p => p.parentPoiId === null), [pois])
+
+  // Auto-open edit mode from ?edit=true search param
+  useEffect(() => {
+    if (editFromSearch && region && !editSheetOpen) {
+      setEditForm({
+        name: region.name,
+        description: region.description,
+        terrain: region.terrain || 'plains',
+        imageUrl: region.imageUrl,
+      })
+      setEditSheetOpen(true)
+    }
+  }, [editFromSearch, region?.id])
 
   // Set breadcrumb in site header
   useEffect(() => {

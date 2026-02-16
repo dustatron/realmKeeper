@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useRegions } from '~/ui/hooks/useRegions'
@@ -6,7 +6,6 @@ import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
 import { useSystemConfig } from '~/ui/hooks/useSystemConfigs'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { executeCreateRegion } from '@application/use-cases/CreateRegion'
-import { executeUpdateRegion } from '@application/use-cases/UpdateRegion'
 import { executeDeleteRegion } from '@application/use-cases/DeleteRegion'
 import { executeGenerateRegion, type GenerateRegionResult } from '@application/use-cases/GenerateRegion'
 import { EmptyState } from '~/components/shared/EmptyState'
@@ -53,15 +52,13 @@ function RegionsPage() {
   const systemConfig = useSystemConfig(realm?.systemId ?? null)
   const regions = useRegions(activeRealmId)
   const container = useContainer()
+  const navigate = useNavigate()
 
   // Create dialog
   const [showCreate, setShowCreate] = useState(false)
   const [createName, setCreateName] = useState('')
   const [createDescription, setCreateDescription] = useState('')
   const [createTerrain, setCreateTerrain] = useState<string>('plains')
-
-  // Edit sheet
-  const [editingRegion, setEditingRegion] = useState<Region | null>(null)
 
   // Generate wizard
   const [showGenerate, setShowGenerate] = useState(false)
@@ -90,15 +87,9 @@ function RegionsPage() {
     setShowCreate(false)
   }
 
-  // ── Edit ────────────────────────────────────────────
+  // ── Edit (navigate to detail page) ─────────────────
   const openEdit = (region: Region) => {
-    setEditingRegion({ ...region })
-  }
-
-  const handleSaveEdit = async () => {
-    if (!editingRegion) return
-    await executeUpdateRegion(editingRegion, { regionRepo: container.regionRepo })
-    setEditingRegion(null)
+    navigate({ to: '/realms/regions/$regionId', params: { regionId: region.id }, search: { edit: true } })
   }
 
   // ── Delete ──────────────────────────────────────────
@@ -106,7 +97,6 @@ function RegionsPage() {
     if (!deleteTarget) return
     await executeDeleteRegion(deleteTarget, { regionRepo: container.regionRepo })
     setDeleteTarget(null)
-    if (editingRegion?.id === deleteTarget) setEditingRegion(null)
   }
 
   // ── Generate ────────────────────────────────────────
@@ -323,66 +313,6 @@ function RegionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* ── Edit Sheet ─────────────────────────────── */}
-      <Sheet open={!!editingRegion} onOpenChange={(open) => !open && setEditingRegion(null)}>
-        <SheetContent className="w-full sm:max-w-lg flex flex-col h-full">
-          {editingRegion && (
-            <>
-              <SheetHeader>
-                <SheetTitle>Edit Region</SheetTitle>
-              </SheetHeader>
-              <ScrollArea className="flex-1 min-h-0">
-                <div className="space-y-4 px-4 py-4">
-                  <div>
-                    <Label htmlFor="edit-name">Name</Label>
-                    <Input id="edit-name" value={editingRegion.name} onChange={(e) => setEditingRegion({ ...editingRegion, name: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-terrain">Terrain</Label>
-                    <Select value={editingRegion.terrain || 'plains'} onValueChange={(v) => setEditingRegion({ ...editingRegion, terrain: v })}>
-                      <SelectTrigger id="edit-terrain"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {TERRAIN_OPTIONS.map((t) => (
-                          <SelectItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-description">Description</Label>
-                    <Textarea id="edit-description" value={editingRegion.description} onChange={(e) => setEditingRegion({ ...editingRegion, description: e.target.value })} rows={3} />
-                  </div>
-                  <div>
-                    <Label>Features</Label>
-                    <TagInput tags={editingRegion.features ?? []} onChange={(features) => setEditingRegion({ ...editingRegion, features })} placeholder="Add feature..." />
-                  </div>
-                  <div>
-                    <Label>Dangers</Label>
-                    <TagInput tags={editingRegion.dangers ?? []} onChange={(dangers) => setEditingRegion({ ...editingRegion, dangers })} placeholder="Add danger..." />
-                  </div>
-                  <div>
-                    <Label>Settlements</Label>
-                    <TagInput tags={editingRegion.settlements ?? []} onChange={(settlements) => setEditingRegion({ ...editingRegion, settlements })} placeholder="Add settlement..." />
-                  </div>
-                  <div>
-                    <Label>Resources</Label>
-                    <TagInput tags={editingRegion.resources ?? []} onChange={(resources) => setEditingRegion({ ...editingRegion, resources })} placeholder="Add resource..." />
-                  </div>
-                </div>
-              </ScrollArea>
-              <div className="flex shrink-0 gap-2 border-t px-4 pt-4 pb-4">
-                <Button onClick={handleSaveEdit} disabled={!editingRegion.name.trim()} className="flex-1">
-                  <Save className="mr-2 size-4" />Save
-                </Button>
-                <Button variant="destructive" onClick={() => { setDeleteTarget(editingRegion.id); setEditingRegion(null) }}>
-                  <Trash2 className="size-4" />
-                </Button>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
 
       {/* ── Generate Wizard ────────────────────────── */}
       <Sheet open={showGenerate} onOpenChange={(open) => { if (!open) { setShowGenerate(false); setBundles([]); setWizardStep(1) } }}>
