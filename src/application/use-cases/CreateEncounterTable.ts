@@ -1,5 +1,6 @@
 import type { IEncounterTableRepository } from '@application/ports/IEncounterTableRepository'
-import type { EncounterTable } from '@domain/entities/EncounterTable'
+import type { EncounterTable, CustomEncounterSection } from '@domain/entities/EncounterTable'
+import type { EncounterCategory } from '@shared/constants'
 import { newId } from '@shared/ulid'
 
 export interface CreateEncounterTableInput {
@@ -12,6 +13,8 @@ export interface CreateEncounterTableInput {
   npc?: string[]
   discovery?: string[]
   treasure?: string[]
+  customSections?: CustomEncounterSection[]
+  disabledCategories?: EncounterCategory[]
 }
 
 export async function executeCreateEncounterTable(
@@ -30,6 +33,8 @@ export async function executeCreateEncounterTable(
     npc: input.npc ?? [],
     discovery: input.discovery ?? [],
     treasure: input.treasure ?? [],
+    customSections: input.customSections ?? [],
+    disabledCategories: input.disabledCategories ?? [],
     createdAt: now,
     updatedAt: now,
   }

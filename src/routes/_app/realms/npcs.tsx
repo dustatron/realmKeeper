@@ -44,7 +44,7 @@ function NPCsPage() {
   const filteredNPCs = useMemo(() => {
     return npcs.filter((npc) => {
       if (search && !npc.name.toLowerCase().includes(search.toLowerCase())) return false
-      if (factionFilter !== 'all' && npc.factionId !== factionFilter) return false
+      if (factionFilter !== 'all' && !npc.factionIds.includes(factionFilter)) return false
       if (lifeStatusFilter !== 'all' && npc.lifeStatus !== lifeStatusFilter) return false
       return true
     })
@@ -144,7 +144,7 @@ function NPCsPage() {
             </TableHeader>
             <TableBody>
               {filteredNPCs.map((npc) => {
-                const faction = factions.find((f) => f.id === npc.factionId)
+                const npcFactions = factions.filter((f) => npc.factionIds.includes(f.id))
                 const region = regions.find((r) => r.id === npc.regionId)
                 const poi = pois.find((p) => p.id === npc.poiId)
                 return (
@@ -159,8 +159,12 @@ function NPCsPage() {
                       </Link>
                     </TableCell>
                     <TableCell>
-                      {faction ? (
-                        <Badge variant="outline">{faction.name}</Badge>
+                      {npcFactions.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {npcFactions.map((f) => (
+                            <Badge key={f.id} variant="outline">{f.name}</Badge>
+                          ))}
+                        </div>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

@@ -73,7 +73,20 @@ Optional: `race` ('human'\|'elf'\|'dwarf'\|'halfling'\|'half-orc'\|'half-elf'\|'
 
 **Required fields for add:** `regionId`, `name`
 
-Optional: `parentPoiId`, `description`, `type` ('settlement'\|'building'\|'interior'\|'fortification'\|'dungeon'\|'natural'\|'landmark'\|'district'\|'zone'\|'ruin'\|'camp'\|'shrine'\|'other'), `subtypeLabel`, `floor`, `tags[]`, `readAloud`, `gmNotes`, `trouble`, `mood`, `sensory`, `services[]`
+Optional: `parentPoiId`, `description`, `type` ('settlement'\|'building'\|'interior'\|'fortification'\|'dungeon'\|'natural'\|'landmark'\|'district'\|'zone'\|'ruin'\|'camp'\|'shrine'\|'other'), `subtypeLabel`, `floor`, `tags[]`, `readAloud`, `gmNotes`, `trouble`, `mood`, `sensory`, `services[]`, `locationSeed`
+
+### LocationSeed shape (for POIs)
+```js
+{
+  // Constructed (ruins, dungeons, camps, fortifications)
+  purpose: '...', creator: '...', entrance: '...', composition: '...', condition: '...', ruinCause: '...',
+  // Natural (natural, landmark, shrine)
+  ecology: '...', terrain: '...', hazards: '...', resources: '...',
+  // Universal
+  lore: '...', secret: '...'
+}
+```
+Only include relevant fields for the POI type. All fields optional.
 
 ### regions
 | Method | Args | Returns |

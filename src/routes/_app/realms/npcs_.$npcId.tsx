@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
 import { useNPC } from '~/ui/hooks/useNPCs'
-import { useFaction, useFactions } from '~/ui/hooks/useFactions'
+import { useFactions } from '~/ui/hooks/useFactions'
 import { useRegion, useRegions } from '~/ui/hooks/useRegions'
 import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
 import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
@@ -45,7 +45,6 @@ function NPCDetailPage() {
   const npc = useNPC(npcId)
   const realm = useActiveRealm()
   const systemConfig = useSystemConfig(realm?.systemId ?? null)
-  const faction = useFaction(npc?.factionId ?? null)
   const region = useRegion(npc?.regionId ?? null)
   const poi = usePOI(npc?.poiId ?? null)
   const factions = useFactions(activeRealmId)
@@ -311,24 +310,27 @@ function NPCDetailPage() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="faction">Faction</Label>
-              <Select
-                value={editingNPC.factionId ?? 'none'}
-                onValueChange={(v) => updateField('factionId', v === 'none' ? null : v)}
-              >
-                <SelectTrigger id="faction">
-                  <SelectValue placeholder="Select faction" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {factions.map((f) => (
-                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="space-y-1.5">
+            <Label>Factions</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {factions.map((f) => {
+                const active = editingNPC.factionIds.includes(f.id)
+                return (
+                  <Badge
+                    key={f.id}
+                    variant={active ? 'default' : 'outline'}
+                    className="cursor-pointer select-none"
+                    onClick={() => updateField('factionIds', active ? editingNPC.factionIds.filter((id: string) => id !== f.id) : [...editingNPC.factionIds, f.id])}
+                  >
+                    {f.name}
+                  </Badge>
+                )
+              })}
+              {factions.length === 0 && <span className="text-sm text-muted-foreground">No factions</span>}
             </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="region">Region</Label>
               <Select
@@ -837,8 +839,8 @@ function NPCDetailPage() {
         </Card>
         </div>
 
-        {/* Faction */}
-        <FactionBlurb faction={faction} />
+        {/* Factions */}
+        <FactionBlurb factions={factions.filter((f) => npc.factionIds.includes(f.id))} />
 
         {/* Attacks */}
         {sb.attacks.length > 0 && (
@@ -953,14 +955,14 @@ function NPCDetailPage() {
   )
 }
 
-function FactionBlurb({ faction }: { faction: Faction | null | undefined }) {
-  if (!faction) {
+function FactionBlurb({ factions }: { factions: Faction[] }) {
+  if (factions.length === 0) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Handshake className="size-4" />
-            Faction
+            Factions
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -975,33 +977,37 @@ function FactionBlurb({ faction }: { faction: Faction | null | undefined }) {
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <Handshake className="size-4" />
-          Faction
+          Factions ({factions.length})
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Link
-            to="/realms/factions/$factionId"
-            params={{ factionId: faction.id }}
-            className="text-primary hover:underline font-medium text-sm"
-          >
-            {faction.name}
-          </Link>
-          <Badge className={STATUS_COLORS[faction.status] ?? 'bg-gray-600'}>
-            {faction.status.charAt(0).toUpperCase() + faction.status.slice(1)}
-          </Badge>
-          {faction.type && <Badge variant="outline">{faction.type}</Badge>}
-        </div>
-        {faction.traits.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {faction.traits.map((trait) => (
-              <Badge key={trait} variant="secondary" className="text-xs">{trait}</Badge>
-            ))}
+      <CardContent className="space-y-3">
+        {factions.map((faction) => (
+          <div key={faction.id} className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Link
+                to="/realms/factions/$factionId"
+                params={{ factionId: faction.id }}
+                className="text-primary hover:underline font-medium text-sm"
+              >
+                {faction.name}
+              </Link>
+              <Badge className={STATUS_COLORS[faction.status] ?? 'bg-gray-600'}>
+                {faction.status.charAt(0).toUpperCase() + faction.status.slice(1)}
+              </Badge>
+              {faction.type && <Badge variant="outline">{faction.type}</Badge>}
+            </div>
+            {faction.traits.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {faction.traits.map((trait) => (
+                  <Badge key={trait} variant="secondary" className="text-xs">{trait}</Badge>
+                ))}
+              </div>
+            )}
+            {faction.description && (
+              <p className="text-sm text-muted-foreground">{faction.description}</p>
+            )}
           </div>
-        )}
-        {faction.description && (
-          <p className="text-sm text-muted-foreground">{faction.description}</p>
-        )}
+        ))}
       </CardContent>
     </Card>
   )

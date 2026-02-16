@@ -143,7 +143,7 @@ export async function executeGenerateNPC(
     worldId: input.worldId,
     name,
     race,
-    factionId: input.factionId ?? null,
+    factionIds: input.factionId ? [input.factionId] : [],
     regionId: input.regionId ?? null,
     poiId: null,
     lifeStatus: 'alive',

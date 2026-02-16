@@ -6,7 +6,7 @@ export interface NPC {
   worldId: string
   name: string
   race?: NPCRace
-  factionId: string | null
+  factionIds: string[]
   regionId: string | null
   poiId: string | null
   lifeStatus: LifeStatus

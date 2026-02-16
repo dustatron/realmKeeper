@@ -131,7 +131,7 @@ const npcs = {
       worldId: data.worldId,
       name: data.name,
       race: data.race,
-      factionId: data.factionId ?? null,
+      factionIds: data.factionIds ?? [],
       regionId: data.regionId ?? null,
       poiId: data.poiId ?? null,
       lifeStatus: data.lifeStatus ?? 'alive',
@@ -222,6 +222,7 @@ const pois = {
       monsterRefs: data.monsterRefs ?? [],
       magicItemRefs: data.magicItemRefs ?? [],
       spellRefs: data.spellRefs ?? [],
+      locationSeed: data.locationSeed ?? null,
       createdAt: ts,
       updatedAt: ts,
     }

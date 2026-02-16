@@ -2,6 +2,7 @@ import type { IPOIRepository } from '@application/ports/IPOIRepository'
 import type { POI } from '@domain/entities/POI'
 import type { PoiType } from '@shared/constants'
 import type { Service } from '@domain/value-objects/Service'
+import type { LocationSeed } from '@domain/value-objects/LocationSeed'
 import { newId } from '@shared/ulid'
 
 export interface CreatePOIInput {
@@ -22,6 +23,7 @@ export interface CreatePOIInput {
   mood?: string
   sensory?: string
   services?: Service[]
+  locationSeed?: LocationSeed | null
 }
 
 export async function executeCreatePOI(
@@ -49,6 +51,7 @@ export async function executeCreatePOI(
     sensory: input.sensory ?? '',
     services: input.services ?? [],
     imageUrl: null,
+    locationSeed: input.locationSeed ?? null,
     monsterRefs: [],
     magicItemRefs: [],
     spellRefs: [],

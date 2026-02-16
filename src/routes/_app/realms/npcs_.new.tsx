@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select'
+import { Badge } from '~/components/ui/badge'
 import { Dices, Save, X, Plus, Trash2, ImageIcon } from 'lucide-react'
 import { useRef } from 'react'
 
@@ -57,7 +58,7 @@ function NPCNewPage() {
   const [voice, setVoice] = useState('')
   const [want, setWant] = useState('')
   const [tags, setTags] = useState<string[]>([])
-  const [factionId, setFactionId] = useState<string | null>(null)
+  const [factionIds, setFactionIds] = useState<string[]>([])
   const [regionId, setRegionId] = useState<string | null>(null)
   const [poiId, setPoiId] = useState<string | null>(null)
   const [lifeStatus, setLifeStatus] = useState<LifeStatus>('alive')
@@ -167,7 +168,7 @@ function NPCNewPage() {
       setVoice(npc.voice)
       setWant(npc.want)
       setTags(npc.tags)
-      setFactionId(npc.factionId)
+      setFactionIds(npc.factionIds)
       setRegionId(npc.regionId)
       setPoiId(npc.poiId)
       setLifeStatus(npc.lifeStatus)
@@ -212,7 +213,7 @@ function NPCNewPage() {
         worldId: activeRealmId,
         name: name.trim() || 'Unnamed NPC',
         race,
-        factionId,
+        factionIds,
         regionId,
         poiId,
         lifeStatus,
@@ -380,15 +381,24 @@ function NPCNewPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="npc-faction">Faction</Label>
-              <Select value={factionId ?? 'none'} onValueChange={(v) => setFactionId(v === 'none' ? null : v)}>
-                <SelectTrigger id="npc-faction"><SelectValue placeholder="Select faction" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {factions.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="grid gap-1.5 sm:col-span-3">
+              <Label>Factions</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {factions.map((f) => {
+                  const active = factionIds.includes(f.id)
+                  return (
+                    <Badge
+                      key={f.id}
+                      variant={active ? 'default' : 'outline'}
+                      className="cursor-pointer select-none"
+                      onClick={() => setFactionIds(active ? factionIds.filter((id) => id !== f.id) : [...factionIds, f.id])}
+                    >
+                      {f.name}
+                    </Badge>
+                  )
+                })}
+                {factions.length === 0 && <span className="text-sm text-muted-foreground">No factions</span>}
+              </div>
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="npc-region">Region</Label>

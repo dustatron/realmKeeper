@@ -12,7 +12,7 @@ export class NPCRepository implements INPCRepository {
   }
 
   async getByFactionId(factionId: string): Promise<NPC[]> {
-    return db.npcs.where('factionId').equals(factionId).toArray()
+    return db.npcs.where('factionIds').equals(factionId).toArray()
   }
 
   async getByRegionId(regionId: string): Promise<NPC[]> {

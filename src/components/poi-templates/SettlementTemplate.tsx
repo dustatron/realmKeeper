@@ -13,26 +13,21 @@ import {
   Users,
   ExternalLink,
   FileText,
-  Building2,
-  Home,
-  DoorOpen,
-  Castle,
-  Skull,
-  TreePine,
-  Flag,
-  Landmark,
-  LayoutGrid,
-  Map,
-  Tent,
-  Sparkles,
+  Lock,
 } from "lucide-react";
 import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
+import { FactionChip } from "~/components/shared/FactionChip";
 import { RumorList } from "~/components/shared/RumorList";
 import { NoticeBoard } from "~/components/shared/NoticeBoard";
 import { EncounterTableUI } from "~/components/shared/EncounterTableUI";
 import { ServicesList } from "~/components/shared/ServicesList";
 import { ReadAloudBlock } from "~/components/shared/ReadAloudBlock";
+import ReactMarkdown from "react-markdown";
+import { markdownOptions } from "~/shared/markdown";
+import { AtAGlancePanel } from "~/components/shared/AtAGlancePanel";
+import { POI_TYPE_ICONS } from "@shared/poi-icons";
 import type { POI } from "@domain/entities/POI";
+import type { ResolvedPath } from "~/ui/hooks/useResolvedPaths";
 import type { NPC } from "@domain/entities/NPC";
 import type { Rumor } from "@domain/entities/Rumor";
 import type { Notice } from "@domain/entities/Notice";
@@ -40,27 +35,7 @@ import type { EncounterTable } from "@domain/entities/EncounterTable";
 import type { FactionPresence } from "@domain/entities/FactionPresence";
 import type { POIEvent } from "@domain/entities/POIEvent";
 import type { GameMap } from "@domain/entities/GameMap";
-import type { EncounterCategory, NoticeType, PoiType } from "@shared/constants";
-import { useFaction } from "~/ui/hooks/useFactions";
-
-const POI_TYPE_ICONS: Record<
-  PoiType,
-  React.ComponentType<{ className?: string }>
-> = {
-  settlement: Building2,
-  building: Home,
-  interior: DoorOpen,
-  fortification: Castle,
-  dungeon: Skull,
-  natural: TreePine,
-  landmark: Flag,
-  district: LayoutGrid,
-  zone: Map,
-  ruin: Landmark,
-  camp: Tent,
-  shrine: Sparkles,
-  other: MapPin,
-};
+import type { EncounterCategory, NoticeType } from "@shared/constants";
 
 interface SettlementTemplateProps {
   poi: POI;
@@ -70,6 +45,7 @@ interface SettlementTemplateProps {
   selectedChildId: string | null;
   onSelectChild: (id: string | null) => void;
   factionPresences: FactionPresence[];
+  paths: ResolvedPath[];
   rumors: Rumor[];
   notices: Notice[];
   encounterTable: EncounterTable | null | undefined;
@@ -117,6 +93,7 @@ export function SettlementTemplate({
   selectedChildId,
   onSelectChild,
   factionPresences,
+  paths,
   rumors,
   notices,
   encounterTable,
@@ -176,14 +153,9 @@ export function SettlementTemplate({
 
   return (
     <div className="space-y-4">
-      {/* Header — badges + factions */}
+      {/* Header badges */}
       <div>
         <div className="flex items-center gap-2 flex-wrap">
-          {poi.mood && (
-            <Badge variant="secondary" className="text-xs">
-              {poi.mood}
-            </Badge>
-          )}
           {poi.subtypeLabel && (
             <Badge variant="outline" className="text-xs">
               {poi.subtypeLabel}
@@ -195,34 +167,21 @@ export function SettlementTemplate({
             </Badge>
           ))}
         </div>
-        {poi.trouble && (
-          <p className="text-sm text-amber-600 mt-1">{poi.trouble}</p>
-        )}
-
-        {/* Factions present */}
-        {factionPresences.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap mt-2">
-            {factionPresences.map((fp) => (
-              <FactionChip key={fp.id} presence={fp} />
-            ))}
-          </div>
-        )}
       </div>
+
+      {/* At A Glance */}
+      <AtAGlancePanel
+        mood={poi.mood}
+        trouble={poi.trouble}
+        factionPresences={factionPresences}
+        npcCount={allNPCs.length}
+        activeEvents={poiEvents.filter((e) => e.isActive).length}
+        paths={paths}
+        currentPoiId={poi.id}
+      />
 
       {/* Read Aloud */}
       <ReadAloudBlock text={poi.readAloud} />
-
-      {/* GM Notes (collapsible) */}
-      {poi.gmNotes && (
-        <details className="rounded-md border p-3">
-          <summary className="text-sm font-medium cursor-pointer">
-            GM Notes
-          </summary>
-          <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">
-            {poi.gmNotes}
-          </p>
-        </details>
-      )}
 
       {/* Tabs */}
       <Tabs defaultValue="locations">
@@ -242,6 +201,10 @@ export function SettlementTemplate({
           <TabsTrigger value="events">
             <CalendarClock className="size-4" />
             Events ({poiEvents.length})
+          </TabsTrigger>
+          <TabsTrigger value="gm-notes">
+            <Lock className="size-4" />
+            GM Notes
           </TabsTrigger>
           <TabsTrigger value="notes">
             <FileText className="size-4" />
@@ -523,6 +486,17 @@ export function SettlementTemplate({
           )}
         </TabsContent>
 
+        {/* GM Notes tab */}
+        <TabsContent value="gm-notes" className="space-y-4 pt-3">
+          {poi.gmNotes ? (
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <ReactMarkdown {...markdownOptions}>{poi.gmNotes}</ReactMarkdown>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No GM notes recorded.</p>
+          )}
+        </TabsContent>
+
         {/* Notes tab */}
         <TabsContent value="notes" className="pt-3">
           {notesSection}
@@ -532,19 +506,3 @@ export function SettlementTemplate({
   );
 }
 
-function FactionChip({ presence }: { presence: FactionPresence }) {
-  const faction = useFaction(presence.factionId);
-  if (!faction) return null;
-
-  return (
-    <Link to="/realms/factions/$factionId" params={{ factionId: faction.id }}>
-      <Badge
-        variant="outline"
-        className="text-xs gap-1 hover:bg-accent cursor-pointer"
-      >
-        {faction.name}
-        <span className="text-muted-foreground">· {presence.type}</span>
-      </Badge>
-    </Link>
-  );
-}
