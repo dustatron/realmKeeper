@@ -413,7 +413,7 @@ function POIDetailPage() {
     }
   }
 
-  const handleUploadMap = async (data: { name: string; imageBlob: Blob; width: number; height: number }) => {
+  const handleUploadMap = async (data: { name: string; imageUrl: string; width: number; height: number }) => {
     if (!poi) return
     await executeCreateGameMap({ ...data, ownerPoiId: poi.id }, { gameMapRepo: container.gameMapRepo })
   }

@@ -3,7 +3,7 @@ export interface GameMap {
   name: string
   ownerRealmId: string | null
   ownerPoiId: string | null
-  imageBlob: Blob
+  imageUrl: string
   width: number
   height: number
   sortOrder: number

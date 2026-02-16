@@ -6,7 +6,7 @@ export interface CreateGameMapInput {
   name: string
   ownerRealmId?: string | null
   ownerPoiId?: string | null
-  imageBlob: Blob
+  imageUrl: string
   width: number
   height: number
   sortOrder?: number
@@ -22,7 +22,7 @@ export async function executeCreateGameMap(
     name: input.name,
     ownerRealmId: input.ownerRealmId ?? null,
     ownerPoiId: input.ownerPoiId ?? null,
-    imageBlob: input.imageBlob,
+    imageUrl: input.imageUrl,
     width: input.width,
     height: input.height,
     sortOrder: input.sortOrder ?? 0,

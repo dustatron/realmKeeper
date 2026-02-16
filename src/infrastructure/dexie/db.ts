@@ -415,6 +415,24 @@ db.version(20).stores(storesV18).upgrade(async (tx) => {
   }
 })
 
+// v21: Convert GameMap imageBlob (Blob) → imageUrl (string) for Dexie Cloud sync
+db.version(21).stores(storesV18).upgrade(async (tx) => {
+  const maps = await tx.table('gameMaps').toArray()
+  for (const m of maps) {
+    if (m.imageBlob && !m.imageUrl) {
+      const blob = m.imageBlob as Blob
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })
+      const { imageBlob: _, ...rest } = m
+      await tx.table('gameMaps').put({ ...rest, imageUrl: dataUrl })
+    }
+  }
+})
+
 // Seed system configs on first DB creation
 db.on('populate', (tx) => {
   seedDatabase(tx)

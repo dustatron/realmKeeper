@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate, useSearch } from '@tanstack/react-router'
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { useRealmMaps, useAllRealmMaps } from '~/ui/hooks/useGameMaps'
@@ -26,50 +26,12 @@ export const Route = createFileRoute('/_app/realms/maps')({
 })
 
 function MapThumbnail({ map }: { map: GameMap }) {
-  const [url, setUrl] = useState<string | null>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-
-  useEffect(() => {
-    const blobUrl = URL.createObjectURL(map.imageBlob)
-    const img = new Image()
-    img.onload = () => {
-      const canvas = canvasRef.current
-      if (!canvas) {
-        setUrl(blobUrl)
-        return
-      }
-      const ctx = canvas.getContext('2d')
-      if (!ctx) {
-        setUrl(blobUrl)
-        return
-      }
-      const maxW = 400
-      const maxH = 200
-      const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1)
-      canvas.width = img.naturalWidth * scale
-      canvas.height = img.naturalHeight * scale
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-      setUrl(canvas.toDataURL('image/jpeg', 0.7))
-      URL.revokeObjectURL(blobUrl)
-    }
-    img.src = blobUrl
-    return () => {
-      if (url?.startsWith('blob:')) URL.revokeObjectURL(url)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map.id, map.imageBlob])
-
-  return (
-    <>
-      <canvas ref={canvasRef} className="hidden" />
-      {url ? (
-        <img src={url} alt={map.name} className="w-full h-40 object-cover rounded-t-lg bg-muted" />
-      ) : (
-        <div className="w-full h-40 bg-muted rounded-t-lg flex items-center justify-center">
-          <MapPinned className="size-8 text-muted-foreground/50" />
-        </div>
-      )}
-    </>
+  return map.imageUrl ? (
+    <img src={map.imageUrl} alt={map.name} className="w-full h-40 object-cover rounded-t-lg bg-muted" />
+  ) : (
+    <div className="w-full h-40 bg-muted rounded-t-lg flex items-center justify-center">
+      <MapPinned className="size-8 text-muted-foreground/50" />
+    </div>
   )
 }
 
@@ -89,7 +51,7 @@ function MapsPage() {
 
   const realmMap = realmMaps[0] ?? null // first realm map = default "Realm Map"
 
-  const handleUpload = async (data: { name: string; imageBlob: Blob; width: number; height: number }) => {
+  const handleUpload = async (data: { name: string; imageUrl: string; width: number; height: number }) => {
     if (!activeRealmId) return
     await executeCreateGameMap(
       { ...data, ownerRealmId: activeRealmId },

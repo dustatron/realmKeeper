@@ -201,20 +201,15 @@ export async function executeImportRealm(
   // Game maps (v3+)
   const gameMaps: GameMapExport[] = (data as { gameMaps?: GameMapExport[] }).gameMaps ?? []
   for (const gm of gameMaps) {
-    // Convert base64 back to Blob
-    const binary = atob(gm.imageBase64)
-    const bytes = new Uint8Array(binary.length)
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i)
-    }
-    const imageBlob = new Blob([bytes], { type: 'image/png' })
+    // Convert base64 back to data URL
+    const imageUrl = `data:image/png;base64,${gm.imageBase64}`
 
     await deps.gameMapRepo.create({
       id: remap(gm.id),
       name: gm.name,
       ownerRealmId: gm.ownerRealmId ? remap(gm.ownerRealmId) : null,
       ownerPoiId: gm.ownerPoiId ? remap(gm.ownerPoiId) : null,
-      imageBlob,
+      imageUrl,
       width: gm.width,
       height: gm.height,
       sortOrder: gm.sortOrder,

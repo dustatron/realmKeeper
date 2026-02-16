@@ -166,8 +166,7 @@ export function MapViewer({
   useEffect(() => {
     if (!containerRef.current) return
 
-    const blobUrl = URL.createObjectURL(map.imageBlob)
-    imageUrlRef.current = blobUrl
+    imageUrlRef.current = map.imageUrl
 
     const [swLng, swLat] = pxToLngLat(0, map.height)
     const [neLng, neLat] = pxToLngLat(map.width, 0)
@@ -179,7 +178,7 @@ export function MapViewer({
         sources: {
           'map-image': {
             type: 'image',
-            url: blobUrl,
+            url: map.imageUrl,
             coordinates: [
               [swLng, neLat], // top-left
               [neLng, neLat], // top-right
@@ -241,13 +240,10 @@ export function MapViewer({
       markerRootsRef.current.clear()
       markerDataRef.current.clear()
       mapInstance.remove()
-      if (imageUrlRef.current) {
-        URL.revokeObjectURL(imageUrlRef.current)
-        imageUrlRef.current = null
-      }
+      imageUrlRef.current = null
       setMapReady(false)
     }
-  }, [map.id, map.imageBlob, map.width, map.height, pxToLngLat])
+  }, [map.id, map.imageUrl, map.width, map.height, pxToLngLat])
 
   // Keep pois in a ref so map click handler always has latest data
   const poisRef = useRef(pois)

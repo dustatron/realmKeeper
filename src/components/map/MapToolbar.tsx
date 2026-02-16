@@ -8,6 +8,7 @@ import {
   Tag,
   Hexagon,
   Layers,
+  Trash2,
 } from 'lucide-react'
 import type { MapMode } from './MapViewer'
 
@@ -21,6 +22,7 @@ interface MapToolbarProps {
   onToggleRegions: () => void
   onUpload: () => void
   onZoomToFit: () => void
+  onDelete?: () => void
 }
 
 export function MapToolbar({
@@ -33,6 +35,7 @@ export function MapToolbar({
   onToggleRegions,
   onUpload,
   onZoomToFit,
+  onDelete,
 }: MapToolbarProps) {
   return (
     <div className="flex items-center gap-2 p-2 bg-background/95 backdrop-blur border-b">
@@ -106,6 +109,12 @@ export function MapToolbar({
       <Button variant="outline" size="sm" onClick={onUpload} title="Replace image">
         <Upload className="size-4" />
       </Button>
+
+      {onDelete && (
+        <Button variant="outline" size="sm" onClick={onDelete} title="Delete map" className="text-destructive hover:text-destructive">
+          <Trash2 className="size-4" />
+        </Button>
+      )}
     </div>
   )
 }
