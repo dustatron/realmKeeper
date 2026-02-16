@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
 import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
@@ -99,6 +99,7 @@ import {
   CalendarClock,
   MapPinned,
   X,
+  Book,
 } from 'lucide-react'
 import { POI_TYPES, POI_EVENT_TYPES, SEASONS, type PoiType, type POIEventType, type Season } from '@shared/constants'
 import type { NoticeType } from '@shared/constants'
@@ -107,6 +108,8 @@ import type { NPC } from '@domain/entities/NPC'
 import type { SystemBlock } from '@domain/value-objects/SystemBlock'
 import type { Service } from '@domain/value-objects/Service'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
+import type { CompendiumRef } from '@domain/entities/Compendium'
+import { getCompendiumById, searchCompendium } from '@domain/data/compendium'
 import { newId } from '@shared/ulid'
 
 export const Route = createFileRoute('/_app/realms/pois_/$poiId')({
@@ -473,6 +476,14 @@ function POIDetailPage() {
     }
   }
 
+  const handleUpdateCompendiumRefs = async (refs: { monsterRefs: CompendiumRef[]; magicItemRefs: CompendiumRef[]; spellRefs: CompendiumRef[] }) => {
+    if (!poi) return
+    await executeUpdatePOI(
+      { ...poi, ...refs },
+      { poiRepo: container.poiRepo }
+    )
+  }
+
   if (poi === undefined) {
     return <div className="py-8 text-center text-muted-foreground">Loading...</div>
   }
@@ -605,6 +616,13 @@ function POIDetailPage() {
 
       {/* Template content */}
       {renderTemplate()}
+
+      {/* Compendium Refs */}
+      <CompendiumRefsSection
+        poi={poi}
+        systemId={realm?.systemId ?? null}
+        onUpdate={handleUpdateCompendiumRefs}
+      />
 
       {/* Events section (shared across non-settlement templates) */}
       {poi.type !== 'settlement' && poiEvents.length > 0 && (
@@ -1017,6 +1035,168 @@ function POIDetailPage() {
           isGenerating={isGeneratingNPC}
         />
       )}
+    </div>
+  )
+}
+
+function CompendiumRefsSection({
+  poi,
+  systemId,
+  onUpdate,
+}: {
+  poi: POI
+  systemId: string | null
+  onUpdate: (refs: { monsterRefs: CompendiumRef[]; magicItemRefs: CompendiumRef[]; spellRefs: CompendiumRef[] }) => void
+}) {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchKind, setSearchKind] = useState<'monster' | 'spell' | 'magicItem'>('monster')
+  const [showSearch, setShowSearch] = useState(false)
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim() || !systemId) return []
+    return searchCompendium(searchQuery, systemId, searchKind).slice(0, 10)
+  }, [searchQuery, systemId, searchKind])
+
+  const addRef = (id: string) => {
+    const refsKey = searchKind === 'monster' ? 'monsterRefs' : searchKind === 'spell' ? 'spellRefs' : 'magicItemRefs'
+    const currentRefs = poi[refsKey]
+    if (currentRefs.some((r) => r.id === id)) return
+    onUpdate({ monsterRefs: poi.monsterRefs, magicItemRefs: poi.magicItemRefs, spellRefs: poi.spellRefs, [refsKey]: [...currentRefs, { id }] })
+    setSearchQuery('')
+    setShowSearch(false)
+  }
+
+  const removeRef = (kind: 'monster' | 'spell' | 'magicItem', id: string) => {
+    const refsKey = kind === 'monster' ? 'monsterRefs' : kind === 'spell' ? 'spellRefs' : 'magicItemRefs'
+    onUpdate({
+      monsterRefs: poi.monsterRefs,
+      magicItemRefs: poi.magicItemRefs,
+      spellRefs: poi.spellRefs,
+      [refsKey]: poi[refsKey].filter((r) => r.id !== id),
+    })
+  }
+
+  const updateQuantity = (kind: 'monster' | 'spell' | 'magicItem', id: string, quantity: number | undefined) => {
+    const refsKey = kind === 'monster' ? 'monsterRefs' : kind === 'spell' ? 'spellRefs' : 'magicItemRefs'
+    onUpdate({
+      monsterRefs: poi.monsterRefs,
+      magicItemRefs: poi.magicItemRefs,
+      spellRefs: poi.spellRefs,
+      [refsKey]: poi[refsKey].map((r) => r.id === id ? { ...r, quantity } : r),
+    })
+  }
+
+  const allRefs = [
+    ...poi.monsterRefs.map((r) => ({ ...r, kind: 'monster' as const })),
+    ...poi.spellRefs.map((r) => ({ ...r, kind: 'spell' as const })),
+    ...poi.magicItemRefs.map((r) => ({ ...r, kind: 'magicItem' as const })),
+  ]
+
+  if (allRefs.length === 0 && !showSearch) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-semibold flex items-center gap-2">
+            <Book className="size-4" />
+            Compendium
+          </h4>
+          <Button size="sm" variant="outline" onClick={() => setShowSearch(true)}>
+            <Plus className="mr-1.5 size-3.5" />
+            Link Entry
+          </Button>
+        </div>
+        <p className="text-sm text-muted-foreground">No compendium entries linked.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm font-semibold flex items-center gap-2">
+          <Book className="size-4" />
+          Compendium ({allRefs.length})
+        </h4>
+        <Button size="sm" variant="outline" onClick={() => setShowSearch(!showSearch)}>
+          <Plus className="mr-1.5 size-3.5" />
+          Link Entry
+        </Button>
+      </div>
+
+      {/* Search UI */}
+      {showSearch && (
+        <div className="space-y-2 mb-4 p-3 rounded-lg border bg-muted/30">
+          <div className="flex gap-2">
+            <Select value={searchKind} onValueChange={(v) => setSearchKind(v as any)}>
+              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="monster">Monsters</SelectItem>
+                <SelectItem value="spell">Spells</SelectItem>
+                <SelectItem value="magicItem">Magic Items</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search compendium..."
+              className="flex-1"
+            />
+          </div>
+          {searchResults.length > 0 && (
+            <div className="space-y-1">
+              {searchResults.map((entry) => (
+                <button
+                  key={entry.id}
+                  onClick={() => addRef(entry.id)}
+                  className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted flex items-center justify-between"
+                >
+                  <span>{entry.name}</span>
+                  <Badge variant="outline" className="text-xs">{entry.systemId.includes('cairn') ? 'Cairn' : 'SD'}</Badge>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Linked refs */}
+      <div className="space-y-1">
+        {allRefs.map((ref) => {
+          const entry = getCompendiumById(ref.id)
+          if (!entry) return null
+          const kindLabel = ref.kind === 'monster' ? 'Monster' : ref.kind === 'spell' ? 'Spell' : 'Magic Item'
+          const kindColor = ref.kind === 'monster' ? 'bg-orange-500/15 text-orange-700 dark:text-orange-400' : ref.kind === 'spell' ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-400' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+          const detailUrl = ref.kind === 'monster' ? '/realms/compendium/monsters/$monsterId' : ref.kind === 'spell' ? '/realms/compendium/spells/$spellId' : '/realms/compendium/magic-items/$itemId'
+          const detailParams = ref.kind === 'monster' ? { monsterId: ref.id } : ref.kind === 'spell' ? { spellId: ref.id } : { itemId: ref.id }
+
+          return (
+            <div key={ref.id} className="flex items-center gap-2 px-3 py-2 rounded-md border text-sm">
+              <Link to={detailUrl} params={detailParams} className="flex-1 flex items-center gap-2 hover:underline">
+                <Badge variant="outline" className={`text-xs ${kindColor}`}>{kindLabel}</Badge>
+                <span className="font-medium">{entry.name}</span>
+              </Link>
+              {ref.kind === 'monster' && (
+                <Input
+                  type="number"
+                  min="1"
+                  value={ref.quantity ?? ''}
+                  onChange={(e) => updateQuantity(ref.kind, ref.id, e.target.value ? parseInt(e.target.value) : undefined)}
+                  placeholder="qty"
+                  className="w-16 h-7 text-xs"
+                />
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="size-7 p-0 text-muted-foreground hover:text-destructive"
+                onClick={() => removeRef(ref.kind, ref.id)}
+              >
+                <X className="size-3.5" />
+              </Button>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

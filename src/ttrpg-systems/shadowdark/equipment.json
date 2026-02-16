@@ -1,0 +1,464 @@
+[
+  {
+    "name": "Bastard sword",
+    "cost": {
+      "amount": 10,
+      "currency": "gp"
+    },
+    "attackType": "Melee",
+    "range": "Close",
+    "damage": "1d8/1d10",
+    "properties": ["Versatile"],
+    "slot": 2,
+    "itemType": "weapon",
+    "uuid": "e756379b-1179-4b18-98e6-d0fc2f5f813f"
+  },
+  {
+    "name": "Club",
+    "cost": {
+      "amount": 5,
+      "currency": "cp"
+    },
+    "attackType": "Melee",
+    "range": "Close",
+    "damage": "1d4",
+    "properties": [],
+    "slot": 1,
+    "itemType": "weapon",
+    "uuid": "d20131ab-a354-47f6-8aeb-243ffd25d138"
+  },
+  {
+    "name": "Crossbow",
+    "cost": {
+      "amount": 8,
+      "currency": "gp"
+    },
+    "attackType": "Range",
+    "range": "Far",
+    "damage": "1d6",
+    "properties": ["2 handed", "loading"],
+    "slot": 1,
+    "itemType": "weapon",
+    "uuid": "c0281d67-d83b-4666-8876-515f71761309"
+  },
+  {
+    "name": "Dagger",
+    "cost": {
+      "amount": 1,
+      "currency": "gp"
+    },
+    "attackType": "M/R",
+    "range": "Close / Near",
+    "damage": "1d4",
+    "properties": ["Finesse", "Thrown"],
+    "slot": 1,
+    "itemType": "weapon",
+    "uuid": "7df8414b-1fba-4c54-a0ca-eec91da79123"
+  },
+  {
+    "name": "Greataxe",
+    "cost": {
+      "amount": 10,
+      "currency": "gp"
+    },
+    "attackType": "Melee",
+    "range": "Close",
+    "damage": "1d8/1d10",
+    "properties": ["Versatile"],
+    "slot": 2,
+    "itemType": "weapon",
+    "uuid": "feee81d8-2a50-4646-afb0-22f86cabdfbd"
+  },
+  {
+    "name": "Greatsword",
+    "cost": {
+      "amount": 12,
+      "currency": "gp"
+    },
+    "attackType": "Melee",
+    "range": "Close",
+    "damage": "1d12",
+    "properties": ["2 handed"],
+    "slot": 2,
+    "itemType": "weapon",
+    "uuid": "ab4b365d-ccd0-41c9-b4aa-7f0fd7948de8"
+  },
+  {
+    "name": "Javelin",
+    "cost": {
+      "amount": 5,
+      "currency": "sp"
+    },
+    "attackType": "M/R",
+    "range": "C/F",
+    "damage": "1d4",
+    "properties": ["Thrown"],
+    "slot": 1,
+    "itemType": "weapon",
+    "uuid": "05ae074a-17ee-425c-acd5-8e4dc0eace1a"
+  },
+  {
+    "name": "Longbow",
+    "cost": {
+      "amount": 8,
+      "currency": "gp"
+    },
+    "attackType": "Range",
+    "range": "Far",
+    "damage": "1d8",
+    "properties": ["2 handed"],
+    "slot": 1,
+    "itemType": "weapon",
+    "uuid": "46ea05e8-762a-46e0-a978-b9ef12df5b1f"
+  },
+  {
+    "name": "Longsword",
+    "cost": {
+      "amount": 9,
+      "currency": "gp"
+    },
+    "attackType": "Melee",
+    "range": "Close",
+    "damage": "1d8",
+    "properties": [],
+    "slot": 1,
+    "itemType": "weapon",
+    "uuid": "7bb20328-6096-4dc7-83dc-bdd395ee90aa"
+  },
+  {
+    "name": "Mace",
+    "cost": {
+      "amount": 5,
+      "currency": "gp"
+    },
+    "attackType": "Melee",
+    "range": "Close",
+    "damage": "1d6",
+    "properties": [],
+    "slot": 1,
+    "itemType": "weapon",
+    "uuid": "ffe29851-39d8-48a2-a3cb-ba257542385b"
+  },
+  {
+    "name": "Shortbow",
+    "cost": {
+      "amount": 6,
+      "currency": "gp"
+    },
+    "attackType": "Range",
+    "range": "Far",
+    "damage": "1d4",
+    "properties": ["2 handed"],
+    "slot": 1,
+    "itemType": "weapon",
+    "uuid": "bff24129-0016-4fda-bdd1-072f4087d953"
+  },
+  {
+    "name": "Shortsword",
+    "cost": {
+      "amount": 7,
+      "currency": "gp"
+    },
+    "attackType": "Melee",
+    "range": "Close",
+    "damage": "1d6",
+    "properties": ["Thrown"],
+    "slot": 1,
+    "itemType": "weapon",
+    "uuid": "1d8d0f2f-d177-49e0-9111-2c04e314ded4"
+  },
+  {
+    "name": "Spear",
+    "cost": {
+      "amount": 5,
+      "currency": "sp"
+    },
+    "attackType": "M/R",
+    "range": "Close / Near",
+    "damage": "1d6",
+    "properties": ["Thrown"],
+    "slot": 1,
+    "itemType": "weapon",
+    "uuid": "7f72ab9a-c0f3-4504-9fb3-481f504c2eba"
+  },
+  {
+    "name": "Staff",
+    "cost": {
+      "amount": 5,
+      "currency": "sp"
+    },
+    "attackType": "Melee",
+    "range": "Close",
+    "damage": "1d4",
+    "properties": ["2 handed"],
+    "slot": 1,
+    "itemType": "weapon",
+    "uuid": "6992ca12-f3d5-43ef-bd74-19aeee50e139"
+  },
+  {
+    "name": "Warhammer",
+    "cost": {
+      "amount": 10,
+      "currency": "gp"
+    },
+    "attackType": "Melee",
+    "range": "Close",
+    "damage": "1d10",
+    "properties": ["2 handed"],
+    "slot": 1,
+    "itemType": "weapon",
+    "uuid": "d56b3122-d398-4960-9ad3-c2219aa44899"
+  },
+  {
+    "itemType": "armor",
+    "name": "Chainmail",
+    "cost": {
+      "amount": 60,
+      "currency": "gp"
+    },
+    "armor": "13 + DEX",
+    "properties": ["Disadvantage on stealth and swimming"],
+    "uuid": "dc7ee0cd-222e-497a-8326-2ff69f896a80",
+    "slot": 2
+  },
+  {
+    "itemType": "armor",
+    "name": "Leather Armor",
+    "cost": {
+      "amount": 10,
+      "currency": "gp"
+    },
+    "armor": "11 + DEX",
+    "properties": [],
+    "uuid": "1415649f-e7ac-4044-a7d8-2a5387eb8754",
+    "slot": 1
+  },
+  {
+    "itemType": "armor",
+    "name": "Mithral Chainmail",
+    "cost": {
+      "amount": 240,
+      "currency": "gp"
+    },
+    "armor": "13 + DEX",
+    "properties": [],
+    "uuid": "508d756c-cdec-4d1c-80ca-45a98772f364",
+    "slot": 1
+  },
+  {
+    "itemType": "armor",
+    "name": "Mithral Plate Mail",
+    "cost": {
+      "amount": 520,
+      "currency": "gp"
+    },
+    "armor": "15",
+    "properties": [],
+    "uuid": "e76bfdfa-0089-4de6-9a20-51224d18aec5",
+    "slot": 2
+  },
+  {
+    "itemType": "armor",
+    "name": "Plate Mail",
+    "cost": {
+      "amount": 130,
+      "currency": "gp"
+    },
+    "armor": "15",
+    "properties": ["Can't swim, Disadvantage on stealth"],
+    "uuid": "d0a34a14-c7e0-4629-9d90-058c09a02e92",
+    "slot": 3
+  },
+  {
+    "itemType": "armor",
+    "name": "Shield",
+    "cost": {
+      "amount": 10,
+      "currency": "gp"
+    },
+    "armor": "+2",
+    "properties": ["Occupies one hand"],
+    "uuid": "697d021c-6cc4-4d10-bdec-995c1274af09",
+    "slot": 1
+  },
+  {
+    "itemType": "gear",
+    "name": "Arrows",
+    "cost": {
+      "amount": 1,
+      "currency": "gp"
+    },
+    "properties": [],
+    "uuid": "",
+    "slot": 1,
+    "quanity": "20"
+  },
+  {
+    "itemType": "gear",
+    "name": "Backpack",
+    "cost": {
+      "amount": 2,
+      "currency": "gp"
+    },
+    "properties": [],
+    "uuid": "",
+    "slot": 1,
+    "quanity": "1"
+  },
+  {
+    "itemType": "gear",
+    "name": "caltrops",
+    "cost": {
+      "amount": 1,
+      "currency": "sp"
+    },
+    "properties": [],
+    "uuid": "",
+    "slot": 1,
+    "quanity": "1 bag"
+  },
+  {
+    "itemType": "gear",
+    "name": "crossbow bolts",
+    "cost": {
+      "amount": 1,
+      "currency": "gp"
+    },
+    "properties": [],
+    "uuid": "",
+    "slot": 1,
+    "quanity": "1-20"
+  },
+  {
+    "itemType": "gear",
+    "name": "crowbar",
+    "cost": {
+      "amount": 5,
+      "currency": "sp"
+    },
+    "properties": [],
+    "uuid": "",
+    "slot": 1,
+    "quanity": "1"
+  },
+  {
+    "itemType": "gear",
+    "name": "flash or bottle",
+    "cost": {
+      "amount": 3,
+      "currency": "sp"
+    },
+    "properties": [],
+    "uuid": "",
+    "slot": 1,
+    "quanity": "1"
+  },
+  {
+    "itemType": "gear",
+    "name": "flint and steel",
+    "cost": {
+      "amount": 5,
+      "currency": "sp"
+    },
+    "properties": [],
+    "uuid": "",
+    "slot": 1,
+    "quanity": "1"
+  },
+  {
+    "itemType": "gear",
+    "name": "grappling hook",
+    "cost": {
+      "amount": 1,
+      "currency": "gp"
+    },
+    "properties": [],
+    "uuid": "",
+    "slot": 1,
+    "quanity": "1"
+  },
+  {
+    "itemType": "gear",
+    "name": "iron spike",
+    "cost": {
+      "amount": 1,
+      "currency": "gp"
+    },
+    "properties": [],
+    "uuid": "",
+    "slot": 1,
+    "quanity": "10"
+  },
+  {
+    "itemType": "gear",
+    "name": "mirror",
+    "cost": {
+      "amount": 10,
+      "currency": "gp"
+    },
+    "properties": [],
+    "uuid": "",
+    "slot": 1,
+    "quanity": "1"
+  },
+  {
+    "itemType": "gear",
+    "name": "oil flask",
+    "cost": {
+      "amount": 5,
+      "currency": "sp"
+    },
+    "properties": [],
+    "uuid": "",
+    "slot": 1,
+    "quanity": "1"
+  },
+  {
+    "itemType": "gear",
+    "name": "pole",
+    "cost": {
+      "amount": 5,
+      "currency": "sp"
+    },
+    "properties": [],
+    "uuid": "",
+    "slot": 1,
+    "quanity": "1"
+  },
+  {
+    "itemType": "gear",
+    "name": "rations",
+    "cost": {
+      "amount": 5,
+      "currency": "sp"
+    },
+    "properties": [],
+    "uuid": "",
+    "slot": 1,
+    "quanity": "3"
+  },
+  {
+    "itemType": "gear",
+    "name": "rope, 60'",
+    "cost": {
+      "amount": 1,
+      "currency": "gp"
+    },
+    "properties": [],
+    "uuid": "",
+    "slot": 1,
+    "quanity": "1"
+  },
+  {
+    "itemType": "gear",
+    "name": "torch",
+    "cost": {
+      "amount": 5,
+      "currency": "sp"
+    },
+    "properties": [],
+    "uuid": "",
+    "slot": 1,
+    "quanity": "1"
+  }
+]

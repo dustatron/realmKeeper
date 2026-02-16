@@ -1,0 +1,614 @@
+[
+  {
+    "name": "Dagger",
+    "cost": 5,
+    "category": "weapon",
+    "damage": "d6",
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Cudgel",
+    "cost": 5,
+    "category": "weapon",
+    "damage": "d6",
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Sickle",
+    "cost": 5,
+    "category": "weapon",
+    "damage": "d6",
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Staff",
+    "cost": 5,
+    "category": "weapon",
+    "damage": "d6",
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Sword",
+    "cost": 10,
+    "category": "weapon",
+    "damage": "d8",
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Mace",
+    "cost": 10,
+    "category": "weapon",
+    "damage": "d8",
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Axe",
+    "cost": 10,
+    "category": "weapon",
+    "damage": "d8",
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Spear",
+    "cost": 10,
+    "category": "weapon",
+    "damage": "d8",
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Halberd",
+    "cost": 20,
+    "category": "weapon",
+    "damage": "d10",
+    "armor": null,
+    "properties": ["bulky"],
+    "slots": 2
+  },
+  {
+    "name": "War Hammer",
+    "cost": 20,
+    "category": "weapon",
+    "damage": "d10",
+    "armor": null,
+    "properties": ["bulky"],
+    "slots": 2
+  },
+  {
+    "name": "Longsword",
+    "cost": 20,
+    "category": "weapon",
+    "damage": "d10",
+    "armor": null,
+    "properties": ["bulky"],
+    "slots": 2
+  },
+  {
+    "name": "Bow",
+    "cost": 20,
+    "category": "weapon",
+    "damage": "d6",
+    "armor": null,
+    "properties": ["bulky"],
+    "slots": 2
+  },
+  {
+    "name": "Crossbow",
+    "cost": 30,
+    "category": "weapon",
+    "damage": "d8",
+    "armor": null,
+    "properties": ["bulky"],
+    "slots": 2
+  },
+  {
+    "name": "Sling",
+    "cost": 5,
+    "category": "weapon",
+    "damage": "d4",
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Shield",
+    "cost": 10,
+    "category": "armor",
+    "damage": null,
+    "armor": 1,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Helmet",
+    "cost": 10,
+    "category": "armor",
+    "damage": null,
+    "armor": 1,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Gambeson",
+    "cost": 15,
+    "category": "armor",
+    "damage": null,
+    "armor": 1,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Brigandine",
+    "cost": 20,
+    "category": "armor",
+    "damage": null,
+    "armor": 1,
+    "properties": ["bulky"],
+    "slots": 2
+  },
+  {
+    "name": "Chainmail",
+    "cost": 40,
+    "category": "armor",
+    "damage": null,
+    "armor": 2,
+    "properties": ["bulky"],
+    "slots": 2
+  },
+  {
+    "name": "Plate",
+    "cost": 60,
+    "category": "armor",
+    "damage": null,
+    "armor": 3,
+    "properties": ["bulky"],
+    "slots": 2
+  },
+  {
+    "name": "Torch",
+    "cost": 1,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Lantern & Oil",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Rope (25ft)",
+    "cost": 5,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Rations (3 days)",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Iron Spike",
+    "cost": 1,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Chalk",
+    "cost": 1,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Mirror",
+    "cost": 5,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Pole (10ft)",
+    "cost": 5,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": ["bulky"],
+    "slots": 2
+  },
+  {
+    "name": "Cart",
+    "cost": 30,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": ["bulky"],
+    "slots": 2
+  },
+  {
+    "name": "Bucket",
+    "cost": 5,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Caltrops",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Chisel",
+    "cost": 5,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Cook Pots",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Crowbar",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Drill",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Fishing Rod",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Glue",
+    "cost": 5,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Grappling Hook",
+    "cost": 25,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Grease",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Hammer",
+    "cost": 5,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Holy Water",
+    "cost": 25,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Horn",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Incense",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Lens",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Lockpicks",
+    "cost": 25,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Manacles",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Metal File",
+    "cost": 5,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Nails",
+    "cost": 5,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Net",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Saw",
+    "cost": 5,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Shovel",
+    "cost": 5,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Soap",
+    "cost": 1,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Tar",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Tent (2 person)",
+    "cost": 20,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": ["bulky"],
+    "slots": 2
+  },
+  {
+    "name": "Tinderbox",
+    "cost": 5,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Wolfsbane",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Bellows",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Bedroll",
+    "cost": 5,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Chain (10ft)",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Pick",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Repellent",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Sack",
+    "cost": 5,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Twine",
+    "cost": 5,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Waterskin",
+    "cost": 5,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Book",
+    "cost": 50,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Quill & Ink",
+    "cost": 10,
+    "category": "gear",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": 1
+  },
+  {
+    "name": "Horse",
+    "cost": 75,
+    "category": "transport",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": null
+  },
+  {
+    "name": "Mule",
+    "cost": 30,
+    "category": "transport",
+    "damage": null,
+    "armor": null,
+    "properties": [],
+    "slots": null
+  }
+]

@@ -400,6 +400,21 @@ db.version(19).stores(storesV18).upgrade(async (tx) => {
   }
 })
 
+// v20: Add compendium refs to POIs
+db.version(20).stores(storesV18).upgrade(async (tx) => {
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.monsterRefs === undefined) {
+      await tx.table('pois').put({
+        ...poi,
+        monsterRefs: [],
+        magicItemRefs: [],
+        spellRefs: [],
+      })
+    }
+  }
+})
+
 // Seed system configs on first DB creation
 db.on('populate', (tx) => {
   seedDatabase(tx)
