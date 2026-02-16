@@ -41,7 +41,8 @@
       "Bash(npm install:*)",
       "Bash(npx dexie-cloud:*)",
       "Bash(npx vite build:*)",
-      "Bash(bd show:*)"
+      "Bash(bd show:*)",
+      "Bash(claude mcp list:*)"
     ]
   }
 }
