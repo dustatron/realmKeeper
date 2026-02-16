@@ -9,7 +9,7 @@ import { executeDeleteGameMap } from '@application/use-cases/DeleteGameMap'
 import { EmptyState } from '~/components/shared/EmptyState'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { MapUploadDialog } from '~/components/map/MapUploadDialog'
-import { InteractiveMap } from '~/components/map/InteractiveMap'
+import { MultiMapViewer } from '~/components/map/MultiMapViewer'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '~/components/ui/tabs'
 import { Card, CardContent } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
@@ -48,8 +48,6 @@ function MapsPage() {
 
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [deletingMap, setDeletingMap] = useState<GameMap | null>(null)
-
-  const realmMap = realmMaps[0] ?? null // first realm map = default "Realm Map"
 
   const handleUpload = async (data: { name: string; imageUrl: string; width: number; height: number }) => {
     if (!activeRealmId) return
@@ -90,27 +88,19 @@ function MapsPage() {
     <div className="space-y-4">
       <Tabs value={tab} onValueChange={(v) => navigate({ to: '/realms/maps', search: { tab: v as MapsSearch['tab'] }, replace: true })}>
         <TabsList>
-          <TabsTrigger value="realm-map">Realm Map</TabsTrigger>
+          <TabsTrigger value="realm-map">Realm Maps ({realmMaps.length})</TabsTrigger>
           <TabsTrigger value="all-maps">All Maps ({allMaps.length})</TabsTrigger>
         </TabsList>
 
-        {/* ── Realm Map tab ── */}
+        {/* ── Realm Maps tab ── */}
         <TabsContent value="realm-map">
-          {realmMap ? (
-            <InteractiveMap gameMap={realmMap} className="h-[calc(100vh-10rem)]" />
-          ) : (
-            <EmptyState
-              icon={MapPinned}
-              title="No realm map"
-              description="Upload a map image to get started"
-              action={
-                <Button onClick={() => setUploadDialogOpen(true)}>
-                  <Upload className="mr-2 size-4" />
-                  Upload Realm Map
-                </Button>
-              }
-            />
-          )}
+          <MultiMapViewer
+            maps={realmMaps}
+            onUpload={handleUpload}
+            className="h-[calc(100vh-13rem)]"
+            emptyTitle="No realm map"
+            emptyDescription="Upload a map image to get started"
+          />
         </TabsContent>
 
         {/* ── All Maps tab ── */}

@@ -27,7 +27,6 @@ import { executeDeletePOIEvent } from '@application/use-cases/DeletePOIEvent'
 import { executeCreateNPC } from '@application/use-cases/CreateNPC'
 import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import { executeCreateGameMap } from '@application/use-cases/CreateGameMap'
-import { executeDeleteGameMap } from '@application/use-cases/DeleteGameMap'
 import { executeCreateRumor } from '@application/use-cases/CreateRumor'
 import { executeUpdateRumor } from '@application/use-cases/UpdateRumor'
 import { executeDeleteRumor } from '@application/use-cases/DeleteRumor'
@@ -39,7 +38,7 @@ import { executeUpdateEncounterTable } from '@application/use-cases/UpdateEncoun
 import { executeRollEncounter } from '@application/use-cases/RollEncounter'
 import { NPCEditSheet } from '~/components/shared/NPCEditSheet'
 import { MapUploadDialog } from '~/components/map/MapUploadDialog'
-import { InteractiveMap } from '~/components/map/InteractiveMap'
+import { MultiMapViewer } from '~/components/map/MultiMapViewer'
 import { ServicesList } from '~/components/shared/ServicesList'
 
 import { SettlementTemplate } from '~/components/poi-templates/SettlementTemplate'
@@ -501,7 +500,12 @@ function POIDetailPage() {
 
   // Shared map section
   const mapSection = poiMaps.length > 0 ? (
-    <POIDetailMap gameMap={poiMaps[0]} poiMaps={poiMaps} parentPoiId={poiId} highlightPoiId={selectedChildId} />
+    <MultiMapViewer
+      maps={poiMaps}
+      onUpload={handleUploadMap}
+      parentPoiId={poiId}
+      highlightPoiId={selectedChildId}
+    />
   ) : null
 
   // Template selection
@@ -1201,61 +1205,3 @@ function CompendiumRefsSection({
   )
 }
 
-function POIDetailMap({ gameMap, poiMaps, parentPoiId, highlightPoiId }: { gameMap: import('@domain/entities/GameMap').GameMap; poiMaps: import('@domain/entities/GameMap').GameMap[]; parentPoiId: string; highlightPoiId?: string | null }) {
-  const [activeMapIndex, setActiveMapIndex] = useState(0)
-  const container = useContainer()
-  const [deletingMapId, setDeletingMapId] = useState<string | null>(null)
-
-  // Clamp index if maps array shrinks
-  const clampedIndex = Math.min(activeMapIndex, poiMaps.length - 1)
-  const activeMap = poiMaps[clampedIndex] ?? gameMap
-
-  const handleDeleteMap = async () => {
-    if (!deletingMapId) return
-    await executeDeleteGameMap(deletingMapId, { gameMapRepo: container.gameMapRepo, poiRepo: container.poiRepo })
-    setDeletingMapId(null)
-    // Reset to first tab if current was deleted
-    if (poiMaps[clampedIndex]?.id === deletingMapId) {
-      setActiveMapIndex(0)
-    }
-  }
-
-  return (
-    <div className="overflow-hidden rounded-lg border">
-      {poiMaps.length > 0 && (
-        <div className="flex items-center gap-1 px-2 py-1 border-b bg-muted/30">
-          {poiMaps.map((m, i) => (
-            <span key={m.id} className="flex items-center">
-              <Button
-                variant={i === clampedIndex ? 'secondary' : 'ghost'}
-                size="sm"
-                className="text-xs h-7 pr-1"
-                onClick={() => setActiveMapIndex(i)}
-              >
-                {m.name}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                onClick={(e) => { e.stopPropagation(); setDeletingMapId(m.id) }}
-              >
-                <X className="size-3" />
-              </Button>
-            </span>
-          ))}
-        </div>
-      )}
-      <InteractiveMap key={activeMap.id} gameMap={activeMap} className="h-[300px] md:h-[500px]" parentPoiId={parentPoiId} highlightPoiId={highlightPoiId} />
-      <ConfirmDialog
-        open={deletingMapId !== null}
-        onOpenChange={(open) => !open && setDeletingMapId(null)}
-        title="Remove Map"
-        description="Remove this map from the location? POIs placed on it will be unlinked."
-        confirmLabel="Remove"
-        variant="destructive"
-        onConfirm={handleDeleteMap}
-      />
-    </div>
-  )
-}
