@@ -56,6 +56,14 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  React.useEffect(() => {
+    if (import.meta.env.DEV) {
+      import('@infrastructure/dev/devApi').then(({ installDevApi }) => {
+        installDevApi()
+      })
+    }
+  }, [])
+
   return (
     <ContainerProvider>
       <TooltipProvider>

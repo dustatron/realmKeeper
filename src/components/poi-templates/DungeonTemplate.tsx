@@ -1,15 +1,21 @@
 import { Link } from '@tanstack/react-router'
+import ReactMarkdown from 'react-markdown'
+import { markdownOptions } from '~/shared/markdown'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '~/components/ui/tabs'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
-import { MapPin, Users, Dices, Plus, Flag, FileText } from 'lucide-react'
+import { MapPin, Users, Dices, Plus, FileText, CalendarClock, Trash2 } from 'lucide-react'
 import { NPCMiniCard } from '~/components/shared/NPCMiniCard'
+import { FactionChip } from '~/components/shared/FactionChip'
 import { EncounterTableUI } from '~/components/shared/EncounterTableUI'
 import { ReadAloudBlock } from '~/components/shared/ReadAloudBlock'
+import { AtAGlancePanel } from '~/components/shared/AtAGlancePanel'
 import type { POI } from '@domain/entities/POI'
 import type { NPC } from '@domain/entities/NPC'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
 import type { FactionPresence } from '@domain/entities/FactionPresence'
+import type { ResolvedPath } from '~/ui/hooks/useResolvedPaths'
+import type { POIEvent } from '@domain/entities/POIEvent'
 import type { EncounterCategory } from '@shared/constants'
 
 interface DungeonTemplateProps {
@@ -17,11 +23,15 @@ interface DungeonTemplateProps {
   children: POI[]
   npcs: NPC[]
   factionPresences: FactionPresence[]
+  paths: ResolvedPath[]
+  poiEvents: POIEvent[]
   encounterTable: EncounterTable | null | undefined
   onRollEncounter: () => Promise<{ category: EncounterCategory; categoryRoll: number; result: string }>
   onSaveEncounterTable?: (entries: Pick<EncounterTable, 'creature' | 'signOmen' | 'loss' | 'npc' | 'discovery' | 'treasure'>) => void
   onCreateChild: () => void
   onCreateNPC: () => void
+  onCreateEvent: () => void
+  onDeleteEvent: (id: string) => void
   mapSection: React.ReactNode
   notesSection?: React.ReactNode
 }
@@ -31,14 +41,20 @@ export function DungeonTemplate({
   children: childPois,
   npcs,
   factionPresences,
+  paths,
+  poiEvents,
   encounterTable,
   onRollEncounter,
   onSaveEncounterTable,
   onCreateChild,
   onCreateNPC,
+  onCreateEvent,
+  onDeleteEvent,
   mapSection,
   notesSection,
 }: DungeonTemplateProps) {
+  const activeEvents = poiEvents.filter((e) => e.isActive).length
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -50,10 +66,18 @@ export function DungeonTemplate({
             <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
           ))}
         </div>
-        {poi.trouble && (
-          <p className="text-sm text-amber-600 mt-1">{poi.trouble}</p>
-        )}
       </div>
+
+      {/* At A Glance */}
+      <AtAGlancePanel
+        mood={poi.mood}
+        trouble={poi.trouble}
+        factionPresences={factionPresences}
+        npcCount={npcs.length}
+        activeEvents={activeEvents}
+        paths={paths}
+        currentPoiId={poi.id}
+      />
 
       {/* Read Aloud */}
       <ReadAloudBlock text={poi.readAloud} />
@@ -62,7 +86,9 @@ export function DungeonTemplate({
       {poi.gmNotes && (
         <details className="rounded-md border p-3">
           <summary className="text-sm font-medium cursor-pointer">GM Notes</summary>
-          <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">{poi.gmNotes}</p>
+          <div className="prose prose-sm dark:prose-invert max-w-none mt-2">
+            <ReactMarkdown {...markdownOptions}>{poi.gmNotes}</ReactMarkdown>
+          </div>
         </details>
       )}
 
@@ -149,16 +175,10 @@ export function DungeonTemplate({
 
           {factionPresences.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                <Flag className="size-4" />
-                Faction Presence
-              </h4>
-              <div className="space-y-1">
+              <h4 className="text-sm font-semibold mb-2">Faction Presence</h4>
+              <div className="flex items-center gap-1.5 flex-wrap">
                 {factionPresences.map((fp) => (
-                  <div key={fp.id} className="flex items-center gap-2 rounded-md border p-2">
-                    <Badge variant="outline" className="text-xs">{fp.type}</Badge>
-                    {fp.notes && <span className="text-xs text-muted-foreground">{fp.notes}</span>}
-                  </div>
+                  <FactionChip key={fp.id} presence={fp} />
                 ))}
               </div>
             </div>
@@ -175,7 +195,56 @@ export function DungeonTemplate({
         </TabsContent>
 
         {/* Notes tab */}
-        <TabsContent value="notes" className="pt-3">
+        <TabsContent value="notes" className="space-y-4 pt-3">
+          {/* Events */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <CalendarClock className="size-4" />
+                Events ({poiEvents.length})
+              </h4>
+              <Button size="sm" variant="outline" onClick={onCreateEvent}>
+                <Plus className="mr-1.5 size-3.5" />
+                Add Event
+              </Button>
+            </div>
+            {poiEvents.length > 0 ? (
+              <div className="space-y-2">
+                {poiEvents.map((event) => (
+                  <div key={event.id} className="flex items-start gap-2 rounded-md border p-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{event.name}</span>
+                        <Badge variant="outline" className="text-xs">{event.type}</Badge>
+                        {event.isActive && <Badge className="text-xs bg-green-600">Active</Badge>}
+                        {event.recurring && <Badge variant="secondary" className="text-xs">Recurring</Badge>}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {event.trigger.season.charAt(0).toUpperCase() + event.trigger.season.slice(1)} Day {event.trigger.day}
+                        {event.trigger.year !== null && `, Year ${event.trigger.year}`}
+                        {event.trigger.watch !== null && `, Watch ${event.trigger.watch}`}
+                        {' \u00B7 '}{event.durationWatches} watch{event.durationWatches !== 1 ? 'es' : ''}
+                      </div>
+                      {event.description && (
+                        <div className="text-xs text-muted-foreground mt-1 line-clamp-1">{event.description}</div>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="size-7 p-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => onDeleteEvent(event.id)}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No events scheduled.</p>
+            )}
+          </div>
+
           {notesSection}
         </TabsContent>
       </Tabs>

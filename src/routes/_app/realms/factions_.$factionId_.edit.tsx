@@ -23,16 +23,18 @@ import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
-import { Dices, Trash2, Plus, Save, X, Crown, Pencil, Users } from 'lucide-react'
+import { Dices, Trash2, Plus, Save, X, Crown, Pencil, Users, Link2 } from 'lucide-react'
 import type { TableDef } from '@domain/entities/TableDef'
 import type { NPC } from '@domain/entities/NPC'
 import type { AgendaGoal, AgendaTimeframe, Advantage, Obstacle } from '@domain/entities/Faction'
 import { FACTION_STATUSES } from '@shared/constants'
-import { useNPCsByFaction } from '~/ui/hooks/useNPCs'
+import { useNPCs, useNPCsByFaction } from '~/ui/hooks/useNPCs'
 import { useFactions } from '~/ui/hooks/useFactions'
 import { NPCEditSheet } from '~/components/shared/NPCEditSheet'
 import { Badge } from '~/components/ui/badge'
 import { executeUpdateNPC } from '@application/use-cases/UpdateNPC'
+import { executeLinkNPCToFaction } from '@application/use-cases/LinkNPCToFaction'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '~/components/ui/dialog'
 
 export const Route = createFileRoute('/_app/realms/factions_/$factionId_/edit')({
   component: FactionEditPage,
@@ -134,6 +136,7 @@ function FactionEditPage() {
   const allFactions = useFactions(activeRealmId)
   const regions = useRegions(activeRealmId)
   const realmPOIs = useRealmPOIs(activeRealmId)
+  const allNPCs = useNPCs(activeRealmId)
   const agentNpcs = useNPCsByFaction(isCreate ? null : factionId)
 
   // Faction tables for re-roll
@@ -174,6 +177,8 @@ function FactionEditPage() {
   const [loaded, setLoaded] = useState(false)
   const [editingNPC, setEditingNPC] = useState<NPC | null>(null)
   const [isAddingAgent, setIsAddingAgent] = useState(false)
+  const [showLinkNPC, setShowLinkNPC] = useState(false)
+  const [linkSearch, setLinkSearch] = useState('')
 
   // Populate form from existing faction
   useEffect(() => {
@@ -339,6 +344,26 @@ function FactionEditPage() {
     }
   }
 
+  const handleLinkExistingNPC = async (npcId: string) => {
+    if (!isCreate) {
+      await executeLinkNPCToFaction(npcId, factionId, { npcRepo: container.npcRepo })
+      if (existingFaction && !existingFaction.agentNpcIds.includes(npcId)) {
+        await executeUpdateFaction(
+          { ...existingFaction, agentNpcIds: [...existingFaction.agentNpcIds, npcId] },
+          { factionRepo: container.factionRepo }
+        )
+      }
+    }
+    setAgentNpcIds((prev) => prev.includes(npcId) ? prev : [...prev, npcId])
+    setShowLinkNPC(false)
+    setLinkSearch('')
+  }
+
+  const availableNPCs = allNPCs.filter(
+    (npc) => !agentNpcIds.includes(npc.id) &&
+      (!linkSearch || npc.name.toLowerCase().includes(linkSearch.toLowerCase()))
+  )
+
   const toggleLeader = (npcId: string) => {
     setLeaderNpcId(leaderNpcId === npcId ? null : npcId)
   }
@@ -367,8 +392,8 @@ function FactionEditPage() {
         // Fix up agent NPCs — they were created with a temp factionId during generate
         for (const npcId of agentNpcIds) {
           const npc = await container.npcRepo.getById(npcId)
-          if (npc) {
-            await container.npcRepo.update({ ...npc, factionId: newFaction.id })
+          if (npc && !npc.factionIds.includes(newFaction.id)) {
+            await container.npcRepo.update({ ...npc, factionIds: [...npc.factionIds, newFaction.id] })
           }
         }
         navigate({ to: '/realms/factions/$factionId', params: { factionId: newFaction.id } })
@@ -694,16 +719,27 @@ function FactionEditPage() {
               <Users className="size-4" />
               Agents ({agentNpcs.length})
             </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7"
-              onClick={handleAddAgent}
-              disabled={isAddingAgent || !systemConfig}
-            >
-              <Dices className="mr-1.5 size-3.5" />
-              {isAddingAgent ? '...' : 'Generate'}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7"
+                onClick={() => setShowLinkNPC(true)}
+              >
+                <Link2 className="mr-1.5 size-3.5" />
+                Link
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7"
+                onClick={handleAddAgent}
+                disabled={isAddingAgent || !systemConfig}
+              >
+                <Dices className="mr-1.5 size-3.5" />
+                {isAddingAgent ? '...' : 'Generate'}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-1">
             {agentNpcs.length === 0 ? (
@@ -742,6 +778,46 @@ function FactionEditPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Link Existing NPC Dialog */}
+      <Dialog open={showLinkNPC} onOpenChange={(open) => { setShowLinkNPC(open); if (!open) setLinkSearch('') }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link Existing NPC</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {allNPCs.length > 10 && (
+              <Input
+                placeholder="Search NPCs..."
+                value={linkSearch}
+                onChange={(e) => setLinkSearch(e.target.value)}
+              />
+            )}
+            <div className="max-h-64 overflow-y-auto space-y-1">
+              {availableNPCs.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">No available NPCs to link.</p>
+              ) : (
+                availableNPCs.map((npc) => (
+                  <button
+                    key={npc.id}
+                    className="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-muted/50 transition-colors text-left"
+                    onClick={() => handleLinkExistingNPC(npc.id)}
+                  >
+                    <span className="text-sm font-medium">{npc.name}</span>
+                    <div className="flex items-center gap-1">
+                      {npc.factionIds.length > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          {npc.factionIds.length} faction{npc.factionIds.length > 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* NPC Edit Sheet */}
       {editingNPC && systemConfig && (

@@ -17,7 +17,7 @@ export function useNPC(id: string | null) {
 
 export function useNPCsByFaction(factionId: string | null) {
   return useLiveQuery(
-    () => (factionId ? db.npcs.where('factionId').equals(factionId).toArray() : []),
+    () => (factionId ? db.npcs.where('factionIds').equals(factionId).toArray() : []),
     [factionId]
   ) ?? []
 }

@@ -107,7 +107,11 @@ export async function executeImportRealm(
       ...n,
       id: remap(n.id),
       worldId,
-      factionId: n.factionId ? remap(n.factionId) : null,
+      factionIds: npcData.factionIds
+        ? (npcData.factionIds as string[]).map((id: string) => remap(id))
+        : npcData.factionId
+          ? [remap(npcData.factionId as string)]
+          : [],
       regionId: n.regionId ? remap(n.regionId) : null,
       // v1 had `location` string, v2 has `poiId` — default poiId to null for old exports
       poiId: npcData.poiId ? remap(npcData.poiId as string) : null,

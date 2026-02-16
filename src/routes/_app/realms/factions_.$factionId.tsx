@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useFaction, useFactions } from '~/ui/hooks/useFactions'
-import { useNPCsByFaction } from '~/ui/hooks/useNPCs'
+import { useNPCs, useNPCsByFaction } from '~/ui/hooks/useNPCs'
 import { useRegions } from '~/ui/hooks/useRegions'
 import { useRealmPOIs } from '~/ui/hooks/usePOIs'
 import { useRelationships } from '~/ui/hooks/useRelationships'
@@ -15,6 +15,7 @@ import { executeDeleteFaction } from '@application/use-cases/DeleteFaction'
 import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import { executeCreateFactionPresence } from '@application/use-cases/CreateFactionPresence'
 import { executeDeleteFactionPresence } from '@application/use-cases/DeleteFactionPresence'
+import { executeLinkNPCToFaction } from '@application/use-cases/LinkNPCToFaction'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
@@ -24,7 +25,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '~/components/ui/dialog'
 import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
-import { ArrowLeft, Trash2, Pencil, Crown, CheckCircle2, Circle, Dices, Users, Handshake, ChevronUp, ChevronDown, MapPin } from 'lucide-react'
+import { Input } from '~/components/ui/input'
+import { ArrowLeft, Trash2, Pencil, Crown, CheckCircle2, Circle, Dices, Users, Handshake, ChevronUp, ChevronDown, MapPin, Link2 } from 'lucide-react'
 import { ProgressClock } from '~/components/shared/ProgressClock'
 import { FACTION_STATUSES, FACTION_PRESENCE_TYPES, type FactionPresenceType } from '@shared/constants'
 import { deriveStatus } from '@domain/value-objects/RelationshipScore'
@@ -54,8 +56,12 @@ function FactionDetailPage() {
   const realmPOIs = useRealmPOIs(activeRealmId)
   const factionRelationships = useRelationships([factionId])
 
+  const allNPCs = useNPCs(activeRealmId)
+
   const [showDelete, setShowDelete] = useState(false)
   const [isAddingAgent, setIsAddingAgent] = useState(false)
+  const [showLinkNPC, setShowLinkNPC] = useState(false)
+  const [linkSearch, setLinkSearch] = useState('')
   const [showAddPresence, setShowAddPresence] = useState(false)
   const [presenceForm, setPresenceForm] = useState({
     poiId: '',
@@ -118,6 +124,24 @@ function FactionDetailPage() {
       setIsAddingAgent(false)
     }
   }
+
+  const handleLinkExistingNPC = async (npcId: string) => {
+    if (!faction) return
+    await executeLinkNPCToFaction(npcId, factionId, { npcRepo: container.npcRepo })
+    if (!faction.agentNpcIds.includes(npcId)) {
+      await executeUpdateFaction(
+        { ...faction, agentNpcIds: [...faction.agentNpcIds, npcId] },
+        { factionRepo: container.factionRepo }
+      )
+    }
+    setShowLinkNPC(false)
+    setLinkSearch('')
+  }
+
+  const availableNPCs = allNPCs.filter(
+    (npc) => !faction?.agentNpcIds.includes(npc.id) &&
+      (!linkSearch || npc.name.toLowerCase().includes(linkSearch.toLowerCase()))
+  )
 
   const handleAddPresence = async () => {
     if (!presenceForm.poiId) return
@@ -420,16 +444,27 @@ function FactionDetailPage() {
                 <Users className="size-4" />
                 Agents ({agentNpcs.length})
               </CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7"
-                onClick={handleAddAgent}
-                disabled={isAddingAgent || !systemConfig}
-              >
-                <Dices className="mr-1.5 size-3.5" />
-                {isAddingAgent ? '...' : 'Add'}
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7"
+                  onClick={() => setShowLinkNPC(true)}
+                >
+                  <Link2 className="mr-1.5 size-3.5" />
+                  Link
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7"
+                  onClick={handleAddAgent}
+                  disabled={isAddingAgent || !systemConfig}
+                >
+                  <Dices className="mr-1.5 size-3.5" />
+                  {isAddingAgent ? '...' : 'Generate'}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="pt-0">
               {agentNpcs.length === 0 ? (
@@ -518,6 +553,46 @@ function FactionDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Link Existing NPC Dialog */}
+      <Dialog open={showLinkNPC} onOpenChange={(open) => { setShowLinkNPC(open); if (!open) setLinkSearch('') }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link Existing NPC</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {allNPCs.length > 10 && (
+              <Input
+                placeholder="Search NPCs..."
+                value={linkSearch}
+                onChange={(e) => setLinkSearch(e.target.value)}
+              />
+            )}
+            <div className="max-h-64 overflow-y-auto space-y-1">
+              {availableNPCs.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">No available NPCs to link.</p>
+              ) : (
+                availableNPCs.map((npc) => (
+                  <button
+                    key={npc.id}
+                    className="flex items-center justify-between w-full py-2 px-2 rounded hover:bg-muted/50 transition-colors text-left"
+                    onClick={() => handleLinkExistingNPC(npc.id)}
+                  >
+                    <span className="text-sm font-medium">{npc.name}</span>
+                    <div className="flex items-center gap-1">
+                      {npc.factionIds.length > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          {npc.factionIds.length} faction{npc.factionIds.length > 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Presence Dialog */}
       <Dialog open={showAddPresence} onOpenChange={setShowAddPresence}>

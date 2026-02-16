@@ -25,6 +25,7 @@ import { Switch } from '~/components/ui/switch'
 import { ScrollArea } from '~/components/ui/scroll-area'
 import { TagInput } from '~/components/shared/TagInput'
 import { NPC_RACES, type NPCRace } from '@shared/constants'
+import { Badge } from '~/components/ui/badge'
 import { Plus, Trash2, Sparkles } from 'lucide-react'
 import { ImagePicker } from '~/components/shared/ImagePicker'
 
@@ -241,23 +242,23 @@ export function NPCEditSheet({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="faction">Faction</Label>
-                <Select
-                  value={npc.factionId ?? 'none'}
-                  onValueChange={(v) => updateField('factionId', v === 'none' ? null : v)}
-                >
-                  <SelectTrigger id="faction">
-                    <SelectValue placeholder="Select faction" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {factions.map((f) => (
-                      <SelectItem key={f.id} value={f.id}>
+                <Label>Factions</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {factions.map((f) => {
+                    const active = npc.factionIds.includes(f.id)
+                    return (
+                      <Badge
+                        key={f.id}
+                        variant={active ? 'default' : 'outline'}
+                        className="cursor-pointer select-none"
+                        onClick={() => updateField('factionIds', active ? npc.factionIds.filter((id: string) => id !== f.id) : [...npc.factionIds, f.id])}
+                      >
                         {f.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      </Badge>
+                    )
+                  })}
+                  {factions.length === 0 && <span className="text-sm text-muted-foreground">No factions</span>}
+                </div>
               </div>
 
               <div className="space-y-2">

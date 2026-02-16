@@ -1,6 +1,7 @@
 import type { PoiType } from '@shared/constants'
 import type { Service } from '@domain/value-objects/Service'
 import type { CompendiumRef } from '@domain/entities/Compendium'
+import type { LocationSeed } from '@domain/value-objects/LocationSeed'
 
 export interface POI {
   id: string
@@ -25,6 +26,7 @@ export interface POI {
   monsterRefs: CompendiumRef[]
   magicItemRefs: CompendiumRef[]
   spellRefs: CompendiumRef[]
+  locationSeed: LocationSeed | null
   createdAt: number
   updatedAt: number
 }

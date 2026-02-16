@@ -433,6 +433,41 @@ db.version(21).stores(storesV18).upgrade(async (tx) => {
   }
 })
 
+// v22: Convert NPC factionId → factionIds (multi-faction support)
+const storesV22 = {
+  ...storesV18,
+  npcs: 'id, worldId, *factionIds, regionId, poiId, *tags',
+}
+
+db.version(22).stores(storesV22).upgrade(async (tx) => {
+  const npcs = await tx.table('npcs').toArray()
+  for (const npc of npcs) {
+    const factionIds = npc.factionId ? [npc.factionId] : []
+    const { factionId: _, ...rest } = npc
+    await tx.table('npcs').put({ ...rest, factionIds })
+  }
+})
+
+// v23: Add locationSeed to POIs
+db.version(23).stores(storesV22).upgrade(async (tx) => {
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.locationSeed === undefined) {
+      await tx.table('pois').put({ ...poi, locationSeed: null })
+    }
+  }
+})
+
+// v24: Add customSections + disabledCategories to encounter tables
+db.version(24).stores(storesV22).upgrade(async (tx) => {
+  const tables = await tx.table('encounterTables').toArray()
+  for (const t of tables) {
+    if (t.customSections === undefined) {
+      await tx.table('encounterTables').put({ ...t, customSections: [], disabledCategories: [] })
+    }
+  }
+})
+
 // Seed system configs on first DB creation
 db.on('populate', (tx) => {
   seedDatabase(tx)

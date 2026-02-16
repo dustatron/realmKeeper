@@ -6,6 +6,7 @@ import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
 import { useRegion, useRegions } from '~/ui/hooks/useRegions'
 import { usePOIBreadcrumb } from '~/ui/hooks/usePOIBreadcrumb'
 import { usePOIChildren } from '~/ui/hooks/usePOIChildren'
+import { useNPCs } from '~/ui/hooks/useNPCs'
 import { useNPCsByPoi } from '~/ui/hooks/useNPCsByPoi'
 import { useNPCsByPoiIds } from '~/ui/hooks/useNPCsByPoiIds'
 import { useFactionPresencesByPoi } from '~/ui/hooks/useFactionPresences'
@@ -25,6 +26,7 @@ import { executeCreatePOI } from '@application/use-cases/CreatePOI'
 import { executeCreatePOIEvent } from '@application/use-cases/CreatePOIEvent'
 import { executeDeletePOIEvent } from '@application/use-cases/DeletePOIEvent'
 import { executeCreateNPC } from '@application/use-cases/CreateNPC'
+import { executeUpdateNPC } from '@application/use-cases/UpdateNPC'
 import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import { executeCreateGameMap } from '@application/use-cases/CreateGameMap'
 import { executeCreateRumor } from '@application/use-cases/CreateRumor'
@@ -81,25 +83,12 @@ import {
   Pencil,
   Trash2,
   Plus,
-  MapPin,
-  Building2,
-  Home,
-  DoorOpen,
-  Castle,
-  Skull,
-  TreePine,
-  Flag,
-  Landmark,
-  LayoutGrid,
-  Map,
-  Tent,
-  Sparkles,
   ChevronRight,
-  CalendarClock,
   MapPinned,
   X,
   Book,
 } from 'lucide-react'
+import { POI_TYPE_ICONS } from '@shared/poi-icons'
 import { POI_TYPES, POI_EVENT_TYPES, SEASONS, type PoiType, type POIEventType, type Season } from '@shared/constants'
 import type { NoticeType } from '@shared/constants'
 import type { POI } from '@domain/entities/POI'
@@ -114,22 +103,6 @@ import { newId } from '@shared/ulid'
 export const Route = createFileRoute('/_app/realms/pois_/$poiId')({
   component: POIDetailPage,
 })
-
-const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }>> = {
-  settlement: Building2,
-  building: Home,
-  interior: DoorOpen,
-  fortification: Castle,
-  dungeon: Skull,
-  natural: TreePine,
-  landmark: Flag,
-  district: LayoutGrid,
-  zone: Map,
-  ruin: Landmark,
-  camp: Tent,
-  shrine: Sparkles,
-  other: MapPin,
-}
 
 function POIDetailPage() {
   const { poiId } = Route.useParams()
@@ -150,6 +123,7 @@ function POIDetailPage() {
   const notices = useNoticesByPoi(poiId)
   const encounterTable = useEncounterTable(poiId, poi?.regionId ?? null, null)
   const realm = useActiveRealm()
+  const allWorldNPCs = useNPCs(realm?.id ?? null)
   const systemConfig = useSystemConfig(realm?.systemId ?? null)
   const factions = useFactions(realm?.id ?? null)
   const regions = useRegions(realm?.id ?? null)
@@ -367,7 +341,7 @@ function POIDetailPage() {
       id: newId(),
       worldId: realm.id,
       name: '',
-      factionId: null,
+      factionIds: [],
       regionId: poi?.regionId ?? null,
       poiId: poiId,
       lifeStatus: 'alive',
@@ -521,6 +495,7 @@ function POIDetailPage() {
             selectedChildId={selectedChildId}
             onSelectChild={setSelectedChildId}
             factionPresences={factionPresences}
+            paths={paths}
             rumors={rumors}
             notices={notices}
             encounterTable={encounterTable}
@@ -549,11 +524,15 @@ function POIDetailPage() {
             children={children}
             npcs={npcs}
             factionPresences={factionPresences}
+            paths={paths}
+            poiEvents={poiEvents}
             encounterTable={encounterTable}
             onRollEncounter={handleRollEncounter}
             onSaveEncounterTable={handleSaveEncounterTable}
             onCreateChild={openCreateChildDialog}
             onCreateNPC={openCreateNPC}
+            onCreateEvent={openCreateEventDialog}
+            onDeleteEvent={(id) => setDeletingEventId(id)}
             mapSection={mapSection}
             notesSection={notesSection}
           />
@@ -565,8 +544,16 @@ function POIDetailPage() {
             poi={poi}
             children={children}
             npcs={npcs}
+            factionPresences={factionPresences}
+            paths={paths}
+            poiEvents={poiEvents}
+            encounterTable={encounterTable}
+            onRollEncounter={handleRollEncounter}
+            onSaveEncounterTable={handleSaveEncounterTable}
             onCreateChild={openCreateChildDialog}
             onCreateNPC={openCreateNPC}
+            onCreateEvent={openCreateEventDialog}
+            onDeleteEvent={(id) => setDeletingEventId(id)}
             mapSection={mapSection}
             notesSection={notesSection}
           />
@@ -577,11 +564,28 @@ function POIDetailPage() {
             poi={poi}
             children={children}
             npcs={npcs}
+            allWorldNPCs={allWorldNPCs}
             factionPresences={factionPresences}
             paths={paths}
             poiEvents={poiEvents}
+            encounterTable={encounterTable}
+            rumors={rumors}
+            onRollEncounter={handleRollEncounter}
+            onSaveEncounterTable={handleSaveEncounterTable}
+            onCreateRumor={handleCreateRumor}
+            onToggleRumorUsed={handleToggleRumorUsed}
+            onDeleteRumor={handleDeleteRumor}
             onCreateChild={openCreateChildDialog}
             onCreateNPC={openCreateNPC}
+            onLinkNPC={async (npcId) => {
+              const npc = allWorldNPCs.find((n) => n.id === npcId)
+              if (npc) await executeUpdateNPC({ ...npc, poiId: poi.id, regionId: poi.regionId }, { npcRepo: container.npcRepo })
+            }}
+            onCreateEvent={openCreateEventDialog}
+            onDeleteEvent={(id) => setDeletingEventId(id)}
+            onUpdateLocationSeed={async (seed) => {
+              await executeUpdatePOI({ ...poi, locationSeed: seed }, { poiRepo: container.poiRepo })
+            }}
             mapSection={mapSection}
             notesSection={notesSection}
           />
@@ -628,52 +632,6 @@ function POIDetailPage() {
         onUpdate={handleUpdateCompendiumRefs}
       />
 
-      {/* Events section (shared across non-settlement templates) */}
-      {poi.type !== 'settlement' && poiEvents.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold flex items-center gap-2">
-              <CalendarClock className="size-4" />
-              Events ({poiEvents.length})
-            </h4>
-            <Button size="sm" variant="outline" onClick={openCreateEventDialog}>
-              <Plus className="mr-1.5 size-3.5" />
-              Add Event
-            </Button>
-          </div>
-          <div className="space-y-2">
-            {poiEvents.map((event) => (
-              <div key={event.id} className="flex items-start gap-2 rounded-md border p-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{event.name}</span>
-                    <Badge variant="outline" className="text-xs">{event.type}</Badge>
-                    {event.isActive && <Badge className="text-xs bg-green-600">Active</Badge>}
-                    {event.recurring && <Badge variant="secondary" className="text-xs">Recurring</Badge>}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    {event.trigger.season.charAt(0).toUpperCase() + event.trigger.season.slice(1)} Day {event.trigger.day}
-                    {event.trigger.year !== null && `, Year ${event.trigger.year}`}
-                    {event.trigger.watch !== null && `, Watch ${event.trigger.watch}`}
-                    {' · '}{event.durationWatches} watch{event.durationWatches !== 1 ? 'es' : ''}
-                  </div>
-                  {event.description && (
-                    <div className="text-xs text-muted-foreground mt-1 line-clamp-1">{event.description}</div>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="size-7 p-0 text-muted-foreground hover:text-destructive"
-                  onClick={() => setDeletingEventId(event.id)}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Edit Sheet */}
       <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
@@ -1063,9 +1021,9 @@ function CompendiumRefsSection({
 
   const addRef = (id: string) => {
     const refsKey = searchKind === 'monster' ? 'monsterRefs' : searchKind === 'spell' ? 'spellRefs' : 'magicItemRefs'
-    const currentRefs = poi[refsKey]
+    const currentRefs = poi[refsKey] ?? []
     if (currentRefs.some((r) => r.id === id)) return
-    onUpdate({ monsterRefs: poi.monsterRefs, magicItemRefs: poi.magicItemRefs, spellRefs: poi.spellRefs, [refsKey]: [...currentRefs, { id }] })
+    onUpdate({ monsterRefs: poi.monsterRefs ?? [], magicItemRefs: poi.magicItemRefs ?? [], spellRefs: poi.spellRefs ?? [], [refsKey]: [...currentRefs, { id }] })
     setSearchQuery('')
     setShowSearch(false)
   }
@@ -1073,27 +1031,27 @@ function CompendiumRefsSection({
   const removeRef = (kind: 'monster' | 'spell' | 'magicItem', id: string) => {
     const refsKey = kind === 'monster' ? 'monsterRefs' : kind === 'spell' ? 'spellRefs' : 'magicItemRefs'
     onUpdate({
-      monsterRefs: poi.monsterRefs,
-      magicItemRefs: poi.magicItemRefs,
-      spellRefs: poi.spellRefs,
-      [refsKey]: poi[refsKey].filter((r) => r.id !== id),
+      monsterRefs: poi.monsterRefs ?? [],
+      magicItemRefs: poi.magicItemRefs ?? [],
+      spellRefs: poi.spellRefs ?? [],
+      [refsKey]: (poi[refsKey] ?? []).filter((r) => r.id !== id),
     })
   }
 
   const updateQuantity = (kind: 'monster' | 'spell' | 'magicItem', id: string, quantity: number | undefined) => {
     const refsKey = kind === 'monster' ? 'monsterRefs' : kind === 'spell' ? 'spellRefs' : 'magicItemRefs'
     onUpdate({
-      monsterRefs: poi.monsterRefs,
-      magicItemRefs: poi.magicItemRefs,
-      spellRefs: poi.spellRefs,
-      [refsKey]: poi[refsKey].map((r) => r.id === id ? { ...r, quantity } : r),
+      monsterRefs: poi.monsterRefs ?? [],
+      magicItemRefs: poi.magicItemRefs ?? [],
+      spellRefs: poi.spellRefs ?? [],
+      [refsKey]: (poi[refsKey] ?? []).map((r) => r.id === id ? { ...r, quantity } : r),
     })
   }
 
   const allRefs = [
-    ...poi.monsterRefs.map((r) => ({ ...r, kind: 'monster' as const })),
-    ...poi.spellRefs.map((r) => ({ ...r, kind: 'spell' as const })),
-    ...poi.magicItemRefs.map((r) => ({ ...r, kind: 'magicItem' as const })),
+    ...(poi.monsterRefs ?? []).map((r) => ({ ...r, kind: 'monster' as const })),
+    ...(poi.spellRefs ?? []).map((r) => ({ ...r, kind: 'spell' as const })),
+    ...(poi.magicItemRefs ?? []).map((r) => ({ ...r, kind: 'magicItem' as const })),
   ]
 
   if (allRefs.length === 0 && !showSearch) {
