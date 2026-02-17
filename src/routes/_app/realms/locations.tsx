@@ -1,6 +1,8 @@
 import { createFileRoute, Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { Tabs, TabsList, TabsTrigger } from '~/components/ui/tabs'
+import { useUIStore } from '~/ui/stores/uiStore'
+import { useStarredPOIs } from '~/ui/hooks/usePOIs'
 
 export const Route = createFileRoute('/_app/realms/locations')({
   component: LocationsLayout,
@@ -8,11 +10,15 @@ export const Route = createFileRoute('/_app/realms/locations')({
 
 function LocationsLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const activeTab = pathname.includes('/pois')
-    ? 'pois'
-    : pathname.includes('/paths')
-      ? 'paths'
-      : 'regions'
+  const activeRealmId = useUIStore((s) => s.activeRealmId)
+  const starredPois = useStarredPOIs(activeRealmId)
+  const activeTab = pathname.includes('/starred')
+    ? 'starred'
+    : pathname.includes('/pois')
+      ? 'pois'
+      : pathname.includes('/paths')
+        ? 'paths'
+        : 'regions'
 
   return (
     <div className="space-y-4">
@@ -21,6 +27,11 @@ function LocationsLayout() {
         <TabsList>
           <TabsTrigger value="pois" asChild>
             <Link to="/realms/locations/pois">Points of Interest</Link>
+          </TabsTrigger>
+          <TabsTrigger value="starred" asChild>
+            <Link to="/realms/locations/starred">
+              ⭐ Starred{starredPois.length > 0 ? ` (${starredPois.length})` : ''}
+            </Link>
           </TabsTrigger>
           <TabsTrigger value="regions" asChild>
             <Link to="/realms/locations/regions">Regions</Link>

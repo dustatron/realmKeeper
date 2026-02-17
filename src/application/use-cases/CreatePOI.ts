@@ -52,6 +52,7 @@ export async function executeCreatePOI(
     services: input.services ?? [],
     imageUrl: null,
     locationSeed: input.locationSeed ?? null,
+    starred: false,
     monsterRefs: [],
     magicItemRefs: [],
     spellRefs: [],

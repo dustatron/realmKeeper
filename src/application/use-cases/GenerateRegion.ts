@@ -63,6 +63,7 @@ function makePoi(regionId: string, name: string, type: PoiType, description: str
     magicItemRefs: [],
     spellRefs: [],
     locationSeed: null,
+    starred: false,
     createdAt: now,
     updatedAt: now,
   }

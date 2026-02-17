@@ -224,6 +224,7 @@ const pois = {
       magicItemRefs: data.magicItemRefs ?? [],
       spellRefs: data.spellRefs ?? [],
       locationSeed: data.locationSeed ?? null,
+      starred: data.starred ?? false,
       createdAt: ts,
       updatedAt: ts,
     }

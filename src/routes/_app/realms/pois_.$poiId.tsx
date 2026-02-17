@@ -85,6 +85,7 @@ import {
   MapPinned,
   X,
   Book,
+  Star,
 } from 'lucide-react'
 import { POI_TYPE_ICONS } from '@shared/poi-icons'
 import { POI_TYPES, POI_EVENT_TYPES, SEASONS, type PoiType, type POIEventType, type Season } from '@shared/constants'
@@ -553,6 +554,14 @@ function POIDetailPage() {
           <span className="font-medium">{poi.name}</span>
           <Badge variant="outline" className="text-xs">{poi.type}</Badge>
         </span>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => db.pois.update(poi.id, { starred: !poi.starred, updatedAt: Date.now() })}
+          title={poi.starred ? 'Unstar' : 'Star'}
+        >
+          <Star className={`size-4 ${poi.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+        </Button>
         <Button size="sm" variant="outline" onClick={() => setMapUploadDialogOpen(true)}>
           <MapPinned className="mr-2 size-4" />
           {poiMaps.length > 0 ? 'Edit Map' : 'Add Map'}

@@ -64,7 +64,9 @@ import {
   Tent,
   Sparkles,
   MapPin,
+  Star,
 } from 'lucide-react'
+import { db } from '@infrastructure/dexie/db'
 
 export const Route = createFileRoute('/_app/realms/locations/pois')({
   component: POIsPage,
@@ -356,6 +358,17 @@ function POIsPage() {
                                   )}
                                 </div>
                               </div>
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  db.pois.update(poi.id, { starred: !poi.starred, updatedAt: Date.now() })
+                                }}
+                                className="shrink-0 p-1 rounded-md hover:bg-muted transition-colors"
+                                title={poi.starred ? 'Unstar' : 'Star'}
+                              >
+                                <Star className={`size-4 ${poi.starred ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
+                              </button>
                               <Badge variant={getPoiTypeColor(poi.type)}>{poi.type}</Badge>
                             </div>
                           </CardHeader>

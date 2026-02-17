@@ -478,6 +478,21 @@ db.version(24).stores(storesV22).upgrade(async (tx) => {
 // v25: Add customCompendiumEntries table
 db.version(25).stores(storesV25)
 
+const storesV26 = {
+  ...storesV25,
+  pois: 'id, regionId, parentPoiId, type, mapRef, starred',
+}
+
+// v26: Add starred field to POIs
+db.version(26).stores(storesV26).upgrade(async (tx) => {
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.starred === undefined) {
+      await tx.table('pois').put({ ...poi, starred: false })
+    }
+  }
+})
+
 // Seed system configs on first DB creation
 db.on('populate', (tx) => {
   seedDatabase(tx)

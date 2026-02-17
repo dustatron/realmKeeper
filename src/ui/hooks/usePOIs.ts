@@ -27,3 +27,17 @@ export function useRealmPOIs(worldId: string | null) {
     [worldId]
   ) ?? []
 }
+
+export function useStarredPOIs(worldId: string | null) {
+  return useLiveQuery(
+    async () => {
+      if (!worldId) return []
+      const regions = await db.regions.where('worldId').equals(worldId).toArray()
+      const regionIds = regions.map((r) => r.id)
+      if (regionIds.length === 0) return []
+      const allPois = await db.pois.where('regionId').anyOf(regionIds).toArray()
+      return allPois.filter((p) => p.starred)
+    },
+    [worldId]
+  ) ?? []
+}

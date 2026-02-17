@@ -27,6 +27,7 @@ export interface POI {
   magicItemRefs: CompendiumRef[]
   spellRefs: CompendiumRef[]
   locationSeed: LocationSeed | null
+  starred: boolean
   createdAt: number
   updatedAt: number
 }
