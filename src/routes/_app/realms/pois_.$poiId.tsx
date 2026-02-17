@@ -434,7 +434,7 @@ function POIDetailPage() {
     )
   }
 
-  const handleSaveEncounterTable = async (entries: Pick<EncounterTable, 'creature' | 'signOmen' | 'loss' | 'npc' | 'discovery' | 'treasure'>) => {
+  const handleSaveEncounterTable = async (entries: Pick<EncounterTable, 'creature' | 'signOmen' | 'loss' | 'npc' | 'discovery' | 'treasure' | 'customSections' | 'disabledCategories'>) => {
     if (!poi || !region) return
     if (encounterTable) {
       await executeUpdateEncounterTable(

@@ -38,7 +38,8 @@ interface DungeonTemplateProps {
   onSaveEncounterTable?: (
     entries: Pick<
       EncounterTable,
-      "creature" | "signOmen" | "loss" | "npc" | "discovery" | "treasure"
+      | "creature" | "signOmen" | "loss" | "npc" | "discovery" | "treasure"
+      | "customSections" | "disabledCategories"
     >,
   ) => void;
   onCreateChild: () => void;
