@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -14,9 +15,12 @@ import {
   ExternalLink,
   FileText,
   Lock,
+  Columns2,
+  Rows2,
+  ChevronDown,
+  Eye,
 } from "lucide-react";
 import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
-import { FactionChip } from "~/components/shared/FactionChip";
 import { RumorList } from "~/components/shared/RumorList";
 import { NoticeBoard } from "~/components/shared/NoticeBoard";
 import { EncounterTableUI } from "~/components/shared/EncounterTableUI";
@@ -71,8 +75,14 @@ interface SettlementTemplateProps {
   onSaveEncounterTable?: (
     entries: Pick<
       EncounterTable,
-      | "creature" | "signOmen" | "loss" | "npc" | "discovery" | "treasure"
-      | "customSections" | "disabledCategories"
+      | "creature"
+      | "signOmen"
+      | "loss"
+      | "npc"
+      | "discovery"
+      | "treasure"
+      | "customSections"
+      | "disabledCategories"
     >,
   ) => void;
   onCreateChild: () => void;
@@ -143,6 +153,21 @@ export function SettlementTemplate({
     [npcs, childNPCs, childPoiNames],
   );
 
+  const [overviewOpen, setOverviewOpen] = useState(true);
+
+  const [layout, setLayout] = useState<"columns" | "stacked">(() => {
+    try {
+      const saved = localStorage.getItem("settlement-layout");
+      if (saved === "stacked" || saved === "columns") return saved;
+    } catch {}
+    return "columns";
+  });
+
+  const updateLayout = (next: "columns" | "stacked") => {
+    setLayout(next);
+    try { localStorage.setItem("settlement-layout", next); } catch {}
+  };
+
   // Aggregate services from child POIs + this POI
   const allServices = [
     ...poi.services,
@@ -151,35 +176,53 @@ export function SettlementTemplate({
 
   return (
     <div className="space-y-4">
-      {/* Header badges */}
-      <div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {poi.subtypeLabel && (
-            <Badge variant="outline" className="text-xs">
-              {poi.subtypeLabel}
-            </Badge>
-          )}
-          {poi.tags.map((tag) => (
-            <Badge key={tag} variant="outline" className="text-xs">
-              {tag}
-            </Badge>
-          ))}
+      {/* Overview — collapsible */}
+      <Collapsible open={overviewOpen} onOpenChange={setOverviewOpen}>
+        <div className="rounded-lg border">
+          <CollapsibleTrigger asChild>
+            <button className="flex w-full items-center justify-between px-4 py-2.5 text-sm font-medium hover:bg-muted/50 transition-colors">
+              <span className="flex items-center gap-2">
+                <Eye className="size-4 text-muted-foreground" />
+                Overview
+              </span>
+              <ChevronDown className={`size-4 text-muted-foreground transition-transform ${overviewOpen ? "rotate-180" : ""}`} />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="space-y-4 px-4 pb-4">
+              {/* Badges */}
+              {(poi.subtypeLabel || poi.tags.length > 0) && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {poi.subtypeLabel && (
+                    <Badge variant="outline" className="text-xs">
+                      {poi.subtypeLabel}
+                    </Badge>
+                  )}
+                  {poi.tags.map((tag) => (
+                    <Badge key={tag} variant="outline" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {/* At A Glance */}
+              <AtAGlancePanel
+                mood={poi.mood}
+                trouble={poi.trouble}
+                factionPresences={factionPresences}
+                npcCount={allNPCs.length}
+                activeEvents={poiEvents.filter((e) => e.isActive).length}
+                paths={paths}
+                currentPoiId={poi.id}
+              />
+
+              {/* Read Aloud */}
+              <ReadAloudBlock text={poi.readAloud} />
+            </div>
+          </CollapsibleContent>
         </div>
-      </div>
-
-      {/* At A Glance */}
-      <AtAGlancePanel
-        mood={poi.mood}
-        trouble={poi.trouble}
-        factionPresences={factionPresences}
-        npcCount={allNPCs.length}
-        activeEvents={poiEvents.filter((e) => e.isActive).length}
-        paths={paths}
-        currentPoiId={poi.id}
-      />
-
-      {/* Read Aloud */}
-      <ReadAloudBlock text={poi.readAloud} />
+      </Collapsible>
 
       {/* Tabs */}
       <Tabs defaultValue="locations">
@@ -212,12 +255,44 @@ export function SettlementTemplate({
 
         {/* Locations & NPCs tab */}
         <TabsContent value="locations" className="space-y-6 pt-3">
-          {/* Map + Key Locations — 2-col on desktop */}
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Left: Map */}
-            <div>{mapSection}</div>
+          {/* Layout toggle — hidden on mobile (always stacked) */}
+          <div className="hidden md:flex justify-end">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                updateLayout(layout === "columns" ? "stacked" : "columns")
+              }
+              className="gap-1.5"
+            >
+              {layout === "columns" ? (
+                <>
+                  <Rows2 className="size-4" />
+                  Stacked
+                </>
+              ) : (
+                <>
+                  <Columns2 className="size-4" />
+                  Columns
+                </>
+              )}
+            </Button>
+          </div>
 
-            {/* Right: Location cards */}
+          {/* Map + Key Locations */}
+          <div
+            className={`grid gap-4 ${layout === "columns" ? "md:grid-cols-2" : ""}`}
+          >
+            {/* Map — taller in stacked mode on desktop */}
+            <div
+              className={layout === "stacked"
+                ? "md:h-[90vh] md:[&>*]:h-full md:[&>*]:!flex md:[&>*]:!flex-col md:[&>*>*+*]:!flex-1 md:[&>*>*+*]:!h-auto md:[&>*>*+*]:min-h-0"
+                : ""}
+            >
+              {mapSection}
+            </div>
+
+            {/* Location cards */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-semibold">Key Locations</h4>
