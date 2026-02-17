@@ -329,7 +329,7 @@ function RealmsPage() {
         onTabChange={(newTab) =>
           navigate({
             to: '/realms',
-            search: newTab === 'world-details' ? {} : { tab: newTab },
+            search: newTab === 'search' ? {} : { tab: newTab },
             replace: true,
           })
         }

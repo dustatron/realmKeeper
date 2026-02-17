@@ -171,7 +171,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
     setTimeout(() => setSettingsSaved(false), 2000)
   }
 
-  const activeTab = tab === 'search' || tab === 'settings' ? tab : 'world-details'
+  const activeTab = tab === 'world-details' || tab === 'settings' ? tab : 'search'
 
   return (
     <div className="space-y-4 p-6">

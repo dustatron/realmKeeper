@@ -149,7 +149,17 @@ function CompendiumPage() {
     )
   }
 
-  const defaultTab = tabs.length > 0 ? tabs[0].value : 'monsters'
+  const validTabs = tabs.map((t) => t.value)
+  const fallbackTab = validTabs[0] ?? 'monsters'
+  const activeTab = tabParam && validTabs.includes(tabParam) ? tabParam : fallbackTab
+
+  const handleTabChange = (value: string) => {
+    navigate({
+      to: '/realms/compendium',
+      search: value === fallbackTab ? {} : { tab: value },
+      replace: true,
+    })
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -166,7 +176,7 @@ function CompendiumPage() {
         }
       />
 
-      <Tabs defaultValue={defaultTab}>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
           {tabs.map((t) => (
             <TabsTrigger key={t.value} value={t.value} className="gap-1.5">
