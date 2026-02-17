@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import { markdownOptions } from "~/shared/markdown";
@@ -12,6 +13,8 @@ import {
   FileText,
   CalendarClock,
   Trash2,
+  Columns2,
+  Rows2,
 } from "lucide-react";
 import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
 import { FactionChip } from "~/components/shared/FactionChip";
@@ -30,6 +33,7 @@ interface DungeonTemplateProps {
   poi: POI;
   children: POI[];
   npcs: NPC[];
+  childNPCs?: NPC[];
   factionPresences: FactionPresence[];
   paths: ResolvedPath[];
   poiEvents: POIEvent[];
@@ -48,12 +52,14 @@ interface DungeonTemplateProps {
   onDeleteEvent: (id: string) => void;
   mapSection: React.ReactNode;
   notesSection?: React.ReactNode;
+  compendiumSection?: React.ReactNode;
 }
 
 export function DungeonTemplate({
   poi,
   children: childPois,
   npcs,
+  childNPCs = [],
   factionPresences,
   paths,
   poiEvents,
@@ -66,8 +72,26 @@ export function DungeonTemplate({
   onDeleteEvent,
   mapSection,
   notesSection,
+  compendiumSection,
 }: DungeonTemplateProps) {
+  const allNPCs = [...npcs, ...childNPCs];
+  const poiNameMap = new Map<string, string>(
+    [poi, ...childPois].map((p) => [p.id, p.name]),
+  );
   const activeEvents = poiEvents.filter((e) => e.isActive).length;
+
+  const [layout, setLayout] = useState<"columns" | "stacked">(() => {
+    try {
+      const saved = localStorage.getItem("dungeon-layout");
+      if (saved === "stacked" || saved === "columns") return saved;
+    } catch {}
+    return "columns";
+  });
+
+  const updateLayout = (next: "columns" | "stacked") => {
+    setLayout(next);
+    try { localStorage.setItem("dungeon-layout", next); } catch {}
+  };
 
   return (
     <div className="space-y-4">
@@ -125,7 +149,7 @@ export function DungeonTemplate({
           </TabsTrigger>
           <TabsTrigger value="denizens">
             <Users className="size-4" />
-            Denizens ({npcs.length})
+            Denizens ({allNPCs.length})
           </TabsTrigger>
           <TabsTrigger value="encounters">
             <Dices className="size-4" />
@@ -139,50 +163,89 @@ export function DungeonTemplate({
 
         {/* Rooms tab */}
         <TabsContent value="rooms" className="space-y-4 pt-3">
-          {mapSection}
-
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-sm font-semibold">Rooms & Areas</h4>
-            <Button size="sm" variant="outline" onClick={onCreateChild}>
-              <Plus className="mr-1.5 size-3.5" />
-              Add Room
+          {/* Layout toggle — hidden on mobile (always stacked) */}
+          <div className="hidden md:flex justify-end">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                updateLayout(layout === "columns" ? "stacked" : "columns")
+              }
+              className="gap-1.5"
+            >
+              {layout === "columns" ? (
+                <>
+                  <Rows2 className="size-4" />
+                  Stacked
+                </>
+              ) : (
+                <>
+                  <Columns2 className="size-4" />
+                  Columns
+                </>
+              )}
             </Button>
           </div>
-          {childPois.length > 0 ? (
-            <div className="space-y-1">
-              {childPois.map((child) => (
-                <Link
-                  key={child.id}
-                  to="/realms/pois/$poiId"
-                  params={{ poiId: child.id }}
-                  className="block"
-                >
-                  <div className="rounded-md border p-2 hover:bg-accent transition-colors">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{child.name}</span>
-                      {child.floor !== null && (
-                        <Badge variant="outline" className="text-xs">
-                          Floor {child.floor}
-                        </Badge>
-                      )}
-                      <Badge variant="outline" className="text-xs">
-                        {child.type}
-                      </Badge>
-                    </div>
-                    {child.description && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                        {child.description}
-                      </p>
-                    )}
-                  </div>
-                </Link>
-              ))}
+
+          {/* Map + Room list */}
+          <div
+            className={`grid gap-4 ${layout === "columns" ? "md:grid-cols-2" : ""}`}
+          >
+            {/* Map — taller in stacked mode on desktop */}
+            <div
+              className={layout === "stacked"
+                ? "md:h-[90vh] md:[&>*]:h-full md:[&>*]:!flex md:[&>*]:!flex-col md:[&>*>*+*]:!flex-1 md:[&>*>*+*]:!h-auto md:[&>*>*+*]:min-h-0"
+                : ""}
+            >
+              {mapSection}
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No rooms mapped yet.
-            </p>
-          )}
+
+            {/* Room cards */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-semibold">Rooms & Areas</h4>
+                <Button size="sm" variant="outline" onClick={onCreateChild}>
+                  <Plus className="mr-1.5 size-3.5" />
+                  Add Room
+                </Button>
+              </div>
+              {childPois.length > 0 ? (
+                <div className="space-y-1">
+                  {childPois.map((child) => (
+                    <Link
+                      key={child.id}
+                      to="/realms/pois/$poiId"
+                      params={{ poiId: child.id }}
+                      className="block"
+                    >
+                      <div className="rounded-md border p-2 hover:bg-accent transition-colors">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{child.name}</span>
+                          {child.floor !== null && (
+                            <Badge variant="outline" className="text-xs">
+                              Floor {child.floor}
+                            </Badge>
+                          )}
+                          <Badge variant="outline" className="text-xs">
+                            {child.type}
+                          </Badge>
+                        </div>
+                        {child.description && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            {child.description}
+                          </p>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No rooms mapped yet.
+                </p>
+              )}
+            </div>
+          </div>
         </TabsContent>
 
         {/* Denizens tab */}
@@ -190,17 +253,17 @@ export function DungeonTemplate({
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-sm font-semibold flex items-center gap-2">
               <Users className="size-4" />
-              Denizens ({npcs.length})
+              Denizens ({allNPCs.length})
             </h4>
             <Button size="sm" variant="outline" onClick={onCreateNPC}>
               <Plus className="mr-1.5 size-3.5" />
               Add NPC
             </Button>
           </div>
-          {npcs.length > 0 ? (
+          {allNPCs.length > 0 ? (
             <div className="space-y-2">
-              {npcs.map((npc) => (
-                <NPCMiniCard key={npc.id} npc={npc} />
+              {allNPCs.map((npc) => (
+                <NPCMiniCard key={npc.id} npc={npc} poiName={npc.poiId ? poiNameMap.get(npc.poiId) : undefined} />
               ))}
             </div>
           ) : (
@@ -219,6 +282,8 @@ export function DungeonTemplate({
               </div>
             </div>
           )}
+
+          {compendiumSection}
         </TabsContent>
 
         {/* Encounters tab */}

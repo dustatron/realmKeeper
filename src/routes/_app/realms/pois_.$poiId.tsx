@@ -455,6 +455,7 @@ function POIDetailPage() {
             poi={poi}
             children={children}
             npcs={npcs}
+            childNPCs={childNPCs}
             factionPresences={factionPresences}
             paths={paths}
             poiEvents={poiEvents}
@@ -467,6 +468,14 @@ function POIDetailPage() {
             onDeleteEvent={(id) => setDeletingEventId(id)}
             mapSection={mapSection}
             notesSection={notesSection}
+            compendiumSection={
+              <CompendiumRefsSection
+                poi={poi}
+                systemId={realm?.systemId ?? null}
+                worldId={realm?.id ?? null}
+                onUpdate={handleUpdateCompendiumRefs}
+              />
+            }
           />
         )
       case 'building':
@@ -559,13 +568,15 @@ function POIDetailPage() {
       {/* Template content */}
       {renderTemplate()}
 
-      {/* Compendium Refs */}
-      <CompendiumRefsSection
-        poi={poi}
-        systemId={realm?.systemId ?? null}
-        worldId={realm?.id ?? null}
-        onUpdate={handleUpdateCompendiumRefs}
-      />
+      {/* Compendium Refs — dungeons show this in the Denizens tab */}
+      {poi.type !== 'dungeon' && (
+        <CompendiumRefsSection
+          poi={poi}
+          systemId={realm?.systemId ?? null}
+          worldId={realm?.id ?? null}
+          onUpdate={handleUpdateCompendiumRefs}
+        />
+      )}
 
 
       {/* Create Child Sheet */}
