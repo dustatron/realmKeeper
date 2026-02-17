@@ -44,7 +44,7 @@ function NPCsPage() {
   const filteredNPCs = useMemo(() => {
     return npcs.filter((npc) => {
       if (search && !npc.name.toLowerCase().includes(search.toLowerCase())) return false
-      if (factionFilter !== 'all' && !npc.factionIds.includes(factionFilter)) return false
+      if (factionFilter !== 'all' && !npc.factionIds?.includes(factionFilter)) return false
       if (lifeStatusFilter !== 'all' && npc.lifeStatus !== lifeStatusFilter) return false
       return true
     })
@@ -144,7 +144,7 @@ function NPCsPage() {
             </TableHeader>
             <TableBody>
               {filteredNPCs.map((npc) => {
-                const npcFactions = factions.filter((f) => npc.factionIds.includes(f.id))
+                const npcFactions = factions.filter((f) => npc.factionIds?.includes(f.id))
                 const region = regions.find((r) => r.id === npc.regionId)
                 const poi = pois.find((p) => p.id === npc.poiId)
                 return (

@@ -320,7 +320,7 @@ function NPCDetailPage() {
             <Label>Factions</Label>
             <div className="flex flex-wrap gap-1.5">
               {factions.map((f) => {
-                const active = editingNPC.factionIds.includes(f.id)
+                const active = editingNPC.factionIds?.includes(f.id)
                 return (
                   <Badge
                     key={f.id}
@@ -875,7 +875,7 @@ function NPCDetailPage() {
         </div>
 
         {/* Factions */}
-        <FactionBlurb factions={factions.filter((f) => npc.factionIds.includes(f.id))} />
+        <FactionBlurb factions={factions.filter((f) => npc.factionIds?.includes(f.id))} />
 
         {/* Attacks */}
         {sb.attacks.length > 0 && (
