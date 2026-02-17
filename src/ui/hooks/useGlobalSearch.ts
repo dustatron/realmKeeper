@@ -1,11 +1,13 @@
 import { useMemo } from 'react'
 import Fuse from 'fuse.js'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useNPCs } from './useNPCs'
 import { useFactions } from './useFactions'
 import { useRegions } from './useRegions'
 import { useRealmPOIs } from './usePOIs'
 import { useRealmNotes } from './useRealmNotes'
 import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
+import { db } from '@infrastructure/dexie/db'
 import {
   getMonstersBySystemId,
   getSpellsBySystemId,
@@ -30,6 +32,11 @@ export function useGlobalSearch(worldId: string | null, query: string) {
   const pois = useRealmPOIs(worldId)
   const notes = useRealmNotes(worldId)
   const realm = useActiveRealm()
+  const customEntries = useLiveQuery(
+    () => worldId ? db.customCompendiumEntries.where('worldId').equals(worldId).toArray() : [],
+    [worldId],
+    []
+  )
 
   const items = useMemo<SearchableItem[]>(() => {
     const result: SearchableItem[] = []
@@ -145,8 +152,21 @@ export function useGlobalSearch(worldId: string | null, query: string) {
       }
     }
 
+    // Custom compendium entries
+    for (const c of customEntries) {
+      result.push({
+        id: c.id,
+        name: c.name,
+        type: c.kind,
+        description: c.description.slice(0, 200),
+        url: '/realms/compendium/custom/$entryId',
+        params: { entryId: c.id },
+        tags: [],
+      })
+    }
+
     return result
-  }, [npcs, factions, regions, pois, notes, realm?.systemId])
+  }, [npcs, factions, regions, pois, notes, realm?.systemId, customEntries])
 
   const fuse = useMemo(
     () =>

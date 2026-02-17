@@ -48,6 +48,7 @@ import { Badge } from '~/components/ui/badge'
 import {
   Compass,
   Plus,
+  Search,
   Pencil,
   Trash2,
   Building2,
@@ -94,6 +95,7 @@ function POIsPage() {
   const pois = selectedRegionId === 'all' ? allPois : poisByRegion
   const container = useContainer()
 
+  const [searchQuery, setSearchQuery] = useState('')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editingPOI, setEditingPOI] = useState<POI | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -123,10 +125,17 @@ function POIsPage() {
     tags: [] as string[],
   })
 
-  // Filter top-level POIs only
+  // Filter top-level POIs, with search
   const topLevelPois = useMemo(() => {
-    return pois.filter((poi) => poi.parentPoiId === null)
-  }, [pois])
+    const q = searchQuery.toLowerCase().trim()
+    if (!q) return pois.filter((poi) => poi.parentPoiId === null)
+    // When searching, include all POIs (not just top-level) so child matches surface
+    return pois.filter((poi) =>
+      poi.name.toLowerCase().includes(q) ||
+      poi.subtypeLabel?.toLowerCase().includes(q) ||
+      poi.tags.some((t) => t.toLowerCase().includes(q))
+    )
+  }, [pois, searchQuery])
 
   // Group by region
   const poisByRegionMap = useMemo(() => {
@@ -262,15 +271,14 @@ function POIsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        {/* Region Selector */}
+      <div className="flex items-center gap-2">
         <div className="flex items-center gap-2">
           <Label htmlFor="region-select">Region:</Label>
           <Select
             value={selectedRegionId}
             onValueChange={(value) => setSelectedRegionId(value)}
           >
-            <SelectTrigger id="region-select" className="w-64">
+            <SelectTrigger id="region-select" className="w-48">
               <SelectValue placeholder="All Regions" />
             </SelectTrigger>
             <SelectContent>
@@ -282,6 +290,15 @@ function POIsPage() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search POIs..."
+            className="pl-9"
+          />
         </div>
         <Button onClick={openCreateDialog}>
           <Plus className="mr-2 size-4" />

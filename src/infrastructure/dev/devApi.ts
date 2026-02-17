@@ -12,6 +12,7 @@ import type { NPC } from '@domain/entities/NPC'
 import type { POI } from '@domain/entities/POI'
 import type { Region } from '@domain/entities/Region'
 import type { FactionRelationship } from '@domain/entities/FactionRelationship'
+import type { CustomCompendiumEntry } from '@domain/entities/CustomCompendiumEntry'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -334,6 +335,59 @@ const relationships = {
 }
 
 // ---------------------------------------------------------------------------
+// Custom Compendium Entries
+// ---------------------------------------------------------------------------
+
+const compendium = {
+  async list(worldId?: string): Promise<CustomCompendiumEntry[]> {
+    const wid = requireWorldId(worldId)
+    return db.customCompendiumEntries.where('worldId').equals(wid).toArray()
+  },
+
+  async listByKind(kind: CustomCompendiumEntry['kind'], worldId?: string): Promise<CustomCompendiumEntry[]> {
+    const wid = requireWorldId(worldId)
+    return db.customCompendiumEntries
+      .where('worldId')
+      .equals(wid)
+      .filter((e) => e.kind === kind)
+      .toArray()
+  },
+
+  async get(id: string): Promise<CustomCompendiumEntry | undefined> {
+    return db.customCompendiumEntries.get(id)
+  },
+
+  async add(
+    data: Pick<CustomCompendiumEntry, 'worldId' | 'name' | 'kind'> &
+      Partial<Omit<CustomCompendiumEntry, 'id' | 'createdAt' | 'updatedAt'>>,
+  ): Promise<CustomCompendiumEntry> {
+    const ts = now()
+    const entry: CustomCompendiumEntry = {
+      id: newId(),
+      worldId: data.worldId,
+      kind: data.kind,
+      name: data.name,
+      description: data.description ?? '',
+      monsterData: data.monsterData,
+      spellData: data.spellData,
+      magicItemData: data.magicItemData,
+      createdAt: ts,
+      updatedAt: ts,
+    }
+    await db.customCompendiumEntries.add(entry)
+    return entry
+  },
+
+  async update(id: string, partial: Partial<Omit<CustomCompendiumEntry, 'id' | 'createdAt'>>): Promise<CustomCompendiumEntry> {
+    const existing = await db.customCompendiumEntries.get(id)
+    if (!existing) throw new Error(`CustomCompendiumEntry ${id} not found`)
+    const updated = { ...existing, ...partial, updatedAt: now() }
+    await db.customCompendiumEntries.put(updated)
+    return updated
+  },
+}
+
+// ---------------------------------------------------------------------------
 // Install on window
 // ---------------------------------------------------------------------------
 
@@ -343,7 +397,7 @@ declare global {
   }
 }
 
-const api = { worlds, factions, npcs, pois, regions, relationships }
+const api = { worlds, factions, npcs, pois, regions, relationships, compendium }
 
 export function installDevApi(): void {
   window.__realmKeeper = api

@@ -15,6 +15,7 @@ import { executeDeleteFaction } from '@application/use-cases/DeleteFaction'
 import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import { executeCreateFactionPresence } from '@application/use-cases/CreateFactionPresence'
 import { executeDeleteFactionPresence } from '@application/use-cases/DeleteFactionPresence'
+import { executeUpdateRelationship } from '@application/use-cases/UpdateRelationship'
 import { executeLinkNPCToFaction } from '@application/use-cases/LinkNPCToFaction'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
@@ -105,6 +106,12 @@ function FactionDetailPage() {
       { ...faction, agendaGoals: updatedGoals },
       { factionRepo: container.factionRepo }
     )
+  }
+
+  const handleAdjustRelationship = async (targetId: string, delta: number) => {
+    await executeUpdateRelationship(factionId, targetId, delta, 'Manual adjustment', {
+      relationshipRepo: container.factionRelationshipRepo,
+    })
   }
 
   const handleAddAgent = async () => {
@@ -421,11 +428,29 @@ function FactionDetailPage() {
                         >
                           {targetFaction?.name ?? 'Unknown'}
                         </Link>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-mono font-semibold">
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-6"
+                            disabled={rel.score <= -6}
+                            onClick={() => handleAdjustRelationship(rel.targetId, -1)}
+                          >
+                            <ChevronDown className="size-4" />
+                          </Button>
+                          <span className="text-sm font-mono font-semibold w-7 text-center">
                             {rel.score > 0 ? `+${rel.score}` : rel.score}
                           </span>
-                          <Badge variant={rel.score > 0 ? 'secondary' : rel.score < 0 ? 'destructive' : 'outline'} className="text-xs w-16 justify-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-6"
+                            disabled={rel.score >= 6}
+                            onClick={() => handleAdjustRelationship(rel.targetId, 1)}
+                          >
+                            <ChevronUp className="size-4" />
+                          </Button>
+                          <Badge variant={rel.score > 0 ? 'secondary' : rel.score < 0 ? 'destructive' : 'outline'} className="text-xs w-20 justify-center">
                             {statusLabel}
                           </Badge>
                         </div>

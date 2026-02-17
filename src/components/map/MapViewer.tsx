@@ -6,6 +6,7 @@ import type { POI } from '@domain/entities/POI'
 import type { Path } from '@domain/entities/Path'
 import type { Region } from '@domain/entities/Region'
 import type { PoiType } from '@shared/constants'
+import { Button } from '~/components/ui/button'
 import {
   Building2,
   Home,
@@ -20,6 +21,8 @@ import {
   Tent,
   Sparkles,
   MapPin,
+  Maximize,
+  Minimize,
 } from 'lucide-react'
 import { createRoot } from 'react-dom/client'
 
@@ -762,7 +765,43 @@ export function MapViewer({
     })
   }, [activeHighlightId])
 
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', handler)
+    return () => document.removeEventListener('fullscreenchange', handler)
+  }, [])
+
+  const toggleFullscreen = () => {
+    if (!wrapperRef.current) return
+    if (document.fullscreenElement) {
+      document.exitFullscreen()
+    } else {
+      wrapperRef.current.requestFullscreen()
+    }
+  }
+
+  // Resize map when entering/exiting fullscreen
+  useEffect(() => {
+    const instance = mapRef.current
+    if (instance) {
+      setTimeout(() => instance.resize(), 50)
+    }
+  }, [isFullscreen])
+
   return (
-    <div ref={containerRef} className="w-full h-full min-h-[200px]" />
+    <div ref={wrapperRef} className="relative w-full h-full min-h-[200px]">
+      <div ref={containerRef} className="w-full h-full" />
+      <Button
+        size="icon"
+        variant="secondary"
+        className="absolute bottom-2 left-2 size-8 z-10 shadow-md"
+        onClick={toggleFullscreen}
+      >
+        {isFullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
+      </Button>
+    </div>
   )
 }

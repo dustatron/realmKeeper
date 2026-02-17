@@ -35,11 +35,21 @@ export interface ShadowdarkMonsterData {
   traits: { name: string; description: string }[];
 }
 
+export interface CustomCompendiumMonsterData {
+  ac: number | null;
+  hp: number | null;
+  speed: string;
+  attacks: string;
+  abilities: string;
+  cr: string;
+}
+
 export interface CompendiumMonster extends CompendiumEntry {
   kind: 'monster';
   systemData:
     | { system: 'cairn'; data: CairnMonsterData }
-    | { system: 'shadowdark'; data: ShadowdarkMonsterData };
+    | { system: 'shadowdark'; data: ShadowdarkMonsterData }
+    | { system: 'custom'; data: CustomCompendiumMonsterData };
 }
 
 // --- Spell ---
@@ -56,11 +66,22 @@ export interface ShadowdarkSpellData {
   tier: string;
 }
 
+export interface CustomCompendiumSpellData {
+  level: string;
+  school: string;
+  castingTime: string;
+  range: string;
+  duration: string;
+  components: string;
+  classes: string[];
+}
+
 export interface CompendiumSpell extends CompendiumEntry {
   kind: 'spell';
   systemData:
     | { system: 'cairn'; data: CairnSpellData }
-    | { system: 'shadowdark'; data: ShadowdarkSpellData };
+    | { system: 'shadowdark'; data: ShadowdarkSpellData }
+    | { system: 'custom'; data: CustomCompendiumSpellData };
 }
 
 // --- Magic Item ---
@@ -76,11 +97,20 @@ export interface ShadowdarkMagicItemData {
   traits: { name: string; description: string }[];
 }
 
+export interface CustomCompendiumMagicItemData {
+  rarity: string;
+  itemType: string;
+  attunement: boolean;
+  charges: string | null;
+  properties: string[];
+}
+
 export interface CompendiumMagicItem extends CompendiumEntry {
   kind: 'magicItem';
   systemData:
     | { system: 'cairn'; data: CairnMagicItemData }
-    | { system: 'shadowdark'; data: ShadowdarkMagicItemData };
+    | { system: 'shadowdark'; data: ShadowdarkMagicItemData }
+    | { system: 'custom'; data: CustomCompendiumMagicItemData };
 }
 
 // --- Equipment ---

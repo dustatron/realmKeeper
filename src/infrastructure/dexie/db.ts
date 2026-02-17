@@ -20,6 +20,7 @@ import type { Rumor } from '@domain/entities/Rumor'
 import type { Notice } from '@domain/entities/Notice'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
 import type { EntityNote } from '@domain/entities/EntityNote'
+import type { CustomCompendiumEntry } from '@domain/entities/CustomCompendiumEntry'
 import { seedDatabase } from './seed'
 
 const cloudUrl = import.meta.env.VITE_DEXIE_CLOUD_URL as string | undefined
@@ -49,6 +50,7 @@ type AppDB = Omit<Dexie, 'realms'> & {
   notices: EntityTable<Notice, 'id'>
   encounterTables: EntityTable<EncounterTable, 'id'>
   entityNotes: EntityTable<EntityNote, 'id'>
+  customCompendiumEntries: EntityTable<CustomCompendiumEntry, 'id'>
 }
 
 const db = new Dexie('RealmKeeperDB', {
@@ -458,6 +460,11 @@ db.version(23).stores(storesV22).upgrade(async (tx) => {
   }
 })
 
+const storesV25 = {
+  ...storesV22,
+  customCompendiumEntries: 'id, worldId, kind, name',
+}
+
 // v24: Add customSections + disabledCategories to encounter tables
 db.version(24).stores(storesV22).upgrade(async (tx) => {
   const tables = await tx.table('encounterTables').toArray()
@@ -467,6 +474,9 @@ db.version(24).stores(storesV22).upgrade(async (tx) => {
     }
   }
 })
+
+// v25: Add customCompendiumEntries table
+db.version(25).stores(storesV25)
 
 // Seed system configs on first DB creation
 db.on('populate', (tx) => {
