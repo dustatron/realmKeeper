@@ -16,6 +16,12 @@ import { executeCreateFaction } from '@application/use-cases/CreateFaction'
 import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import { executeCreateNPC } from '@application/use-cases/CreateNPC'
 import { executeCreatePOIEvent } from '@application/use-cases/CreatePOIEvent'
+import { executeRollEncounter } from '@application/use-cases/RollEncounter'
+import { executeCreateEncounterTable } from '@application/use-cases/CreateEncounterTable'
+import { executeUpdateEncounterTable } from '@application/use-cases/UpdateEncounterTable'
+import { useEncounterTable } from '~/ui/hooks/useEncounterTable'
+import { EncounterTableUI } from '~/components/shared/EncounterTableUI'
+import type { EncounterTable } from '@domain/entities/EncounterTable'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { NotesPanel } from '~/components/shared/NotesPanel'
 import { WysiwygEditor } from '~/components/shared/WysiwygEditor'
@@ -167,6 +173,9 @@ function RegionDetailPage() {
 
   const topLevelPOIs = useMemo(() => pois.filter(p => p.parentPoiId === null), [pois])
 
+  // Encounter table for this region
+  const encounterTable = useEncounterTable(null, regionId, region?.worldId ?? null)
+
   // Auto-open edit mode from ?edit=true search param
   useEffect(() => {
     if (editFromSearch && region && !editSheetOpen) {
@@ -285,6 +294,29 @@ function RegionDetailPage() {
     )
     setCreateEventOpen(false)
     setEventForm({ name: '', type: 'custom', poiId: '', description: '', season: realm?.currentSeason ?? 'spring', day: realm?.currentDay ?? 1 })
+  }
+
+  const handleRollEncounter = async () => {
+    if (!region) throw new Error('No region')
+    return executeRollEncounter(
+      { poiId: null, regionId: region.id, worldId: region.worldId },
+      { encounterTableRepo: container.encounterTableRepo }
+    )
+  }
+
+  const handleSaveEncounterTable = async (entries: Pick<EncounterTable, 'creature' | 'signOmen' | 'loss' | 'npc' | 'discovery' | 'treasure' | 'customSections' | 'disabledCategories'>) => {
+    if (!region) return
+    if (encounterTable) {
+      await executeUpdateEncounterTable(
+        { ...encounterTable, ...entries },
+        { encounterTableRepo: container.encounterTableRepo }
+      )
+    } else {
+      await executeCreateEncounterTable(
+        { ownerRegionId: region.id, worldId: region.worldId, ...entries },
+        { encounterTableRepo: container.encounterTableRepo }
+      )
+    }
   }
 
   if (region === undefined) {
@@ -415,6 +447,10 @@ function RegionDetailPage() {
           <TabsTrigger value="factions">
             <Swords className="size-4" />
             Factions ({factions.length})
+          </TabsTrigger>
+          <TabsTrigger value="encounters">
+            <Dices className="size-4" />
+            Encounters
           </TabsTrigger>
           <TabsTrigger value="events">
             <CalendarClock className="size-4" />
@@ -588,6 +624,15 @@ function RegionDetailPage() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* Encounters tab */}
+        <TabsContent value="encounters" className="space-y-6 pt-3">
+          <EncounterTableUI
+            table={encounterTable}
+            onRoll={handleRollEncounter}
+            onSave={handleSaveEncounterTable}
+          />
         </TabsContent>
 
         {/* Events tab */}

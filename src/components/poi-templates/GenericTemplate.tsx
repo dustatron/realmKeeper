@@ -54,7 +54,8 @@ interface GenericTemplateProps {
   onSaveEncounterTable?: (
     entries: Pick<
       EncounterTable,
-      "creature" | "signOmen" | "loss" | "npc" | "discovery" | "treasure"
+      | "creature" | "signOmen" | "loss" | "npc" | "discovery" | "treasure"
+      | "customSections" | "disabledCategories"
     >,
   ) => void;
   onCreateRumor: (input: {
