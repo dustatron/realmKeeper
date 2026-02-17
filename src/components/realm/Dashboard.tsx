@@ -1,24 +1,41 @@
-import { useState, useEffect } from 'react'
-import { Link } from '@tanstack/react-router'
-import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
-import { useTimeline } from '~/ui/hooks/useTimeline'
-import { useRecentWeather } from '~/ui/hooks/useWeather'
-import { useContainer } from '~/ui/hooks/useContainer'
-import { useGlobalSearch } from '~/ui/hooks/useGlobalSearch'
-import type { SearchableItem } from '~/ui/hooks/useGlobalSearch'
-import { executeGetDashboardData, type DashboardData } from '@application/use-cases/GetDashboardData'
-import { formatWorldDateTime } from '@domain/value-objects/WorldDate'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '~/components/ui/card'
-import { Badge } from '~/components/ui/badge'
-import { Button } from '~/components/ui/button'
-import { Input } from '~/components/ui/input'
-import { Label } from '~/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
-import { ScrollArea } from '~/components/ui/scroll-area'
-import { Skeleton } from '~/components/ui/skeleton'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '~/components/ui/tabs'
-import { FilterBar } from '~/components/shared/FilterBar'
-import { EmptyState } from '~/components/shared/EmptyState'
+import { useState, useEffect, useMemo } from "react";
+import { Link } from "@tanstack/react-router";
+import { useActiveRealm } from "~/ui/hooks/useActiveRealm";
+import { useTimeline } from "~/ui/hooks/useTimeline";
+import { useRecentWeather } from "~/ui/hooks/useWeather";
+import { useContainer } from "~/ui/hooks/useContainer";
+import { useGlobalSearch } from "~/ui/hooks/useGlobalSearch";
+import type { SearchableItem } from "~/ui/hooks/useGlobalSearch";
+import {
+  executeGetDashboardData,
+  type DashboardData,
+} from "@application/use-cases/GetDashboardData";
+import { formatWorldDateTime } from "@domain/value-objects/WorldDate";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "~/components/ui/card";
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { ScrollArea } from "~/components/ui/scroll-area";
+import { Skeleton } from "~/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
+import { FilterBar } from "~/components/shared/FilterBar";
+import { EmptyState } from "~/components/shared/EmptyState";
+import { SearchFilterToggles } from "~/components/shared/SearchFilterToggles";
+import type { FilterOption } from "~/components/shared/SearchFilterToggles";
 import {
   Swords,
   Users,
@@ -34,94 +51,134 @@ import {
   Search as SearchIcon,
   Settings,
   Save,
-} from 'lucide-react'
-import type { Season } from '@shared/constants'
+  BookOpen,
+  Sparkles,
+  Gem,
+} from "lucide-react";
+import type { Season } from "@shared/constants";
+
+const SEARCH_FILTER_OPTIONS: FilterOption[] = [
+  { value: "npc", label: "NPC", icon: Users },
+  { value: "poi", label: "POI", icon: MapPin },
+  { value: "faction", label: "Faction", icon: Swords },
+  { value: "core-rules", label: "Core Rules", icon: BookOpen },
+  { value: "magic-items", label: "Magic Items", icon: Gem },
+  { value: "custom", label: "Custom", icon: Sparkles },
+];
 
 interface DashboardProps {
-  worldId: string
-  tab?: string
-  onTabChange?: (tab: string) => void
+  worldId: string;
+  tab?: string;
+  onTabChange?: (tab: string) => void;
 }
 
 const SEASON_COLORS: Record<Season, string> = {
-  spring: 'bg-green-500/10 text-green-700 border-green-500/20',
-  summer: 'bg-amber-500/10 text-amber-700 border-amber-500/20',
-  fall: 'bg-orange-500/10 text-orange-700 border-orange-500/20',
-  winter: 'bg-blue-500/10 text-blue-700 border-blue-500/20',
-}
+  spring: "bg-green-500/10 text-green-700 border-green-500/20",
+  summer: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+  fall: "bg-orange-500/10 text-orange-700 border-orange-500/20",
+  winter: "bg-blue-500/10 text-blue-700 border-blue-500/20",
+};
 
 const EVENT_TYPE_COLORS: Record<string, string> = {
-  faction: 'bg-purple-500/10 text-purple-700 border-purple-500/20',
-  npc: 'bg-blue-500/10 text-blue-700 border-blue-500/20',
-  weather: 'bg-sky-500/10 text-sky-700 border-sky-500/20',
-  calendar: 'bg-amber-500/10 text-amber-700 border-amber-500/20',
-  other: 'bg-slate-500/10 text-slate-700 border-slate-500/20',
-}
+  faction: "bg-purple-500/10 text-purple-700 border-purple-500/20",
+  npc: "bg-blue-500/10 text-blue-700 border-blue-500/20",
+  weather: "bg-sky-500/10 text-sky-700 border-sky-500/20",
+  calendar: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+  other: "bg-slate-500/10 text-slate-700 border-slate-500/20",
+};
 
 const WEATHER_SEVERITY_COLORS: Record<string, string> = {
-  clear: 'bg-sky-500/10 text-sky-700 border-sky-500/20',
-  light: 'bg-blue-500/10 text-blue-700 border-blue-500/20',
-  moderate: 'bg-amber-500/10 text-amber-700 border-amber-500/20',
-  heavy: 'bg-orange-500/10 text-orange-700 border-orange-500/20',
-  extreme: 'bg-red-500/10 text-red-700 border-red-500/20',
-}
+  clear: "bg-sky-500/10 text-sky-700 border-sky-500/20",
+  light: "bg-blue-500/10 text-blue-700 border-blue-500/20",
+  moderate: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+  heavy: "bg-orange-500/10 text-orange-700 border-orange-500/20",
+  extreme: "bg-red-500/10 text-red-700 border-red-500/20",
+};
 
-const typeBadgeColors: Record<SearchableItem['type'], string> = {
-  npc: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
-  faction: 'bg-red-500/15 text-red-700 dark:text-red-400',
-  region: 'bg-green-500/15 text-green-700 dark:text-green-400',
-  poi: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
-  note: 'bg-purple-500/15 text-purple-700 dark:text-purple-400',
-  monster: 'bg-orange-500/15 text-orange-700 dark:text-orange-400',
-  spell: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-400',
-  magicItem: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
-  equipment: 'bg-slate-500/15 text-slate-700 dark:text-slate-400',
-}
+const typeBadgeColors: Record<SearchableItem["type"], string> = {
+  npc: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
+  faction: "bg-red-500/15 text-red-700 dark:text-red-400",
+  region: "bg-green-500/15 text-green-700 dark:text-green-400",
+  poi: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  note: "bg-purple-500/15 text-purple-700 dark:text-purple-400",
+  monster: "bg-orange-500/15 text-orange-700 dark:text-orange-400",
+  spell: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-400",
+  magicItem: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  equipment: "bg-slate-500/15 text-slate-700 dark:text-slate-400",
+};
 
-const typeLabels: Record<SearchableItem['type'], string> = {
-  npc: 'NPC',
-  faction: 'Faction',
-  region: 'Region',
-  poi: 'POI',
-  note: 'Note',
-  monster: 'Monster',
-  spell: 'Spell',
-  magicItem: 'Magic Item',
-  equipment: 'Equipment',
-}
+const typeLabels: Record<SearchableItem["type"], string> = {
+  npc: "NPC",
+  faction: "Faction",
+  region: "Region",
+  poi: "POI",
+  note: "Note",
+  monster: "Monster",
+  spell: "Spell",
+  magicItem: "Magic Item",
+  equipment: "Equipment",
+};
 
 export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const container = useContainer()
-  const realm = useActiveRealm()
-  const searchResults = useGlobalSearch(worldId, searchQuery)
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchFilters, setSearchFilters] = useState<string[]>([]);
+  const container = useContainer();
+  const realm = useActiveRealm();
+  const searchResults = useGlobalSearch(worldId, searchQuery);
+
+  const filteredSearchResults = useMemo(() => {
+    if (searchFilters.length === 0) return searchResults;
+    return searchResults.filter((item) => {
+      for (const f of searchFilters) {
+        if (f === "npc" && item.type === "npc") return true;
+        if (f === "poi" && item.type === "poi") return true;
+        if (f === "faction" && item.type === "faction") return true;
+        if (
+          f === "core-rules" &&
+          ["monster", "spell", "equipment"].includes(item.type) &&
+          !item.url.includes("/custom/")
+        )
+          return true;
+        if (
+          f === "magic-items" &&
+          item.type === "magicItem" &&
+          !item.url.includes("/custom/")
+        )
+          return true;
+        if (f === "custom" && item.url.includes("/custom/")) return true;
+      }
+      return false;
+    });
+  }, [searchResults, searchFilters]);
 
   // Settings state
-  const [settingsDaysPerSeason, setSettingsDaysPerSeason] = useState(30)
-  const [settingsDaysPerWeek, setSettingsDaysPerWeek] = useState(7)
-  const [settingsWatchesPerDay, setSettingsWatchesPerDay] = useState(3)
-  const [settingsFactionTurnTrigger, setSettingsFactionTurnTrigger] = useState<'day' | 'week' | 'manual'>('day')
-  const [settingsSaved, setSettingsSaved] = useState(false)
+  const [settingsDaysPerSeason, setSettingsDaysPerSeason] = useState(30);
+  const [settingsDaysPerWeek, setSettingsDaysPerWeek] = useState(7);
+  const [settingsWatchesPerDay, setSettingsWatchesPerDay] = useState(3);
+  const [settingsFactionTurnTrigger, setSettingsFactionTurnTrigger] = useState<
+    "day" | "week" | "manual"
+  >("day");
+  const [settingsSaved, setSettingsSaved] = useState(false);
 
   // Live updates
-  const recentEvents = useTimeline(worldId, 5)
-  const recentWeather = useRecentWeather(worldId, 3)
+  const recentEvents = useTimeline(worldId, 5);
+  const recentWeather = useRecentWeather(worldId, 3);
 
   // Sync settings state from realm
   useEffect(() => {
     if (realm) {
-      setSettingsDaysPerSeason(realm.daysPerSeason)
-      setSettingsDaysPerWeek(realm.daysPerWeek)
-      setSettingsWatchesPerDay(realm.watchesPerDay)
-      setSettingsFactionTurnTrigger(realm.factionTurnTrigger)
+      setSettingsDaysPerSeason(realm.daysPerSeason);
+      setSettingsDaysPerWeek(realm.daysPerWeek);
+      setSettingsWatchesPerDay(realm.watchesPerDay);
+      setSettingsFactionTurnTrigger(realm.factionTurnTrigger);
     }
-  }, [realm?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [realm?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    let mounted = true
-    setLoading(true)
+    let mounted = true;
+    setLoading(true);
 
     executeGetDashboardData(worldId, {
       realmRepo: container.realmRepo,
@@ -131,15 +188,15 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
       weatherRepo: container.weatherRepo,
     }).then((result) => {
       if (mounted) {
-        setData(result)
-        setLoading(false)
+        setData(result);
+        setLoading(false);
       }
-    })
+    });
 
     return () => {
-      mounted = false
-    }
-  }, [worldId, container])
+      mounted = false;
+    };
+  }, [worldId, container]);
 
   if (loading || !data || !realm) {
     return (
@@ -153,10 +210,10 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
         </div>
         <Skeleton className="h-96 w-full" />
       </div>
-    )
+    );
   }
 
-  const latestWeather = recentWeather[0] || data.latestWeather
+  const latestWeather = recentWeather[0] || data.latestWeather;
 
   const handleSaveSettings = async () => {
     await container.realmRepo.update({
@@ -166,12 +223,13 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
       watchesPerDay: clamp(settingsWatchesPerDay, 2, 6),
       factionTurnTrigger: settingsFactionTurnTrigger,
       updatedAt: Date.now(),
-    })
-    setSettingsSaved(true)
-    setTimeout(() => setSettingsSaved(false), 2000)
-  }
+    });
+    setSettingsSaved(true);
+    setTimeout(() => setSettingsSaved(false), 2000);
+  };
 
-  const activeTab = tab === 'world-details' || tab === 'settings' ? tab : 'search'
+  const activeTab =
+    tab === "world-details" || tab === "settings" ? tab : "search";
 
   return (
     <div className="space-y-4 p-6">
@@ -192,7 +250,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
         <TabsList>
           <TabsTrigger value="search">
             <SearchIcon className="size-4" />
-            Search
+            Global Search
           </TabsTrigger>
           <TabsTrigger value="world-details">
             <Crown className="size-4" />
@@ -207,7 +265,15 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
         {/* Search Tab */}
         <TabsContent value="search">
           <div className="flex flex-col gap-4">
-            <FilterBar search={searchQuery} onSearchChange={setSearchQuery} />
+            <div className="flex flex-wrap items-center gap-3">
+              <FilterBar search={searchQuery} onSearchChange={setSearchQuery} />
+              <SearchFilterToggles
+                type="multiple"
+                value={searchFilters}
+                onChange={setSearchFilters}
+                options={SEARCH_FILTER_OPTIONS}
+              />
+            </div>
 
             {!searchQuery.trim() ? (
               <EmptyState
@@ -215,15 +281,15 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                 title="Type to search"
                 description="Search NPCs, factions, regions, POIs, and notes."
               />
-            ) : searchResults.length === 0 ? (
+            ) : filteredSearchResults.length === 0 ? (
               <EmptyState
                 icon={SearchIcon}
                 title="No results"
-                description={`No matches for "${searchQuery}".`}
+                description={`No matches for "${searchQuery}"${searchFilters.length > 0 ? " with selected filters" : ""}.`}
               />
             ) : (
               <div className="space-y-2">
-                {searchResults.map((item) => (
+                {filteredSearchResults.map((item) => (
                   <Link
                     key={`${item.type}-${item.id}`}
                     to={item.url}
@@ -231,7 +297,10 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                     className="block rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50"
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="outline" className={typeBadgeColors[item.type]}>
+                      <Badge
+                        variant="outline"
+                        className={typeBadgeColors[item.type]}
+                      >
                         {typeLabels[item.type]}
                       </Badge>
                       <span className="font-medium">{item.name}</span>
@@ -264,7 +333,8 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                 <CardContent>
                   <div className="space-y-2">
                     <Badge className={SEASON_COLORS[realm.currentSeason]}>
-                      {realm.currentSeason.charAt(0).toUpperCase() + realm.currentSeason.slice(1)}
+                      {realm.currentSeason.charAt(0).toUpperCase() +
+                        realm.currentSeason.slice(1)}
                     </Badge>
                     <div className="text-2xl font-bold">
                       Year {realm.currentYear}
@@ -286,7 +356,9 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    <div className="text-2xl font-bold">{data.factionCount}</div>
+                    <div className="text-2xl font-bold">
+                      {data.factionCount}
+                    </div>
                     <div className="text-sm text-muted-foreground">
                       {data.activeFactions.length} active
                     </div>
@@ -294,7 +366,11 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                       <ScrollArea className="h-16">
                         <div className="flex flex-wrap gap-1">
                           {data.activeFactions.slice(0, 5).map((faction) => (
-                            <Badge key={faction.id} variant="outline" className="text-xs">
+                            <Badge
+                              key={faction.id}
+                              variant="outline"
+                              className="text-xs"
+                            >
                               {faction.name}
                             </Badge>
                           ))}
@@ -343,7 +419,12 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                         <div className="text-2xl font-bold capitalize">
                           {latestWeather.condition}
                         </div>
-                        <Badge className={WEATHER_SEVERITY_COLORS[latestWeather.severity] || WEATHER_SEVERITY_COLORS.clear}>
+                        <Badge
+                          className={
+                            WEATHER_SEVERITY_COLORS[latestWeather.severity] ||
+                            WEATHER_SEVERITY_COLORS.clear
+                          }
+                        >
                           {latestWeather.severity}
                         </Badge>
                       </>
@@ -362,88 +443,128 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
               <h2 className="text-lg font-semibold mb-4">Quick Links</h2>
               <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
                 <Link to="/realms/calendar">
-                  <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2 h-auto py-3"
+                  >
                     <Calendar className="size-5" />
                     <div className="text-left">
                       <div className="font-medium">Calendar</div>
-                      <div className="text-xs text-muted-foreground">Manage time & weather</div>
+                      <div className="text-xs text-muted-foreground">
+                        Manage time & weather
+                      </div>
                     </div>
                     <ChevronRight className="size-4 ml-auto" />
                   </Button>
                 </Link>
 
                 <Link to="/realms/factions">
-                  <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2 h-auto py-3"
+                  >
                     <Swords className="size-5" />
                     <div className="text-left">
                       <div className="font-medium">Factions</div>
-                      <div className="text-xs text-muted-foreground">View all factions</div>
+                      <div className="text-xs text-muted-foreground">
+                        View all factions
+                      </div>
                     </div>
                     <ChevronRight className="size-4 ml-auto" />
                   </Button>
                 </Link>
 
                 <Link to="/realms/npcs">
-                  <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2 h-auto py-3"
+                  >
                     <Users className="size-5" />
                     <div className="text-left">
                       <div className="font-medium">NPCs</div>
-                      <div className="text-xs text-muted-foreground">Manage characters</div>
+                      <div className="text-xs text-muted-foreground">
+                        Manage characters
+                      </div>
                     </div>
                     <ChevronRight className="size-4 ml-auto" />
                   </Button>
                 </Link>
 
                 <Link to="/realms/locations/regions">
-                  <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2 h-auto py-3"
+                  >
                     <Map className="size-5" />
                     <div className="text-left">
                       <div className="font-medium">Regions</div>
-                      <div className="text-xs text-muted-foreground">Explore locations</div>
+                      <div className="text-xs text-muted-foreground">
+                        Explore locations
+                      </div>
                     </div>
                     <ChevronRight className="size-4 ml-auto" />
                   </Button>
                 </Link>
 
                 <Link to="/realms/locations/pois">
-                  <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2 h-auto py-3"
+                  >
                     <MapPin className="size-5" />
                     <div className="text-left">
                       <div className="font-medium">Points of Interest</div>
-                      <div className="text-xs text-muted-foreground">View POIs & paths</div>
+                      <div className="text-xs text-muted-foreground">
+                        View POIs & paths
+                      </div>
                     </div>
                     <ChevronRight className="size-4 ml-auto" />
                   </Button>
                 </Link>
 
                 <Link to="/realms/tables">
-                  <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2 h-auto py-3"
+                  >
                     <Dices className="size-5" />
                     <div className="text-left">
                       <div className="font-medium">Random Tables</div>
-                      <div className="text-xs text-muted-foreground">Roll on tables</div>
+                      <div className="text-xs text-muted-foreground">
+                        Roll on tables
+                      </div>
                     </div>
                     <ChevronRight className="size-4 ml-auto" />
                   </Button>
                 </Link>
 
                 <Link to="/realms/notes">
-                  <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2 h-auto py-3"
+                  >
                     <Scroll className="size-5" />
                     <div className="text-left">
                       <div className="font-medium">Notes</div>
-                      <div className="text-xs text-muted-foreground">Campaign notes</div>
+                      <div className="text-xs text-muted-foreground">
+                        Campaign notes
+                      </div>
                     </div>
                     <ChevronRight className="size-4 ml-auto" />
                   </Button>
                 </Link>
 
                 <Link to="/realms">
-                  <Button variant="outline" className="w-full justify-start gap-2 h-auto py-3">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2 h-auto py-3"
+                  >
                     <Compass className="size-5" />
                     <div className="text-left">
                       <div className="font-medium">All Realms</div>
-                      <div className="text-xs text-muted-foreground">Switch realm</div>
+                      <div className="text-xs text-muted-foreground">
+                        Switch realm
+                      </div>
                     </div>
                     <ChevronRight className="size-4 ml-auto" />
                   </Button>
@@ -476,7 +597,12 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                           className="flex gap-3 pb-4 border-b last:border-0 last:pb-0"
                         >
                           <div className="flex-shrink-0">
-                            <Badge className={EVENT_TYPE_COLORS[event.type] || EVENT_TYPE_COLORS.other}>
+                            <Badge
+                              className={
+                                EVENT_TYPE_COLORS[event.type] ||
+                                EVENT_TYPE_COLORS.other
+                              }
+                            >
                               {event.type}
                             </Badge>
                           </div>
@@ -517,16 +643,22 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
               <CardContent className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-2">
-                    <Label htmlFor="settingsDaysPerSeason">Days per season (month)</Label>
+                    <Label htmlFor="settingsDaysPerSeason">
+                      Days per season (month)
+                    </Label>
                     <Input
                       id="settingsDaysPerSeason"
                       type="number"
                       min={10}
                       max={90}
                       value={settingsDaysPerSeason}
-                      onChange={(e) => setSettingsDaysPerSeason(Number(e.target.value))}
+                      onChange={(e) =>
+                        setSettingsDaysPerSeason(Number(e.target.value))
+                      }
                     />
-                    <p className="text-xs text-muted-foreground">10 &ndash; 90</p>
+                    <p className="text-xs text-muted-foreground">
+                      10 &ndash; 90
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="settingsDaysPerWeek">Days per week</Label>
@@ -536,19 +668,27 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                       min={5}
                       max={10}
                       value={settingsDaysPerWeek}
-                      onChange={(e) => setSettingsDaysPerWeek(Number(e.target.value))}
+                      onChange={(e) =>
+                        setSettingsDaysPerWeek(Number(e.target.value))
+                      }
                     />
-                    <p className="text-xs text-muted-foreground">5 &ndash; 10</p>
+                    <p className="text-xs text-muted-foreground">
+                      5 &ndash; 10
+                    </p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="settingsWatchesPerDay">Watches per day</Label>
+                    <Label htmlFor="settingsWatchesPerDay">
+                      Watches per day
+                    </Label>
                     <Input
                       id="settingsWatchesPerDay"
                       type="number"
                       min={2}
                       max={6}
                       value={settingsWatchesPerDay}
-                      onChange={(e) => setSettingsWatchesPerDay(Number(e.target.value))}
+                      onChange={(e) =>
+                        setSettingsWatchesPerDay(Number(e.target.value))
+                      }
                     />
                     <p className="text-xs text-muted-foreground">2 &ndash; 6</p>
                   </div>
@@ -559,12 +699,21 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
             <Card>
               <CardHeader>
                 <CardTitle>Faction Turns</CardTitle>
-                <CardDescription>When faction turns auto-trigger on clock advance.</CardDescription>
+                <CardDescription>
+                  When faction turns auto-trigger on clock advance.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2 max-w-xs">
                   <Label>Trigger frequency</Label>
-                  <Select value={settingsFactionTurnTrigger} onValueChange={(v) => setSettingsFactionTurnTrigger(v as 'day' | 'week' | 'manual')}>
+                  <Select
+                    value={settingsFactionTurnTrigger}
+                    onValueChange={(v) =>
+                      setSettingsFactionTurnTrigger(
+                        v as "day" | "week" | "manual",
+                      )
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -583,15 +732,17 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                 <Save className="size-4 mr-2" />
                 Save Settings
               </Button>
-              {settingsSaved && <span className="text-sm text-green-600">Saved!</span>}
+              {settingsSaved && (
+                <span className="text-sm text-green-600">Saved!</span>
+              )}
             </div>
           </div>
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
 
 function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value))
+  return Math.max(min, Math.min(max, value));
 }

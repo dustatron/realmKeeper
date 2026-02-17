@@ -8,36 +8,36 @@ import {
   Swords,
   TableProperties,
   Users,
-} from 'lucide-react'
-import type { NavGroup } from './types'
+} from "lucide-react";
+import type { NavGroup } from "./types";
 
 export function getSidebarData(_worldId?: string): { navGroups: NavGroup[] } {
   return {
     navGroups: [
       {
-        title: 'Overview',
+        title: "Overview",
         items: [
-          { title: 'Dashboard', url: '/realms', icon: LayoutDashboard },
-          { title: 'Maps', url: '/realms/maps', icon: MapPinned },
-          { title: 'Calendar', url: '/realms/calendar', icon: Scroll },
+          { title: "Dashboard", url: "/realms", icon: LayoutDashboard },
+          { title: "Maps", url: "/realms/maps", icon: MapPinned },
+          { title: "Calendar", url: "/realms/calendar", icon: Scroll },
         ],
       },
       {
-        title: 'World',
+        title: "World",
         items: [
-          { title: 'Factions', url: '/realms/factions', icon: Swords },
-          { title: 'NPCs', url: '/realms/npcs', icon: Users },
-          { title: 'Locations', url: '/realms/locations', icon: Map },
+          { title: "Locations", url: "/realms/locations", icon: Map },
+          { title: "NPCs", url: "/realms/npcs", icon: Users },
+          { title: "Factions", url: "/realms/factions", icon: Swords },
         ],
       },
       {
-        title: 'Tools',
+        title: "Tools",
         items: [
-          { title: 'Tables', url: '/realms/tables', icon: TableProperties },
-          { title: 'Compendium', url: '/realms/compendium', icon: Book },
-          { title: 'Notes', url: '/realms/notes', icon: NotebookPen },
+          { title: "Compendium", url: "/realms/compendium", icon: Book },
+          { title: "Tables", url: "/realms/tables", icon: TableProperties },
+          { title: "Notes", url: "/realms/notes", icon: NotebookPen },
         ],
       },
     ],
-  }
+  };
 }
