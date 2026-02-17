@@ -41,14 +41,12 @@ import { executeRollEncounter } from '@application/use-cases/RollEncounter'
 import { NPCEditSheet } from '~/components/shared/NPCEditSheet'
 import { MapUploadDialog } from '~/components/map/MapUploadDialog'
 import { MultiMapViewer } from '~/components/map/MultiMapViewer'
-import { ServicesList } from '~/components/shared/ServicesList'
 
 import { SettlementTemplate } from '~/components/poi-templates/SettlementTemplate'
 import { DungeonTemplate } from '~/components/poi-templates/DungeonTemplate'
 import { BuildingTemplate } from '~/components/poi-templates/BuildingTemplate'
 import { GenericTemplate } from '~/components/poi-templates/GenericTemplate'
 import { NotesPanel } from '~/components/shared/NotesPanel'
-import { ImagePicker } from '~/components/shared/ImagePicker'
 import { CloudinaryImage } from '~/components/shared/CloudinaryImage'
 
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
@@ -94,10 +92,10 @@ import type { NoticeType } from '@shared/constants'
 import type { POI } from '@domain/entities/POI'
 import type { NPC } from '@domain/entities/NPC'
 import type { SystemBlock } from '@domain/value-objects/SystemBlock'
-import type { Service } from '@domain/value-objects/Service'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
 import type { CompendiumRef } from '@domain/entities/Compendium'
-import { getCompendiumById, searchCompendium } from '@domain/data/compendium'
+import { getCompendiumById, searchCompendium, searchCustomEntries, customEntryToCompendiumEntry } from '@domain/data/compendium'
+import type { CustomCompendiumEntry } from '@domain/entities/CustomCompendiumEntry'
 import { newId } from '@shared/ulid'
 
 export const Route = createFileRoute('/_app/realms/pois_/$poiId')({
@@ -166,7 +164,6 @@ function POIDetailPage() {
 
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
   const [mapUploadDialogOpen, setMapUploadDialogOpen] = useState(false)
-  const [editSheetOpen, setEditSheetOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [createChildDialogOpen, setCreateChildDialogOpen] = useState(false)
   const [createEventDialogOpen, setCreateEventDialogOpen] = useState(false)
@@ -175,23 +172,6 @@ function POIDetailPage() {
   const [npcEditOpen, setNpcEditOpen] = useState(false)
   const [isGeneratingNPC, setIsGeneratingNPC] = useState(false)
 
-  const [editForm, setEditForm] = useState({
-    name: '',
-    description: '',
-    type: 'settlement' as PoiType,
-    regionId: '',
-    parentPoiId: null as string | null,
-    subtypeLabel: '',
-    floor: null as number | null,
-    tags: [] as string[],
-    readAloud: '',
-    gmNotes: '',
-    trouble: '',
-    mood: '',
-    sensory: '',
-    services: [] as Service[],
-    imageUrl: null as string | null,
-  })
 
   const [createChildForm, setCreateChildForm] = useState({
     name: '',
@@ -215,54 +195,6 @@ function POIDetailPage() {
     effects: '',
     tags: [] as string[],
   })
-
-  const openEditSheet = () => {
-    if (!poi) return
-    setEditForm({
-      name: poi.name,
-      description: poi.description,
-      type: poi.type,
-      regionId: poi.regionId,
-      parentPoiId: poi.parentPoiId,
-      subtypeLabel: poi.subtypeLabel ?? '',
-      floor: poi.floor,
-      tags: poi.tags,
-      readAloud: poi.readAloud,
-      gmNotes: poi.gmNotes,
-      trouble: poi.trouble,
-      mood: poi.mood,
-      sensory: poi.sensory,
-      services: poi.services,
-      imageUrl: poi.imageUrl,
-    })
-    setEditSheetOpen(true)
-  }
-
-  const handleEdit = async () => {
-    if (!poi || !editForm.name.trim()) return
-    await executeUpdatePOI(
-      {
-        ...poi,
-        name: editForm.name,
-        description: editForm.description,
-        type: editForm.type,
-        regionId: editForm.regionId,
-        parentPoiId: editForm.parentPoiId,
-        subtypeLabel: editForm.subtypeLabel || null,
-        floor: editForm.floor,
-        tags: editForm.tags,
-        readAloud: editForm.readAloud,
-        gmNotes: editForm.gmNotes,
-        trouble: editForm.trouble,
-        mood: editForm.mood,
-        sensory: editForm.sensory,
-        services: editForm.services,
-        imageUrl: editForm.imageUrl,
-      },
-      { poiRepo: container.poiRepo }
-    )
-    setEditSheetOpen(false)
-  }
 
   const handleDelete = async () => {
     if (!poi) return
@@ -616,10 +548,12 @@ function POIDetailPage() {
           <MapPinned className="mr-2 size-4" />
           {poiMaps.length > 0 ? 'Edit Map' : 'Add Map'}
         </Button>
-        <Button size="sm" onClick={openEditSheet}>
-          <Pencil className="mr-2 size-4" />
-          Edit
-        </Button>
+        <Link to="/realms/pois/$poiId/edit" params={{ poiId }}>
+          <Button size="sm">
+            <Pencil className="mr-2 size-4" />
+            Edit
+          </Button>
+        </Link>
       </div>
 
       {/* Template content */}
@@ -629,163 +563,10 @@ function POIDetailPage() {
       <CompendiumRefsSection
         poi={poi}
         systemId={realm?.systemId ?? null}
+        worldId={realm?.id ?? null}
         onUpdate={handleUpdateCompendiumRefs}
       />
 
-
-      {/* Edit Sheet */}
-      <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
-        <SheetContent className="sm:max-w-lg overflow-y-auto p-6">
-          <SheetHeader>
-            <SheetTitle>Edit Point of Interest</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-name">Name *</Label>
-              <Input
-                id="edit-name"
-                value={editForm.name}
-                onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Name of the POI"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={editForm.description}
-                onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Describe this location..."
-                rows={3}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Image</Label>
-              <ImagePicker
-                imageUrl={editForm.imageUrl}
-                onImageChange={(url) => setEditForm((f) => ({ ...f, imageUrl: url }))}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-type">Type</Label>
-                <Select
-                  value={editForm.type}
-                  onValueChange={(value) => setEditForm((f) => ({ ...f, type: value as PoiType }))}
-                >
-                  <SelectTrigger id="edit-type"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {POI_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-subtype">Subtype Label</Label>
-                <Input
-                  id="edit-subtype"
-                  value={editForm.subtypeLabel}
-                  onChange={(e) => setEditForm((f) => ({ ...f, subtypeLabel: e.target.value }))}
-                  placeholder="e.g., Tavern, Tower"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-mood">Mood</Label>
-                <Input
-                  id="edit-mood"
-                  value={editForm.mood}
-                  onChange={(e) => setEditForm((f) => ({ ...f, mood: e.target.value }))}
-                  placeholder="prosperous, fearful, lawless..."
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-floor">Floor</Label>
-                <Input
-                  id="edit-floor"
-                  type="number"
-                  value={editForm.floor ?? ''}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    setEditForm((f) => ({ ...f, floor: val ? parseInt(val, 10) : null }))
-                  }}
-                  placeholder="e.g., 1, 2, -1"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-trouble">Trouble</Label>
-              <Input
-                id="edit-trouble"
-                value={editForm.trouble}
-                onChange={(e) => setEditForm((f) => ({ ...f, trouble: e.target.value }))}
-                placeholder="Current tension or conflict..."
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-readaloud">Read Aloud</Label>
-              <Textarea
-                id="edit-readaloud"
-                value={editForm.readAloud}
-                onChange={(e) => setEditForm((f) => ({ ...f, readAloud: e.target.value }))}
-                placeholder="Player-facing description to read aloud..."
-                rows={3}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-sensory">Sensory Details</Label>
-              <Input
-                id="edit-sensory"
-                value={editForm.sensory}
-                onChange={(e) => setEditForm((f) => ({ ...f, sensory: e.target.value }))}
-                placeholder="Sights, sounds, smells..."
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-gmnotes">GM Notes</Label>
-              <Textarea
-                id="edit-gmnotes"
-                value={editForm.gmNotes}
-                onChange={(e) => setEditForm((f) => ({ ...f, gmNotes: e.target.value }))}
-                placeholder="Secrets, hidden info..."
-                rows={3}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Services</Label>
-              <ServicesList
-                services={editForm.services}
-                editable
-                onChange={(services) => setEditForm((f) => ({ ...f, services }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Tags</Label>
-              <TagInput
-                tags={editForm.tags}
-                onChange={(tags) => setEditForm((f) => ({ ...f, tags }))}
-              />
-            </div>
-          </div>
-          <SheetFooter>
-            <div className="flex w-full items-center gap-2">
-              <Button
-                variant="destructive"
-                size="sm"
-                className="mr-auto"
-                onClick={() => { setEditSheetOpen(false); setDeleteConfirmOpen(true) }}
-              >
-                <Trash2 className="mr-2 size-4" />
-                Delete
-              </Button>
-              <Button variant="outline" onClick={() => setEditSheetOpen(false)}>Cancel</Button>
-              <Button onClick={handleEdit} disabled={!editForm.name.trim()}>Save</Button>
-            </div>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
 
       {/* Create Child Sheet */}
       <Sheet open={createChildDialogOpen} onOpenChange={setCreateChildDialogOpen}>
@@ -1004,20 +785,33 @@ function POIDetailPage() {
 function CompendiumRefsSection({
   poi,
   systemId,
+  worldId,
   onUpdate,
 }: {
   poi: POI
   systemId: string | null
+  worldId: string | null
   onUpdate: (refs: { monsterRefs: CompendiumRef[]; magicItemRefs: CompendiumRef[]; spellRefs: CompendiumRef[] }) => void
 }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchKind, setSearchKind] = useState<'monster' | 'spell' | 'magicItem'>('monster')
   const [showSearch, setShowSearch] = useState(false)
 
+  // Load custom entries for this world
+  const customEntries = useLiveQuery(
+    () => worldId ? db.customCompendiumEntries.where('worldId').equals(worldId).toArray() : [],
+    [worldId]
+  ) ?? []
+
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim() || !systemId) return []
-    return searchCompendium(searchQuery, systemId, searchKind).slice(0, 10)
-  }, [searchQuery, systemId, searchKind])
+    if (!searchQuery.trim()) return []
+    const systemResults = systemId ? searchCompendium(searchQuery, systemId, searchKind) : []
+    const customResults = searchCustomEntries(customEntries, searchQuery, searchKind)
+    // Dedupe by id
+    const seen = new Set(systemResults.map((r) => r.id))
+    const merged = [...systemResults, ...customResults.filter((r) => !seen.has(r.id))]
+    return merged.slice(0, 10)
+  }, [searchQuery, systemId, searchKind, customEntries])
 
   const addRef = (id: string) => {
     const refsKey = searchKind === 'monster' ? 'monsterRefs' : searchKind === 'spell' ? 'spellRefs' : 'magicItemRefs'
@@ -1113,7 +907,9 @@ function CompendiumRefsSection({
                   className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted flex items-center justify-between"
                 >
                   <span>{entry.name}</span>
-                  <Badge variant="outline" className="text-xs">{entry.systemId.includes('cairn') ? 'Cairn' : 'SD'}</Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {entry.systemId === 'custom' ? 'Custom' : entry.systemId.includes('cairn') ? 'Cairn' : 'SD'}
+                  </Badge>
                 </button>
               ))}
             </div>
@@ -1124,12 +920,19 @@ function CompendiumRefsSection({
       {/* Linked refs */}
       <div className="space-y-1">
         {allRefs.map((ref) => {
-          const entry = getCompendiumById(ref.id)
+          const systemEntry = getCompendiumById(ref.id)
+          const customMatch = !systemEntry ? customEntries.find((c) => c.id === ref.id) : undefined
+          const entry = systemEntry ?? (customMatch ? customEntryToCompendiumEntry(customMatch) : undefined)
           if (!entry) return null
+          const isCustom = !systemEntry && !!customMatch
           const kindLabel = ref.kind === 'monster' ? 'Monster' : ref.kind === 'spell' ? 'Spell' : 'Magic Item'
           const kindColor = ref.kind === 'monster' ? 'bg-orange-500/15 text-orange-700 dark:text-orange-400' : ref.kind === 'spell' ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-400' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
-          const detailUrl = ref.kind === 'monster' ? '/realms/compendium/monsters/$monsterId' : ref.kind === 'spell' ? '/realms/compendium/spells/$spellId' : '/realms/compendium/magic-items/$itemId'
-          const detailParams = ref.kind === 'monster' ? { monsterId: ref.id } : ref.kind === 'spell' ? { spellId: ref.id } : { itemId: ref.id }
+          const detailUrl = isCustom
+            ? '/realms/compendium/custom/$entryId'
+            : ref.kind === 'monster' ? '/realms/compendium/monsters/$monsterId' : ref.kind === 'spell' ? '/realms/compendium/spells/$spellId' : '/realms/compendium/magic-items/$itemId'
+          const detailParams = isCustom
+            ? { entryId: ref.id }
+            : ref.kind === 'monster' ? { monsterId: ref.id } : ref.kind === 'spell' ? { spellId: ref.id } : { itemId: ref.id }
 
           return (
             <div key={ref.id} className="flex items-center gap-2 px-3 py-2 rounded-md border text-sm">

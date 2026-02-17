@@ -21,7 +21,10 @@ import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
-import { ArrowLeft, Heart, Shield, Skull, Swords, Package, Sparkles, Handshake, Pencil, MapPin, ChevronUp, ChevronDown, Trash2, Plus } from 'lucide-react'
+import { ArrowLeft, Heart, Shield, Skull, Swords, Package, Sparkles, Handshake, Pencil, MapPin, ChevronUp, ChevronDown, Trash2, Plus, ChevronsUpDown, Check } from 'lucide-react'
+import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '~/components/ui/command'
+import { cn } from '~/lib/utils'
 import { CloudinaryImage } from '~/components/shared/CloudinaryImage'
 import { NPC_RACES, type NPCRace } from '@shared/constants'
 import type { NPC } from '@domain/entities/NPC'
@@ -67,6 +70,9 @@ function NPCDetailPage() {
 
   const [editingNPC, setEditingNPC] = useState<NPC | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [poiSearchOpen, setPoiSearchOpen] = useState(false)
+
+  const regionMap = useMemo(() => new Map(regions.map((r) => [r.id, r.name])), [regions])
 
   const handleSaveNPC = async () => {
     if (!editingNPC) return
@@ -330,7 +336,7 @@ function NPCDetailPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="region">Region</Label>
               <Select
@@ -349,25 +355,54 @@ function NPCDetailPage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="poi">POI</Label>
-              <Select
-                value={editingNPC.poiId ?? 'none'}
-                onValueChange={(v) => updateField('poiId', v === 'none' ? null : v)}
-              >
-                <SelectTrigger id="poi">
-                  <SelectValue placeholder="Select POI" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {pois.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>POI</Label>
+              <Popover open={poiSearchOpen} onOpenChange={setPoiSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={poiSearchOpen} className="w-full justify-between font-normal">
+                    <span className="truncate">{editingNPC.poiId
+                      ? pois.find((p) => p.id === editingNPC.poiId)?.name ?? 'Unknown'
+                      : 'Select POI...'}</span>
+                    <ChevronsUpDown className="ml-1 size-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search POIs..." />
+                    <CommandList>
+                      <CommandEmpty>No POIs found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="__none__"
+                          onSelect={() => {
+                            updateField('poiId', null)
+                            setPoiSearchOpen(false)
+                          }}
+                        >
+                          <Check className={cn('mr-2 size-4', !editingNPC.poiId ? 'opacity-100' : 'opacity-0')} />
+                          None
+                        </CommandItem>
+                        {pois.map((p) => (
+                          <CommandItem
+                            key={p.id}
+                            value={`${p.name} ${regionMap.get(p.regionId) ?? ''}`}
+                            onSelect={() => {
+                              updateField('poiId', p.id)
+                              setPoiSearchOpen(false)
+                            }}
+                          >
+                            <Check className={cn('mr-2 size-4', editingNPC.poiId === p.id ? 'opacity-100' : 'opacity-0')} />
+                            <span className="truncate">{p.name}</span>
+                            {regionMap.get(p.regionId) && (
+                              <span className="ml-auto text-xs text-muted-foreground">{regionMap.get(p.regionId)}</span>
+                            )}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="lifeStatus">Life Status</Label>
               <Select
@@ -386,7 +421,7 @@ function NPCDetailPage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="movementStatus">Movement Status</Label>
+              <Label htmlFor="movementStatus">Movement</Label>
               <Select
                 value={editingNPC.movementStatus}
                 onValueChange={(v) => updateField('movementStatus', v)}

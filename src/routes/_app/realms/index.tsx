@@ -52,6 +52,9 @@ import type { RealmExport } from '@application/use-cases/ExportRealm'
 
 export const Route = createFileRoute('/_app/realms/')({
   component: RealmsPage,
+  validateSearch: (search: Record<string, unknown>): { tab?: string } => ({
+    tab: typeof search.tab === 'string' ? search.tab : undefined,
+  }),
 })
 
 function RealmsPage() {
@@ -63,6 +66,7 @@ function RealmsPage() {
   const systemConfigs = useSystemConfigs()
   const setActiveRealmId = useUIStore((state) => state.setActiveRealmId)
   const activeRealmId = useUIStore((state) => state.activeRealmId)
+  const { tab } = Route.useSearch()
 
   // Clear stale activeRealmId if the realm no longer exists in DB (e.g. DB was deleted)
   useEffect(() => {
@@ -318,7 +322,19 @@ function RealmsPage() {
 
   // Show dashboard when a realm is active and confirmed to exist
   if (activeRealmId && realmsLoaded && realms.some((r) => r.id === activeRealmId)) {
-    return <Dashboard worldId={activeRealmId} />
+    return (
+      <Dashboard
+        worldId={activeRealmId}
+        tab={tab}
+        onTabChange={(newTab) =>
+          navigate({
+            to: '/realms',
+            search: newTab === 'world-details' ? {} : { tab: newTab },
+            replace: true,
+          })
+        }
+      />
+    )
   }
 
   if (realms.length === 0) {

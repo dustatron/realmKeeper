@@ -1,4 +1,5 @@
 import type { CompendiumEntry, CompendiumMonster, CompendiumSpell, CompendiumMagicItem, CompendiumEquipment, CompendiumKind } from '@domain/entities/Compendium'
+import type { CustomCompendiumEntry } from '@domain/entities/CustomCompendiumEntry'
 import { cairnMonsters, cairnSpells, cairnMagicItems, cairnEquipment } from './cairn-compendium'
 import { shadowdarkMonsters, shadowdarkSpells, shadowdarkMagicItems, shadowdarkEquipment } from './shadowdark-compendium'
 
@@ -40,4 +41,69 @@ export function searchCompendium(query: string, systemId?: string, kind?: Compen
     if (kind && e.kind !== kind) return false
     return e.name.toLowerCase().includes(q) || e.description.toLowerCase().includes(q)
   })
+}
+
+// --- Custom entry adapters ---
+
+export function customEntryToMonster(e: CustomCompendiumEntry): CompendiumMonster {
+  return {
+    id: e.id,
+    systemId: 'custom',
+    name: e.name,
+    description: e.description,
+    kind: 'monster',
+    systemData: {
+      system: 'custom',
+      data: e.monsterData ?? { ac: null, hp: null, speed: '', attacks: '', abilities: '', cr: '' },
+    },
+  }
+}
+
+export function customEntryToSpell(e: CustomCompendiumEntry): CompendiumSpell {
+  return {
+    id: e.id,
+    systemId: 'custom',
+    name: e.name,
+    description: e.description,
+    kind: 'spell',
+    systemData: {
+      system: 'custom',
+      data: e.spellData ?? { level: '', school: '', castingTime: '', range: '', duration: '', components: '', classes: [] },
+    },
+  }
+}
+
+export function customEntryToMagicItem(e: CustomCompendiumEntry): CompendiumMagicItem {
+  return {
+    id: e.id,
+    systemId: 'custom',
+    name: e.name,
+    description: e.description,
+    kind: 'magicItem',
+    systemData: {
+      system: 'custom',
+      data: e.magicItemData ?? { rarity: '', itemType: '', attunement: false, charges: null, properties: [] },
+    },
+  }
+}
+
+export function customEntryToCompendiumEntry(e: CustomCompendiumEntry): CompendiumEntry {
+  if (e.kind === 'monster') return customEntryToMonster(e)
+  if (e.kind === 'spell') return customEntryToSpell(e)
+  return customEntryToMagicItem(e)
+}
+
+/** Search custom entries the same way as system entries */
+export function searchCustomEntries(
+  entries: CustomCompendiumEntry[],
+  query: string,
+  kind?: CompendiumKind
+): CompendiumEntry[] {
+  const q = query.toLowerCase()
+  return entries
+    .filter((e) => {
+      if (kind && e.kind !== kind) return false
+      return e.name.toLowerCase().includes(q) || e.description.toLowerCase().includes(q)
+    })
+    .map(customEntryToCompendiumEntry)
 }
