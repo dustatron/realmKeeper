@@ -265,15 +265,14 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
         {/* Search Tab */}
         <TabsContent value="search">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <FilterBar search={searchQuery} onSearchChange={setSearchQuery} />
+            <FilterBar search={searchQuery} onSearchChange={setSearchQuery}>
               <SearchFilterToggles
                 type="multiple"
                 value={searchFilters}
                 onChange={setSearchFilters}
                 options={SEARCH_FILTER_OPTIONS}
               />
-            </div>
+            </FilterBar>
 
             {!searchQuery.trim() ? (
               <EmptyState

@@ -1,11 +1,11 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
-import { PageHeader } from '~/components/shared/PageHeader'
-import { EmptyState } from '~/components/shared/EmptyState'
-import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
-import { Button } from '~/components/ui/button'
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@infrastructure/dexie/db";
+import { PageHeader } from "~/components/shared/PageHeader";
+import { EmptyState } from "~/components/shared/EmptyState";
+import { ConfirmDialog } from "~/components/shared/ConfirmDialog";
+import { Button } from "~/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '~/components/ui/dialog'
+} from "~/components/ui/dialog";
 import {
   Card,
   CardHeader,
@@ -21,81 +21,104 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-} from '~/components/ui/card'
-import { Input } from '~/components/ui/input'
-import { Label } from '~/components/ui/label'
+} from "~/components/ui/card";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '~/components/ui/select'
-import { Textarea } from '~/components/ui/textarea'
+} from "~/components/ui/select";
+import { Textarea } from "~/components/ui/textarea";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '~/components/ui/collapsible'
-import { LayoutDashboard, Plus, Trash2, Download, Upload, Crown, Pencil, ChevronDown, Settings } from 'lucide-react'
-import { DEFAULT_DAYS_PER_SEASON, DEFAULT_WATCHES_PER_DAY } from '@shared/constants'
+} from "~/components/ui/collapsible";
+import {
+  LayoutDashboard,
+  Plus,
+  Trash2,
+  Download,
+  Upload,
+  Crown,
+  Pencil,
+  ChevronDown,
+  Settings,
+} from "lucide-react";
+import {
+  DEFAULT_DAYS_PER_SEASON,
+  DEFAULT_WATCHES_PER_DAY,
+} from "@shared/constants";
 // useRealms replaced by direct useLiveQuery to detect loading vs empty
-import { useSystemConfigs } from '~/ui/hooks/useSystemConfigs'
-import { useContainer } from '~/ui/hooks/useContainer'
-import { useUIStore } from '~/ui/stores/uiStore'
-import { executeCreateRealm } from '@application/use-cases/CreateRealm'
-import { executeDeleteRealm } from '@application/use-cases/DeleteRealm'
-import { executeExportRealm } from '@application/use-cases/ExportRealm'
-import { executeImportRealm } from '@application/use-cases/ImportRealm'
-import { Dashboard } from '~/components/realm/Dashboard'
-import type { RealmExport } from '@application/use-cases/ExportRealm'
+import { useSystemConfigs } from "~/ui/hooks/useSystemConfigs";
+import { useContainer } from "~/ui/hooks/useContainer";
+import { useUIStore } from "~/ui/stores/uiStore";
+import { executeCreateRealm } from "@application/use-cases/CreateRealm";
+import { executeDeleteRealm } from "@application/use-cases/DeleteRealm";
+import { executeExportRealm } from "@application/use-cases/ExportRealm";
+import { executeImportRealm } from "@application/use-cases/ImportRealm";
+import { Dashboard } from "~/components/realm/Dashboard";
+import type { RealmExport } from "@application/use-cases/ExportRealm";
 
-export const Route = createFileRoute('/_app/realms/')({
+export const Route = createFileRoute("/_app/realms/")({
   component: RealmsPage,
   validateSearch: (search: Record<string, unknown>): { tab?: string } => ({
-    tab: typeof search.tab === 'string' ? search.tab : undefined,
+    tab: typeof search.tab === "string" ? search.tab : undefined,
   }),
-})
+});
 
 function RealmsPage() {
-  const navigate = useNavigate()
-  const container = useContainer()
-  const rawRealms = useLiveQuery(() => db.worlds.toArray())
-  const realmsLoaded = rawRealms !== undefined
-  const realms = rawRealms ?? []
-  const systemConfigs = useSystemConfigs()
-  const setActiveRealmId = useUIStore((state) => state.setActiveRealmId)
-  const activeRealmId = useUIStore((state) => state.activeRealmId)
-  const { tab } = Route.useSearch()
+  const navigate = useNavigate();
+  const container = useContainer();
+  const rawRealms = useLiveQuery(() => db.worlds.toArray());
+  const realmsLoaded = rawRealms !== undefined;
+  const realms = rawRealms ?? [];
+  const systemConfigs = useSystemConfigs();
+  const setActiveRealmId = useUIStore((state) => state.setActiveRealmId);
+  const activeRealmId = useUIStore((state) => state.activeRealmId);
+  const { tab } = Route.useSearch();
 
   // Clear stale activeRealmId if the realm no longer exists in DB (e.g. DB was deleted)
   useEffect(() => {
-    if (realmsLoaded && activeRealmId && !realms.some((r) => r.id === activeRealmId)) {
-      setActiveRealmId(null)
+    if (
+      realmsLoaded &&
+      activeRealmId &&
+      !realms.some((r) => r.id === activeRealmId)
+    ) {
+      setActiveRealmId(null);
     }
-  }, [realmsLoaded, activeRealmId, realms, setActiveRealmId])
+  }, [realmsLoaded, activeRealmId, realms, setActiveRealmId]);
 
-  const [showCreate, setShowCreate] = useState(false)
-  const [createName, setCreateName] = useState('')
-  const [createSystem, setCreateSystem] = useState('')
-  const [createDesc, setCreateDesc] = useState('')
-  const [calendarOpen, setCalendarOpen] = useState(false)
-  const [createWatchesPerDay, setCreateWatchesPerDay] = useState(DEFAULT_WATCHES_PER_DAY)
-  const [createDaysPerSeason, setCreateDaysPerSeason] = useState(DEFAULT_DAYS_PER_SEASON)
-  const [createDaysPerWeek, setCreateDaysPerWeek] = useState(7)
-  const [createFactionTurnTrigger, setCreateFactionTurnTrigger] = useState<'day' | 'week' | 'manual'>('day')
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
-  const [editTarget, setEditTarget] = useState<string | null>(null)
-  const [editName, setEditName] = useState('')
-  const [editDesc, setEditDesc] = useState('')
-  const [isCreating, setIsCreating] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const [showCreate, setShowCreate] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createSystem, setCreateSystem] = useState("");
+  const [createDesc, setCreateDesc] = useState("");
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [createWatchesPerDay, setCreateWatchesPerDay] = useState(
+    DEFAULT_WATCHES_PER_DAY,
+  );
+  const [createDaysPerSeason, setCreateDaysPerSeason] = useState(
+    DEFAULT_DAYS_PER_SEASON,
+  );
+  const [createDaysPerWeek, setCreateDaysPerWeek] = useState(7);
+  const [createFactionTurnTrigger, setCreateFactionTurnTrigger] = useState<
+    "day" | "week" | "manual"
+  >("day");
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const handleCreateRealm = async () => {
-    if (!createName.trim() || !createSystem) return
+    if (!createName.trim() || !createSystem) return;
 
-    setIsCreating(true)
+    setIsCreating(true);
     try {
       const newRealm = await executeCreateRealm(
         {
@@ -111,41 +134,41 @@ function RealmsPage() {
           realmRepo: container.realmRepo,
           factionRepo: container.factionRepo,
           realmNoteRepo: container.realmNoteRepo,
-        }
-      )
+        },
+      );
 
-      setActiveRealmId(newRealm.id)
-      setShowCreate(false)
-      setCreateName('')
-      setCreateSystem('')
-      setCreateDesc('')
-      setCalendarOpen(false)
-      setCreateWatchesPerDay(DEFAULT_WATCHES_PER_DAY)
-      setCreateDaysPerSeason(DEFAULT_DAYS_PER_SEASON)
-      setCreateDaysPerWeek(7)
-      setCreateFactionTurnTrigger('day')
+      setActiveRealmId(newRealm.id);
+      setShowCreate(false);
+      setCreateName("");
+      setCreateSystem("");
+      setCreateDesc("");
+      setCalendarOpen(false);
+      setCreateWatchesPerDay(DEFAULT_WATCHES_PER_DAY);
+      setCreateDaysPerSeason(DEFAULT_DAYS_PER_SEASON);
+      setCreateDaysPerWeek(7);
+      setCreateFactionTurnTrigger("day");
     } catch (error) {
-      console.error('Failed to create realm:', error)
+      console.error("Failed to create realm:", error);
     } finally {
-      setIsCreating(false)
+      setIsCreating(false);
     }
-  }
+  };
 
   const handleDeleteRealm = async () => {
-    if (!deleteTarget) return
+    if (!deleteTarget) return;
 
-    setIsDeleting(true)
+    setIsDeleting(true);
     try {
       await executeDeleteRealm(deleteTarget, {
         realmRepo: container.realmRepo,
-      })
-      setDeleteTarget(null)
+      });
+      setDeleteTarget(null);
     } catch (error) {
-      console.error('Failed to delete realm:', error)
+      console.error("Failed to delete realm:", error);
     } finally {
-      setIsDeleting(false)
+      setIsDeleting(false);
     }
-  }
+  };
 
   const handleExportRealm = async (worldId: string) => {
     try {
@@ -163,33 +186,35 @@ function RealmsPage() {
         factionPresenceRepo: container.factionPresenceRepo,
         poiEventRepo: container.poiEventRepo,
         gameMapRepo: container.gameMapRepo,
-      })
+      });
 
-      if (!data) return
+      if (!data) return;
 
       const blob = new Blob([JSON.stringify(data, null, 2)], {
-        type: 'application/json',
-      })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${data.realm.name.toLowerCase().replace(/\s+/g, '-')}-export.json`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${data.realm.name.toLowerCase().replace(/\s+/g, "-")}-export.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Failed to export realm:', error)
+      console.error("Failed to export realm:", error);
     }
-  }
+  };
 
-  const handleImportRealm = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const handleImportRealm = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
     try {
-      const text = await file.text()
-      const data: RealmExport = JSON.parse(text)
+      const text = await file.text();
+      const data: RealmExport = JSON.parse(text);
 
       const newRealmId = await executeImportRealm(data, {
         realmRepo: container.realmRepo,
@@ -205,104 +230,133 @@ function RealmsPage() {
         factionPresenceRepo: container.factionPresenceRepo,
         poiEventRepo: container.poiEventRepo,
         gameMapRepo: container.gameMapRepo,
-      })
+      });
 
-      setActiveRealmId(newRealmId)
+      setActiveRealmId(newRealmId);
     } catch (error) {
-      console.error('Failed to import realm:', error)
+      console.error("Failed to import realm:", error);
     }
 
-    event.target.value = ''
-  }
+    event.target.value = "";
+  };
 
   const handleRealmClick = (worldId: string) => {
-    setActiveRealmId(worldId)
-    navigate({ to: '/realms' })
-  }
+    setActiveRealmId(worldId);
+    navigate({ to: "/realms" });
+  };
 
   const openEditRealm = (worldId: string) => {
-    const realm = realms.find((r) => r.id === worldId)
-    if (!realm) return
-    setEditTarget(worldId)
-    setEditName(realm.name)
-    setEditDesc(realm.description)
-  }
+    const realm = realms.find((r) => r.id === worldId);
+    if (!realm) return;
+    setEditTarget(worldId);
+    setEditName(realm.name);
+    setEditDesc(realm.description);
+  };
 
   const handleSaveEdit = async () => {
-    if (!editTarget || !editName.trim()) return
-    const realm = realms.find((r) => r.id === editTarget)
-    if (!realm) return
+    if (!editTarget || !editName.trim()) return;
+    const realm = realms.find((r) => r.id === editTarget);
+    if (!realm) return;
 
-    setIsSavingEdit(true)
+    setIsSavingEdit(true);
     try {
       await container.realmRepo.update({
         ...realm,
         name: editName.trim(),
         description: editDesc.trim(),
         updatedAt: Date.now(),
-      })
-      setEditTarget(null)
+      });
+      setEditTarget(null);
     } catch (error) {
-      console.error('Failed to update realm:', error)
+      console.error("Failed to update realm:", error);
     } finally {
-      setIsSavingEdit(false)
+      setIsSavingEdit(false);
     }
-  }
+  };
 
   const calendarSettingsSection = (
     <Collapsible open={calendarOpen} onOpenChange={setCalendarOpen}>
       <CollapsibleTrigger asChild>
-        <Button variant="ghost" size="sm" className="w-full justify-between px-0 font-medium" disabled={isCreating}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-between px-0 font-medium"
+          disabled={isCreating}
+        >
           <span className="flex items-center gap-2">
             <Settings className="size-4" />
             Calendar Settings
           </span>
-          <ChevronDown className={`size-4 transition-transform ${calendarOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown
+            className={`size-4 transition-transform ${calendarOpen ? "rotate-180" : ""}`}
+          />
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent className="space-y-3 pt-2">
         <div className="grid grid-cols-2 gap-3">
           <div className="grid gap-1.5">
-            <Label htmlFor="watches-per-day" className="text-xs">Watches per Day</Label>
+            <Label htmlFor="watches-per-day" className="text-xs">
+              Watches per Day
+            </Label>
             <Input
               id="watches-per-day"
               type="number"
               min="1"
               max="12"
               value={createWatchesPerDay}
-              onChange={(e) => setCreateWatchesPerDay(parseInt(e.target.value) || DEFAULT_WATCHES_PER_DAY)}
+              onChange={(e) =>
+                setCreateWatchesPerDay(
+                  parseInt(e.target.value) || DEFAULT_WATCHES_PER_DAY,
+                )
+              }
               disabled={isCreating}
             />
           </div>
           <div className="grid gap-1.5">
-            <Label htmlFor="days-per-season" className="text-xs">Days per Season</Label>
+            <Label htmlFor="days-per-season" className="text-xs">
+              Days per Season
+            </Label>
             <Input
               id="days-per-season"
               type="number"
               min="1"
               max="365"
               value={createDaysPerSeason}
-              onChange={(e) => setCreateDaysPerSeason(parseInt(e.target.value) || DEFAULT_DAYS_PER_SEASON)}
+              onChange={(e) =>
+                setCreateDaysPerSeason(
+                  parseInt(e.target.value) || DEFAULT_DAYS_PER_SEASON,
+                )
+              }
               disabled={isCreating}
             />
           </div>
           <div className="grid gap-1.5">
-            <Label htmlFor="days-per-week" className="text-xs">Days per Week</Label>
+            <Label htmlFor="days-per-week" className="text-xs">
+              Days per Week
+            </Label>
             <Input
               id="days-per-week"
               type="number"
               min="1"
               max="30"
               value={createDaysPerWeek}
-              onChange={(e) => setCreateDaysPerWeek(parseInt(e.target.value) || 7)}
+              onChange={(e) =>
+                setCreateDaysPerWeek(parseInt(e.target.value) || 7)
+              }
               disabled={isCreating}
             />
           </div>
           <div className="grid gap-1.5">
-            <Label htmlFor="faction-turn-trigger" className="text-xs">Faction Turn Trigger</Label>
+            <Label htmlFor="faction-turn-trigger" className="text-xs">
+              Faction Turn Trigger
+            </Label>
             <Select
               value={createFactionTurnTrigger}
-              onValueChange={(v) => setCreateFactionTurnTrigger(v as typeof createFactionTurnTrigger)}
+              onValueChange={(v) =>
+                setCreateFactionTurnTrigger(
+                  v as typeof createFactionTurnTrigger,
+                )
+              }
               disabled={isCreating}
             >
               <SelectTrigger id="faction-turn-trigger">
@@ -318,29 +372,33 @@ function RealmsPage() {
         </div>
       </CollapsibleContent>
     </Collapsible>
-  )
+  );
 
   // Show dashboard when a realm is active and confirmed to exist
-  if (activeRealmId && realmsLoaded && realms.some((r) => r.id === activeRealmId)) {
+  if (
+    activeRealmId &&
+    realmsLoaded &&
+    realms.some((r) => r.id === activeRealmId)
+  ) {
     return (
       <Dashboard
         worldId={activeRealmId}
         tab={tab}
         onTabChange={(newTab) =>
           navigate({
-            to: '/realms',
-            search: newTab === 'search' ? {} : { tab: newTab },
+            to: "/realms",
+            search: newTab === "search" ? {} : { tab: newTab },
             replace: true,
           })
         }
       />
-    )
+    );
   }
 
   if (realms.length === 0) {
     return (
       <div>
-        <PageHeader title="Realms" description="Select or create a realm." />
+        <PageHeader title="World" description="Select or create a realm." />
         <EmptyState
           icon={LayoutDashboard}
           title="No realms yet"
@@ -391,7 +449,11 @@ function RealmsPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="realm-system">System</Label>
-                <Select value={createSystem} onValueChange={setCreateSystem} disabled={isCreating}>
+                <Select
+                  value={createSystem}
+                  onValueChange={setCreateSystem}
+                  disabled={isCreating}
+                >
                   <SelectTrigger id="realm-system" className="w-full">
                     <SelectValue placeholder="Select a system" />
                   </SelectTrigger>
@@ -417,20 +479,24 @@ function RealmsPage() {
               {calendarSettingsSection}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCreate(false)} disabled={isCreating}>
+              <Button
+                variant="outline"
+                onClick={() => setShowCreate(false)}
+                disabled={isCreating}
+              >
                 Cancel
               </Button>
               <Button
                 onClick={handleCreateRealm}
                 disabled={!createName.trim() || !createSystem || isCreating}
               >
-                {isCreating ? 'Creating...' : 'Create Realm'}
+                {isCreating ? "Creating..." : "Create Realm"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
-    )
+    );
   }
 
   return (
@@ -465,7 +531,7 @@ function RealmsPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {realms.map((realm) => {
-          const system = systemConfigs.find((s) => s.id === realm.systemId)
+          const system = systemConfigs.find((s) => s.id === realm.systemId);
           return (
             <Card
               key={realm.id}
@@ -499,8 +565,8 @@ function RealmsPage() {
                   size="sm"
                   variant="outline"
                   onClick={(e) => {
-                    e.stopPropagation()
-                    openEditRealm(realm.id)
+                    e.stopPropagation();
+                    openEditRealm(realm.id);
                   }}
                 >
                   <Pencil className="mr-2 size-3" />
@@ -510,8 +576,8 @@ function RealmsPage() {
                   size="sm"
                   variant="outline"
                   onClick={(e) => {
-                    e.stopPropagation()
-                    handleExportRealm(realm.id)
+                    e.stopPropagation();
+                    handleExportRealm(realm.id);
                   }}
                 >
                   <Download className="mr-2 size-3" />
@@ -521,8 +587,8 @@ function RealmsPage() {
                   size="sm"
                   variant="outline"
                   onClick={(e) => {
-                    e.stopPropagation()
-                    setDeleteTarget(realm.id)
+                    e.stopPropagation();
+                    setDeleteTarget(realm.id);
                   }}
                 >
                   <Trash2 className="mr-2 size-3" />
@@ -530,7 +596,7 @@ function RealmsPage() {
                 </Button>
               </CardFooter>
             </Card>
-          )
+          );
         })}
       </div>
 
@@ -555,7 +621,11 @@ function RealmsPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="realm-system">System</Label>
-              <Select value={createSystem} onValueChange={setCreateSystem} disabled={isCreating}>
+              <Select
+                value={createSystem}
+                onValueChange={setCreateSystem}
+                disabled={isCreating}
+              >
                 <SelectTrigger id="realm-system" className="w-full">
                   <SelectValue placeholder="Select a system" />
                 </SelectTrigger>
@@ -581,20 +651,27 @@ function RealmsPage() {
             {calendarSettingsSection}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreate(false)} disabled={isCreating}>
+            <Button
+              variant="outline"
+              onClick={() => setShowCreate(false)}
+              disabled={isCreating}
+            >
               Cancel
             </Button>
             <Button
               onClick={handleCreateRealm}
               disabled={!createName.trim() || !createSystem || isCreating}
             >
-              {isCreating ? 'Creating...' : 'Create Realm'}
+              {isCreating ? "Creating..." : "Create Realm"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={editTarget !== null} onOpenChange={(open) => !open && setEditTarget(null)}>
+      <Dialog
+        open={editTarget !== null}
+        onOpenChange={(open) => !open && setEditTarget(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Realm</DialogTitle>
@@ -621,14 +698,18 @@ function RealmsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditTarget(null)} disabled={isSavingEdit}>
+            <Button
+              variant="outline"
+              onClick={() => setEditTarget(null)}
+              disabled={isSavingEdit}
+            >
               Cancel
             </Button>
             <Button
               onClick={handleSaveEdit}
               disabled={!editName.trim() || isSavingEdit}
             >
-              {isSavingEdit ? 'Saving...' : 'Save'}
+              {isSavingEdit ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -639,10 +720,10 @@ function RealmsPage() {
         onOpenChange={(open) => !open && setDeleteTarget(null)}
         title="Delete Realm"
         description="Are you sure you want to delete this realm? This action cannot be undone and will remove all associated data."
-        confirmLabel={isDeleting ? 'Deleting...' : 'Delete'}
+        confirmLabel={isDeleting ? "Deleting..." : "Delete"}
         variant="destructive"
         onConfirm={handleDeleteRealm}
       />
     </div>
-  )
+  );
 }
