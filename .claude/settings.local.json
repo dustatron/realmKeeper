@@ -49,7 +49,12 @@
       "Bash(git fetch:*)",
       "Bash(git commit:*)",
       "Bash(pnpm tsc:*)",
-      "mcp__chrome-devtools__list_console_messages"
+      "mcp__chrome-devtools__list_console_messages",
+      "Bash(lsof:*)",
+      "mcp__chrome-devtools__new_page",
+      "mcp__chrome-devtools__press_key",
+      "mcp__chrome-devtools__evaluate_script",
+      "mcp__chrome-devtools__select_page"
     ]
   }
 }

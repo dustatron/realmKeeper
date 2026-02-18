@@ -5,6 +5,7 @@ import type { TreasureItem } from '@domain/value-objects/TreasureItem'
 import type { SessionLogEntry } from '@domain/value-objects/SessionLogEntry'
 import type { CompendiumRef } from '@domain/entities/Compendium'
 import type { LocationSeed } from '@domain/value-objects/LocationSeed'
+import type { WanderingMonsterEntry } from '@domain/value-objects/WanderingMonster'
 
 export interface POI {
   id: string
@@ -37,6 +38,7 @@ export interface POI {
   roomLength: number | null
   visited: boolean
   lightLevel: 'bright' | 'dim' | 'dark' | null
+  wanderingMonsters: WanderingMonsterEntry[]
   sessionLog: SessionLogEntry[]
   starred: boolean
   createdAt: number

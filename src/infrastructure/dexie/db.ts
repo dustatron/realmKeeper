@@ -624,12 +624,21 @@ db.pois.hook('reading', (poi) => {
     magicItemRefs: [],
     spellRefs: [],
     equipmentRefs: [],
+    wanderingMonsters: [],
   }
   for (const [key, val] of Object.entries(defaults)) {
     if (rec[key] === undefined) {
       if (!patched) { poi = { ...poi }; patched = true }
       ;(poi as unknown as Record<string, unknown>)[key] = val
     }
+  }
+  // Migrate wanderingMonsters from old string[] format to WanderingMonsterEntry[]
+  const wm = rec.wanderingMonsters
+  if (Array.isArray(wm) && wm.length > 0 && typeof wm[0] === 'string') {
+    if (!patched) { poi = { ...poi }; patched = true }
+    ;(poi as unknown as Record<string, unknown>).wanderingMonsters = (wm as string[]).map((s: string) => ({
+      name: s, count: '1', activity: '', compendiumId: null,
+    }))
   }
   return poi
 })

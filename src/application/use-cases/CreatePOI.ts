@@ -58,6 +58,7 @@ export async function executeCreatePOI(
     roomLength: null,
     visited: false,
     lightLevel: null,
+    wanderingMonsters: [],
     sessionLog: [],
     starred: false,
     monsterRefs: [],
