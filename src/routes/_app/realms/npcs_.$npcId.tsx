@@ -26,7 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '~/components/ui/command'
 import { cn } from '~/lib/utils'
 import { CloudinaryImage } from '~/components/shared/CloudinaryImage'
-import { NPC_RACES, type NPCRace } from '@shared/constants'
+import { getAllRaces } from '@shared/constants'
 import type { NPC } from '@domain/entities/NPC'
 import type { SystemBlock, Attack, InventoryItem } from '@domain/value-objects/SystemBlock'
 import type { Faction } from '@domain/entities/Faction'
@@ -222,13 +222,13 @@ function NPCDetailPage() {
               <Label htmlFor="race">Race</Label>
               <Select
                 value={editingNPC.race ?? 'human'}
-                onValueChange={(v) => updateField('race', v as NPCRace)}
+                onValueChange={(v) => updateField('race', v)}
               >
                 <SelectTrigger id="race">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {NPC_RACES.map((r) => (
+                  {getAllRaces(realm?.customRaces ?? []).map((r) => (
                     <SelectItem key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</SelectItem>
                   ))}
                 </SelectContent>

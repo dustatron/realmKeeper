@@ -41,7 +41,7 @@ function CustomCompendiumDetailPage() {
     navigate({ to: '/realms/compendium' })
   }
 
-  const kindLabel = entry.kind === 'monster' ? 'Monster' : entry.kind === 'spell' ? 'Spell' : 'Magic Item'
+  const kindLabel = entry.kind === 'monster' ? 'Monster' : entry.kind === 'spell' ? 'Spell' : entry.kind === 'equipment' ? 'Equipment' : 'Magic Item'
 
   return (
     <div className="flex flex-col gap-4">
@@ -83,6 +83,7 @@ function CustomCompendiumDetailPage() {
       {entry.kind === 'monster' && entry.monsterData && <MonsterBlock data={entry.monsterData} />}
       {entry.kind === 'spell' && entry.spellData && <SpellBlock data={entry.spellData} />}
       {entry.kind === 'magicItem' && entry.magicItemData && <MagicItemBlock data={entry.magicItemData} />}
+      {entry.kind === 'equipment' && entry.equipmentData && <EquipmentBlock data={entry.equipmentData} />}
     </div>
   )
 }
@@ -154,6 +155,29 @@ function MagicItemBlock({ data }: { data: NonNullable<CustomCompendiumEntry['mag
           <div className="flex flex-wrap gap-1">
             {data.properties.map((p) => (
               <Badge key={p} className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-xs">{p}</Badge>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function EquipmentBlock({ data }: { data: NonNullable<CustomCompendiumEntry['equipmentData']> }) {
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-base">Equipment Details</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          {data.category && <Stat label="Category" value={data.category} />}
+          {data.cost && <Stat label="Cost" value={data.cost} />}
+          {data.weight && <Stat label="Weight" value={data.weight} />}
+          {data.damage && <Stat label="Damage" value={data.damage} />}
+        </div>
+        {data.properties.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {data.properties.map((p) => (
+              <Badge key={p} className="bg-amber-500/15 text-amber-700 dark:text-amber-400 text-xs">{p}</Badge>
             ))}
           </div>
         )}

@@ -135,9 +135,18 @@ export interface ShadowdarkEquipmentData {
   itemType: string;
 }
 
+export interface CustomCompendiumEquipmentData {
+  cost: string;
+  weight: string;
+  category: string;
+  damage: string;
+  properties: string[];
+}
+
 export interface CompendiumEquipment extends CompendiumEntry {
   kind: 'equipment';
   systemData:
     | { system: 'cairn'; data: CairnEquipmentData }
-    | { system: 'shadowdark'; data: ShadowdarkEquipmentData };
+    | { system: 'shadowdark'; data: ShadowdarkEquipmentData }
+    | { system: 'custom'; data: CustomCompendiumEquipmentData };
 }

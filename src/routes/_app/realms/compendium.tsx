@@ -12,6 +12,7 @@ import {
   customEntryToMonster,
   customEntryToSpell,
   customEntryToMagicItem,
+  customEntryToEquipment,
 } from "@domain/data/compendium";
 import type { CompendiumEntry } from "@domain/entities/Compendium";
 import { PageHeader } from "~/components/shared/PageHeader";
@@ -32,11 +33,27 @@ import {
   Layers,
   BookOpen,
   Sparkles,
+  Users,
+  X,
+  Paintbrush,
 } from "lucide-react";
+import { NPC_RACES } from "@shared/constants";
+import { Input } from "~/components/ui/input";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "~/components/ui/popover";
 import { EquipmentTable } from "~/components/compendium/EquipmentTable";
 import { MagicItemCard } from "~/components/compendium/MagicItemCard";
 import { MonsterCard } from "~/components/compendium/MonsterCards";
 import { SpellCard } from "~/components/compendium/SpellCard";
+
+const RACE_PALETTE = [
+  '#ef4444', '#f97316', '#eab308', '#22c55e',
+  '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899',
+  '#78716c', '#166534', '#1e293b', '#b45309',
+];
 
 export const Route = createFileRoute("/_app/realms/compendium")({
   component: CompendiumPage,
@@ -61,6 +78,57 @@ const sourceFilterOptions = [
   { value: "system", label: "System", icon: BookOpen },
   { value: "custom", label: "Custom", icon: Sparkles },
 ];
+
+function RaceColorPicker({
+  race,
+  currentColor,
+  onSelect,
+}: {
+  race: string;
+  currentColor: string | null;
+  onSelect: (race: string, color: string | null) => void;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          className="size-5 rounded-full border border-border hover:scale-110 transition-transform shrink-0 flex items-center justify-center"
+          style={currentColor ? { backgroundColor: currentColor } : undefined}
+          title={`Set color for ${race}`}
+        >
+          {!currentColor && (
+            <Paintbrush className="size-3 text-muted-foreground" />
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-2" align="start">
+        <div className="flex flex-wrap gap-1 max-w-[180px]">
+          {/* Clear option */}
+          <button
+            className={`size-6 rounded-full border-2 transition-transform hover:scale-110 flex items-center justify-center ${
+              currentColor === null ? "border-foreground scale-110" : "border-border"
+            }`}
+            onClick={() => onSelect(race, null)}
+            title="No color"
+          >
+            <X className="size-3 text-muted-foreground" />
+          </button>
+          {RACE_PALETTE.map((c) => (
+            <button
+              key={c}
+              className={`size-6 rounded-full border-2 transition-transform hover:scale-110 ${
+                currentColor === c ? "border-foreground scale-110" : "border-transparent"
+              }`}
+              style={{ backgroundColor: c }}
+              onClick={() => onSelect(race, c)}
+              title={c}
+            />
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 function CompendiumPage() {
   const realm = useActiveRealm();
@@ -101,6 +169,13 @@ function CompendiumPage() {
         .map(customEntryToMagicItem),
     [customEntries],
   );
+  const customEquipment = useMemo(
+    () =>
+      customEntries
+        .filter((e) => e.kind === "equipment")
+        .map(customEntryToEquipment),
+    [customEntries],
+  );
 
   const monsters = useMemo(
     () => [...getMonstersBySystemId(systemId), ...customMonsters],
@@ -114,7 +189,10 @@ function CompendiumPage() {
     () => [...getMagicItemsBySystemId(systemId), ...customMagicItems],
     [systemId, customMagicItems],
   );
-  const equipment = useMemo(() => getEquipmentBySystemId(systemId), [systemId]);
+  const equipment = useMemo(
+    () => [...getEquipmentBySystemId(systemId), ...customEquipment],
+    [systemId, customEquipment],
+  );
 
   const [monsterSearch, setMonsterSearch] = useState("");
   const [spellSearch, setSpellSearch] = useState("");
@@ -163,22 +241,78 @@ function CompendiumPage() {
   }, [magicItems, magicItemSearch, filterSource]);
 
   const filteredEquipment = useMemo(() => {
-    if (!equipmentSearch) return equipment;
-    const q = equipmentSearch.toLowerCase();
-    return equipment.filter(
-      (e) =>
-        e.name.toLowerCase().includes(q) ||
-        e.description.toLowerCase().includes(q),
-    );
-  }, [equipment, equipmentSearch]);
+    let result = applySourceFilter(equipment, filterSource);
+    if (equipmentSearch) {
+      const q = equipmentSearch.toLowerCase();
+      result = result.filter(
+        (e) =>
+          e.name.toLowerCase().includes(q) ||
+          e.description.toLowerCase().includes(q),
+      );
+    }
+    return result;
+  }, [equipment, equipmentSearch, filterSource]);
+
+  // Custom races state
+  const [newRace, setNewRace] = useState("");
+  const customRaces = realm?.customRaces ?? [];
+  const raceColors = realm?.raceColors ?? {};
+
+  const handleSetRaceColor = async (race: string, color: string | null) => {
+    if (!realm) return;
+    const key = race.toLowerCase();
+    const updated = { ...raceColors };
+    if (color) {
+      updated[key] = color;
+    } else {
+      delete updated[key];
+    }
+    await db.worlds.update(realm.id, {
+      raceColors: updated,
+      updatedAt: Date.now(),
+    });
+  };
+
+  const handleAddRace = async () => {
+    const trimmed = newRace.trim();
+    if (!trimmed || !realm) return;
+    const lower = trimmed.toLowerCase();
+    // Check duplicates against built-in + existing custom
+    if (
+      (NPC_RACES as readonly string[]).includes(lower) ||
+      customRaces.some((r) => r.toLowerCase() === lower)
+    )
+      return;
+    await db.worlds.update(realm.id, {
+      customRaces: [...customRaces, trimmed],
+      updatedAt: Date.now(),
+    });
+    setNewRace("");
+  };
+
+  const handleRemoveRace = async (race: string) => {
+    if (!realm) return;
+    await db.worlds.update(realm.id, {
+      customRaces: customRaces.filter((r) => r !== race),
+      updatedAt: Date.now(),
+    });
+  };
 
   type TabDef = {
     value: string;
     label: string;
     icon: typeof Book;
     count: number;
+    alwaysShow?: boolean;
   };
   const tabs: TabDef[] = [
+    {
+      value: "races",
+      label: "Races",
+      icon: Users,
+      count: NPC_RACES.length + customRaces.length,
+      alwaysShow: true,
+    },
     {
       value: "monsters",
       label: "Monsters",
@@ -198,7 +332,7 @@ function CompendiumPage() {
       icon: Shield,
       count: equipment.length,
     },
-  ].filter((t) => t.count > 0);
+  ].filter((t) => t.alwaysShow || t.count > 0);
 
   if (!realm) {
     return (
@@ -278,6 +412,100 @@ function CompendiumPage() {
             </Button>
           </Link>
         </TabsList>
+
+        {/* Races */}
+        <TabsContent value="races">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Input
+                value={newRace}
+                onChange={(e) => setNewRace(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddRace()}
+                placeholder="Add custom race..."
+                className="max-w-xs"
+              />
+              <Button
+                size="sm"
+                onClick={handleAddRace}
+                disabled={!newRace.trim()}
+              >
+                <Plus className="mr-1.5 size-4" />
+                Add
+              </Button>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                Built-in Races
+              </h4>
+              <div className="flex flex-wrap gap-1.5">
+                {NPC_RACES.map((r) => (
+                  <div key={r} className="flex items-center gap-1">
+                    <Badge
+                      variant="secondary"
+                      style={
+                        raceColors[r]
+                          ? { backgroundColor: raceColors[r] + "20", borderColor: raceColors[r] }
+                          : undefined
+                      }
+                    >
+                      {r.charAt(0).toUpperCase() + r.slice(1)}
+                    </Badge>
+                    <RaceColorPicker
+                      race={r}
+                      currentColor={raceColors[r] ?? null}
+                      onSelect={handleSetRaceColor}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                Custom Races ({customRaces.length})
+              </h4>
+              {customRaces.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No custom races yet. Add one above to make it available in NPC
+                  race dropdowns.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {customRaces.map((r) => {
+                    const key = r.toLowerCase();
+                    return (
+                      <div key={r} className="flex items-center gap-1">
+                        <Badge
+                          variant="outline"
+                          className="gap-1 pr-1"
+                          style={
+                            raceColors[key]
+                              ? { backgroundColor: raceColors[key] + "20", borderColor: raceColors[key] }
+                              : undefined
+                          }
+                        >
+                          {r.charAt(0).toUpperCase() + r.slice(1)}
+                          <button
+                            onClick={() => handleRemoveRace(r)}
+                            className="ml-0.5 rounded-full p-0.5 hover:bg-muted"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </Badge>
+                        <RaceColorPicker
+                          race={key}
+                          currentColor={raceColors[key] ?? null}
+                          onSelect={handleSetRaceColor}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
 
         {/* Monsters */}
         <TabsContent value="monsters">
@@ -376,7 +604,14 @@ function CompendiumPage() {
               <FilterBar
                 search={equipmentSearch}
                 onSearchChange={setEquipmentSearch}
-              />
+              >
+                <SearchFilterToggles
+                  type="single"
+                  value={filterSource}
+                  onChange={(v) => setFilterSource(v as SourceFilter)}
+                  options={sourceFilterOptions}
+                />
+              </FilterBar>
               {filteredEquipment.length === 0 ? (
                 <EmptyState
                   icon={Shield}

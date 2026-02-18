@@ -40,6 +40,8 @@ export async function executeCreateRealm(
     watchesPerDay: input.watchesPerDay ?? DEFAULT_WATCHES_PER_DAY,
     factionTurnTrigger: input.factionTurnTrigger ?? 'day',
     completedThroughDay: -1,
+    customRaces: [],
+    raceColors: {},
     createdAt: now,
     updatedAt: now,
   }

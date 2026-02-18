@@ -25,15 +25,24 @@ export type CustomMagicItemData = {
   properties: string[]
 }
 
+export type CustomEquipmentData = {
+  cost: string
+  weight: string
+  category: string // "Weapon", "Armor", "Gear", "Tool", etc.
+  damage: string
+  properties: string[]
+}
+
 export interface CustomCompendiumEntry {
   id: string
   worldId: string
-  kind: 'monster' | 'spell' | 'magicItem'
+  kind: 'monster' | 'spell' | 'magicItem' | 'equipment'
   name: string
   description: string // markdown
   monsterData?: CustomMonsterData
   spellData?: CustomSpellData
   magicItemData?: CustomMagicItemData
+  equipmentData?: CustomEquipmentData
   createdAt: number
   updatedAt: number
 }

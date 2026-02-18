@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { executeUpdateCustomCompendiumEntry } from '@application/use-cases/UpdateCustomCompendiumEntry'
-import type { CustomMonsterData, CustomSpellData, CustomMagicItemData } from '@domain/entities/CustomCompendiumEntry'
+import type { CustomMonsterData, CustomSpellData, CustomMagicItemData, CustomEquipmentData } from '@domain/entities/CustomCompendiumEntry'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
@@ -53,6 +53,13 @@ function CustomCompendiumEditPage() {
   const [charges, setCharges] = useState('')
   const [properties, setProperties] = useState<string[]>([])
 
+  // Equipment
+  const [eqCost, setEqCost] = useState('')
+  const [eqWeight, setEqWeight] = useState('')
+  const [eqCategory, setEqCategory] = useState('')
+  const [eqDamage, setEqDamage] = useState('')
+  const [eqProperties, setEqProperties] = useState<string[]>([])
+
   const [saving, setSaving] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
@@ -83,6 +90,13 @@ function CustomCompendiumEditPage() {
         setAttunement(entry.magicItemData.attunement)
         setCharges(entry.magicItemData.charges ?? '')
         setProperties(entry.magicItemData.properties)
+      }
+      if (entry.kind === 'equipment' && entry.equipmentData) {
+        setEqCost(entry.equipmentData.cost)
+        setEqWeight(entry.equipmentData.weight)
+        setEqCategory(entry.equipmentData.category)
+        setEqDamage(entry.equipmentData.damage)
+        setEqProperties(entry.equipmentData.properties)
       }
       setLoaded(true)
     }
@@ -118,6 +132,11 @@ function CustomCompendiumEditPage() {
         level, school, castingTime, range, duration, components, classes,
       }
       updated.spellData = spellData
+    } else if (entry.kind === 'equipment') {
+      const equipmentData: CustomEquipmentData = {
+        cost: eqCost, weight: eqWeight, category: eqCategory, damage: eqDamage, properties: eqProperties,
+      }
+      updated.equipmentData = equipmentData
     } else {
       const magicItemData: CustomMagicItemData = {
         rarity, itemType, attunement,
@@ -131,7 +150,7 @@ function CustomCompendiumEditPage() {
     navigate({ to: '/realms/compendium/custom/$entryId', params: { entryId: entry.id } })
   }
 
-  const kindLabel = entry.kind === 'monster' ? 'Monster' : entry.kind === 'spell' ? 'Spell' : 'Magic Item'
+  const kindLabel = entry.kind === 'monster' ? 'Monster' : entry.kind === 'spell' ? 'Spell' : entry.kind === 'equipment' ? 'Equipment' : 'Magic Item'
 
   return (
     <div className="flex flex-col gap-4">
@@ -251,6 +270,36 @@ function CustomCompendiumEditPage() {
             <div className="space-y-2">
               <Label>Properties</Label>
               <TagInput tags={properties} onChange={setProperties} placeholder="Add property..." />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {entry.kind === 'equipment' && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Equipment Details</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Input value={eqCategory} onChange={(e) => setEqCategory(e.target.value)} placeholder="Weapon, Armor, Gear..." />
+              </div>
+              <div className="space-y-2">
+                <Label>Cost</Label>
+                <Input value={eqCost} onChange={(e) => setEqCost(e.target.value)} placeholder="10 gp" />
+              </div>
+              <div className="space-y-2">
+                <Label>Weight</Label>
+                <Input value={eqWeight} onChange={(e) => setEqWeight(e.target.value)} placeholder="5 lb" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Damage</Label>
+              <Input value={eqDamage} onChange={(e) => setEqDamage(e.target.value)} placeholder="1d8 slashing" />
+            </div>
+            <div className="space-y-2">
+              <Label>Properties</Label>
+              <TagInput tags={eqProperties} onChange={setEqProperties} placeholder="Add property..." />
             </div>
           </CardContent>
         </Card>

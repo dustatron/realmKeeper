@@ -26,29 +26,24 @@ export function EquipmentTable({ items }: { items: CompendiumEquipment[] }) {
       <TableBody>
         {items.map((item) => {
           const sd = item.systemData;
-          const cost =
-            sd.system === "cairn"
-              ? sd.data.cost
-                ? `${sd.data.cost} gp`
-                : "—"
-              : `${sd.data.cost.amount} ${sd.data.cost.currency}`;
-          const category =
-            sd.system === "cairn" ? sd.data.category : sd.data.itemType;
+          let cost: string;
+          let category: string;
+          let armor = "—";
+          let slots = "—";
+          if (sd.system === "cairn") {
+            cost = sd.data.cost ? `${sd.data.cost} gp` : "—";
+            category = sd.data.category;
+            if (sd.data.armor != null) armor = String(sd.data.armor);
+            if (sd.data.slots != null) slots = String(sd.data.slots);
+          } else if (sd.system === "shadowdark") {
+            cost = `${sd.data.cost.amount} ${sd.data.cost.currency}`;
+            category = sd.data.itemType;
+            if (sd.data.slot > 0) slots = String(sd.data.slot);
+          } else {
+            cost = sd.data.cost || "—";
+            category = sd.data.category || "—";
+          }
           const damage = sd.data.damage ?? "—";
-          const armor =
-            sd.system === "cairn"
-              ? sd.data.armor != null
-                ? String(sd.data.armor)
-                : "—"
-              : "—";
-          const slots =
-            sd.system === "cairn"
-              ? sd.data.slots != null
-                ? String(sd.data.slots)
-                : "—"
-              : sd.data.slot > 0
-                ? String(sd.data.slot)
-                : "—";
           const properties = sd.data.properties;
 
           return (

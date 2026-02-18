@@ -71,6 +71,8 @@ interface GenericTemplateProps {
   onLinkNPC: (npcId: string) => void;
   onCreateEvent: () => void;
   onDeleteEvent: (id: string) => void;
+  onToggleTrapDisarmed?: (trapId: string) => void;
+  onUpdateNPC?: (npc: NPC) => void;
   onUpdateLocationSeed: (seed: LocationSeed) => void;
   mapSection: React.ReactNode;
   notesSection?: React.ReactNode;
@@ -96,6 +98,8 @@ export function GenericTemplate({
   onLinkNPC,
   onCreateEvent,
   onDeleteEvent,
+  onToggleTrapDisarmed,
+  onUpdateNPC,
   onUpdateLocationSeed,
   mapSection,
   notesSection,
@@ -138,6 +142,12 @@ export function GenericTemplate({
         activeEvents={activeEvents}
         paths={paths}
         currentPoiId={poi.id}
+        traps={poi.traps}
+        onToggleTrapDisarmed={onToggleTrapDisarmed}
+        roomWidth={poi.roomWidth}
+        roomLength={poi.roomLength}
+        treasure={poi.treasure}
+        lightLevel={poi.lightLevel}
       />
 
       {/* Read Aloud */}
@@ -208,9 +218,13 @@ export function GenericTemplate({
                       params={{ poiId: child.id }}
                       className="block"
                     >
-                      <div className="rounded-md border p-3 hover:bg-accent transition-colors space-y-1.5">
+                      <div className={`rounded-md border p-3 hover:bg-accent transition-colors space-y-1.5 ${child.visited ? 'border-l-2 border-l-green-500' : ''}`}>
                         <div className="flex items-center gap-2">
-                          <ChildIcon className="size-4 shrink-0 text-muted-foreground" />
+                          {child.visited ? (
+                            <span className="text-xs shrink-0">✅</span>
+                          ) : (
+                            <ChildIcon className="size-4 shrink-0 text-muted-foreground" />
+                          )}
                           <span className="text-sm font-medium">
                             {child.name}
                           </span>
@@ -299,7 +313,7 @@ export function GenericTemplate({
           {npcs.length > 0 ? (
             <div className="space-y-2">
               {npcs.map((npc) => (
-                <NPCMiniCard key={npc.id} npc={npc} />
+                <NPCMiniCard key={npc.id} npc={npc} onUpdateNPC={onUpdateNPC} />
               ))}
             </div>
           ) : (

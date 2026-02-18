@@ -13,7 +13,7 @@ import { runTableChain } from '@domain/services/TableChainRunner'
 import { rollDice } from '@shared/dice'
 import type { NPC } from '@domain/entities/NPC'
 import type { SystemBlock, Attack, InventoryItem } from '@domain/value-objects/SystemBlock'
-import { NPC_RACES, type NPCRace, type LifeStatus, type MovementStatus } from '@shared/constants'
+import { NPC_RACES, getAllRaces, type LifeStatus, type MovementStatus } from '@shared/constants'
 import { newId } from '@shared/ulid'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { TagInput } from '~/components/shared/TagInput'
@@ -50,7 +50,7 @@ function NPCNewPage() {
 
   // Form state
   const [name, setName] = useState('')
-  const [race, setRace] = useState<NPCRace>('human')
+  const [race, setRace] = useState<string>('human')
   const [description, setDescription] = useState('')
   const [traits, setTraits] = useState<string[]>([])
   const [motivation, setMotivation] = useState('')
@@ -154,13 +154,13 @@ function NPCNewPage() {
         : undefined
 
       const npc = await executeGenerateNPC(
-        { worldId: activeRealmId, systemConfig, factionId: autoFactionId, regionId: autoRegionId },
+        { worldId: activeRealmId, systemConfig, factionId: autoFactionId, regionId: autoRegionId, customRaces: realm?.customRaces },
         { tableRepo: container.tableRepo }
       )
 
       // Spread generated NPC into state
       setName(npc.name)
-      setRace(npc.race ?? 'human')
+      setRace(npc.race || 'human')
       setDescription(npc.description)
       setTraits(npc.traits)
       setMotivation(npc.motivation)
@@ -290,10 +290,10 @@ function NPCNewPage() {
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="npc-race">Race</Label>
-              <Select value={race} onValueChange={(v) => setRace(v as NPCRace)}>
+              <Select value={race} onValueChange={(v) => setRace(v)}>
                 <SelectTrigger id="npc-race"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {NPC_RACES.map((r) => (
+                  {getAllRaces(realm?.customRaces ?? []).map((r) => (
                     <SelectItem key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</SelectItem>
                   ))}
                 </SelectContent>

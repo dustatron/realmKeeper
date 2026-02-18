@@ -1,11 +1,11 @@
 import type { SystemBlock } from '@domain/value-objects/SystemBlock'
-import type { LifeStatus, MovementStatus, NPCRace } from '@shared/constants'
+import type { LifeStatus, MovementStatus } from '@shared/constants'
 
 export interface NPC {
   id: string
   worldId: string
   name: string
-  race?: NPCRace
+  race?: string
   factionIds: string[]
   regionId: string | null
   poiId: string | null

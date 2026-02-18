@@ -24,7 +24,7 @@ import {
 import { Switch } from '~/components/ui/switch'
 import { ScrollArea } from '~/components/ui/scroll-area'
 import { TagInput } from '~/components/shared/TagInput'
-import { NPC_RACES, type NPCRace } from '@shared/constants'
+import { getAllRaces } from '@shared/constants'
 import { Badge } from '~/components/ui/badge'
 import { Plus, Trash2, Sparkles } from 'lucide-react'
 import { ImagePicker } from '~/components/shared/ImagePicker'
@@ -35,6 +35,7 @@ export interface NPCEditSheetProps {
   factions: Faction[]
   regions: Region[]
   pois: POI[]
+  customRaces?: string[]
   open: boolean
   onOpenChange: (open: boolean) => void
   onSave: () => void
@@ -50,6 +51,7 @@ export function NPCEditSheet({
   factions,
   regions,
   pois,
+  customRaces = [],
   open,
   onOpenChange,
   onSave,
@@ -149,13 +151,13 @@ export function NPCEditSheet({
                 <Label htmlFor="race">Race</Label>
                 <Select
                   value={npc.race ?? 'human'}
-                  onValueChange={(v) => updateField('race', v as NPCRace)}
+                  onValueChange={(v) => updateField('race', v)}
                 >
                   <SelectTrigger id="race">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {NPC_RACES.map((r) => (
+                    {getAllRaces(customRaces).map((r) => (
                       <SelectItem key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</SelectItem>
                     ))}
                   </SelectContent>
