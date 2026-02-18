@@ -1,11 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { useActiveRealm } from "~/ui/hooks/useActiveRealm";
 import { useTimeline } from "~/ui/hooks/useTimeline";
 import { useRecentWeather } from "~/ui/hooks/useWeather";
 import { useContainer } from "~/ui/hooks/useContainer";
-import { useGlobalSearch } from "~/ui/hooks/useGlobalSearch";
-import type { SearchableItem } from "~/ui/hooks/useGlobalSearch";
 import {
   executeGetDashboardData,
   type DashboardData,
@@ -32,10 +30,7 @@ import {
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
-import { FilterBar } from "~/components/shared/FilterBar";
 import { EmptyState } from "~/components/shared/EmptyState";
-import { SearchFilterToggles } from "~/components/shared/SearchFilterToggles";
-import type { FilterOption } from "~/components/shared/SearchFilterToggles";
 import {
   Swords,
   Users,
@@ -48,23 +43,10 @@ import {
   Calendar,
   MapPin,
   Dices,
-  Search as SearchIcon,
   Settings,
   Save,
-  BookOpen,
-  Sparkles,
-  Gem,
 } from "lucide-react";
 import type { Season } from "@shared/constants";
-
-const SEARCH_FILTER_OPTIONS: FilterOption[] = [
-  { value: "npc", label: "NPC", icon: Users },
-  { value: "poi", label: "POI", icon: MapPin },
-  { value: "faction", label: "Faction", icon: Swords },
-  { value: "core-rules", label: "Core Rules", icon: BookOpen },
-  { value: "magic-items", label: "Magic Items", icon: Gem },
-  { value: "custom", label: "Custom", icon: Sparkles },
-];
 
 interface DashboardProps {
   worldId: string;
@@ -95,63 +77,11 @@ const WEATHER_SEVERITY_COLORS: Record<string, string> = {
   extreme: "bg-red-500/10 text-red-700 border-red-500/20",
 };
 
-const typeBadgeColors: Record<SearchableItem["type"], string> = {
-  npc: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
-  faction: "bg-red-500/15 text-red-700 dark:text-red-400",
-  region: "bg-green-500/15 text-green-700 dark:text-green-400",
-  poi: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-  note: "bg-purple-500/15 text-purple-700 dark:text-purple-400",
-  monster: "bg-orange-500/15 text-orange-700 dark:text-orange-400",
-  spell: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-400",
-  magicItem: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-  equipment: "bg-slate-500/15 text-slate-700 dark:text-slate-400",
-};
-
-const typeLabels: Record<SearchableItem["type"], string> = {
-  npc: "NPC",
-  faction: "Faction",
-  region: "Region",
-  poi: "POI",
-  note: "Note",
-  monster: "Monster",
-  spell: "Spell",
-  magicItem: "Magic Item",
-  equipment: "Equipment",
-};
-
 export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchFilters, setSearchFilters] = useState<string[]>([]);
   const container = useContainer();
   const realm = useActiveRealm();
-  const searchResults = useGlobalSearch(worldId, searchQuery);
-
-  const filteredSearchResults = useMemo(() => {
-    if (searchFilters.length === 0) return searchResults;
-    return searchResults.filter((item) => {
-      for (const f of searchFilters) {
-        if (f === "npc" && item.type === "npc") return true;
-        if (f === "poi" && item.type === "poi") return true;
-        if (f === "faction" && item.type === "faction") return true;
-        if (
-          f === "core-rules" &&
-          ["monster", "spell", "equipment"].includes(item.type) &&
-          !item.url.includes("/custom/")
-        )
-          return true;
-        if (
-          f === "magic-items" &&
-          item.type === "magicItem" &&
-          !item.url.includes("/custom/")
-        )
-          return true;
-        if (f === "custom" && item.url.includes("/custom/")) return true;
-      }
-      return false;
-    });
-  }, [searchResults, searchFilters]);
 
   // Settings state
   const [settingsDaysPerSeason, setSettingsDaysPerSeason] = useState(30);
@@ -229,7 +159,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
   };
 
   const activeTab =
-    tab === "world-details" || tab === "settings" ? tab : "search";
+    tab === "settings" ? tab : "world-details";
 
   return (
     <div className="space-y-4 p-6">
@@ -248,10 +178,6 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
 
       <Tabs value={activeTab} onValueChange={onTabChange}>
         <TabsList>
-          <TabsTrigger value="search">
-            <SearchIcon className="size-4" />
-            Global Search
-          </TabsTrigger>
           <TabsTrigger value="world-details">
             <Crown className="size-4" />
             World Details
@@ -261,60 +187,6 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
             Settings
           </TabsTrigger>
         </TabsList>
-
-        {/* Search Tab */}
-        <TabsContent value="search">
-          <div className="flex flex-col gap-4">
-            <FilterBar search={searchQuery} onSearchChange={setSearchQuery}>
-              <SearchFilterToggles
-                type="multiple"
-                value={searchFilters}
-                onChange={setSearchFilters}
-                options={SEARCH_FILTER_OPTIONS}
-              />
-            </FilterBar>
-
-            {!searchQuery.trim() ? (
-              <EmptyState
-                icon={SearchIcon}
-                title="Type to search"
-                description="Search NPCs, factions, regions, POIs, and notes."
-              />
-            ) : filteredSearchResults.length === 0 ? (
-              <EmptyState
-                icon={SearchIcon}
-                title="No results"
-                description={`No matches for "${searchQuery}"${searchFilters.length > 0 ? " with selected filters" : ""}.`}
-              />
-            ) : (
-              <div className="space-y-2">
-                {filteredSearchResults.map((item) => (
-                  <Link
-                    key={`${item.type}-${item.id}`}
-                    to={item.url}
-                    params={item.params}
-                    className="block rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge
-                        variant="outline"
-                        className={typeBadgeColors[item.type]}
-                      >
-                        {typeLabels[item.type]}
-                      </Badge>
-                      <span className="font-medium">{item.name}</span>
-                    </div>
-                    {item.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {item.description.slice(0, 200)}
-                      </p>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </TabsContent>
 
         {/* World Details Tab */}
         <TabsContent value="world-details">

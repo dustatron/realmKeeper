@@ -50,15 +50,27 @@ import { MonsterCard } from "~/components/compendium/MonsterCards";
 import { SpellCard } from "~/components/compendium/SpellCard";
 
 const RACE_PALETTE = [
-  '#ef4444', '#f97316', '#eab308', '#22c55e',
-  '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899',
-  '#78716c', '#166534', '#1e293b', '#b45309',
+  "#ef4444",
+  "#f97316",
+  "#eab308",
+  "#22c55e",
+  "#06b6d4",
+  "#3b82f6",
+  "#8b5cf6",
+  "#ec4899",
+  "#78716c",
+  "#166534",
+  "#1e293b",
+  "#b45309",
 ];
 
 export const Route = createFileRoute("/_app/realms/compendium")({
   component: CompendiumPage,
-  validateSearch: (search: Record<string, unknown>): { tab?: string } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { tab?: string; q?: string } => ({
     tab: typeof search.tab === "string" ? search.tab : undefined,
+    q: typeof search.q === "string" ? search.q : undefined,
   }),
 });
 
@@ -106,7 +118,9 @@ function RaceColorPicker({
           {/* Clear option */}
           <button
             className={`size-6 rounded-full border-2 transition-transform hover:scale-110 flex items-center justify-center ${
-              currentColor === null ? "border-foreground scale-110" : "border-border"
+              currentColor === null
+                ? "border-foreground scale-110"
+                : "border-border"
             }`}
             onClick={() => onSelect(race, null)}
             title="No color"
@@ -117,7 +131,9 @@ function RaceColorPicker({
             <button
               key={c}
               className={`size-6 rounded-full border-2 transition-transform hover:scale-110 ${
-                currentColor === c ? "border-foreground scale-110" : "border-transparent"
+                currentColor === c
+                  ? "border-foreground scale-110"
+                  : "border-transparent"
               }`}
               style={{ backgroundColor: c }}
               onClick={() => onSelect(race, c)}
@@ -133,8 +149,8 @@ function RaceColorPicker({
 function CompendiumPage() {
   const realm = useActiveRealm();
   const activeRealmId = useUIStore((s) => s.activeRealmId);
-  const navigate = useNavigate();
-  const { tab: tabParam } = Route.useSearch();
+  const navigate = useNavigate({ from: "/realms/compendium" });
+  const { tab: tabParam, q: searchQuery = "" } = Route.useSearch();
   const systemId = realm?.systemId ?? "";
 
   // Custom entries from Dexie
@@ -194,17 +210,19 @@ function CompendiumPage() {
     [systemId, customEquipment],
   );
 
-  const [monsterSearch, setMonsterSearch] = useState("");
-  const [spellSearch, setSpellSearch] = useState("");
-  const [magicItemSearch, setMagicItemSearch] = useState("");
-  const [equipmentSearch, setEquipmentSearch] = useState("");
+  const setSearchQuery = (value: string) => {
+    navigate({
+      search: (prev) => ({ ...prev, q: value || undefined }),
+      replace: true,
+    });
+  };
 
   const [filterSource, setFilterSource] = useState<SourceFilter>("all");
 
   const filteredMonsters = useMemo(() => {
     let result = applySourceFilter(monsters, filterSource);
-    if (monsterSearch) {
-      const q = monsterSearch.toLowerCase();
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
       result = result.filter(
         (m) =>
           m.name.toLowerCase().includes(q) ||
@@ -212,12 +230,12 @@ function CompendiumPage() {
       );
     }
     return result;
-  }, [monsters, monsterSearch, filterSource]);
+  }, [monsters, searchQuery, filterSource]);
 
   const filteredSpells = useMemo(() => {
     let result = applySourceFilter(spells, filterSource);
-    if (spellSearch) {
-      const q = spellSearch.toLowerCase();
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
       result = result.filter(
         (s) =>
           s.name.toLowerCase().includes(q) ||
@@ -225,12 +243,12 @@ function CompendiumPage() {
       );
     }
     return result;
-  }, [spells, spellSearch, filterSource]);
+  }, [spells, searchQuery, filterSource]);
 
   const filteredMagicItems = useMemo(() => {
     let result = applySourceFilter(magicItems, filterSource);
-    if (magicItemSearch) {
-      const q = magicItemSearch.toLowerCase();
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
       result = result.filter(
         (i) =>
           i.name.toLowerCase().includes(q) ||
@@ -238,12 +256,12 @@ function CompendiumPage() {
       );
     }
     return result;
-  }, [magicItems, magicItemSearch, filterSource]);
+  }, [magicItems, searchQuery, filterSource]);
 
   const filteredEquipment = useMemo(() => {
     let result = applySourceFilter(equipment, filterSource);
-    if (equipmentSearch) {
-      const q = equipmentSearch.toLowerCase();
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
       result = result.filter(
         (e) =>
           e.name.toLowerCase().includes(q) ||
@@ -251,7 +269,7 @@ function CompendiumPage() {
       );
     }
     return result;
-  }, [equipment, equipmentSearch, filterSource]);
+  }, [equipment, searchQuery, filterSource]);
 
   // Custom races state
   const [newRace, setNewRace] = useState("");
@@ -307,13 +325,6 @@ function CompendiumPage() {
   };
   const tabs: TabDef[] = [
     {
-      value: "races",
-      label: "Races",
-      icon: Users,
-      count: NPC_RACES.length + customRaces.length,
-      alwaysShow: true,
-    },
-    {
       value: "monsters",
       label: "Monsters",
       icon: Sword,
@@ -331,6 +342,13 @@ function CompendiumPage() {
       label: "Equipment",
       icon: Shield,
       count: equipment.length,
+    },
+    {
+      value: "races",
+      label: "Races",
+      icon: Users,
+      count: NPC_RACES.length + customRaces.length,
+      alwaysShow: true,
     },
   ].filter((t) => t.alwaysShow || t.count > 0);
 
@@ -375,7 +393,6 @@ function CompendiumPage() {
     navigate({
       to: "/realms/compendium",
       search: value === fallbackTab ? {} : { tab: value },
-      replace: true,
     });
   };
 
@@ -445,7 +462,10 @@ function CompendiumPage() {
                       variant="secondary"
                       style={
                         raceColors[r]
-                          ? { backgroundColor: raceColors[r] + "20", borderColor: raceColors[r] }
+                          ? {
+                              backgroundColor: raceColors[r] + "20",
+                              borderColor: raceColors[r],
+                            }
                           : undefined
                       }
                     >
@@ -481,7 +501,10 @@ function CompendiumPage() {
                           className="gap-1 pr-1"
                           style={
                             raceColors[key]
-                              ? { backgroundColor: raceColors[key] + "20", borderColor: raceColors[key] }
+                              ? {
+                                  backgroundColor: raceColors[key] + "20",
+                                  borderColor: raceColors[key],
+                                }
                               : undefined
                           }
                         >
@@ -510,7 +533,7 @@ function CompendiumPage() {
         {/* Monsters */}
         <TabsContent value="monsters">
           <div className="space-y-4">
-            <FilterBar search={monsterSearch} onSearchChange={setMonsterSearch}>
+            <FilterBar search={searchQuery} onSearchChange={setSearchQuery}>
               <SearchFilterToggles
                 type="single"
                 value={filterSource}
@@ -539,7 +562,7 @@ function CompendiumPage() {
         {/* Spells */}
         <TabsContent value="spells">
           <div className="space-y-4">
-            <FilterBar search={spellSearch} onSearchChange={setSpellSearch}>
+            <FilterBar search={searchQuery} onSearchChange={setSearchQuery}>
               <SearchFilterToggles
                 type="single"
                 value={filterSource}
@@ -568,10 +591,7 @@ function CompendiumPage() {
         {/* Magic Items */}
         <TabsContent value="magic-items">
           <div className="space-y-4">
-            <FilterBar
-              search={magicItemSearch}
-              onSearchChange={setMagicItemSearch}
-            >
+            <FilterBar search={searchQuery} onSearchChange={setSearchQuery}>
               <SearchFilterToggles
                 type="single"
                 value={filterSource}
@@ -601,10 +621,7 @@ function CompendiumPage() {
         {equipment.length > 0 && (
           <TabsContent value="equipment">
             <div className="space-y-4">
-              <FilterBar
-                search={equipmentSearch}
-                onSearchChange={setEquipmentSearch}
-              >
+              <FilterBar search={searchQuery} onSearchChange={setSearchQuery}>
                 <SearchFilterToggles
                   type="single"
                   value={filterSource}

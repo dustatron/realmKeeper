@@ -48,7 +48,8 @@
       "Bash(npx shadcn@latest add:*)",
       "Bash(git fetch:*)",
       "Bash(git commit:*)",
-      "Bash(pnpm tsc:*)"
+      "Bash(pnpm tsc:*)",
+      "mcp__chrome-devtools__list_console_messages"
     ]
   }
 }
