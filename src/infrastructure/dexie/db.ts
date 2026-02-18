@@ -569,6 +569,65 @@ db.version(31).stores(storesV26).upgrade(async (tx) => {
   }
 })
 
+// Normalize POIs on read — ensures array fields added after initial creation have defaults
+db.pois.hook('reading', (poi) => {
+  if (!poi) return poi
+  const rec = poi as unknown as Record<string, unknown>
+  let patched = false
+  const defaults: Record<string, unknown> = {
+    tags: [],
+    services: [],
+    traps: [],
+    treasure: [],
+    sessionLog: [],
+    monsterRefs: [],
+    magicItemRefs: [],
+    spellRefs: [],
+    equipmentRefs: [],
+  }
+  for (const [key, val] of Object.entries(defaults)) {
+    if (rec[key] === undefined) {
+      if (!patched) { poi = { ...poi }; patched = true }
+      ;(poi as unknown as Record<string, unknown>)[key] = val
+    }
+  }
+  return poi
+})
+
+// Normalize NPCs on read — ensures array fields have defaults
+db.npcs.hook('reading', (npc) => {
+  if (!npc) return npc
+  const rec = npc as unknown as Record<string, unknown>
+  let patched = false
+  const defaults: Record<string, unknown> = {
+    factionIds: [],
+    traits: [],
+    tags: [],
+  }
+  for (const [key, val] of Object.entries(defaults)) {
+    if (rec[key] === undefined) {
+      if (!patched) { npc = { ...npc }; patched = true }
+      ;(npc as unknown as Record<string, unknown>)[key] = val
+    }
+  }
+  // Normalize systemBlock sub-arrays
+  if (rec.systemBlock) {
+    const sb = rec.systemBlock as Record<string, unknown>
+    if (sb.stats === undefined || sb.attacks === undefined || sb.inventory === undefined || sb.abilities === undefined) {
+      if (!patched) { npc = { ...npc }; patched = true }
+      ;(npc as unknown as Record<string, unknown>).systemBlock = {
+        ...sb,
+        stats: sb.stats ?? [],
+        attacks: sb.attacks ?? [],
+        inventory: sb.inventory ?? [],
+        abilities: sb.abilities ?? [],
+        notes: sb.notes ?? '',
+      }
+    }
+  }
+  return npc
+})
+
 // Seed system configs on first DB creation
 db.on('populate', (tx) => {
   seedDatabase(tx)
