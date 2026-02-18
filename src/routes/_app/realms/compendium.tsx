@@ -152,6 +152,42 @@ function CompendiumPage() {
   const navigate = useNavigate({ from: "/realms/compendium" });
   const { tab: tabParam, q: searchQuery = "" } = Route.useSearch();
   const systemId = realm?.systemId ?? "";
+  const starredMonsterIds = realm?.starredMonsterIds ?? [];
+  const starredSpellIds = realm?.starredSpellIds ?? [];
+  const starredMagicItemIds = realm?.starredMagicItemIds ?? [];
+
+  const handleToggleMonsterStar = async (monsterId: string) => {
+    if (!realm) return;
+    const updated = starredMonsterIds.includes(monsterId)
+      ? starredMonsterIds.filter((id) => id !== monsterId)
+      : [...starredMonsterIds, monsterId];
+    await db.worlds.update(realm.id, {
+      starredMonsterIds: updated,
+      updatedAt: Date.now(),
+    });
+  };
+
+  const handleToggleSpellStar = async (spellId: string) => {
+    if (!realm) return;
+    const updated = starredSpellIds.includes(spellId)
+      ? starredSpellIds.filter((id) => id !== spellId)
+      : [...starredSpellIds, spellId];
+    await db.worlds.update(realm.id, {
+      starredSpellIds: updated,
+      updatedAt: Date.now(),
+    });
+  };
+
+  const handleToggleMagicItemStar = async (itemId: string) => {
+    if (!realm) return;
+    const updated = starredMagicItemIds.includes(itemId)
+      ? starredMagicItemIds.filter((id) => id !== itemId)
+      : [...starredMagicItemIds, itemId];
+    await db.worlds.update(realm.id, {
+      starredMagicItemIds: updated,
+      updatedAt: Date.now(),
+    });
+  };
 
   // Custom entries from Dexie
   const customEntries =
@@ -551,7 +587,12 @@ function CompendiumPage() {
               <ScrollArea className="h-[calc(100vh-16rem)]">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {filteredMonsters.map((m) => (
-                    <MonsterCard key={m.id} monster={m} />
+                    <MonsterCard
+                      key={m.id}
+                      monster={m}
+                      starred={starredMonsterIds.includes(m.id)}
+                      onToggleStar={handleToggleMonsterStar}
+                    />
                   ))}
                 </div>
               </ScrollArea>
@@ -580,7 +621,12 @@ function CompendiumPage() {
               <ScrollArea className="h-[calc(100vh-16rem)]">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {filteredSpells.map((s) => (
-                    <SpellCard key={s.id} spell={s} />
+                    <SpellCard
+                      key={s.id}
+                      spell={s}
+                      starred={starredSpellIds.includes(s.id)}
+                      onToggleStar={handleToggleSpellStar}
+                    />
                   ))}
                 </div>
               </ScrollArea>
@@ -609,7 +655,12 @@ function CompendiumPage() {
               <ScrollArea className="h-[calc(100vh-16rem)]">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {filteredMagicItems.map((i) => (
-                    <MagicItemCard key={i.id} item={i} />
+                    <MagicItemCard
+                      key={i.id}
+                      item={i}
+                      starred={starredMagicItemIds.includes(i.id)}
+                      onToggleStar={handleToggleMagicItemStar}
+                    />
                   ))}
                 </div>
               </ScrollArea>

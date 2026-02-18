@@ -155,6 +155,7 @@ const npcs = {
         abilities: [],
         notes: '',
       },
+      starred: data.starred ?? false,
       createdAt: ts,
       updatedAt: ts,
     }

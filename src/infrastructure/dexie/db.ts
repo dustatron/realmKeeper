@@ -569,6 +569,46 @@ db.version(31).stores(storesV26).upgrade(async (tx) => {
   }
 })
 
+// v32: Add starred to NPCs + starred compendium IDs to Realms
+db.version(32).stores(storesV26).upgrade(async (tx) => {
+  const npcs = await tx.table('npcs').toArray()
+  for (const npc of npcs) {
+    if (npc.starred === undefined) {
+      await tx.table('npcs').put({ ...npc, starred: false })
+    }
+  }
+  const realms = await tx.table('worlds').toArray()
+  for (const realm of realms) {
+    if (realm.starredMonsterIds === undefined || realm.starredSpellIds === undefined || realm.starredMagicItemIds === undefined) {
+      await tx.table('worlds').put({
+        ...realm,
+        starredMonsterIds: realm.starredMonsterIds ?? [],
+        starredSpellIds: realm.starredSpellIds ?? [],
+        starredMagicItemIds: realm.starredMagicItemIds ?? [],
+      })
+    }
+  }
+})
+
+// Normalize Realms on read — ensures starred arrays have defaults
+db.worlds.hook('reading', (realm) => {
+  if (!realm) return realm
+  const rec = realm as unknown as Record<string, unknown>
+  let patched = false
+  const defaults: Record<string, unknown> = {
+    starredMonsterIds: [],
+    starredSpellIds: [],
+    starredMagicItemIds: [],
+  }
+  for (const [key, val] of Object.entries(defaults)) {
+    if (rec[key] === undefined) {
+      if (!patched) { realm = { ...realm }; patched = true }
+      ;(realm as unknown as Record<string, unknown>)[key] = val
+    }
+  }
+  return realm
+})
+
 // Normalize POIs on read — ensures array fields added after initial creation have defaults
 db.pois.hook('reading', (poi) => {
   if (!poi) return poi

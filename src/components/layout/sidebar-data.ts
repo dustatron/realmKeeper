@@ -18,9 +18,9 @@ export function getSidebarData(_worldId?: string): { navGroups: NavGroup[] } {
       {
         title: "Overview",
         items: [
+          { title: "Dashboard", url: "/realms", icon: LayoutDashboard },
           { title: "Maps", url: "/realms/maps", icon: MapPinned },
           { title: "Search", url: "/search", icon: Search },
-          { title: "Dashboard", url: "/realms", icon: LayoutDashboard },
           { title: "Calendar", url: "/realms/calendar", icon: Scroll },
         ],
       },

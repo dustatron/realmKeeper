@@ -15,6 +15,17 @@ export function useNPC(id: string | null) {
   )
 }
 
+export function useStarredNPCs(worldId: string | null) {
+  return useLiveQuery(
+    async () => {
+      if (!worldId) return []
+      const npcs = await db.npcs.where('worldId').equals(worldId).toArray()
+      return npcs.filter((n) => n.starred)
+    },
+    [worldId]
+  ) ?? []
+}
+
 export function useNPCsByFaction(factionId: string | null) {
   return useLiveQuery(
     () => (factionId ? db.npcs.where('factionIds').equals(factionId).toArray() : []),

@@ -311,6 +311,7 @@ function POIDetailPage() {
       tags: [],
       imageUrl: null,
       systemBlock: defaultSystemBlock,
+      starred: false,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }

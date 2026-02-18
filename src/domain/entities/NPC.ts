@@ -20,6 +20,7 @@ export interface NPC {
   tags: string[]
   imageUrl: string | null
   systemBlock: SystemBlock
+  starred: boolean
   createdAt: number
   updatedAt: number
 }

@@ -16,6 +16,9 @@ export interface Realm {
   completedThroughDay: number
   customRaces: string[]
   raceColors: Record<string, string>
+  starredMonsterIds: string[]
+  starredSpellIds: string[]
+  starredMagicItemIds: string[]
   createdAt: number
   updatedAt: number
 }

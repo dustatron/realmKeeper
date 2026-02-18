@@ -227,6 +227,7 @@ function NPCNewPage() {
         tags,
         imageUrl,
         systemBlock,
+        starred: false,
         createdAt: now,
         updatedAt: now,
       }

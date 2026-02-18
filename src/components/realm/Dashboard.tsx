@@ -3,7 +3,14 @@ import { Link } from "@tanstack/react-router";
 import { useActiveRealm } from "~/ui/hooks/useActiveRealm";
 import { useTimeline } from "~/ui/hooks/useTimeline";
 import { useRecentWeather } from "~/ui/hooks/useWeather";
+import { useRecentVisitedPOIs, useStarredPOIs } from "~/ui/hooks/usePOIs";
+import { useStarredNPCs } from "~/ui/hooks/useNPCs";
 import { useContainer } from "~/ui/hooks/useContainer";
+import {
+  getMonstersBySystemId,
+  getSpellsBySystemId,
+  getMagicItemsBySystemId,
+} from "@domain/data/compendium";
 import {
   executeGetDashboardData,
   type DashboardData,
@@ -30,7 +37,6 @@ import {
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
-import { EmptyState } from "~/components/shared/EmptyState";
 import {
   Swords,
   Users,
@@ -45,8 +51,14 @@ import {
   Dices,
   Settings,
   Save,
+  BarChart3,
+  Sword,
+  Wand2,
+  Gem,
+  Cat,
 } from "lucide-react";
 import type { Season } from "@shared/constants";
+import { QuickLinksBar } from "./QuickLinksBar";
 
 interface DashboardProps {
   worldId: string;
@@ -95,6 +107,27 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
   // Live updates
   const recentEvents = useTimeline(worldId, 5);
   const recentWeather = useRecentWeather(worldId, 3);
+  const recentPOIs = useRecentVisitedPOIs(worldId, 5);
+  const starredPOIs = useStarredPOIs(worldId);
+  const starredNPCs = useStarredNPCs(worldId);
+  const starredMonsterIds = realm?.starredMonsterIds ?? [];
+  const starredSpellIds = realm?.starredSpellIds ?? [];
+  const starredMagicItemIds = realm?.starredMagicItemIds ?? [];
+  const starredMonsters = realm
+    ? getMonstersBySystemId(realm.systemId).filter((m) =>
+        starredMonsterIds.includes(m.id),
+      )
+    : [];
+  const starredSpells = realm
+    ? getSpellsBySystemId(realm.systemId).filter((s) =>
+        starredSpellIds.includes(s.id),
+      )
+    : [];
+  const starredMagicItems = realm
+    ? getMagicItemsBySystemId(realm.systemId).filter((i) =>
+        starredMagicItemIds.includes(i.id),
+      )
+    : [];
 
   // Sync settings state from realm
   useEffect(() => {
@@ -159,7 +192,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
   };
 
   const activeTab =
-    tab === "settings" ? tab : "world-details";
+    tab === "world-stats" || tab === "settings" ? tab : "overview";
 
   return (
     <div className="space-y-4 p-6">
@@ -176,11 +209,17 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
         </div>
       </div>
 
+      <QuickLinksBar />
+
       <Tabs value={activeTab} onValueChange={onTabChange}>
         <TabsList>
-          <TabsTrigger value="world-details">
+          <TabsTrigger value="overview">
             <Crown className="size-4" />
-            World Details
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="world-stats">
+            <BarChart3 className="size-4" />
+            World Stats
           </TabsTrigger>
           <TabsTrigger value="settings">
             <Settings className="size-4" />
@@ -188,8 +227,220 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
           </TabsTrigger>
         </TabsList>
 
-        {/* World Details Tab */}
-        <TabsContent value="world-details">
+        {/* Overview Tab */}
+        <TabsContent value="overview">
+          <div className="space-y-6">
+            {/* Favorites */}
+            <div className="grid grid-cols-3 gap-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Map className="size-5 text-amber-500" />
+                    NPCs
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {starredNPCs.map((npc) => (
+                    <Link
+                      key={npc.id}
+                      to="/realms/npcs/$npcId"
+                      params={{ npcId: npc.id }}
+                      className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                    >
+                      <Users className="size-4 shrink-0 text-blue-500" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{npc.name}</div>
+                      </div>
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        NPC
+                      </Badge>
+                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                  ))}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Map className="size-5 text-amber-500" />
+                    Monsters
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {starredMonsters.map((m) => (
+                    <Link
+                      key={m.id}
+                      to="/realms/compendium"
+                      search={{ tab: "monsters", q: m.name }}
+                      className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                    >
+                      <Sword className="size-4 shrink-0 text-orange-500" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{m.name}</div>
+                      </div>
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        Beast
+                      </Badge>
+                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                  ))}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Gem className="size-5 text-amber-500" />
+                    Magic Items
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {starredMagicItems.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">
+                      No starred magic items
+                    </div>
+                  ) : (
+                    starredMagicItems.map((item) => (
+                      <Link
+                        key={item.id}
+                        to="/realms/compendium"
+                        search={{ tab: "magic-items", q: item.name }}
+                        className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                      >
+                        <Gem className="size-4 shrink-0 text-purple-500" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">
+                            {item.name}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          Magic Item
+                        </Badge>
+                        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                      </Link>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Wand2 className="size-5 text-amber-500" />
+                    Spells
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {starredSpells.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">
+                      No starred spells
+                    </div>
+                  ) : (
+                    starredSpells.map((spell) => (
+                      <Link
+                        key={spell.id}
+                        to="/realms/compendium"
+                        search={{ tab: "spells", q: spell.name }}
+                        className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                      >
+                        <Wand2 className="size-4 shrink-0 text-indigo-500" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">
+                            {spell.name}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          Spell
+                        </Badge>
+                        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                      </Link>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Map className="size-5 text-amber-500" />
+                    Locations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {starredPOIs.map((poi) => (
+                    <Link
+                      key={poi.id}
+                      to="/realms/pois/$poiId"
+                      params={{ poiId: poi.id }}
+                      className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                    >
+                      <MapPin className="size-4 shrink-0 text-amber-500" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{poi.name}</div>
+                        {poi.description && (
+                          <div className="text-xs text-muted-foreground truncate">
+                            {poi.description}
+                          </div>
+                        )}
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="text-xs shrink-0 capitalize"
+                      >
+                        {poi.type}
+                      </Badge>
+                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recently Visited POIs */}
+            {recentPOIs.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="size-5" />
+                    Recently Visited
+                  </CardTitle>
+                  <CardDescription>
+                    POIs you've recently marked as visited
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {recentPOIs.map((poi) => (
+                      <Link
+                        key={poi.id}
+                        to="/realms/pois/$poiId"
+                        params={{ poiId: poi.id }}
+                        className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                      >
+                        <MapPin className="size-4 shrink-0 text-muted-foreground" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">{poi.name}</div>
+                          {poi.description && (
+                            <div className="text-xs text-muted-foreground truncate">
+                              {poi.description}
+                            </div>
+                          )}
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className="text-xs shrink-0 capitalize"
+                        >
+                          {poi.type}
+                        </Badge>
+                        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                      </Link>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* World Stats Tab */}
+        <TabsContent value="world-stats">
           <div className="space-y-6">
             {/* Stats Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -309,140 +560,6 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
               </Card>
             </div>
 
-            {/* Quick Links */}
-            <div>
-              <h2 className="text-lg font-semibold mb-4">Quick Links</h2>
-              <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
-                <Link to="/realms/calendar">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 h-auto py-3"
-                  >
-                    <Calendar className="size-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Calendar</div>
-                      <div className="text-xs text-muted-foreground">
-                        Manage time & weather
-                      </div>
-                    </div>
-                    <ChevronRight className="size-4 ml-auto" />
-                  </Button>
-                </Link>
-
-                <Link to="/realms/factions">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 h-auto py-3"
-                  >
-                    <Swords className="size-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Factions</div>
-                      <div className="text-xs text-muted-foreground">
-                        View all factions
-                      </div>
-                    </div>
-                    <ChevronRight className="size-4 ml-auto" />
-                  </Button>
-                </Link>
-
-                <Link to="/realms/npcs">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 h-auto py-3"
-                  >
-                    <Users className="size-5" />
-                    <div className="text-left">
-                      <div className="font-medium">NPCs</div>
-                      <div className="text-xs text-muted-foreground">
-                        Manage characters
-                      </div>
-                    </div>
-                    <ChevronRight className="size-4 ml-auto" />
-                  </Button>
-                </Link>
-
-                <Link to="/realms/locations/regions">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 h-auto py-3"
-                  >
-                    <Map className="size-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Regions</div>
-                      <div className="text-xs text-muted-foreground">
-                        Explore locations
-                      </div>
-                    </div>
-                    <ChevronRight className="size-4 ml-auto" />
-                  </Button>
-                </Link>
-
-                <Link to="/realms/locations/pois">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 h-auto py-3"
-                  >
-                    <MapPin className="size-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Points of Interest</div>
-                      <div className="text-xs text-muted-foreground">
-                        View POIs & paths
-                      </div>
-                    </div>
-                    <ChevronRight className="size-4 ml-auto" />
-                  </Button>
-                </Link>
-
-                <Link to="/realms/tables">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 h-auto py-3"
-                  >
-                    <Dices className="size-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Random Tables</div>
-                      <div className="text-xs text-muted-foreground">
-                        Roll on tables
-                      </div>
-                    </div>
-                    <ChevronRight className="size-4 ml-auto" />
-                  </Button>
-                </Link>
-
-                <Link to="/realms/notes">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 h-auto py-3"
-                  >
-                    <Scroll className="size-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Notes</div>
-                      <div className="text-xs text-muted-foreground">
-                        Campaign notes
-                      </div>
-                    </div>
-                    <ChevronRight className="size-4 ml-auto" />
-                  </Button>
-                </Link>
-
-                <Link to="/realms">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 h-auto py-3"
-                  >
-                    <Compass className="size-5" />
-                    <div className="text-left">
-                      <div className="font-medium">All Realms</div>
-                      <div className="text-xs text-muted-foreground">
-                        Switch realm
-                      </div>
-                    </div>
-                    <ChevronRight className="size-4 ml-auto" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
             {/* Recent Events */}
             <Card>
               <CardHeader>
@@ -467,7 +584,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                           key={event.id}
                           className="flex gap-3 pb-4 border-b last:border-0 last:pb-0"
                         >
-                          <div className="flex-shrink-0">
+                          <div className="shrink-0">
                             <Badge
                               className={
                                 EVENT_TYPE_COLORS[event.type] ||
