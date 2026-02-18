@@ -10,8 +10,8 @@ import { executeUpdatePath } from '@application/use-cases/UpdatePath'
 import { executeDeletePath } from '@application/use-cases/DeletePath'
 import { calculateTravelTime } from '@application/use-cases/CalculateTravelTime'
 import type { Path } from '@domain/entities/Path'
-import type { TerrainType, PathType } from '@shared/constants'
-import { TERRAIN_TYPES, PATH_TYPES } from '@shared/constants'
+import type { TerrainType, PathType, Direction } from '@shared/constants'
+import { TERRAIN_TYPES, PATH_TYPES, DIRECTIONS, DIRECTION_LABELS, OPPOSITE_DIRECTION } from '@shared/constants'
 import { EmptyState } from '~/components/shared/EmptyState'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import {
@@ -73,6 +73,10 @@ function PathsPage() {
     baseTravelWatches: 1,
     terrain: 'plains' as TerrainType,
     type: 'road' as PathType,
+    direction: '' as Direction | '',
+    hasDoor: false,
+    isLocked: false,
+    doorDescription: '',
   })
 
   // Edit form state
@@ -84,6 +88,10 @@ function PathsPage() {
     baseTravelWatches: 1,
     terrain: 'plains' as TerrainType,
     type: 'road' as PathType,
+    direction: '' as Direction | '',
+    hasDoor: false,
+    isLocked: false,
+    doorDescription: '',
   })
 
   const getPOIName = (poiId: string): string => {
@@ -107,6 +115,10 @@ function PathsPage() {
         baseTravelWatches: createForm.baseTravelWatches,
         terrain: createForm.terrain,
         type: createForm.type,
+        direction: createForm.direction || null,
+        hasDoor: createForm.hasDoor,
+        isLocked: createForm.isLocked,
+        doorDescription: createForm.doorDescription,
       },
       { pathRepo: container.pathRepo }
     )
@@ -119,6 +131,10 @@ function PathsPage() {
       baseTravelWatches: 1,
       terrain: 'plains',
       type: 'road',
+      direction: '',
+      hasDoor: false,
+      isLocked: false,
+      doorDescription: '',
     })
   }
 
@@ -134,6 +150,10 @@ function PathsPage() {
         baseTravelWatches: editForm.baseTravelWatches,
         terrain: editForm.terrain,
         type: editForm.type,
+        direction: editForm.direction || null,
+        hasDoor: editForm.hasDoor,
+        isLocked: editForm.isLocked,
+        doorDescription: editForm.doorDescription,
       },
       { pathRepo: container.pathRepo }
     )
@@ -157,6 +177,10 @@ function PathsPage() {
       baseTravelWatches: 1,
       terrain: 'plains',
       type: 'road',
+      direction: '',
+      hasDoor: false,
+      isLocked: false,
+      doorDescription: '',
     })
     setCreateDialogOpen(true)
   }
@@ -170,6 +194,10 @@ function PathsPage() {
       baseTravelWatches: path.baseTravelWatches,
       terrain: path.terrain,
       type: path.type,
+      direction: path.direction ?? '',
+      hasDoor: path.hasDoor ?? false,
+      isLocked: path.isLocked ?? false,
+      doorDescription: path.doorDescription ?? '',
     })
     setEditingPath(path)
   }
@@ -243,8 +271,16 @@ function PathsPage() {
                     </p>
                   )}
                   <div className="flex items-center gap-2">
+                    {path.direction && (
+                      <Badge variant="secondary" className="font-mono">{path.direction.toUpperCase()}</Badge>
+                    )}
                     <Badge variant="outline">{path.type}</Badge>
                     <Badge variant="secondary">{path.terrain}</Badge>
+                    {path.hasDoor && (
+                      <span title={path.isLocked ? 'Locked door' : 'Door'}>
+                        {path.isLocked ? '🔒' : '🚪'}
+                      </span>
+                    )}
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Clock className="size-3" />
                       <span>{travelTime} {travelTime === 1 ? 'watch' : 'watches'}</span>
@@ -386,6 +422,64 @@ function PathsPage() {
                 </Select>
               </div>
             </div>
+            <div>
+              <Label htmlFor="create-direction">Direction</Label>
+              <Select
+                value={createForm.direction || 'none'}
+                onValueChange={(value) =>
+                  setCreateForm((f) => ({ ...f, direction: (value === 'none' ? '' : value) as Direction | '' }))
+                }
+              >
+                <SelectTrigger id="create-direction">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {DIRECTIONS.map((d) => (
+                    <SelectItem key={d} value={d}>{DIRECTION_LABELS[d]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={createForm.hasDoor}
+                  onChange={(e) =>
+                    setCreateForm((f) => ({ ...f, hasDoor: e.target.checked, isLocked: e.target.checked ? f.isLocked : false }))
+                  }
+                  className="rounded"
+                />
+                🚪 Has Door
+              </label>
+              {createForm.hasDoor && (
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={createForm.isLocked}
+                    onChange={(e) =>
+                      setCreateForm((f) => ({ ...f, isLocked: e.target.checked }))
+                    }
+                    className="rounded"
+                  />
+                  🔒 Locked
+                </label>
+              )}
+            </div>
+            {createForm.hasDoor && (
+              <div>
+                <Label htmlFor="create-door-desc">Door Description</Label>
+                <Input
+                  id="create-door-desc"
+                  value={createForm.doorDescription}
+                  onChange={(e) =>
+                    setCreateForm((f) => ({ ...f, doorDescription: e.target.value }))
+                  }
+                  placeholder="Heavy oak door, iron-banded..."
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
@@ -534,6 +628,64 @@ function PathsPage() {
                 </Select>
               </div>
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-direction">Direction</Label>
+              <Select
+                value={editForm.direction || 'none'}
+                onValueChange={(value) =>
+                  setEditForm((f) => ({ ...f, direction: (value === 'none' ? '' : value) as Direction | '' }))
+                }
+              >
+                <SelectTrigger id="edit-direction">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {DIRECTIONS.map((d) => (
+                    <SelectItem key={d} value={d}>{DIRECTION_LABELS[d]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editForm.hasDoor}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, hasDoor: e.target.checked, isLocked: e.target.checked ? f.isLocked : false }))
+                  }
+                  className="rounded"
+                />
+                🚪 Has Door
+              </label>
+              {editForm.hasDoor && (
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editForm.isLocked}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, isLocked: e.target.checked }))
+                    }
+                    className="rounded"
+                  />
+                  🔒 Locked
+                </label>
+              )}
+            </div>
+            {editForm.hasDoor && (
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-door-desc">Door Description</Label>
+                <Input
+                  id="edit-door-desc"
+                  value={editForm.doorDescription}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, doorDescription: e.target.value }))
+                  }
+                  placeholder="Heavy oak door, iron-banded..."
+                />
+              </div>
+            )}
             {/* Show calculated travel time */}
             <div className="rounded-md bg-muted p-3">
               <div className="flex items-center gap-2 text-sm">

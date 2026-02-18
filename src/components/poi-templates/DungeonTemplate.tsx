@@ -50,9 +50,12 @@ interface DungeonTemplateProps {
   onCreateNPC: () => void;
   onCreateEvent: () => void;
   onDeleteEvent: (id: string) => void;
+  onToggleTrapDisarmed?: (trapId: string) => void;
+  onUpdateNPC?: (npc: NPC) => void;
   mapSection: React.ReactNode;
   notesSection?: React.ReactNode;
   compendiumSection?: React.ReactNode;
+  dungeonEventsPanel?: React.ReactNode;
 }
 
 export function DungeonTemplate({
@@ -70,9 +73,12 @@ export function DungeonTemplate({
   onCreateNPC,
   onCreateEvent,
   onDeleteEvent,
+  onToggleTrapDisarmed,
+  onUpdateNPC,
   mapSection,
   notesSection,
   compendiumSection,
+  dungeonEventsPanel,
 }: DungeonTemplateProps) {
   const allNPCs = [...npcs, ...childNPCs];
   const poiNameMap = new Map<string, string>(
@@ -123,6 +129,12 @@ export function DungeonTemplate({
         activeEvents={activeEvents}
         paths={paths}
         currentPoiId={poi.id}
+        traps={poi.traps}
+        onToggleTrapDisarmed={onToggleTrapDisarmed}
+        roomWidth={poi.roomWidth}
+        roomLength={poi.roomLength}
+        treasure={poi.treasure}
+        lightLevel={poi.lightLevel}
       />
 
       {/* Read Aloud */}
@@ -218,8 +230,9 @@ export function DungeonTemplate({
                       params={{ poiId: child.id }}
                       className="block"
                     >
-                      <div className="rounded-md border p-2 hover:bg-accent transition-colors">
+                      <div className={`rounded-md border p-2 hover:bg-accent transition-colors ${child.visited ? 'border-l-2 border-l-green-500' : ''}`}>
                         <div className="flex items-center gap-2">
+                          {child.visited && <span className="text-xs shrink-0">✅</span>}
                           <span className="text-sm font-medium">{child.name}</span>
                           {child.floor !== null && (
                             <Badge variant="outline" className="text-xs">
@@ -263,7 +276,7 @@ export function DungeonTemplate({
           {allNPCs.length > 0 ? (
             <div className="space-y-2">
               {allNPCs.map((npc) => (
-                <NPCMiniCard key={npc.id} npc={npc} poiName={npc.poiId ? poiNameMap.get(npc.poiId) : undefined} />
+                <NPCMiniCard key={npc.id} npc={npc} poiName={npc.poiId ? poiNameMap.get(npc.poiId) : undefined} onUpdateNPC={onUpdateNPC} />
               ))}
             </div>
           ) : (
@@ -284,6 +297,9 @@ export function DungeonTemplate({
           )}
 
           {compendiumSection}
+
+          {/* Dungeon Events Check */}
+          {dungeonEventsPanel}
         </TabsContent>
 
         {/* Encounters tab */}

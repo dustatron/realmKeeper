@@ -45,7 +45,10 @@
       "Bash(claude mcp list:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd dev API \\(window.__realmKeeper\\) + realm-data skill\n\nDev-only API for Chrome MCP automation: CRUD for worlds, factions,\nNPCs, POIs, regions, relationships. Dynamic import in root route,\ntree-shaken from prod. Slash command documents full API surface.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git check-ignore:*)",
-      "Bash(npx shadcn@latest add:*)"
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(git fetch:*)",
+      "Bash(git commit:*)",
+      "Bash(pnpm tsc:*)"
     ]
   }
 }

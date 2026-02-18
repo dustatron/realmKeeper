@@ -55,6 +55,8 @@ function POIEditPage() {
     sensory: string
     services: Service[]
     imageUrl: string | null
+    roomWidth: number | null
+    roomLength: number | null
   } | null>(null)
 
   // Initialize form from POI on first load
@@ -76,6 +78,8 @@ function POIEditPage() {
       sensory: poi.sensory,
       services: poi.services,
       imageUrl: poi.imageUrl,
+      roomWidth: poi.roomWidth ?? null,
+      roomLength: poi.roomLength ?? null,
     }
     setForm(initial)
   }
@@ -100,6 +104,8 @@ function POIEditPage() {
         sensory: form.sensory,
         services: form.services,
         imageUrl: form.imageUrl,
+        roomWidth: form.roomWidth,
+        roomLength: form.roomLength,
       },
       { poiRepo: container.poiRepo }
     )
@@ -261,6 +267,36 @@ function POIEditPage() {
               value={form.trouble}
               onChange={(e) => setForm((f) => f && ({ ...f, trouble: e.target.value }))}
               placeholder="Current tension or conflict..."
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-room-width">Room Width (ft)</Label>
+            <Input
+              id="edit-room-width"
+              type="number"
+              min="1"
+              value={form.roomWidth ?? ''}
+              onChange={(e) => {
+                const val = e.target.value
+                setForm((f) => f && ({ ...f, roomWidth: val ? parseInt(val, 10) : null }))
+              }}
+              placeholder="e.g., 30"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-room-length">Room Length (ft)</Label>
+            <Input
+              id="edit-room-length"
+              type="number"
+              min="1"
+              value={form.roomLength ?? ''}
+              onChange={(e) => {
+                const val = e.target.value
+                setForm((f) => f && ({ ...f, roomLength: val ? parseInt(val, 10) : null }))
+              }}
+              placeholder="e.g., 40"
             />
           </div>
         </div>

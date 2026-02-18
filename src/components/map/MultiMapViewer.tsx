@@ -11,7 +11,7 @@ import type { GameMap } from '@domain/entities/GameMap'
 
 interface MultiMapViewerProps {
   maps: GameMap[]
-  onUpload: (data: { name: string; imageUrl: string; width: number; height: number }) => void
+  onUpload?: (data: { name: string; imageUrl: string; width: number; height: number }) => void
   /** CSS class for the InteractiveMap height */
   className?: string
   parentPoiId?: string | null
@@ -56,18 +56,20 @@ export function MultiMapViewer({
           icon={MapPinned}
           title={emptyTitle}
           description={emptyDescription}
-          action={
+          action={onUpload ? (
             <Button onClick={() => setUploadDialogOpen(true)}>
               <Upload className="mr-2 size-4" />
               Upload Map
             </Button>
-          }
+          ) : undefined}
         />
-        <MapUploadDialog
-          open={uploadDialogOpen}
-          onOpenChange={setUploadDialogOpen}
-          onUpload={onUpload}
-        />
+        {onUpload && (
+          <MapUploadDialog
+            open={uploadDialogOpen}
+            onOpenChange={setUploadDialogOpen}
+            onUpload={onUpload}
+          />
+        )}
       </>
     )
   }
@@ -81,30 +83,34 @@ export function MultiMapViewer({
             <Button
               variant={i === clampedIndex ? 'secondary' : 'ghost'}
               size="sm"
-              className="text-xs h-7 pr-1"
+              className={`text-xs h-7 ${onUpload ? 'pr-1' : ''}`}
               onClick={() => setActiveMapIndex(i)}
             >
               {m.name}
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-              onClick={(e) => { e.stopPropagation(); setDeletingMapId(m.id) }}
-            >
-              <X className="size-3" />
-            </Button>
+            {onUpload && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                onClick={(e) => { e.stopPropagation(); setDeletingMapId(m.id) }}
+              >
+                <X className="size-3" />
+              </Button>
+            )}
           </span>
         ))}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-xs h-7 text-muted-foreground"
-          onClick={() => setUploadDialogOpen(true)}
-        >
-          <Plus className="size-3 mr-1" />
-          Add
-        </Button>
+        {onUpload && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs h-7 text-muted-foreground"
+            onClick={() => setUploadDialogOpen(true)}
+          >
+            <Plus className="size-3 mr-1" />
+            Add
+          </Button>
+        )}
       </div>
 
       <InteractiveMap
@@ -125,11 +131,13 @@ export function MultiMapViewer({
         onConfirm={handleDeleteMap}
       />
 
-      <MapUploadDialog
-        open={uploadDialogOpen}
-        onOpenChange={setUploadDialogOpen}
-        onUpload={onUpload}
-      />
+      {onUpload && (
+        <MapUploadDialog
+          open={uploadDialogOpen}
+          onOpenChange={setUploadDialogOpen}
+          onUpload={onUpload}
+        />
+      )}
     </div>
   )
 }

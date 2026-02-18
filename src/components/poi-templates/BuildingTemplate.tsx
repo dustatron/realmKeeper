@@ -49,6 +49,8 @@ interface BuildingTemplateProps {
   onCreateNPC: () => void;
   onCreateEvent: () => void;
   onDeleteEvent: (id: string) => void;
+  onToggleTrapDisarmed?: (trapId: string) => void;
+  onUpdateNPC?: (npc: NPC) => void;
   mapSection: React.ReactNode;
   notesSection?: React.ReactNode;
 }
@@ -67,6 +69,8 @@ export function BuildingTemplate({
   onCreateNPC,
   onCreateEvent,
   onDeleteEvent,
+  onToggleTrapDisarmed,
+  onUpdateNPC,
   mapSection,
   notesSection,
 }: BuildingTemplateProps) {
@@ -102,6 +106,12 @@ export function BuildingTemplate({
         activeEvents={activeEvents}
         paths={paths}
         currentPoiId={poi.id}
+        traps={poi.traps}
+        onToggleTrapDisarmed={onToggleTrapDisarmed}
+        roomWidth={poi.roomWidth}
+        roomLength={poi.roomLength}
+        treasure={poi.treasure}
+        lightLevel={poi.lightLevel}
       />
 
       {/* Services inline */}
@@ -168,7 +178,8 @@ export function BuildingTemplate({
                     params={{ poiId: child.id }}
                     className="block"
                   >
-                    <div className="flex items-center gap-2 rounded-md border p-2 hover:bg-accent transition-colors">
+                    <div className={`flex items-center gap-2 rounded-md border p-2 hover:bg-accent transition-colors ${child.visited ? 'border-l-2 border-l-green-500' : ''}`}>
+                      {child.visited && <span className="text-xs shrink-0">✅</span>}
                       <div className="flex-1 min-w-0">
                         <span className="text-sm font-medium">
                           {child.name}
@@ -207,7 +218,7 @@ export function BuildingTemplate({
           {npcs.length > 0 ? (
             <div className="space-y-2">
               {npcs.map((npc) => (
-                <NPCMiniCard key={npc.id} npc={npc} />
+                <NPCMiniCard key={npc.id} npc={npc} onUpdateNPC={onUpdateNPC} />
               ))}
             </div>
           ) : (

@@ -754,6 +754,8 @@ export function MapViewer({
 
   // Highlight selected or externally highlighted POI
   const activeHighlightId = selectedPoiId ?? highlightPoiId
+  // Track whether we've already centered on the highlightPoiId (don't re-fly on every render)
+  const hasCenteredOnHighlightRef = useRef<string | null>(null)
   useEffect(() => {
     markersRef.current.forEach((marker, id) => {
       const el = marker.getElement()
@@ -763,7 +765,18 @@ export function MapViewer({
         el.classList.remove('ring-2', 'ring-primary', 'rounded-full')
       }
     })
-  }, [activeHighlightId])
+
+    // Center map on highlighted POI on initial load
+    const instance = mapRef.current
+    if (instance && highlightPoiId && activeHighlightId === highlightPoiId && hasCenteredOnHighlightRef.current !== highlightPoiId) {
+      const marker = markersRef.current.get(highlightPoiId)
+      if (marker) {
+        hasCenteredOnHighlightRef.current = highlightPoiId
+        const lngLat = marker.getLngLat()
+        instance.flyTo({ center: [lngLat.lng, lngLat.lat], zoom: Math.max(instance.getZoom(), 3), duration: 600 })
+      }
+    }
+  }, [activeHighlightId, highlightPoiId, mapReady, pois])
 
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)

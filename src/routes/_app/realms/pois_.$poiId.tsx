@@ -46,8 +46,20 @@ import { SettlementTemplate } from '~/components/poi-templates/SettlementTemplat
 import { DungeonTemplate } from '~/components/poi-templates/DungeonTemplate'
 import { BuildingTemplate } from '~/components/poi-templates/BuildingTemplate'
 import { GenericTemplate } from '~/components/poi-templates/GenericTemplate'
+import { DungeonRoomTemplate } from '~/components/poi-templates/DungeonRoomTemplate'
 import { NotesPanel } from '~/components/shared/NotesPanel'
+import { CompassRose } from '~/components/shared/CompassRose'
+import { TreasureSection } from '~/components/shared/TreasureSection'
+import { TrapSection } from '~/components/shared/TrapSection'
+import { DungeonEventsPanel } from '~/components/shared/DungeonEventsPanel'
+import { SessionLog } from '~/components/shared/SessionLog'
+import { RunModePanel } from '~/components/shared/RunModePanel'
+import type { TreasureItem } from '@domain/value-objects/TreasureItem'
+import type { Trap } from '@domain/value-objects/Trap'
+import type { SessionLogEntry } from '@domain/value-objects/SessionLogEntry'
+import type { CompassConnection } from '~/components/shared/CompassRose'
 import { CloudinaryImage } from '~/components/shared/CloudinaryImage'
+import { OPPOSITE_DIRECTION } from '@shared/constants'
 
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { TagInput } from '~/components/shared/TagInput'
@@ -85,6 +97,13 @@ import {
   MapPinned,
   X,
   Book,
+  Star,
+  CheckCircle2,
+  CircleDashed,
+  Swords,
+  Sun,
+  Moon,
+  CloudMoon,
 } from 'lucide-react'
 import { POI_TYPE_ICONS } from '@shared/poi-icons'
 import { POI_TYPES, POI_EVENT_TYPES, SEASONS, type PoiType, type POIEventType, type Season } from '@shared/constants'
@@ -129,6 +148,10 @@ function POIDetailPage() {
   const container = useContainer()
   const setHeaderTitle = useUIStore((s) => s.setHeaderTitle)
 
+  // Parent dungeon data — for child rooms that inherit the dungeon map
+  const parentPoi = usePOI(poi?.parentPoiId ?? null)
+  const parentMaps = usePOIMaps(poi?.parentPoiId ?? null)
+
   // Breadcrumb in site header
   useEffect(() => {
     if (!poi) return
@@ -162,6 +185,7 @@ function POIDetailPage() {
     return () => setHeaderTitle(null)
   }, [poi, region, breadcrumb, setHeaderTitle])
 
+  const [runMode, setRunMode] = useState(false)
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
   const [mapUploadDialogOpen, setMapUploadDialogOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -306,7 +330,7 @@ function POIDetailPage() {
     setIsGeneratingNPC(true)
     try {
       const generated = await executeGenerateNPC(
-        { worldId: realm.id, systemConfig, regionId: poi.regionId },
+        { worldId: realm.id, systemConfig, regionId: poi.regionId, customRaces: realm.customRaces },
         { tableRepo: container.tableRepo }
       )
       // Preserve the POI context
@@ -316,6 +340,19 @@ function POIDetailPage() {
     } finally {
       setIsGeneratingNPC(false)
     }
+  }
+
+  const handleUpdateTraps = async (traps: Trap[]) => {
+    if (!poi) return
+    await executeUpdatePOI({ ...poi, traps }, { poiRepo: container.poiRepo })
+  }
+
+  const handleToggleTrapDisarmed = async (trapId: string) => {
+    if (!poi) return
+    const updatedTraps = poi.traps.map((t) =>
+      t.id === trapId ? { ...t, disarmed: !t.disarmed } : t
+    )
+    await executeUpdatePOI({ ...poi, traps: updatedTraps }, { poiRepo: container.poiRepo })
   }
 
   const handleUploadMap = async (data: { name: string; imageUrl: string; width: number; height: number }) => {
@@ -381,13 +418,65 @@ function POIDetailPage() {
     }
   }
 
-  const handleUpdateCompendiumRefs = async (refs: { monsterRefs: CompendiumRef[]; magicItemRefs: CompendiumRef[]; spellRefs: CompendiumRef[] }) => {
+  const handleUpdateNPC = async (npc: NPC) => {
+    await executeUpdateNPC(npc, { npcRepo: container.npcRepo })
+  }
+
+  const handleUpdateTreasure = async (treasure: TreasureItem[]) => {
+    if (!poi) return
+    await executeUpdatePOI(
+      { ...poi, treasure },
+      { poiRepo: container.poiRepo }
+    )
+  }
+
+  const handleUpdateSessionLog = async (sessionLog: SessionLogEntry[]) => {
+    if (!poi) return
+    await executeUpdatePOI(
+      { ...poi, sessionLog },
+      { poiRepo: container.poiRepo }
+    )
+  }
+
+  const handleLogDungeonEvent = (text: string) => {
+    if (!poi) return
+    const entry: SessionLogEntry = { id: newId(), text, timestamp: Date.now() }
+    handleUpdateSessionLog([entry, ...(poi.sessionLog ?? [])])
+  }
+
+  const cycleLightLevel = async () => {
+    if (!poi) return
+    const cycle: Array<'bright' | 'dim' | 'dark' | null> = [null, 'bright', 'dim', 'dark']
+    const idx = cycle.indexOf(poi.lightLevel ?? null)
+    const next = cycle[(idx + 1) % cycle.length]
+    await db.pois.update(poi.id, { lightLevel: next, updatedAt: Date.now() })
+  }
+
+  const handleUpdateCompendiumRefs = async (refs: { monsterRefs: CompendiumRef[]; magicItemRefs: CompendiumRef[]; spellRefs: CompendiumRef[]; equipmentRefs: CompendiumRef[] }) => {
     if (!poi) return
     await executeUpdatePOI(
       { ...poi, ...refs },
       { poiRepo: container.poiRepo }
     )
   }
+
+  // Compute compass connections from paths with direction set
+  // (must be before early returns to satisfy hook rules)
+  const compassConnections: CompassConnection[] = useMemo(() => {
+    if (!poi) return []
+    const conns: CompassConnection[] = []
+    for (const path of paths) {
+      if (!path.direction) continue
+      const isFrom = path.fromPoiId === poi.id
+      const targetPoiId = isFrom ? path.toPoiId : path.fromPoiId
+      const direction = isFrom ? path.direction : OPPOSITE_DIRECTION[path.direction]
+      const targetPoi = allPois.find((p) => p.id === targetPoiId)
+      if (targetPoi) {
+        conns.push({ direction, room: targetPoi, path })
+      }
+    }
+    return conns
+  }, [poi, paths, allPois])
 
   if (poi === undefined) {
     return <div className="py-8 text-center text-muted-foreground">Loading...</div>
@@ -414,8 +503,65 @@ function POIDetailPage() {
     />
   ) : null
 
+  // Parent dungeon map — compact map inherited from parent POI
+  const parentMapSection = parentMaps.length > 0 ? (
+    <MultiMapViewer
+      maps={parentMaps}
+      parentPoiId={poi.parentPoiId!}
+      highlightPoiId={poiId}
+      className="h-[200px] md:h-[300px]"
+    />
+  ) : null
+
   // Template selection
   const renderTemplate = () => {
+    // Child of a dungeon → use compact room layout
+    if (parentPoi?.type === 'dungeon') {
+      return (
+        <DungeonRoomTemplate
+          poi={poi}
+          npcs={npcs}
+          factionPresences={factionPresences}
+          paths={paths}
+          poiEvents={poiEvents}
+          parentMapSection={parentMapSection}
+          onCreateNPC={openCreateNPC}
+          onCreateEvent={openCreateEventDialog}
+          onDeleteEvent={(id) => setDeletingEventId(id)}
+          onUpdateNPC={handleUpdateNPC}
+          compendiumSection={
+            <CompendiumRefsSection
+              poi={poi}
+              systemId={realm?.systemId ?? null}
+              worldId={realm?.id ?? null}
+              onUpdate={handleUpdateCompendiumRefs}
+            />
+          }
+          trapSection={
+            <TrapSection
+              traps={poi.traps ?? []}
+              onUpdate={handleUpdateTraps}
+            />
+          }
+          treasureSection={
+            <TreasureSection
+              treasure={poi.treasure ?? []}
+              onUpdate={handleUpdateTreasure}
+            />
+          }
+          dungeonEventsPanel={
+            <DungeonEventsPanel
+              onLogEntry={handleLogDungeonEvent}
+              encounterTable={encounterTable}
+              onRollEncounter={handleRollEncounter}
+              onSaveEncounterTable={handleSaveEncounterTable}
+            />
+          }
+          notesSection={notesSection}
+        />
+      )
+    }
+
     switch (poi.type) {
       case 'settlement':
         return (
@@ -445,6 +591,8 @@ function POIDetailPage() {
             onCreateNPC={openCreateNPC}
             onCreateEvent={openCreateEventDialog}
             onDeleteEvent={(id) => setDeletingEventId(id)}
+            onToggleTrapDisarmed={handleToggleTrapDisarmed}
+            onUpdateNPC={handleUpdateNPC}
             mapSection={mapSection}
             notesSection={notesSection}
           />
@@ -466,6 +614,8 @@ function POIDetailPage() {
             onCreateNPC={openCreateNPC}
             onCreateEvent={openCreateEventDialog}
             onDeleteEvent={(id) => setDeletingEventId(id)}
+            onToggleTrapDisarmed={handleToggleTrapDisarmed}
+            onUpdateNPC={handleUpdateNPC}
             mapSection={mapSection}
             notesSection={notesSection}
             compendiumSection={
@@ -474,6 +624,14 @@ function POIDetailPage() {
                 systemId={realm?.systemId ?? null}
                 worldId={realm?.id ?? null}
                 onUpdate={handleUpdateCompendiumRefs}
+              />
+            }
+            dungeonEventsPanel={
+              <DungeonEventsPanel
+                onLogEntry={handleLogDungeonEvent}
+                encounterTable={encounterTable}
+                onRollEncounter={handleRollEncounter}
+                onSaveEncounterTable={handleSaveEncounterTable}
               />
             }
           />
@@ -495,6 +653,8 @@ function POIDetailPage() {
             onCreateNPC={openCreateNPC}
             onCreateEvent={openCreateEventDialog}
             onDeleteEvent={(id) => setDeletingEventId(id)}
+            onToggleTrapDisarmed={handleToggleTrapDisarmed}
+            onUpdateNPC={handleUpdateNPC}
             mapSection={mapSection}
             notesSection={notesSection}
           />
@@ -518,6 +678,8 @@ function POIDetailPage() {
             onDeleteRumor={handleDeleteRumor}
             onCreateChild={openCreateChildDialog}
             onCreateNPC={openCreateNPC}
+            onToggleTrapDisarmed={handleToggleTrapDisarmed}
+            onUpdateNPC={handleUpdateNPC}
             onLinkNPC={async (npcId) => {
               const npc = allWorldNPCs.find((n) => n.id === npcId)
               if (npc) await executeUpdateNPC({ ...npc, poiId: poi.id, regionId: poi.regionId }, { npcRepo: container.npcRepo })
@@ -547,12 +709,54 @@ function POIDetailPage() {
       )}
 
       {/* Action bar */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <span className="flex items-center gap-2 mr-auto">
           <Icon className="size-5" />
           <span className="font-medium">{poi.name}</span>
           <Badge variant="outline" className="text-xs">{poi.type}</Badge>
         </span>
+        {/* Run mode toggle */}
+        <Button
+          size="sm"
+          variant={runMode ? 'default' : 'outline'}
+          onClick={() => setRunMode(!runMode)}
+          title={runMode ? 'Exit run mode' : 'Enter run mode'}
+        >
+          <Swords className="mr-1.5 size-4" />
+          {runMode ? 'Browse' : 'Run'}
+        </Button>
+        {/* Visited toggle */}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => db.pois.update(poi.id, { visited: !poi.visited, updatedAt: Date.now() })}
+          title={poi.visited ? 'Mark as unvisited' : 'Mark as visited'}
+        >
+          {poi.visited
+            ? <CheckCircle2 className="size-4 text-green-500" />
+            : <CircleDashed className="size-4" />}
+        </Button>
+        {/* Light level toggle */}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={cycleLightLevel}
+          title={`Light: ${poi.lightLevel ?? 'not set'}`}
+        >
+          {poi.lightLevel === 'bright' ? <Sun className="size-4 text-yellow-500" /> :
+           poi.lightLevel === 'dim' ? <CloudMoon className="size-4 text-blue-400" /> :
+           poi.lightLevel === 'dark' ? <Moon className="size-4 text-slate-500" /> :
+           <Sun className="size-4 text-muted-foreground/40" />}
+        </Button>
+        {/* Star */}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => db.pois.update(poi.id, { starred: !poi.starred, updatedAt: Date.now() })}
+          title={poi.starred ? 'Unstar' : 'Star'}
+        >
+          <Star className={`size-4 ${poi.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+        </Button>
         <Button size="sm" variant="outline" onClick={() => setMapUploadDialogOpen(true)}>
           <MapPinned className="mr-2 size-4" />
           {poiMaps.length > 0 ? 'Edit Map' : 'Add Map'}
@@ -565,19 +769,60 @@ function POIDetailPage() {
         </Link>
       </div>
 
-      {/* Template content */}
-      {renderTemplate()}
-
-      {/* Compendium Refs — dungeons show this in the Denizens tab */}
-      {poi.type !== 'dungeon' && (
-        <CompendiumRefsSection
-          poi={poi}
-          systemId={realm?.systemId ?? null}
-          worldId={realm?.id ?? null}
-          onUpdate={handleUpdateCompendiumRefs}
-        />
+      {/* Compass Rose */}
+      {compassConnections.length > 0 && (
+        <CompassRose currentRoom={poi} connections={compassConnections} />
       )}
 
+      {/* Run Mode vs Browse Mode */}
+      {runMode ? (
+        <RunModePanel
+          poi={poi}
+          npcs={npcs}
+          paths={paths}
+          onRollEncounter={handleRollEncounter}
+          onUpdateNPC={handleUpdateNPC}
+          onToggleTrapDisarmed={handleToggleTrapDisarmed}
+          onUpdateTreasure={handleUpdateTreasure}
+        />
+      ) : (
+        <>
+          {/* Template content */}
+          {renderTemplate()}
+
+          {/* Compendium Refs — dungeons & dungeon rooms show this inside their template */}
+          {poi.type !== 'dungeon' && parentPoi?.type !== 'dungeon' && (
+            <CompendiumRefsSection
+              poi={poi}
+              systemId={realm?.systemId ?? null}
+              worldId={realm?.id ?? null}
+              onUpdate={handleUpdateCompendiumRefs}
+            />
+          )}
+
+          {/* Traps — dungeon rooms show this inside their template */}
+          {parentPoi?.type !== 'dungeon' && (
+            <TrapSection
+              traps={poi.traps ?? []}
+              onUpdate={handleUpdateTraps}
+            />
+          )}
+
+          {/* Treasure — dungeon rooms show this inside their template */}
+          {parentPoi?.type !== 'dungeon' && (
+            <TreasureSection
+              treasure={poi.treasure ?? []}
+              onUpdate={handleUpdateTreasure}
+            />
+          )}
+        </>
+      )}
+
+      {/* Session Log — always visible */}
+      <SessionLog
+        log={poi.sessionLog ?? []}
+        onUpdate={handleUpdateSessionLog}
+      />
 
       {/* Create Child Sheet */}
       <Sheet open={createChildDialogOpen} onOpenChange={setCreateChildDialogOpen}>
@@ -776,6 +1021,7 @@ function POIDetailPage() {
           factions={factions}
           regions={regions}
           pois={allPois}
+          customRaces={realm?.customRaces}
           open={npcEditOpen}
           onOpenChange={(open) => {
             if (!open) {
@@ -802,10 +1048,10 @@ function CompendiumRefsSection({
   poi: POI
   systemId: string | null
   worldId: string | null
-  onUpdate: (refs: { monsterRefs: CompendiumRef[]; magicItemRefs: CompendiumRef[]; spellRefs: CompendiumRef[] }) => void
+  onUpdate: (refs: { monsterRefs: CompendiumRef[]; magicItemRefs: CompendiumRef[]; spellRefs: CompendiumRef[]; equipmentRefs: CompendiumRef[] }) => void
 }) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchKind, setSearchKind] = useState<'monster' | 'spell' | 'magicItem'>('monster')
+  const [searchKind, setSearchKind] = useState<'all' | 'monster' | 'spell' | 'magicItem' | 'equipment'>('all')
   const [showSearch, setShowSearch] = useState(false)
 
   // Load custom entries for this world
@@ -816,39 +1062,54 @@ function CompendiumRefsSection({
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return []
-    const systemResults = systemId ? searchCompendium(searchQuery, systemId, searchKind) : []
-    const customResults = searchCustomEntries(customEntries, searchQuery, searchKind)
+    const kindFilter = searchKind === 'all' ? undefined : searchKind
+    // Search system entries — prefer current system but include all as fallback
+    const systemResults = searchCompendium(searchQuery, undefined, kindFilter)
+    // Sort: current system first, then others
+    if (systemId) {
+      systemResults.sort((a, b) => {
+        const aMatch = a.systemId === systemId ? 0 : 1
+        const bMatch = b.systemId === systemId ? 0 : 1
+        return aMatch - bMatch
+      })
+    }
+    const customResults = searchCustomEntries(customEntries, searchQuery, kindFilter)
     // Dedupe by id
     const seen = new Set(systemResults.map((r) => r.id))
     const merged = [...systemResults, ...customResults.filter((r) => !seen.has(r.id))]
-    return merged.slice(0, 10)
+    return merged.slice(0, 15)
   }, [searchQuery, systemId, searchKind, customEntries])
 
   const addRef = (id: string) => {
-    const refsKey = searchKind === 'monster' ? 'monsterRefs' : searchKind === 'spell' ? 'spellRefs' : 'magicItemRefs'
+    // Determine kind from the entry itself (handles "all" mode)
+    const entry = searchResults.find((r) => r.id === id)
+    const kind = entry?.kind ?? (searchKind !== 'all' ? searchKind : 'monster')
+    const refsKey = kind === 'monster' ? 'monsterRefs' : kind === 'spell' ? 'spellRefs' : kind === 'equipment' ? 'equipmentRefs' : 'magicItemRefs'
     const currentRefs = poi[refsKey] ?? []
     if (currentRefs.some((r) => r.id === id)) return
-    onUpdate({ monsterRefs: poi.monsterRefs ?? [], magicItemRefs: poi.magicItemRefs ?? [], spellRefs: poi.spellRefs ?? [], [refsKey]: [...currentRefs, { id }] })
+    onUpdate({ monsterRefs: poi.monsterRefs ?? [], magicItemRefs: poi.magicItemRefs ?? [], spellRefs: poi.spellRefs ?? [], equipmentRefs: poi.equipmentRefs ?? [], [refsKey]: [...currentRefs, { id }] })
     setSearchQuery('')
     setShowSearch(false)
   }
 
-  const removeRef = (kind: 'monster' | 'spell' | 'magicItem', id: string) => {
-    const refsKey = kind === 'monster' ? 'monsterRefs' : kind === 'spell' ? 'spellRefs' : 'magicItemRefs'
+  const removeRef = (kind: 'monster' | 'spell' | 'magicItem' | 'equipment', id: string) => {
+    const refsKey = kind === 'monster' ? 'monsterRefs' : kind === 'spell' ? 'spellRefs' : kind === 'equipment' ? 'equipmentRefs' : 'magicItemRefs'
     onUpdate({
       monsterRefs: poi.monsterRefs ?? [],
       magicItemRefs: poi.magicItemRefs ?? [],
       spellRefs: poi.spellRefs ?? [],
+      equipmentRefs: poi.equipmentRefs ?? [],
       [refsKey]: (poi[refsKey] ?? []).filter((r) => r.id !== id),
     })
   }
 
-  const updateQuantity = (kind: 'monster' | 'spell' | 'magicItem', id: string, quantity: number | undefined) => {
-    const refsKey = kind === 'monster' ? 'monsterRefs' : kind === 'spell' ? 'spellRefs' : 'magicItemRefs'
+  const updateQuantity = (kind: 'monster' | 'spell' | 'magicItem' | 'equipment', id: string, quantity: number | undefined) => {
+    const refsKey = kind === 'monster' ? 'monsterRefs' : kind === 'spell' ? 'spellRefs' : kind === 'equipment' ? 'equipmentRefs' : 'magicItemRefs'
     onUpdate({
       monsterRefs: poi.monsterRefs ?? [],
       magicItemRefs: poi.magicItemRefs ?? [],
       spellRefs: poi.spellRefs ?? [],
+      equipmentRefs: poi.equipmentRefs ?? [],
       [refsKey]: (poi[refsKey] ?? []).map((r) => r.id === id ? { ...r, quantity } : r),
     })
   }
@@ -857,6 +1118,7 @@ function CompendiumRefsSection({
     ...(poi.monsterRefs ?? []).map((r) => ({ ...r, kind: 'monster' as const })),
     ...(poi.spellRefs ?? []).map((r) => ({ ...r, kind: 'spell' as const })),
     ...(poi.magicItemRefs ?? []).map((r) => ({ ...r, kind: 'magicItem' as const })),
+    ...(poi.equipmentRefs ?? []).map((r) => ({ ...r, kind: 'equipment' as const })),
   ]
 
   if (allRefs.length === 0 && !showSearch) {
@@ -897,9 +1159,11 @@ function CompendiumRefsSection({
             <Select value={searchKind} onValueChange={(v) => setSearchKind(v as any)}>
               <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="monster">Monsters</SelectItem>
                 <SelectItem value="spell">Spells</SelectItem>
                 <SelectItem value="magicItem">Magic Items</SelectItem>
+                <SelectItem value="equipment">Equipment</SelectItem>
               </SelectContent>
             </Select>
             <Input
@@ -907,22 +1171,33 @@ function CompendiumRefsSection({
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search compendium..."
               className="flex-1"
+              autoFocus
             />
           </div>
+          {searchQuery.trim() && searchResults.length === 0 && (
+            <p className="text-xs text-muted-foreground py-2 px-1">No results for "{searchQuery}"</p>
+          )}
           {searchResults.length > 0 && (
             <div className="space-y-1">
-              {searchResults.map((entry) => (
-                <button
-                  key={entry.id}
-                  onClick={() => addRef(entry.id)}
-                  className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted flex items-center justify-between"
-                >
-                  <span>{entry.name}</span>
-                  <Badge variant="outline" className="text-xs">
-                    {entry.systemId === 'custom' ? 'Custom' : entry.systemId.includes('cairn') ? 'Cairn' : 'SD'}
-                  </Badge>
-                </button>
-              ))}
+              {searchResults.map((entry) => {
+                const kindBadge = entry.kind === 'monster' ? 'Mon' : entry.kind === 'spell' ? 'Spl' : entry.kind === 'equipment' ? 'Eqp' : 'Mag'
+                const sourceBadge = entry.systemId === 'custom' ? 'Custom' : entry.systemId.includes('cairn') ? 'Cairn' : 'SD'
+                return (
+                  <button
+                    key={entry.id}
+                    onClick={() => addRef(entry.id)}
+                    className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted flex items-center justify-between gap-2"
+                  >
+                    <span className="truncate">{entry.name}</span>
+                    <span className="flex items-center gap-1 shrink-0">
+                      {searchKind === 'all' && (
+                        <Badge variant="secondary" className="text-[10px]">{kindBadge}</Badge>
+                      )}
+                      <Badge variant="outline" className="text-[10px]">{sourceBadge}</Badge>
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>
@@ -936,14 +1211,14 @@ function CompendiumRefsSection({
           const entry = systemEntry ?? (customMatch ? customEntryToCompendiumEntry(customMatch) : undefined)
           if (!entry) return null
           const isCustom = !systemEntry && !!customMatch
-          const kindLabel = ref.kind === 'monster' ? 'Monster' : ref.kind === 'spell' ? 'Spell' : 'Magic Item'
-          const kindColor = ref.kind === 'monster' ? 'bg-orange-500/15 text-orange-700 dark:text-orange-400' : ref.kind === 'spell' ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-400' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+          const kindLabel = ref.kind === 'monster' ? 'Monster' : ref.kind === 'spell' ? 'Spell' : ref.kind === 'equipment' ? 'Equipment' : 'Magic Item'
+          const kindColor = ref.kind === 'monster' ? 'bg-orange-500/15 text-orange-700 dark:text-orange-400' : ref.kind === 'spell' ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-400' : ref.kind === 'equipment' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
           const detailUrl = isCustom
             ? '/realms/compendium/custom/$entryId'
-            : ref.kind === 'monster' ? '/realms/compendium/monsters/$monsterId' : ref.kind === 'spell' ? '/realms/compendium/spells/$spellId' : '/realms/compendium/magic-items/$itemId'
+            : ref.kind === 'monster' ? '/realms/compendium/monsters/$monsterId' : ref.kind === 'spell' ? '/realms/compendium/spells/$spellId' : ref.kind === 'equipment' ? '/realms/compendium/equipment/$equipmentId' : '/realms/compendium/magic-items/$itemId'
           const detailParams = isCustom
             ? { entryId: ref.id }
-            : ref.kind === 'monster' ? { monsterId: ref.id } : ref.kind === 'spell' ? { spellId: ref.id } : { itemId: ref.id }
+            : ref.kind === 'monster' ? { monsterId: ref.id } : ref.kind === 'spell' ? { spellId: ref.id } : ref.kind === 'equipment' ? { equipmentId: ref.id } : { itemId: ref.id }
 
           return (
             <div key={ref.id} className="flex items-center gap-2 px-3 py-2 rounded-md border text-sm">
@@ -951,7 +1226,7 @@ function CompendiumRefsSection({
                 <Badge variant="outline" className={`text-xs ${kindColor}`}>{kindLabel}</Badge>
                 <span className="font-medium">{entry.name}</span>
               </Link>
-              {ref.kind === 'monster' && (
+              {(ref.kind === 'monster' || ref.kind === 'equipment') && (
                 <Input
                   type="number"
                   min="1"

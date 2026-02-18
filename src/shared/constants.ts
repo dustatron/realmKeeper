@@ -50,6 +50,15 @@ export type TerrainType = (typeof TERRAIN_TYPES)[number]
 export const NPC_RACES = ['human', 'elf', 'dwarf', 'halfling', 'half-orc', 'half-elf', 'goblin', 'other'] as const
 export type NPCRace = (typeof NPC_RACES)[number]
 
+/** Merge built-in + custom races, deduplicated, sorted, "other" last. */
+export function getAllRaces(customRaces: string[]): string[] {
+  const builtIn = NPC_RACES as readonly string[]
+  const merged = new Set([...builtIn, ...customRaces])
+  const sorted = [...merged].filter((r) => r !== 'other').sort((a, b) => a.localeCompare(b))
+  sorted.push('other')
+  return sorted
+}
+
 export const NPC_LIFE_STATUSES = ['alive', 'dead', 'undead', 'ghost'] as const
 export type LifeStatus = (typeof NPC_LIFE_STATUSES)[number]
 
@@ -71,3 +80,18 @@ export type NoticeType = (typeof NOTICE_TYPES)[number]
 
 export const ENCOUNTER_CATEGORIES = ['creature', 'signOmen', 'loss', 'npc', 'discovery', 'treasure'] as const
 export type EncounterCategory = (typeof ENCOUNTER_CATEGORIES)[number]
+
+export const DIRECTIONS = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw', 'up', 'down'] as const
+export type Direction = (typeof DIRECTIONS)[number]
+
+export const OPPOSITE_DIRECTION: Record<Direction, Direction> = {
+  n: 's', s: 'n', e: 'w', w: 'e',
+  ne: 'sw', sw: 'ne', nw: 'se', se: 'nw',
+  up: 'down', down: 'up',
+}
+
+export const DIRECTION_LABELS: Record<Direction, string> = {
+  n: 'North', ne: 'Northeast', e: 'East', se: 'Southeast',
+  s: 'South', sw: 'Southwest', w: 'West', nw: 'Northwest',
+  up: 'Up', down: 'Down',
+}

@@ -6,13 +6,14 @@ import { rollOnTable } from '@domain/services/RandomTableEngine'
 import { runTableChain } from '@domain/services/TableChainRunner'
 import { rollDice } from '@shared/dice'
 import { newId } from '@shared/ulid'
-import { NPC_RACES, type NPCRace } from '@shared/constants'
+import { NPC_RACES } from '@shared/constants'
 
 export interface GenerateNPCInput {
   worldId: string
   systemConfig: SystemConfig
   factionId?: string
   regionId?: string
+  customRaces?: string[]
 }
 
 export interface GenerateNPCDeps {
@@ -48,9 +49,12 @@ export async function executeGenerateNPC(
   // Roll on all tables for this system (used for names + traits)
   const allTables = await deps.tableRepo.getTablesBySystemId(systemConfig.id)
 
-  // Pick a random race (weighted toward human)
-  const rollableRaces: NPCRace[] = ['human', 'human', 'human', 'human', 'elf', 'dwarf', 'halfling', 'half-orc', 'half-elf', 'goblin']
-  const race: NPCRace = rollableRaces[Math.floor(Math.random() * rollableRaces.length)]
+  // Pick a random race (weighted toward human, includes custom races)
+  const rollableRaces: string[] = ['human', 'human', 'human', 'human', 'elf', 'dwarf', 'halfling', 'half-orc', 'half-elf', 'goblin']
+  if (input.customRaces) {
+    rollableRaces.push(...input.customRaces)
+  }
+  const race: string = rollableRaces[Math.floor(Math.random() * rollableRaces.length)]
 
   // Roll name — discover tables by race + gender tags
   let name = 'Unnamed NPC'

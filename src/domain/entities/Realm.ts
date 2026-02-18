@@ -14,6 +14,8 @@ export interface Realm {
   watchesPerDay: number
   factionTurnTrigger: 'day' | 'week' | 'manual'
   completedThroughDay: number
+  customRaces: string[]
+  raceColors: Record<string, string>
   createdAt: number
   updatedAt: number
 }

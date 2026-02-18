@@ -478,6 +478,97 @@ db.version(24).stores(storesV22).upgrade(async (tx) => {
 // v25: Add customCompendiumEntries table
 db.version(25).stores(storesV25)
 
+const storesV26 = {
+  ...storesV25,
+  pois: 'id, regionId, parentPoiId, type, mapRef, starred',
+}
+
+// v26: Add starred field to POIs
+db.version(26).stores(storesV26).upgrade(async (tx) => {
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.starred === undefined) {
+      await tx.table('pois').put({ ...poi, starred: false })
+    }
+  }
+})
+
+// v27: Add direction/door fields to Paths, traps + room dimensions to POIs
+db.version(27).stores(storesV26).upgrade(async (tx) => {
+  const paths = await tx.table('paths').toArray()
+  for (const p of paths) {
+    if (p.direction === undefined) {
+      await tx.table('paths').put({
+        ...p,
+        direction: null,
+        hasDoor: false,
+        isLocked: false,
+        doorDescription: '',
+      })
+    }
+  }
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.traps === undefined) {
+      await tx.table('pois').put({
+        ...poi,
+        traps: [],
+        roomWidth: null,
+        roomLength: null,
+      })
+    }
+  }
+})
+
+// v28: Add equipmentRefs to POIs
+db.version(28).stores(storesV26).upgrade(async (tx) => {
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.equipmentRefs === undefined) {
+      await tx.table('pois').put({ ...poi, equipmentRefs: [] })
+    }
+  }
+})
+
+// v29: Add treasure to POIs
+db.version(29).stores(storesV26).upgrade(async (tx) => {
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.treasure === undefined) {
+      await tx.table('pois').put({ ...poi, treasure: [] })
+    }
+  }
+})
+
+// v30: Add visited, lightLevel, sessionLog to POIs
+db.version(30).stores(storesV26).upgrade(async (tx) => {
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.visited === undefined) {
+      await tx.table('pois').put({
+        ...poi,
+        visited: false,
+        lightLevel: null,
+        sessionLog: [],
+      })
+    }
+  }
+})
+
+// v31: Add customRaces + raceColors to Realms
+db.version(31).stores(storesV26).upgrade(async (tx) => {
+  const realms = await tx.table('worlds').toArray()
+  for (const realm of realms) {
+    if (realm.customRaces === undefined || realm.raceColors === undefined) {
+      await tx.table('worlds').put({
+        ...realm,
+        customRaces: realm.customRaces ?? [],
+        raceColors: realm.raceColors ?? {},
+      })
+    }
+  }
+})
+
 // Seed system configs on first DB creation
 db.on('populate', (tx) => {
   seedDatabase(tx)

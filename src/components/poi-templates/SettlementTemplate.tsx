@@ -89,6 +89,8 @@ interface SettlementTemplateProps {
   onCreateNPC: () => void;
   onCreateEvent: () => void;
   onDeleteEvent: (id: string) => void;
+  onToggleTrapDisarmed?: (trapId: string) => void;
+  onUpdateNPC?: (npc: NPC) => void;
   mapSection: React.ReactNode;
   notesSection?: React.ReactNode;
 }
@@ -118,6 +120,8 @@ export function SettlementTemplate({
   onCreateNPC,
   onCreateEvent,
   onDeleteEvent,
+  onToggleTrapDisarmed,
+  onUpdateNPC,
   mapSection,
   notesSection,
 }: SettlementTemplateProps) {
@@ -215,6 +219,12 @@ export function SettlementTemplate({
                 activeEvents={poiEvents.filter((e) => e.isActive).length}
                 paths={paths}
                 currentPoiId={poi.id}
+                traps={poi.traps}
+                onToggleTrapDisarmed={onToggleTrapDisarmed}
+                roomWidth={poi.roomWidth}
+                roomLength={poi.roomLength}
+                treasure={poi.treasure}
+                lightLevel={poi.lightLevel}
               />
 
               {/* Read Aloud */}
@@ -456,7 +466,7 @@ export function SettlementTemplate({
                       key={npc.id}
                       className={`w-96 rounded-md transition-all ${isHighlighted ? "ring-2 ring-primary" : ""}`}
                     >
-                      <NPCMiniCard npc={npc} poiName={poiName} />
+                      <NPCMiniCard npc={npc} poiName={poiName} onUpdateNPC={onUpdateNPC} />
                     </div>
                   );
                 })}

@@ -1,4 +1,4 @@
-import type { CompendiumEntry, CompendiumMonster, CompendiumSpell, CompendiumMagicItem, CompendiumEquipment, CompendiumKind } from '@domain/entities/Compendium'
+import type { CompendiumEntry, CompendiumMonster, CompendiumSpell, CompendiumMagicItem, CompendiumEquipment, CompendiumKind, CustomCompendiumEquipmentData } from '@domain/entities/Compendium'
 import type { CustomCompendiumEntry } from '@domain/entities/CustomCompendiumEntry'
 import { cairnMonsters, cairnSpells, cairnMagicItems, cairnEquipment } from './cairn-compendium'
 import { shadowdarkMonsters, shadowdarkSpells, shadowdarkMagicItems, shadowdarkEquipment } from './shadowdark-compendium'
@@ -87,9 +87,24 @@ export function customEntryToMagicItem(e: CustomCompendiumEntry): CompendiumMagi
   }
 }
 
+export function customEntryToEquipment(e: CustomCompendiumEntry): CompendiumEquipment {
+  return {
+    id: e.id,
+    systemId: 'custom',
+    name: e.name,
+    description: e.description,
+    kind: 'equipment',
+    systemData: {
+      system: 'custom',
+      data: e.equipmentData ?? { cost: '', weight: '', category: '', damage: '', properties: [] },
+    },
+  }
+}
+
 export function customEntryToCompendiumEntry(e: CustomCompendiumEntry): CompendiumEntry {
   if (e.kind === 'monster') return customEntryToMonster(e)
   if (e.kind === 'spell') return customEntryToSpell(e)
+  if (e.kind === 'equipment') return customEntryToEquipment(e)
   return customEntryToMagicItem(e)
 }
 

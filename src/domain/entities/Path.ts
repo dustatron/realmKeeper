@@ -1,4 +1,4 @@
-import type { PathType, TerrainType } from '@shared/constants'
+import type { PathType, TerrainType, Direction } from '@shared/constants'
 
 export interface Path {
   id: string
@@ -9,6 +9,10 @@ export interface Path {
   type: PathType
   baseTravelWatches: number
   terrain: TerrainType
+  direction: Direction | null
+  hasDoor: boolean
+  isLocked: boolean
+  doorDescription: string
   createdAt: number
   updatedAt: number
 }

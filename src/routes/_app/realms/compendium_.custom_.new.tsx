@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { executeCreateCustomCompendiumEntry } from '@application/use-cases/CreateCustomCompendiumEntry'
-import type { CustomCompendiumEntry, CustomMonsterData, CustomSpellData, CustomMagicItemData } from '@domain/entities/CustomCompendiumEntry'
+import type { CustomCompendiumEntry, CustomMonsterData, CustomSpellData, CustomMagicItemData, CustomEquipmentData } from '@domain/entities/CustomCompendiumEntry'
 import { newId } from '@shared/ulid'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
@@ -20,7 +20,7 @@ export const Route = createFileRoute('/_app/realms/compendium_/custom_/new')({
   component: CustomCompendiumNewPage,
 })
 
-type Kind = 'monster' | 'spell' | 'magicItem'
+type Kind = 'monster' | 'spell' | 'magicItem' | 'equipment'
 
 function CustomCompendiumNewPage() {
   const navigate = useNavigate()
@@ -55,6 +55,13 @@ function CustomCompendiumNewPage() {
   const [charges, setCharges] = useState('')
   const [properties, setProperties] = useState<string[]>([])
 
+  // Equipment fields
+  const [eqCost, setEqCost] = useState('')
+  const [eqWeight, setEqWeight] = useState('')
+  const [eqCategory, setEqCategory] = useState('')
+  const [eqDamage, setEqDamage] = useState('')
+  const [eqProperties, setEqProperties] = useState<string[]>([])
+
   const [saving, setSaving] = useState(false)
 
   if (!activeRealmId) {
@@ -88,6 +95,11 @@ function CustomCompendiumNewPage() {
         level, school, castingTime, range, duration, components, classes,
       }
       entry.spellData = spellData
+    } else if (kind === 'equipment') {
+      const equipmentData: CustomEquipmentData = {
+        cost: eqCost, weight: eqWeight, category: eqCategory, damage: eqDamage, properties: eqProperties,
+      }
+      entry.equipmentData = equipmentData
     } else {
       const magicItemData: CustomMagicItemData = {
         rarity, itemType, attunement,
@@ -129,6 +141,7 @@ function CustomCompendiumNewPage() {
                   <SelectItem value="monster">Monster</SelectItem>
                   <SelectItem value="spell">Spell</SelectItem>
                   <SelectItem value="magicItem">Magic Item</SelectItem>
+                  <SelectItem value="equipment">Equipment</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -241,6 +254,36 @@ function CustomCompendiumNewPage() {
             <div className="space-y-2">
               <Label>Properties</Label>
               <TagInput tags={properties} onChange={setProperties} placeholder="Add property..." />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {kind === 'equipment' && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Equipment Details</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Input value={eqCategory} onChange={(e) => setEqCategory(e.target.value)} placeholder="Weapon, Armor, Gear..." />
+              </div>
+              <div className="space-y-2">
+                <Label>Cost</Label>
+                <Input value={eqCost} onChange={(e) => setEqCost(e.target.value)} placeholder="10 gp" />
+              </div>
+              <div className="space-y-2">
+                <Label>Weight</Label>
+                <Input value={eqWeight} onChange={(e) => setEqWeight(e.target.value)} placeholder="5 lb" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Damage</Label>
+              <Input value={eqDamage} onChange={(e) => setEqDamage(e.target.value)} placeholder="1d8 slashing" />
+            </div>
+            <div className="space-y-2">
+              <Label>Properties</Label>
+              <TagInput tags={eqProperties} onChange={setEqProperties} placeholder="Add property..." />
             </div>
           </CardContent>
         </Card>
