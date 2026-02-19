@@ -19,6 +19,14 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
+        blue: "border border-blue-500/30 bg-blue-500/10 text-blue-700 hover:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/40",
+        purple: "border border-purple-500/30 bg-purple-500/10 text-purple-700 hover:bg-purple-500/20 dark:text-purple-400 dark:border-purple-500/40",
+        amber: "border border-amber-500/30 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/40",
+        green: "border border-green-500/30 bg-green-500/10 text-green-700 hover:bg-green-500/20 dark:text-green-400 dark:border-green-500/40",
+        red: "border border-red-500/30 bg-red-500/10 text-red-700 hover:bg-red-500/20 dark:text-red-400 dark:border-red-500/40",
+        indigo: "border border-indigo-500/30 bg-indigo-500/10 text-indigo-700 hover:bg-indigo-500/20 dark:text-indigo-400 dark:border-indigo-500/40",
+        orange: "border border-orange-500/30 bg-orange-500/10 text-orange-700 hover:bg-orange-500/20 dark:text-orange-400 dark:border-orange-500/40",
+        sky: "border border-sky-500/30 bg-sky-500/10 text-sky-700 hover:bg-sky-500/20 dark:text-sky-400 dark:border-sky-500/40",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

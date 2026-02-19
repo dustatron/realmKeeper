@@ -1,0 +1,23 @@
+/** Pre-built activity suggestions for wandering monster table entries */
+export const WANDERING_MONSTER_ACTIVITIES: string[] = [
+  'patrolling the corridors',
+  'searching for food',
+  'guarding a chokepoint',
+  'fighting another creature',
+  'eating a recent kill',
+  'sleeping or resting',
+  'setting up an ambush',
+  'lost and confused',
+  'carrying loot to their lair',
+  'tracking the party',
+  'performing a ritual',
+  'fleeing from something deeper',
+  'repairing defenses',
+  'arguing amongst themselves',
+  'tending to their wounded',
+  'investigating a noise',
+  'dragging a captive',
+  'looting corpses',
+  'worshipping at a shrine',
+  'building a nest',
+]

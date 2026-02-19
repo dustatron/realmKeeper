@@ -161,6 +161,7 @@ export async function executeGenerateNPC(
     tags,
     imageUrl: null,
     systemBlock: block,
+    starred: false,
     createdAt: now,
     updatedAt: now,
   }

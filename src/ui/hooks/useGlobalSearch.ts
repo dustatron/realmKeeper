@@ -22,6 +22,7 @@ export interface SearchableItem {
   description: string
   url: string
   params: Record<string, string>
+  search?: Record<string, string>
   tags: string[]
 }
 
@@ -147,6 +148,7 @@ export function useGlobalSearch(worldId: string | null, query: string) {
           description: e.description,
           url: '/realms/compendium',
           params: {},
+          search: { tab: 'equipment', q: e.name },
           tags: [],
         })
       }

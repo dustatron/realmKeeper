@@ -1,7 +1,11 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "~/components/ui/collapsible";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -169,7 +173,9 @@ export function SettlementTemplate({
 
   const updateLayout = (next: "columns" | "stacked") => {
     setLayout(next);
-    try { localStorage.setItem("settlement-layout", next); } catch {}
+    try {
+      localStorage.setItem("settlement-layout", next);
+    } catch {}
   };
 
   // Aggregate services from child POIs + this POI
@@ -189,7 +195,9 @@ export function SettlementTemplate({
                 <Eye className="size-4 text-muted-foreground" />
                 Overview
               </span>
-              <ChevronDown className={`size-4 text-muted-foreground transition-transform ${overviewOpen ? "rotate-180" : ""}`} />
+              <ChevronDown
+                className={`size-4 text-muted-foreground transition-transform ${overviewOpen ? "rotate-180" : ""}`}
+              />
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -266,28 +274,6 @@ export function SettlementTemplate({
         {/* Locations & NPCs tab */}
         <TabsContent value="locations" className="space-y-6 pt-3">
           {/* Layout toggle — hidden on mobile (always stacked) */}
-          <div className="hidden md:flex justify-end">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                updateLayout(layout === "columns" ? "stacked" : "columns")
-              }
-              className="gap-1.5"
-            >
-              {layout === "columns" ? (
-                <>
-                  <Rows2 className="size-4" />
-                  Stacked
-                </>
-              ) : (
-                <>
-                  <Columns2 className="size-4" />
-                  Columns
-                </>
-              )}
-            </Button>
-          </div>
 
           {/* Map + Key Locations */}
           <div
@@ -295,22 +281,54 @@ export function SettlementTemplate({
           >
             {/* Map — taller in stacked mode on desktop */}
             <div
-              className={layout === "stacked"
-                ? "md:h-[90vh] md:[&>*]:h-full md:[&>*]:!flex md:[&>*]:!flex-col md:[&>*>*+*]:!flex-1 md:[&>*>*+*]:!h-auto md:[&>*>*+*]:min-h-0"
-                : ""}
+              className={
+                layout === "stacked"
+                  ? "md:h-[90vh] md:[&>*]:h-full md:[&>*]:!flex md:[&>*]:!flex-col md:[&>*>*+*]:!flex-1 md:[&>*>*+*]:!h-auto md:[&>*>*+*]:min-h-0"
+                  : ""
+              }
             >
               {mapSection}
             </div>
 
             {/* Location cards */}
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex justify-between">
                 <h4 className="text-sm font-semibold">Key Locations</h4>
-                <Button size="sm" variant="outline" onClick={onCreateChild}>
-                  <Plus className="mr-1.5 size-3.5" />
-                  Add Location
-                </Button>
+
+                <div className="flex justify-end space-x-2">
+                  <div className="hidden md:flex justify-end">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        updateLayout(
+                          layout === "columns" ? "stacked" : "columns",
+                        )
+                      }
+                      className="gap-1.5"
+                    >
+                      {layout === "columns" ? (
+                        <>
+                          <Rows2 className="size-4" />
+                          Stacked
+                        </>
+                      ) : (
+                        <>
+                          <Columns2 className="size-4" />
+                          Columns
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Button size="sm" variant="outline" onClick={onCreateChild}>
+                      <Plus className="mr-1.5 size-3.5" />
+                      Add Location
+                    </Button>
+                  </div>
+                </div>
               </div>
+
               {childPois.length > 0 ? (
                 <div className="space-y-2">
                   {childPois.map((child) => {
@@ -466,7 +484,11 @@ export function SettlementTemplate({
                       key={npc.id}
                       className={`w-96 rounded-md transition-all ${isHighlighted ? "ring-2 ring-primary" : ""}`}
                     >
-                      <NPCMiniCard npc={npc} poiName={poiName} onUpdateNPC={onUpdateNPC} />
+                      <NPCMiniCard
+                        npc={npc}
+                        poiName={poiName}
+                        onUpdateNPC={onUpdateNPC}
+                      />
                     </div>
                   );
                 })}

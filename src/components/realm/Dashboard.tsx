@@ -1,11 +1,16 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { useActiveRealm } from "~/ui/hooks/useActiveRealm";
 import { useTimeline } from "~/ui/hooks/useTimeline";
 import { useRecentWeather } from "~/ui/hooks/useWeather";
+import { useRecentVisitedPOIs, useStarredPOIs } from "~/ui/hooks/usePOIs";
+import { useStarredNPCs } from "~/ui/hooks/useNPCs";
 import { useContainer } from "~/ui/hooks/useContainer";
-import { useGlobalSearch } from "~/ui/hooks/useGlobalSearch";
-import type { SearchableItem } from "~/ui/hooks/useGlobalSearch";
+import {
+  getMonstersBySystemId,
+  getSpellsBySystemId,
+  getMagicItemsBySystemId,
+} from "@domain/data/compendium";
 import {
   executeGetDashboardData,
   type DashboardData,
@@ -32,10 +37,6 @@ import {
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
-import { FilterBar } from "~/components/shared/FilterBar";
-import { EmptyState } from "~/components/shared/EmptyState";
-import { SearchFilterToggles } from "~/components/shared/SearchFilterToggles";
-import type { FilterOption } from "~/components/shared/SearchFilterToggles";
 import {
   Swords,
   Users,
@@ -48,23 +49,16 @@ import {
   Calendar,
   MapPin,
   Dices,
-  Search as SearchIcon,
   Settings,
   Save,
-  BookOpen,
-  Sparkles,
+  BarChart3,
+  Sword,
+  Wand2,
   Gem,
+  Cat,
 } from "lucide-react";
 import type { Season } from "@shared/constants";
-
-const SEARCH_FILTER_OPTIONS: FilterOption[] = [
-  { value: "npc", label: "NPC", icon: Users },
-  { value: "poi", label: "POI", icon: MapPin },
-  { value: "faction", label: "Faction", icon: Swords },
-  { value: "core-rules", label: "Core Rules", icon: BookOpen },
-  { value: "magic-items", label: "Magic Items", icon: Gem },
-  { value: "custom", label: "Custom", icon: Sparkles },
-];
+import { QuickLinksBar } from "./QuickLinksBar";
 
 interface DashboardProps {
   worldId: string;
@@ -95,63 +89,11 @@ const WEATHER_SEVERITY_COLORS: Record<string, string> = {
   extreme: "bg-red-500/10 text-red-700 border-red-500/20",
 };
 
-const typeBadgeColors: Record<SearchableItem["type"], string> = {
-  npc: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
-  faction: "bg-red-500/15 text-red-700 dark:text-red-400",
-  region: "bg-green-500/15 text-green-700 dark:text-green-400",
-  poi: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-  note: "bg-purple-500/15 text-purple-700 dark:text-purple-400",
-  monster: "bg-orange-500/15 text-orange-700 dark:text-orange-400",
-  spell: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-400",
-  magicItem: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-  equipment: "bg-slate-500/15 text-slate-700 dark:text-slate-400",
-};
-
-const typeLabels: Record<SearchableItem["type"], string> = {
-  npc: "NPC",
-  faction: "Faction",
-  region: "Region",
-  poi: "POI",
-  note: "Note",
-  monster: "Monster",
-  spell: "Spell",
-  magicItem: "Magic Item",
-  equipment: "Equipment",
-};
-
 export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchFilters, setSearchFilters] = useState<string[]>([]);
   const container = useContainer();
   const realm = useActiveRealm();
-  const searchResults = useGlobalSearch(worldId, searchQuery);
-
-  const filteredSearchResults = useMemo(() => {
-    if (searchFilters.length === 0) return searchResults;
-    return searchResults.filter((item) => {
-      for (const f of searchFilters) {
-        if (f === "npc" && item.type === "npc") return true;
-        if (f === "poi" && item.type === "poi") return true;
-        if (f === "faction" && item.type === "faction") return true;
-        if (
-          f === "core-rules" &&
-          ["monster", "spell", "equipment"].includes(item.type) &&
-          !item.url.includes("/custom/")
-        )
-          return true;
-        if (
-          f === "magic-items" &&
-          item.type === "magicItem" &&
-          !item.url.includes("/custom/")
-        )
-          return true;
-        if (f === "custom" && item.url.includes("/custom/")) return true;
-      }
-      return false;
-    });
-  }, [searchResults, searchFilters]);
 
   // Settings state
   const [settingsDaysPerSeason, setSettingsDaysPerSeason] = useState(30);
@@ -165,6 +107,27 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
   // Live updates
   const recentEvents = useTimeline(worldId, 5);
   const recentWeather = useRecentWeather(worldId, 3);
+  const recentPOIs = useRecentVisitedPOIs(worldId, 5);
+  const starredPOIs = useStarredPOIs(worldId);
+  const starredNPCs = useStarredNPCs(worldId);
+  const starredMonsterIds = realm?.starredMonsterIds ?? [];
+  const starredSpellIds = realm?.starredSpellIds ?? [];
+  const starredMagicItemIds = realm?.starredMagicItemIds ?? [];
+  const starredMonsters = realm
+    ? getMonstersBySystemId(realm.systemId).filter((m) =>
+        starredMonsterIds.includes(m.id),
+      )
+    : [];
+  const starredSpells = realm
+    ? getSpellsBySystemId(realm.systemId).filter((s) =>
+        starredSpellIds.includes(s.id),
+      )
+    : [];
+  const starredMagicItems = realm
+    ? getMagicItemsBySystemId(realm.systemId).filter((i) =>
+        starredMagicItemIds.includes(i.id),
+      )
+    : [];
 
   // Sync settings state from realm
   useEffect(() => {
@@ -229,7 +192,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
   };
 
   const activeTab =
-    tab === "world-details" || tab === "settings" ? tab : "search";
+    tab === "world-stats" || tab === "settings" ? tab : "overview";
 
   return (
     <div className="space-y-4 p-6">
@@ -246,15 +209,17 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
         </div>
       </div>
 
+      <QuickLinksBar />
+
       <Tabs value={activeTab} onValueChange={onTabChange}>
         <TabsList>
-          <TabsTrigger value="search">
-            <SearchIcon className="size-4" />
-            Global Search
-          </TabsTrigger>
-          <TabsTrigger value="world-details">
+          <TabsTrigger value="overview">
             <Crown className="size-4" />
-            World Details
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="world-stats">
+            <BarChart3 className="size-4" />
+            World Stats
           </TabsTrigger>
           <TabsTrigger value="settings">
             <Settings className="size-4" />
@@ -262,62 +227,220 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
           </TabsTrigger>
         </TabsList>
 
-        {/* Search Tab */}
-        <TabsContent value="search">
-          <div className="flex flex-col gap-4">
-            <FilterBar search={searchQuery} onSearchChange={setSearchQuery}>
-              <SearchFilterToggles
-                type="multiple"
-                value={searchFilters}
-                onChange={setSearchFilters}
-                options={SEARCH_FILTER_OPTIONS}
-              />
-            </FilterBar>
-
-            {!searchQuery.trim() ? (
-              <EmptyState
-                icon={SearchIcon}
-                title="Type to search"
-                description="Search NPCs, factions, regions, POIs, and notes."
-              />
-            ) : filteredSearchResults.length === 0 ? (
-              <EmptyState
-                icon={SearchIcon}
-                title="No results"
-                description={`No matches for "${searchQuery}"${searchFilters.length > 0 ? " with selected filters" : ""}.`}
-              />
-            ) : (
-              <div className="space-y-2">
-                {filteredSearchResults.map((item) => (
-                  <Link
-                    key={`${item.type}-${item.id}`}
-                    to={item.url}
-                    params={item.params}
-                    className="block rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
+        {/* Overview Tab */}
+        <TabsContent value="overview">
+          <div className="space-y-6">
+            {/* Favorites */}
+            <div className="grid grid-cols-3 gap-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Map className="size-5 text-amber-500" />
+                    NPCs
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {starredNPCs.map((npc) => (
+                    <Link
+                      key={npc.id}
+                      to="/realms/npcs/$npcId"
+                      params={{ npcId: npc.id }}
+                      className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                    >
+                      <Users className="size-4 shrink-0 text-blue-500" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{npc.name}</div>
+                      </div>
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        NPC
+                      </Badge>
+                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                  ))}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Map className="size-5 text-amber-500" />
+                    Monsters
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {starredMonsters.map((m) => (
+                    <Link
+                      key={m.id}
+                      to="/realms/compendium"
+                      search={{ tab: "monsters", q: m.name }}
+                      className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                    >
+                      <Sword className="size-4 shrink-0 text-orange-500" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{m.name}</div>
+                      </div>
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        Beast
+                      </Badge>
+                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                  ))}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Gem className="size-5 text-amber-500" />
+                    Magic Items
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {starredMagicItems.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">
+                      No starred magic items
+                    </div>
+                  ) : (
+                    starredMagicItems.map((item) => (
+                      <Link
+                        key={item.id}
+                        to="/realms/compendium"
+                        search={{ tab: "magic-items", q: item.name }}
+                        className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                      >
+                        <Gem className="size-4 shrink-0 text-purple-500" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">
+                            {item.name}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          Magic Item
+                        </Badge>
+                        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                      </Link>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Wand2 className="size-5 text-amber-500" />
+                    Spells
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {starredSpells.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">
+                      No starred spells
+                    </div>
+                  ) : (
+                    starredSpells.map((spell) => (
+                      <Link
+                        key={spell.id}
+                        to="/realms/compendium"
+                        search={{ tab: "spells", q: spell.name }}
+                        className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                      >
+                        <Wand2 className="size-4 shrink-0 text-indigo-500" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">
+                            {spell.name}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          Spell
+                        </Badge>
+                        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                      </Link>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Map className="size-5 text-amber-500" />
+                    Locations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {starredPOIs.map((poi) => (
+                    <Link
+                      key={poi.id}
+                      to="/realms/pois/$poiId"
+                      params={{ poiId: poi.id }}
+                      className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                    >
+                      <MapPin className="size-4 shrink-0 text-amber-500" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{poi.name}</div>
+                        {poi.description && (
+                          <div className="text-xs text-muted-foreground truncate">
+                            {poi.description}
+                          </div>
+                        )}
+                      </div>
                       <Badge
                         variant="outline"
-                        className={typeBadgeColors[item.type]}
+                        className="text-xs shrink-0 capitalize"
                       >
-                        {typeLabels[item.type]}
+                        {poi.type}
                       </Badge>
-                      <span className="font-medium">{item.name}</span>
-                    </div>
-                    {item.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {item.description.slice(0, 200)}
-                      </p>
-                    )}
-                  </Link>
-                ))}
-              </div>
+                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recently Visited POIs */}
+            {recentPOIs.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="size-5" />
+                    Recently Visited
+                  </CardTitle>
+                  <CardDescription>
+                    POIs you've recently marked as visited
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {recentPOIs.map((poi) => (
+                      <Link
+                        key={poi.id}
+                        to="/realms/pois/$poiId"
+                        params={{ poiId: poi.id }}
+                        className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                      >
+                        <MapPin className="size-4 shrink-0 text-muted-foreground" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">{poi.name}</div>
+                          {poi.description && (
+                            <div className="text-xs text-muted-foreground truncate">
+                              {poi.description}
+                            </div>
+                          )}
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className="text-xs shrink-0 capitalize"
+                        >
+                          {poi.type}
+                        </Badge>
+                        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                      </Link>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
         </TabsContent>
 
-        {/* World Details Tab */}
-        <TabsContent value="world-details">
+        {/* World Stats Tab */}
+        <TabsContent value="world-stats">
           <div className="space-y-6">
             {/* Stats Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -437,140 +560,6 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
               </Card>
             </div>
 
-            {/* Quick Links */}
-            <div>
-              <h2 className="text-lg font-semibold mb-4">Quick Links</h2>
-              <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
-                <Link to="/realms/calendar">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 h-auto py-3"
-                  >
-                    <Calendar className="size-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Calendar</div>
-                      <div className="text-xs text-muted-foreground">
-                        Manage time & weather
-                      </div>
-                    </div>
-                    <ChevronRight className="size-4 ml-auto" />
-                  </Button>
-                </Link>
-
-                <Link to="/realms/factions">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 h-auto py-3"
-                  >
-                    <Swords className="size-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Factions</div>
-                      <div className="text-xs text-muted-foreground">
-                        View all factions
-                      </div>
-                    </div>
-                    <ChevronRight className="size-4 ml-auto" />
-                  </Button>
-                </Link>
-
-                <Link to="/realms/npcs">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 h-auto py-3"
-                  >
-                    <Users className="size-5" />
-                    <div className="text-left">
-                      <div className="font-medium">NPCs</div>
-                      <div className="text-xs text-muted-foreground">
-                        Manage characters
-                      </div>
-                    </div>
-                    <ChevronRight className="size-4 ml-auto" />
-                  </Button>
-                </Link>
-
-                <Link to="/realms/locations/regions">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 h-auto py-3"
-                  >
-                    <Map className="size-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Regions</div>
-                      <div className="text-xs text-muted-foreground">
-                        Explore locations
-                      </div>
-                    </div>
-                    <ChevronRight className="size-4 ml-auto" />
-                  </Button>
-                </Link>
-
-                <Link to="/realms/locations/pois">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 h-auto py-3"
-                  >
-                    <MapPin className="size-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Points of Interest</div>
-                      <div className="text-xs text-muted-foreground">
-                        View POIs & paths
-                      </div>
-                    </div>
-                    <ChevronRight className="size-4 ml-auto" />
-                  </Button>
-                </Link>
-
-                <Link to="/realms/tables">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 h-auto py-3"
-                  >
-                    <Dices className="size-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Random Tables</div>
-                      <div className="text-xs text-muted-foreground">
-                        Roll on tables
-                      </div>
-                    </div>
-                    <ChevronRight className="size-4 ml-auto" />
-                  </Button>
-                </Link>
-
-                <Link to="/realms/notes">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 h-auto py-3"
-                  >
-                    <Scroll className="size-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Notes</div>
-                      <div className="text-xs text-muted-foreground">
-                        Campaign notes
-                      </div>
-                    </div>
-                    <ChevronRight className="size-4 ml-auto" />
-                  </Button>
-                </Link>
-
-                <Link to="/realms">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2 h-auto py-3"
-                  >
-                    <Compass className="size-5" />
-                    <div className="text-left">
-                      <div className="font-medium">All Realms</div>
-                      <div className="text-xs text-muted-foreground">
-                        Switch realm
-                      </div>
-                    </div>
-                    <ChevronRight className="size-4 ml-auto" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
             {/* Recent Events */}
             <Card>
               <CardHeader>
@@ -595,7 +584,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                           key={event.id}
                           className="flex gap-3 pb-4 border-b last:border-0 last:pb-0"
                         >
-                          <div className="flex-shrink-0">
+                          <div className="shrink-0">
                             <Badge
                               className={
                                 EVENT_TYPE_COLORS[event.type] ||

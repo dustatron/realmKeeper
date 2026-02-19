@@ -311,6 +311,7 @@ function POIDetailPage() {
       tags: [],
       imageUrl: null,
       systemBlock: defaultSystemBlock,
+      starred: false,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }
@@ -616,8 +617,12 @@ function POIDetailPage() {
             onDeleteEvent={(id) => setDeletingEventId(id)}
             onToggleTrapDisarmed={handleToggleTrapDisarmed}
             onUpdateNPC={handleUpdateNPC}
+            selectedChildId={selectedChildId}
+            onSelectChild={setSelectedChildId}
             mapSection={mapSection}
             notesSection={notesSection}
+            systemId={realm?.systemId ?? null}
+            worldId={realm?.id ?? null}
             compendiumSection={
               <CompendiumRefsSection
                 poi={poi}
@@ -800,16 +805,16 @@ function POIDetailPage() {
             />
           )}
 
-          {/* Traps — dungeon rooms show this inside their template */}
-          {parentPoi?.type !== 'dungeon' && (
+          {/* Traps — hidden for dungeons (traps live on rooms) and dungeon rooms (shown in their template) */}
+          {poi.type !== 'dungeon' && parentPoi?.type !== 'dungeon' && (
             <TrapSection
               traps={poi.traps ?? []}
               onUpdate={handleUpdateTraps}
             />
           )}
 
-          {/* Treasure — dungeon rooms show this inside their template */}
-          {parentPoi?.type !== 'dungeon' && (
+          {/* Treasure — hidden for dungeons (treasure lives on rooms) and dungeon rooms (shown in their template) */}
+          {poi.type !== 'dungeon' && parentPoi?.type !== 'dungeon' && (
             <TreasureSection
               treasure={poi.treasure ?? []}
               onUpdate={handleUpdateTreasure}

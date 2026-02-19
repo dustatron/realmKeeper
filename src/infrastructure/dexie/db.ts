@@ -569,6 +569,46 @@ db.version(31).stores(storesV26).upgrade(async (tx) => {
   }
 })
 
+// v32: Add starred to NPCs + starred compendium IDs to Realms
+db.version(32).stores(storesV26).upgrade(async (tx) => {
+  const npcs = await tx.table('npcs').toArray()
+  for (const npc of npcs) {
+    if (npc.starred === undefined) {
+      await tx.table('npcs').put({ ...npc, starred: false })
+    }
+  }
+  const realms = await tx.table('worlds').toArray()
+  for (const realm of realms) {
+    if (realm.starredMonsterIds === undefined || realm.starredSpellIds === undefined || realm.starredMagicItemIds === undefined) {
+      await tx.table('worlds').put({
+        ...realm,
+        starredMonsterIds: realm.starredMonsterIds ?? [],
+        starredSpellIds: realm.starredSpellIds ?? [],
+        starredMagicItemIds: realm.starredMagicItemIds ?? [],
+      })
+    }
+  }
+})
+
+// Normalize Realms on read — ensures starred arrays have defaults
+db.worlds.hook('reading', (realm) => {
+  if (!realm) return realm
+  const rec = realm as unknown as Record<string, unknown>
+  let patched = false
+  const defaults: Record<string, unknown> = {
+    starredMonsterIds: [],
+    starredSpellIds: [],
+    starredMagicItemIds: [],
+  }
+  for (const [key, val] of Object.entries(defaults)) {
+    if (rec[key] === undefined) {
+      if (!patched) { realm = { ...realm }; patched = true }
+      ;(realm as unknown as Record<string, unknown>)[key] = val
+    }
+  }
+  return realm
+})
+
 // Normalize POIs on read — ensures array fields added after initial creation have defaults
 db.pois.hook('reading', (poi) => {
   if (!poi) return poi
@@ -584,11 +624,30 @@ db.pois.hook('reading', (poi) => {
     magicItemRefs: [],
     spellRefs: [],
     equipmentRefs: [],
+    wanderingMonsters: [],
   }
   for (const [key, val] of Object.entries(defaults)) {
     if (rec[key] === undefined) {
       if (!patched) { poi = { ...poi }; patched = true }
       ;(poi as unknown as Record<string, unknown>)[key] = val
+    }
+  }
+  // Migrate wanderingMonsters from old string[] format to WanderingMonsterEntry[]
+  const wm = rec.wanderingMonsters
+  if (Array.isArray(wm) && wm.length > 0 && typeof wm[0] === 'string') {
+    if (!patched) { poi = { ...poi }; patched = true }
+    ;(poi as unknown as Record<string, unknown>).wanderingMonsters = (wm as string[]).map((s: string) => ({
+      name: s, creatureType: '', count: '1', activity: '', compendiumId: null, npcId: null, customStats: null,
+    }))
+  }
+  // Patch old WanderingMonsterEntry objects missing npcId/customStats/creatureType
+  if (Array.isArray(wm) && wm.length > 0 && typeof wm[0] === 'object' && wm[0] !== null) {
+    const needsPatch = wm.some((e: Record<string, unknown>) => e.npcId === undefined || e.creatureType === undefined)
+    if (needsPatch) {
+      if (!patched) { poi = { ...poi }; patched = true }
+      ;(poi as unknown as Record<string, unknown>).wanderingMonsters = (wm as Record<string, unknown>[]).map((e) => ({
+        ...e, npcId: e.npcId ?? null, customStats: e.customStats ?? null, creatureType: e.creatureType ?? '',
+      }))
     }
   }
   return poi

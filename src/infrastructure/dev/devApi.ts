@@ -155,6 +155,7 @@ const npcs = {
         abilities: [],
         notes: '',
       },
+      starred: data.starred ?? false,
       createdAt: ts,
       updatedAt: ts,
     }
@@ -231,6 +232,7 @@ const pois = {
       roomLength: data.roomLength ?? null,
       visited: data.visited ?? false,
       lightLevel: data.lightLevel ?? null,
+      wanderingMonsters: data.wanderingMonsters ?? [],
       sessionLog: data.sessionLog ?? [],
       starred: data.starred ?? false,
       createdAt: ts,

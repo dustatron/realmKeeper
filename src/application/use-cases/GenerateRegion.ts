@@ -70,6 +70,7 @@ function makePoi(regionId: string, name: string, type: PoiType, description: str
     roomLength: null,
     visited: false,
     lightLevel: null,
+    wanderingMonsters: [],
     sessionLog: [],
     starred: false,
     createdAt: now,

@@ -42,6 +42,9 @@ export async function executeCreateRealm(
     completedThroughDay: -1,
     customRaces: [],
     raceColors: {},
+    starredMonsterIds: [],
+    starredSpellIds: [],
+    starredMagicItemIds: [],
     createdAt: now,
     updatedAt: now,
   }

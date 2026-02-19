@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { getCompendiumById } from '@domain/data/compendium'
 import type { CompendiumMagicItem } from '@domain/entities/Compendium'
+import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
+import { db } from '@infrastructure/dexie/db'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Star } from 'lucide-react'
 
 export const Route = createFileRoute('/_app/realms/compendium_/magic-items_/$itemId')({
   component: MagicItemDetailPage,
@@ -26,12 +28,38 @@ function MagicItemDetailPage() {
 
   const item = entry as CompendiumMagicItem
   const sd = item.systemData
+  const realm = useActiveRealm()
+  const starredIds = realm?.starredMagicItemIds ?? []
+  const isStarred = starredIds.includes(item.id)
+
+  const handleToggleStar = async () => {
+    if (!realm) return
+    const updated = isStarred
+      ? starredIds.filter((id) => id !== item.id)
+      : [...starredIds, item.id]
+    await db.worlds.update(realm.id, {
+      starredMagicItemIds: updated,
+      updatedAt: Date.now(),
+    })
+  }
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
         title={item.name}
-        actions={<BackLink />}
+        actions={
+          <div className="flex items-center gap-2">
+            <BackLink />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleToggleStar}
+              title={isStarred ? 'Unstar' : 'Star'}
+            >
+              <Star className={`size-4 ${isStarred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+            </Button>
+          </div>
+        }
       />
 
       <Card>
