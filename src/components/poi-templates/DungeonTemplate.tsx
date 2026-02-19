@@ -72,6 +72,10 @@ interface DungeonTemplateProps {
   notesSection?: React.ReactNode;
   compendiumSection?: React.ReactNode;
   dungeonEventsPanel?: React.ReactNode;
+  /** System ID for bestiary search */
+  systemId?: string | null;
+  /** World ID for custom compendium entries */
+  worldId?: string | null;
 }
 
 export function DungeonTemplate({
@@ -97,6 +101,8 @@ export function DungeonTemplate({
   notesSection,
   compendiumSection,
   dungeonEventsPanel,
+  systemId,
+  worldId,
 }: DungeonTemplateProps) {
   const allNPCs = [...npcs, ...childNPCs];
   const npcsByPoiId: Record<string, NPC[]> = {};
@@ -243,6 +249,10 @@ export function DungeonTemplate({
                 <WanderingMonsterTable
                   entries={poi.wanderingMonsters ?? []}
                   onSave={handleSaveWanderingMonsters}
+                  npcs={allNPCs}
+                  poiChildren={childPois}
+                  systemId={systemId}
+                  worldId={worldId}
                 />
               </div>
             </div>

@@ -637,8 +637,18 @@ db.pois.hook('reading', (poi) => {
   if (Array.isArray(wm) && wm.length > 0 && typeof wm[0] === 'string') {
     if (!patched) { poi = { ...poi }; patched = true }
     ;(poi as unknown as Record<string, unknown>).wanderingMonsters = (wm as string[]).map((s: string) => ({
-      name: s, count: '1', activity: '', compendiumId: null,
+      name: s, creatureType: '', count: '1', activity: '', compendiumId: null, npcId: null, customStats: null,
     }))
+  }
+  // Patch old WanderingMonsterEntry objects missing npcId/customStats/creatureType
+  if (Array.isArray(wm) && wm.length > 0 && typeof wm[0] === 'object' && wm[0] !== null) {
+    const needsPatch = wm.some((e: Record<string, unknown>) => e.npcId === undefined || e.creatureType === undefined)
+    if (needsPatch) {
+      if (!patched) { poi = { ...poi }; patched = true }
+      ;(poi as unknown as Record<string, unknown>).wanderingMonsters = (wm as Record<string, unknown>[]).map((e) => ({
+        ...e, npcId: e.npcId ?? null, customStats: e.customStats ?? null, creatureType: e.creatureType ?? '',
+      }))
+    }
   }
   return poi
 })

@@ -7,6 +7,8 @@ export interface WanderingMonsterCustomStats {
 export interface WanderingMonsterEntry {
   /** Display name, e.g. "Goblins" */
   name: string
+  /** Creature type/race, e.g. "monster", "undead", "Fish Folk" */
+  creatureType: string
   /** Dice or number, e.g. "1d4", "2" */
   count: string
   /** What they're doing, e.g. "patrolling the corridors" */

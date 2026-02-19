@@ -621,6 +621,8 @@ function POIDetailPage() {
             onSelectChild={setSelectedChildId}
             mapSection={mapSection}
             notesSection={notesSection}
+            systemId={realm?.systemId ?? null}
+            worldId={realm?.id ?? null}
             compendiumSection={
               <CompendiumRefsSection
                 poi={poi}
