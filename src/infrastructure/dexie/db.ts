@@ -590,6 +590,9 @@ db.version(32).stores(storesV26).upgrade(async (tx) => {
   }
 })
 
+// v33: Add disposition to NPCs (no index change needed)
+db.version(33).stores(storesV26)
+
 // Normalize Realms on read — ensures starred arrays have defaults
 db.worlds.hook('reading', (realm) => {
   if (!realm) return realm

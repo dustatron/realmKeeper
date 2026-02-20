@@ -9,6 +9,7 @@ import {
 } from "~/components/ui/collapsible";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import {
   MapPin,
   Users,
@@ -21,11 +22,17 @@ import {
   Rows2,
   ExternalLink,
   ChevronDown,
+  ChevronUp,
   AlertTriangle,
   Gem,
   CheckCircle2,
   Circle,
+  Heart,
+  Skull,
+  Shield,
+  Swords,
 } from "lucide-react";
+import { DispositionBadge } from "~/components/shared/DispositionBadge";
 import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
 import { FactionChip } from "~/components/shared/FactionChip";
 import { EncounterTableUI } from "~/components/shared/EncounterTableUI";
@@ -42,6 +49,109 @@ import type { FactionPresence } from "@domain/entities/FactionPresence";
 import type { ResolvedPath } from "~/ui/hooks/useResolvedPaths";
 import type { POIEvent } from "@domain/entities/POIEvent";
 import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
+
+function RoomNPCRow({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) => void }) {
+  const sb = npc.systemBlock;
+  const isDead = npc.lifeStatus !== "alive";
+  const [editingHp, setEditingHp] = useState(false);
+  const [hpInput, setHpInput] = useState("");
+
+  const updateHp = (newHp: number) => {
+    if (!onUpdateNPC || !sb) return;
+    const clamped = Math.max(0, Math.min(newHp, sb.maxHp));
+    onUpdateNPC({ ...npc, systemBlock: { ...sb, hp: clamped } });
+  };
+
+  const commitHpEdit = () => {
+    if (!sb) return;
+    const val = parseInt(hpInput);
+    if (!isNaN(val)) updateHp(val);
+    setEditingHp(false);
+  };
+
+  return (
+    <div className={`flex items-center gap-2 text-sm rounded border px-2 py-1.5 ${isDead ? "opacity-50" : ""}`}>
+      {isDead ? (
+        <span title={npc.lifeStatus}><Skull className="size-3.5 text-muted-foreground shrink-0" /></span>
+      ) : (
+        <Heart className="size-3.5 text-green-500 fill-green-500 shrink-0" />
+      )}
+      <Link
+        to="/realms/npcs/$npcId"
+        params={{ npcId: npc.id }}
+        className="font-medium text-amber-500 hover:underline truncate"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {npc.name}
+      </Link>
+      <DispositionBadge npc={npc} onUpdateNPC={onUpdateNPC} />
+      {sb && (
+        <span className="ml-auto flex items-center gap-1.5 shrink-0">
+          {sb.maxHp > 0 && (
+            <span className="inline-flex items-center gap-0.5">
+              {onUpdateNPC && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); updateHp(sb.hp - 1); }}
+                  className="size-7 rounded flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <ChevronDown className="size-4" />
+                </button>
+              )}
+              {editingHp ? (
+                <Input
+                  type="number"
+                  value={hpInput}
+                  onChange={(e) => setHpInput(e.target.value)}
+                  onBlur={commitHpEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitHpEdit();
+                    if (e.key === "Escape") setEditingHp(false);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-10 h-5 text-[10px] font-mono text-center px-0.5"
+                  autoFocus
+                />
+              ) : (
+                <Badge
+                  variant={sb.hp <= sb.maxHp * 0.25 ? "destructive" : sb.hp <= sb.maxHp * 0.5 ? "secondary" : "outline"}
+                  className={`text-[10px] font-mono px-1.5 py-0 gap-0.5 ${onUpdateNPC ? "cursor-pointer" : ""}`}
+                  onClick={onUpdateNPC ? (e) => {
+                    e.stopPropagation();
+                    setHpInput(String(sb.hp));
+                    setEditingHp(true);
+                  } : undefined}
+                >
+                  <Heart className="size-2.5" />
+                  {sb.hp}/{sb.maxHp}
+                </Badge>
+              )}
+              {onUpdateNPC && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); updateHp(sb.hp + 1); }}
+                  className="size-7 rounded flex items-center justify-center hover:bg-green-500/20 text-muted-foreground hover:text-green-600 transition-colors"
+                >
+                  <ChevronUp className="size-4" />
+                </button>
+              )}
+            </span>
+          )}
+          {sb.armor > 0 && (
+            <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0 gap-0.5">
+              <Shield className="size-2.5" />
+              {sb.armor}
+            </Badge>
+          )}
+          {sb.attacks.length > 0 && (
+            <span className="text-[10px] font-mono text-muted-foreground flex items-center gap-0.5">
+              <Swords className="size-2.5" />
+              {sb.attacks[0].name} ({sb.attacks[0].damage})
+            </span>
+          )}
+        </span>
+      )}
+    </div>
+  );
+}
 
 interface DungeonTemplateProps {
   poi: POI;
@@ -68,6 +178,8 @@ interface DungeonTemplateProps {
   onUpdateNPC?: (npc: NPC) => void;
   selectedChildId: string | null;
   onSelectChild: (id: string | null) => void;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
   mapSection: React.ReactNode;
   notesSection?: React.ReactNode;
   compendiumSection?: React.ReactNode;
@@ -97,6 +209,8 @@ export function DungeonTemplate({
   onUpdateNPC,
   selectedChildId,
   onSelectChild,
+  activeTab,
+  onTabChange,
   mapSection,
   notesSection,
   compendiumSection,
@@ -184,7 +298,7 @@ export function DungeonTemplate({
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="rooms">
+      <Tabs value={activeTab ?? "rooms"} onValueChange={onTabChange}>
         <TabsList variant="line" className="w-full">
           <TabsTrigger value="rooms">
             <MapPin className="size-4" />
@@ -275,7 +389,7 @@ export function DungeonTemplate({
               </div>
               {childPois.length > 0 ? (
                 <div className="space-y-1.5">
-                  {childPois.map((child) => {
+                  {childPois.map((child, idx) => {
                     const isSelected = selectedChildId === child.id;
                     const childNpcList = npcsByPoiId[child.id] ?? [];
                     const hasActiveTraps = child.traps?.some((t) => !t.disarmed);
@@ -296,6 +410,7 @@ export function DungeonTemplate({
                         >
                           {/* Title row */}
                           <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-mono text-muted-foreground w-5 text-right shrink-0">{idx + 1}.</span>
                             {/* Visited toggle */}
                             <button
                               className="shrink-0 p-0.5 rounded hover:bg-muted-foreground/20 transition-colors"
@@ -350,7 +465,6 @@ export function DungeonTemplate({
                               <Link
                                 to="/realms/pois/$poiId"
                                 params={{ poiId: child.id }}
-                                target="_blank"
                                 className="inline-flex items-center justify-center size-6 rounded-md hover:bg-muted-foreground/20 transition-colors"
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -449,25 +563,11 @@ export function DungeonTemplate({
 
                               {/* NPCs */}
                               {childNpcList.length > 0 && (
-                                <div className="space-y-1">
+                                <div className="space-y-1.5">
                                   <div className="text-xs font-semibold text-blue-400 uppercase tracking-wide">👤 NPCs</div>
-                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                  <div className="space-y-1">
                                     {childNpcList.map((n) => (
-                                      <span
-                                        key={n.id}
-                                        className="inline-flex items-center gap-1 text-sm text-amber-500"
-                                      >
-                                        {n.name}
-                                        <Link
-                                          to="/realms/npcs/$npcId"
-                                          params={{ npcId: n.id }}
-                                          target="_blank"
-                                          className="inline-flex items-center justify-center size-4 rounded hover:bg-muted-foreground/20 transition-colors"
-                                          onClick={(e) => e.stopPropagation()}
-                                        >
-                                          <ExternalLink className="size-3 text-muted-foreground" />
-                                        </Link>
-                                      </span>
+                                      <RoomNPCRow key={n.id} npc={n} onUpdateNPC={onUpdateNPC} />
                                     ))}
                                   </div>
                                 </div>

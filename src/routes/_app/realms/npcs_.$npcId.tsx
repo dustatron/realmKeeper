@@ -21,13 +21,15 @@ import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
-import { ArrowLeft, Heart, Shield, Skull, Swords, Package, Sparkles, Handshake, Pencil, MapPin, ChevronUp, ChevronDown, Trash2, Plus, ChevronsUpDown, Check, Star } from 'lucide-react'
+import { ArrowLeft, Heart, Shield, Skull, Swords, Package, Sparkles, Handshake, Pencil, MapPin, ChevronUp, ChevronDown, Trash2, Plus, ChevronsUpDown, Check, Star, Dices } from 'lucide-react'
 import { db } from '@infrastructure/dexie/db'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '~/components/ui/command'
 import { cn } from '~/lib/utils'
 import { CloudinaryImage } from '~/components/shared/CloudinaryImage'
-import { getAllRaces } from '@shared/constants'
+import { getAllRaces, NPC_DISPOSITIONS } from '@shared/constants'
+import { rollDisposition } from '@shared/dice'
+import { DispositionBadge } from '~/components/shared/DispositionBadge'
 import type { NPC } from '@domain/entities/NPC'
 import type { SystemBlock, Attack, InventoryItem } from '@domain/value-objects/SystemBlock'
 import type { Faction } from '@domain/entities/Faction'
@@ -337,7 +339,34 @@ function NPCDetailPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-5 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="disposition">Disposition</Label>
+              <div className="flex items-center gap-1">
+                <Select
+                  value={editingNPC.disposition ?? '__none__'}
+                  onValueChange={(v) => updateField('disposition', v === '__none__' ? undefined : v)}
+                >
+                  <SelectTrigger id="disposition">
+                    <SelectValue placeholder="Unknown" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Unknown</SelectItem>
+                    {NPC_DISPOSITIONS.map((d) => (
+                      <SelectItem key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <button
+                  type="button"
+                  onClick={() => updateField('disposition', rollDisposition())}
+                  className="size-8 shrink-0 rounded flex items-center justify-center hover:bg-muted-foreground/20 text-muted-foreground transition-colors border"
+                  title="Roll disposition (2d6)"
+                >
+                  <Dices className="size-4" />
+                </button>
+              </div>
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="region">Region</Label>
               <Select
@@ -794,6 +823,19 @@ function NPCDetailPage() {
                 <Badge variant="destructive">{npc.lifeStatus.charAt(0).toUpperCase() + npc.lifeStatus.slice(1)}</Badge>
               )}
               <Badge variant="outline">{npc.movementStatus.charAt(0).toUpperCase() + npc.movementStatus.slice(1)}</Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground w-24 shrink-0">Disposition</span>
+              <DispositionBadge
+                npc={npc}
+                size="sm"
+                onUpdateNPC={async (updated) => {
+                  await executeUpdateNPC(
+                    { ...updated, updatedAt: Date.now() },
+                    { npcRepo: container.npcRepo },
+                  )
+                }}
+              />
             </div>
 
             {/* Level & Class */}

@@ -4,7 +4,7 @@ import type { ITableRepository } from '@application/ports/ITableRepository'
 import { rollStats, rollHpForLevel, buildDefaultSystemBlock } from '@domain/services/SystemConfigService'
 import { rollOnTable } from '@domain/services/RandomTableEngine'
 import { runTableChain } from '@domain/services/TableChainRunner'
-import { rollDice } from '@shared/dice'
+import { rollDice, rollDisposition } from '@shared/dice'
 import { newId } from '@shared/ulid'
 import { NPC_RACES } from '@shared/constants'
 
@@ -160,6 +160,7 @@ export async function executeGenerateNPC(
     want,
     tags,
     imageUrl: null,
+    disposition: rollDisposition(),
     systemBlock: block,
     starred: false,
     createdAt: now,
