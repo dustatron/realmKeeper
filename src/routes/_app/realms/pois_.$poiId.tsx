@@ -515,6 +515,7 @@ function POIDetailPage() {
       onUpload={handleUploadMap}
       parentPoiId={poiId}
       highlightPoiId={selectedChildId}
+      onPoiSelect={setSelectedChildId}
     />
   ) : null
 

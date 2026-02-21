@@ -22,7 +22,9 @@ import {
   Columns2,
   Rows2,
   ChevronDown,
+  ChevronRight,
   Eye,
+  ShoppingBag,
 } from "lucide-react";
 import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
 import { RumorList } from "~/components/shared/RumorList";
@@ -45,6 +47,136 @@ import type { POIEvent } from "@domain/entities/POIEvent";
 import type { GameMap } from "@domain/entities/GameMap";
 import type { NoticeType } from "@shared/constants";
 import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
+
+function LocationDetailPanel({
+  location,
+  npcs,
+  onUpdateNPC,
+}: {
+  location: POI;
+  npcs: NPC[];
+  onUpdateNPC?: (npc: NPC) => void;
+}) {
+  const LocIcon = POI_TYPE_ICONS[location.type];
+  return (
+    <div className="rounded-md border bg-card p-3 space-y-3">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <LocIcon className="size-4 shrink-0 text-muted-foreground" />
+        <h4 className="text-sm font-semibold truncate">{location.name}</h4>
+        {location.subtypeLabel && (
+          <Badge variant="secondary" className="text-xs shrink-0">
+            {location.subtypeLabel}
+          </Badge>
+        )}
+        <Link
+          to="/realms/pois/$poiId"
+          params={{ poiId: location.id }}
+          className="ml-auto inline-flex items-center justify-center size-6 rounded-md hover:bg-muted-foreground/20 transition-colors shrink-0"
+        >
+          <ExternalLink className="size-3.5 text-muted-foreground" />
+        </Link>
+      </div>
+
+      {/* Read Aloud */}
+      {location.readAloud && (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5">
+          <div className="text-xs font-medium text-amber-500 mb-1">📖 Read Aloud</div>
+          <p className="text-sm italic text-foreground/80 leading-relaxed">{location.readAloud}</p>
+        </div>
+      )}
+
+      {/* Description */}
+      {location.description && (
+        <p className="text-sm text-muted-foreground leading-relaxed">{location.description}</p>
+      )}
+
+      {/* Sensory */}
+      {location.sensory && (
+        <p className="text-sm italic text-muted-foreground">
+          👃 {location.sensory}
+        </p>
+      )}
+
+      {/* Mood + Tags */}
+      {(location.tags.length > 0 || location.mood) && (
+        <div className="flex items-center gap-1 flex-wrap">
+          {location.mood && (
+            <Badge variant="secondary" className="text-xs">
+              🎭 {location.mood}
+            </Badge>
+          )}
+          {location.tags.map((tag) => (
+            <Badge key={tag} variant="outline" className="text-xs">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {/* NPCs */}
+      {npcs.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="text-xs font-semibold text-blue-400 uppercase tracking-wide">👤 NPCs</div>
+          <div className="space-y-1.5">
+            {npcs.map((n) => (
+              <NPCMiniCard key={n.id} npc={n} onUpdateNPC={onUpdateNPC} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Services */}
+      {location.services.length > 0 && (
+        <div className="space-y-1">
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">🏪 Services</div>
+          <ServicesList services={location.services} />
+        </div>
+      )}
+
+      {/* Traps */}
+      {location.traps?.length > 0 && (
+        <div className="space-y-1">
+          <div className="text-xs font-semibold text-amber-500 uppercase tracking-wide">⚠️ Traps</div>
+          {location.traps.map((trap) => (
+            <div key={trap.id} className="flex items-start gap-2 text-sm rounded border border-amber-500/20 bg-amber-500/5 px-2 py-1.5">
+              <span className={trap.disarmed ? "line-through text-muted-foreground" : "text-foreground"}>
+                {trap.name}
+              </span>
+              {trap.dc != null && (
+                <Badge variant="outline" className="text-xs shrink-0">DC {trap.dc}</Badge>
+              )}
+              <span className="ml-auto text-xs shrink-0">
+                {trap.disarmed ? "✅ disarmed" : "❌ armed"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Treasure */}
+      {location.treasure?.length > 0 && (
+        <div className="space-y-1">
+          <div className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">💎 Treasure</div>
+          {location.treasure.map((item) => (
+            <div key={item.id} className="flex items-center gap-2 text-sm rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5">
+              <span className={item.collected ? "line-through text-muted-foreground" : "text-foreground"}>
+                {item.name}
+                {item.quantity > 1 && ` (×${item.quantity})`}
+              </span>
+              {item.value && (
+                <span className="text-xs text-amber-400">{item.value}</span>
+              )}
+              <span className="ml-auto text-xs shrink-0">
+                {item.collected ? "✅ collected" : "💰 loot"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface SettlementTemplateProps {
   poi: POI;
@@ -161,6 +293,10 @@ export function SettlementTemplate({
     [npcs, childNPCs, childPoiNames],
   );
 
+  const selectedLocation = selectedChildId
+    ? childPois.find((c) => c.id === selectedChildId) ?? null
+    : null;
+
   const [overviewOpen, setOverviewOpen] = useState(true);
 
   const [layout, setLayout] = useState<"columns" | "stacked">(() => {
@@ -273,28 +409,41 @@ export function SettlementTemplate({
 
         {/* Locations & NPCs tab */}
         <TabsContent value="locations" className="space-y-6 pt-3">
-          {/* Layout toggle — hidden on mobile (always stacked) */}
-
           {/* Map + Key Locations */}
           <div
             className={`grid gap-4 ${layout === "columns" ? "md:grid-cols-2" : ""}`}
           >
-            {/* Map — taller in stacked mode on desktop */}
-            <div
-              className={
-                layout === "stacked"
-                  ? "md:h-[90vh] md:[&>*]:h-full md:[&>*]:!flex md:[&>*]:!flex-col md:[&>*>*+*]:!flex-1 md:[&>*>*+*]:!h-auto md:[&>*>*+*]:min-h-0"
-                  : ""
-              }
-            >
-              {mapSection}
+            {/* Map — sticky in columns mode */}
+            <div className={layout === "columns" ? "md:sticky md:top-0 md:self-start md:max-h-screen md:overflow-y-auto" : ""}>
+              <div
+                className={
+                  layout === "stacked"
+                    ? "md:h-[90vh] md:[&>*]:h-full md:[&>*]:!flex md:[&>*]:!flex-col md:[&>*>*+*]:!flex-1 md:[&>*>*+*]:!h-auto md:[&>*>*+*]:min-h-0"
+                    : ""
+                }
+              >
+                {mapSection}
+              </div>
             </div>
 
-            {/* Location cards */}
-            <div>
+            {/* Detail panel + Location list */}
+            <div className="space-y-3">
+              {/* Location detail panel */}
+              {selectedLocation ? (
+                <LocationDetailPanel
+                  location={selectedLocation}
+                  npcs={npcsByPoiId[selectedLocation.id] ?? []}
+                  onUpdateNPC={onUpdateNPC}
+                />
+              ) : childPois.length > 0 ? (
+                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  Select a location to see details
+                </div>
+              ) : null}
+
+              {/* Location list header */}
               <div className="flex justify-between">
                 <h4 className="text-sm font-semibold">Key Locations</h4>
-
                 <div className="flex justify-end space-x-2">
                   <div className="hidden md:flex justify-end">
                     <Button
@@ -320,17 +469,16 @@ export function SettlementTemplate({
                       )}
                     </Button>
                   </div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Button size="sm" variant="outline" onClick={onCreateChild}>
-                      <Plus className="mr-1.5 size-3.5" />
-                      Add Location
-                    </Button>
-                  </div>
+                  <Button size="sm" variant="outline" onClick={onCreateChild}>
+                    <Plus className="mr-1.5 size-3.5" />
+                    Add Location
+                  </Button>
                 </div>
               </div>
 
+              {/* Compact location cards */}
               {childPois.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {childPois.map((child) => {
                     const ChildIcon = POI_TYPE_ICONS[child.type];
                     const childNpcList = npcsByPoiId[child.id] ?? [];
@@ -338,7 +486,7 @@ export function SettlementTemplate({
                     return (
                       <div
                         key={child.id}
-                        className={`rounded-md border p-3 cursor-pointer transition-colors space-y-1.5 ${
+                        className={`rounded-md border p-2.5 cursor-pointer transition-colors ${
                           isSelected
                             ? "ring-2 ring-primary bg-accent"
                             : "hover:bg-accent"
@@ -349,29 +497,30 @@ export function SettlementTemplate({
                       >
                         <div className="flex items-center gap-2">
                           <ChildIcon className="size-4 shrink-0 text-muted-foreground" />
-                          <span className="text-sm font-medium">
+                          <ChevronRight className={`size-3.5 shrink-0 text-muted-foreground transition-transform ${isSelected ? "rotate-90" : ""}`} />
+                          <span className="text-sm font-medium truncate">
                             {child.name}
                           </span>
-                          {child.subtypeLabel && (
-                            <Badge
-                              variant="secondary"
-                              className="text-xs shrink-0"
-                            >
-                              {child.subtypeLabel}
-                            </Badge>
-                          )}
-                          <span className="ml-auto flex items-center gap-1.5">
-                            <Badge
-                              variant="outline"
-                              className="text-xs shrink-0"
-                            >
+                          {/* Compact indicators */}
+                          <span className="flex items-center gap-1 shrink-0">
+                            {childNpcList.length > 0 && (
+                              <span title={`${childNpcList.length} NPC${childNpcList.length > 1 ? "s" : ""}`}><Users className="size-3.5 text-blue-400" /></span>
+                            )}
+                            {child.services.length > 0 && (
+                              <span title={`${child.services.length} service${child.services.length > 1 ? "s" : ""}`}><ShoppingBag className="size-3.5 text-muted-foreground" /></span>
+                            )}
+                          </span>
+                          <span className="ml-auto flex items-center gap-1.5 shrink-0">
+                            {child.subtypeLabel && (
+                              <Badge variant="secondary" className="text-xs shrink-0">
+                                {child.subtypeLabel}
+                              </Badge>
+                            )}
+                            <Badge variant="outline" className="text-xs shrink-0">
                               {child.type}
                             </Badge>
                             {child.floor != null && (
-                              <Badge
-                                variant="secondary"
-                                className="text-xs shrink-0"
-                              >
+                              <Badge variant="secondary" className="text-xs shrink-0">
                                 F{child.floor}
                               </Badge>
                             )}
@@ -385,63 +534,6 @@ export function SettlementTemplate({
                             </Link>
                           </span>
                         </div>
-                        {childNpcList.length > 0 && (
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                            {childNpcList.map((n) => (
-                              <span
-                                key={n.id}
-                                className="inline-flex items-center gap-1 text-xs text-amber-500"
-                              >
-                                {n.name}
-                                <Link
-                                  to="/realms/npcs/$npcId"
-                                  params={{ npcId: n.id }}
-                                  className="inline-flex items-center justify-center size-4 rounded hover:bg-muted-foreground/20 transition-colors"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <ExternalLink className="size-3 text-muted-foreground" />
-                                </Link>
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {child.description && (
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {child.description}
-                          </p>
-                        )}
-                        {(child.tags.length > 0 || child.mood) && (
-                          <div className="flex items-center gap-1 flex-wrap">
-                            {child.mood && (
-                              <Badge variant="secondary" className="text-xs">
-                                {child.mood}
-                              </Badge>
-                            )}
-                            {child.tags.map((tag) => (
-                              <Badge
-                                key={tag}
-                                variant="outline"
-                                className="text-xs"
-                              >
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                        {child.services.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {child.services.map((s, i) => (
-                              <Badge
-                                key={i}
-                                variant="outline"
-                                className="text-xs font-normal"
-                              >
-                                {s.name}
-                                {s.cost ? ` (${s.cost})` : ""}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     );
                   })}

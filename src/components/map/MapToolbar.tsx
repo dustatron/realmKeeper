@@ -8,6 +8,7 @@ import {
   Tag,
   Hexagon,
   Layers,
+  MousePointerClick,
 } from 'lucide-react'
 import type { MapMode } from './MapViewer'
 
@@ -21,6 +22,9 @@ interface MapToolbarProps {
   onToggleRegions: () => void
   onUpload: () => void
   onZoomToFit: () => void
+  /** When true, clicking markers selects rooms instead of opening popup */
+  poiSelectMode?: boolean
+  onTogglePoiSelectMode?: () => void
 }
 
 export function MapToolbar({
@@ -33,6 +37,8 @@ export function MapToolbar({
   onToggleRegions,
   onUpload,
   onZoomToFit,
+  poiSelectMode,
+  onTogglePoiSelectMode,
 }: MapToolbarProps) {
   return (
     <div className="flex items-center gap-2 p-2 bg-background/95 backdrop-blur border-b">
@@ -96,6 +102,17 @@ export function MapToolbar({
           title={showRegions ? 'Hide regions' : 'Show regions'}
         >
           <Layers className="size-4" />
+        </Button>
+      )}
+
+      {onTogglePoiSelectMode != null && (
+        <Button
+          variant={poiSelectMode ? 'secondary' : 'outline'}
+          size="sm"
+          onClick={onTogglePoiSelectMode}
+          title={poiSelectMode ? 'Click markers to select rooms' : 'Click markers to inspect/edit'}
+        >
+          <MousePointerClick className="size-4" />
         </Button>
       )}
 
