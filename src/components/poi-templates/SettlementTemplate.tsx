@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import {
@@ -297,6 +297,14 @@ export function SettlementTemplate({
     ? childPois.find((c) => c.id === selectedChildId) ?? null
     : null;
 
+  const detailPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (selectedChildId && detailPanelRef.current) {
+      detailPanelRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [selectedChildId]);
+
   const [overviewOpen, setOverviewOpen] = useState(true);
 
   const [layout, setLayout] = useState<"columns" | "stacked">(() => {
@@ -429,6 +437,7 @@ export function SettlementTemplate({
             {/* Detail panel + Location list */}
             <div className="space-y-3">
               {/* Location detail panel */}
+              <div ref={detailPanelRef} />
               {selectedLocation ? (
                 <LocationDetailPanel
                   location={selectedLocation}

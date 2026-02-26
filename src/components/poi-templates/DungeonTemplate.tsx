@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import { markdownOptions } from "~/shared/markdown";
@@ -374,6 +374,15 @@ export function DungeonTemplate({
     : null;
   const selectedRoomIndex = selectedRoom ? childPois.indexOf(selectedRoom) : -1;
 
+  const detailPanelRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to detail panel when a room is selected
+  useEffect(() => {
+    if (selectedChildId && detailPanelRef.current) {
+      detailPanelRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [selectedChildId]);
+
   const [layout, setLayout] = useState<"columns" | "stacked">(() => {
     try {
       const saved = localStorage.getItem("dungeon-layout");
@@ -486,7 +495,7 @@ export function DungeonTemplate({
             className={`grid gap-4 ${layout === "columns" ? "md:grid-cols-2" : ""}`}
           >
             {/* Map + Wandering Monsters — sticky in columns mode */}
-            <div className={layout === "columns" ? "md:sticky md:top-0 md:self-start md:max-h-screen md:overflow-y-auto" : ""}>
+            <div className={layout === "columns" ? "md:sticky md:top-0 md:self-start" : ""}>
               <div
                 className={layout === "stacked"
                   ? "md:h-[90vh] md:[&>*]:h-full md:[&>*]:!flex md:[&>*]:!flex-col md:[&>*>*+*]:!flex-1 md:[&>*>*+*]:!h-auto md:[&>*>*+*]:min-h-0"
@@ -511,6 +520,7 @@ export function DungeonTemplate({
             {/* Detail panel + Room list */}
             <div className="space-y-3">
               {/* Room detail panel */}
+              <div ref={detailPanelRef} />
               {selectedRoom ? (
                 <RoomDetailPanel
                   room={selectedRoom}
@@ -651,7 +661,7 @@ export function DungeonTemplate({
             </Button>
           </div>
           {allNPCs.length > 0 ? (
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {allNPCs.map((npc) => (
                 <NPCMiniCard key={npc.id} npc={npc} poiName={npc.poiId ? poiNameMap.get(npc.poiId) : undefined} onUpdateNPC={onUpdateNPC} />
               ))}

@@ -79,18 +79,23 @@ export function NPCMiniCard({ npc, poiName, onUpdateNPC }: NPCMiniCardProps) {
       style={raceColor ? { borderLeftColor: raceColor, borderLeftWidth: '3px' } : undefined}
     >
       {npc.imageUrl && (
-        <CloudinaryImage
-          src={npc.imageUrl}
-          alt={npc.name}
-          width={150}
-          className="w-30 h-auto object-cover shrink-0"
-        />
+        <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="shrink-0">
+          <CloudinaryImage
+            src={npc.imageUrl}
+            alt={npc.name}
+            width={150}
+            className="w-30 h-auto object-cover"
+          />
+        </Link>
       )}
       <div className="p-3 space-y-1.5 min-w-0 flex-1">
-        {/* Name row + life status + view */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold truncate">{npc.name}</span>
+        {/* Name */}
+        <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="text-sm font-semibold hover:underline block truncate">
+          {npc.name}
+        </Link>
 
+        {/* Status badges */}
+        <div className="flex items-center gap-2 flex-wrap">
           {npc.race && (
             <Badge
               variant="outline"
@@ -127,17 +132,6 @@ export function NPCMiniCard({ npc, poiName, onUpdateNPC }: NPCMiniCardProps) {
               {npc.movementStatus}
             </Badge>
           )}
-
-          <Link
-            to="/realms/npcs/$npcId"
-            params={{ npcId: npc.id }}
-            className="ml-auto shrink-0"
-          >
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1">
-              <Eye className="size-3" />
-              View
-            </Button>
-          </Link>
         </div>
 
         {/* Faction badges */}
