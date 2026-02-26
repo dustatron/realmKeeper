@@ -193,7 +193,7 @@ function POIDetailPage() {
   const { room: selectedChildId, tab: activeTab } = Route.useSearch()
 
   const setSelectedChildId = (id: string | null) => {
-    navigate({ search: (prev) => ({ ...prev, room: id ?? undefined }), replace: true })
+    navigate({ search: (prev) => ({ ...prev, room: id ?? undefined }), replace: true, resetScroll: false })
   }
 
   const setActiveTab = (tab: string) => {
