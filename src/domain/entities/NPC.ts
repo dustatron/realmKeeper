@@ -1,5 +1,5 @@
 import type { SystemBlock } from '@domain/value-objects/SystemBlock'
-import type { LifeStatus, MovementStatus } from '@shared/constants'
+import type { Disposition, LifeStatus, MovementStatus } from '@shared/constants'
 
 export interface NPC {
   id: string
@@ -20,6 +20,7 @@ export interface NPC {
   tags: string[]
   imageUrl: string | null
   systemBlock: SystemBlock
+  disposition?: Disposition
   starred: boolean
   createdAt: number
   updatedAt: number

@@ -97,9 +97,11 @@ interface InteractiveMapProps {
   parentPoiId?: string | null
   /** External highlight (e.g. from a sidebar card selection) */
   highlightPoiId?: string | null
+  /** Called when a POI marker is clicked in view mode (for room selection) */
+  onPoiSelect?: (poiId: string) => void
 }
 
-export function InteractiveMap({ gameMap, className, style, parentPoiId, highlightPoiId }: InteractiveMapProps) {
+export function InteractiveMap({ gameMap, className, style, parentPoiId, highlightPoiId, onPoiSelect }: InteractiveMapProps) {
   const navigate = useNavigate()
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const container = useContainer()
@@ -119,6 +121,7 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
   const [mode, setMode] = useState<MapMode>('view')
   const [selectedPoiForPlacement, setSelectedPoiForPlacement] = useState<POI | null>(null)
   const [poiPopup, setPoiPopup] = useState<POI | null>(null)
+  const [poiSelectMode, setPoiSelectMode] = useState(!!onPoiSelect)
   const [regionPopup, setRegionPopup] = useState<Region | null>(null)
 
   // Create POI state
@@ -172,9 +175,13 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
         }
         return
       }
-      setPoiPopup(poi)
+      if (onPoiSelect && poiSelectMode) {
+        onPoiSelect(poi.id)
+      } else {
+        setPoiPopup(poi)
+      }
     },
-    [mode, drawPathFrom],
+    [mode, drawPathFrom, onPoiSelect, poiSelectMode],
   )
 
   const handleMapClick = useCallback(
@@ -328,6 +335,8 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
         onToggleRegions={() => setShowRegions(!showRegions)}
         onUpload={() => {}}
         onZoomToFit={() => mapHandleRef.current?.zoomToFit()}
+        poiSelectMode={onPoiSelect ? poiSelectMode : undefined}
+        onTogglePoiSelectMode={onPoiSelect ? () => setPoiSelectMode((v) => !v) : undefined}
       />
 
       <div className="flex-1 relative">

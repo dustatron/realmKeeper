@@ -1,3 +1,5 @@
+import type { Disposition } from '@shared/constants'
+
 export interface DiceResult {
   total: number
   rolls: number[]
@@ -43,4 +45,14 @@ export function rollDice(notation: string): DiceResult {
     kept,
     notation,
   }
+}
+
+/** Roll 2d6 on the NPC reaction table and return a Disposition. */
+export function rollDisposition(): Disposition {
+  const total = rollDice('2d6').total
+  if (total <= 2) return 'hostile'
+  if (total <= 5) return 'wary'
+  if (total <= 8) return 'curious'
+  if (total <= 11) return 'kind'
+  return 'helpful'
 }

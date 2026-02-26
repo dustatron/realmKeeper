@@ -59,6 +59,9 @@ export function getAllRaces(customRaces: string[]): string[] {
   return sorted
 }
 
+export const NPC_DISPOSITIONS = ['hostile', 'wary', 'curious', 'kind', 'helpful'] as const
+export type Disposition = (typeof NPC_DISPOSITIONS)[number]
+
 export const NPC_LIFE_STATUSES = ['alive', 'dead', 'undead', 'ghost'] as const
 export type LifeStatus = (typeof NPC_LIFE_STATUSES)[number]
 

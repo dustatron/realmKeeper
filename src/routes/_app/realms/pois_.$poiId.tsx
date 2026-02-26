@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect, useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
@@ -119,6 +119,10 @@ import { newId } from '@shared/ulid'
 
 export const Route = createFileRoute('/_app/realms/pois_/$poiId')({
   component: POIDetailPage,
+  validateSearch: (search: Record<string, unknown>): { room?: string; tab?: string } => ({
+    room: typeof search.room === 'string' ? search.room : undefined,
+    tab: typeof search.tab === 'string' ? search.tab : undefined,
+  }),
 })
 
 function POIDetailPage() {
@@ -185,8 +189,18 @@ function POIDetailPage() {
     return () => setHeaderTitle(null)
   }, [poi, region, breadcrumb, setHeaderTitle])
 
+  const navigate = useNavigate({ from: Route.fullPath })
+  const { room: selectedChildId, tab: activeTab } = Route.useSearch()
+
+  const setSelectedChildId = (id: string | null) => {
+    navigate({ search: (prev) => ({ ...prev, room: id ?? undefined }), replace: true })
+  }
+
+  const setActiveTab = (tab: string) => {
+    navigate({ search: (prev) => ({ ...prev, tab }), replace: true })
+  }
+
   const [runMode, setRunMode] = useState(false)
-  const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
   const [mapUploadDialogOpen, setMapUploadDialogOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [createChildDialogOpen, setCreateChildDialogOpen] = useState(false)
@@ -501,6 +515,7 @@ function POIDetailPage() {
       onUpload={handleUploadMap}
       parentPoiId={poiId}
       highlightPoiId={selectedChildId}
+      onPoiSelect={setSelectedChildId}
     />
   ) : null
 
@@ -571,7 +586,7 @@ function POIDetailPage() {
             children={children}
             npcs={npcs}
             childNPCs={childNPCs}
-            selectedChildId={selectedChildId}
+            selectedChildId={selectedChildId ?? null}
             onSelectChild={setSelectedChildId}
             factionPresences={factionPresences}
             paths={paths}
@@ -617,8 +632,10 @@ function POIDetailPage() {
             onDeleteEvent={(id) => setDeletingEventId(id)}
             onToggleTrapDisarmed={handleToggleTrapDisarmed}
             onUpdateNPC={handleUpdateNPC}
-            selectedChildId={selectedChildId}
+            selectedChildId={selectedChildId ?? null}
             onSelectChild={setSelectedChildId}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
             mapSection={mapSection}
             notesSection={notesSection}
             systemId={realm?.systemId ?? null}

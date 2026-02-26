@@ -3,12 +3,9 @@ import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import { markdownOptions } from "~/shared/markdown";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
-import {
-  Collapsible,
-  CollapsibleContent,
-} from "~/components/ui/collapsible";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import {
   MapPin,
   Users,
@@ -21,11 +18,18 @@ import {
   Rows2,
   ExternalLink,
   ChevronDown,
+  ChevronRight,
+  ChevronUp,
   AlertTriangle,
   Gem,
   CheckCircle2,
   Circle,
+  Heart,
+  Skull,
+  Shield,
+  Swords,
 } from "lucide-react";
+import { DispositionBadge } from "~/components/shared/DispositionBadge";
 import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
 import { FactionChip } from "~/components/shared/FactionChip";
 import { EncounterTableUI } from "~/components/shared/EncounterTableUI";
@@ -42,6 +46,244 @@ import type { FactionPresence } from "@domain/entities/FactionPresence";
 import type { ResolvedPath } from "~/ui/hooks/useResolvedPaths";
 import type { POIEvent } from "@domain/entities/POIEvent";
 import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
+
+function RoomNPCRow({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) => void }) {
+  const sb = npc.systemBlock;
+  const isDead = npc.lifeStatus !== "alive";
+  const [editingHp, setEditingHp] = useState(false);
+  const [hpInput, setHpInput] = useState("");
+
+  const updateHp = (newHp: number) => {
+    if (!onUpdateNPC || !sb) return;
+    const clamped = Math.max(0, Math.min(newHp, sb.maxHp));
+    onUpdateNPC({ ...npc, systemBlock: { ...sb, hp: clamped } });
+  };
+
+  const commitHpEdit = () => {
+    if (!sb) return;
+    const val = parseInt(hpInput);
+    if (!isNaN(val)) updateHp(val);
+    setEditingHp(false);
+  };
+
+  return (
+    <div className={`flex items-center gap-2 text-sm rounded border px-2 py-1.5 ${isDead ? "opacity-50" : ""}`}>
+      {isDead ? (
+        <span title={npc.lifeStatus}><Skull className="size-3.5 text-muted-foreground shrink-0" /></span>
+      ) : (
+        <Heart className="size-3.5 text-green-500 fill-green-500 shrink-0" />
+      )}
+      <Link
+        to="/realms/npcs/$npcId"
+        params={{ npcId: npc.id }}
+        className="font-medium text-amber-500 hover:underline truncate"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {npc.name}
+      </Link>
+      <DispositionBadge npc={npc} onUpdateNPC={onUpdateNPC} />
+      {sb && (
+        <span className="ml-auto flex items-center gap-1.5 shrink-0">
+          {sb.maxHp > 0 && (
+            <span className="inline-flex items-center gap-0.5">
+              {onUpdateNPC && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); updateHp(sb.hp - 1); }}
+                  className="size-7 rounded flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <ChevronDown className="size-4" />
+                </button>
+              )}
+              {editingHp ? (
+                <Input
+                  type="number"
+                  value={hpInput}
+                  onChange={(e) => setHpInput(e.target.value)}
+                  onBlur={commitHpEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitHpEdit();
+                    if (e.key === "Escape") setEditingHp(false);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-10 h-5 text-[10px] font-mono text-center px-0.5"
+                  autoFocus
+                />
+              ) : (
+                <Badge
+                  variant={sb.hp <= sb.maxHp * 0.25 ? "destructive" : sb.hp <= sb.maxHp * 0.5 ? "secondary" : "outline"}
+                  className={`text-[10px] font-mono px-1.5 py-0 gap-0.5 ${onUpdateNPC ? "cursor-pointer" : ""}`}
+                  onClick={onUpdateNPC ? (e) => {
+                    e.stopPropagation();
+                    setHpInput(String(sb.hp));
+                    setEditingHp(true);
+                  } : undefined}
+                >
+                  <Heart className="size-2.5" />
+                  {sb.hp}/{sb.maxHp}
+                </Badge>
+              )}
+              {onUpdateNPC && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); updateHp(sb.hp + 1); }}
+                  className="size-7 rounded flex items-center justify-center hover:bg-green-500/20 text-muted-foreground hover:text-green-600 transition-colors"
+                >
+                  <ChevronUp className="size-4" />
+                </button>
+              )}
+            </span>
+          )}
+          {sb.armor > 0 && (
+            <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0 gap-0.5">
+              <Shield className="size-2.5" />
+              {sb.armor}
+            </Badge>
+          )}
+          {sb.attacks.length > 0 && (
+            <span className="text-[10px] font-mono text-muted-foreground flex items-center gap-0.5">
+              <Swords className="size-2.5" />
+              {sb.attacks[0].name} ({sb.attacks[0].damage})
+            </span>
+          )}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function RoomDetailPanel({
+  room,
+  index,
+  npcs,
+  onUpdateNPC,
+}: {
+  room: POI;
+  index: number;
+  npcs: NPC[];
+  onUpdateNPC?: (npc: NPC) => void;
+}) {
+  const unmappedTags = getUnmappedTags(room.tags);
+  return (
+    <div className="rounded-md border bg-card p-3 space-y-3">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-mono text-muted-foreground">{index + 1}.</span>
+        <h4 className="text-sm font-semibold truncate">{room.name}</h4>
+        <Link
+          to="/realms/pois/$poiId"
+          params={{ poiId: room.id }}
+          className="ml-auto inline-flex items-center justify-center size-6 rounded-md hover:bg-muted-foreground/20 transition-colors shrink-0"
+        >
+          <ExternalLink className="size-3.5 text-muted-foreground" />
+        </Link>
+      </div>
+
+      {/* Read Aloud */}
+      {room.readAloud && (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5">
+          <div className="text-xs font-medium text-amber-500 mb-1">📖 Read Aloud</div>
+          <p className="text-sm italic text-foreground/80 leading-relaxed">{room.readAloud}</p>
+        </div>
+      )}
+
+      {/* Description */}
+      {room.description && (
+        <p className="text-sm text-muted-foreground leading-relaxed">{room.description}</p>
+      )}
+
+      {/* Sensory */}
+      {room.sensory && (
+        <p className="text-sm italic text-muted-foreground">
+          👃 {room.sensory}
+        </p>
+      )}
+
+      {/* Mood + Dimensions row */}
+      {(room.mood || room.roomWidth || room.roomLength) && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {room.mood && (
+            <Badge variant="secondary" className="text-xs">
+              🎭 {room.mood}
+            </Badge>
+          )}
+          {(room.roomWidth || room.roomLength) && (
+            <Badge variant="outline" className="text-xs">
+              📐 {room.roomWidth && room.roomLength
+                ? `${room.roomWidth} × ${room.roomLength} ft`
+                : `${room.roomWidth ?? room.roomLength} ft`}
+            </Badge>
+          )}
+        </div>
+      )}
+
+      {/* Traps */}
+      {room.traps?.length > 0 && (
+        <div className="space-y-1">
+          <div className="text-xs font-semibold text-amber-500 uppercase tracking-wide">⚠️ Traps</div>
+          {room.traps.map((trap) => (
+            <div key={trap.id} className="flex items-start gap-2 text-sm rounded border border-amber-500/20 bg-amber-500/5 px-2 py-1.5">
+              <span className={trap.disarmed ? "line-through text-muted-foreground" : "text-foreground"}>
+                {trap.name}
+              </span>
+              {trap.dc != null && (
+                <Badge variant="outline" className="text-xs shrink-0">DC {trap.dc}</Badge>
+              )}
+              {trap.damage && (
+                <span className="text-xs text-red-400 shrink-0">{trap.damage}</span>
+              )}
+              <span className="ml-auto text-xs shrink-0">
+                {trap.disarmed ? "✅ disarmed" : "❌ armed"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Treasure */}
+      {room.treasure?.length > 0 && (
+        <div className="space-y-1">
+          <div className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">💎 Treasure</div>
+          {room.treasure.map((item) => (
+            <div key={item.id} className="flex items-center gap-2 text-sm rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5">
+              <span className={item.collected ? "line-through text-muted-foreground" : "text-foreground"}>
+                {item.name}
+                {item.quantity > 1 && ` (×${item.quantity})`}
+              </span>
+              {item.value && (
+                <span className="text-xs text-amber-400">{item.value}</span>
+              )}
+              <span className="ml-auto text-xs shrink-0">
+                {item.collected ? "✅ collected" : "💰 loot"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* NPCs */}
+      {npcs.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="text-xs font-semibold text-blue-400 uppercase tracking-wide">👤 NPCs</div>
+          <div className="space-y-1">
+            {npcs.map((n) => (
+              <RoomNPCRow key={n.id} npc={n} onUpdateNPC={onUpdateNPC} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Remaining tags */}
+      {unmappedTags.length > 0 && (
+        <div className="flex items-center gap-1 flex-wrap">
+          {unmappedTags.map((tag) => (
+            <Badge key={tag} variant="outline" className="text-xs">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface DungeonTemplateProps {
   poi: POI;
@@ -68,6 +310,8 @@ interface DungeonTemplateProps {
   onUpdateNPC?: (npc: NPC) => void;
   selectedChildId: string | null;
   onSelectChild: (id: string | null) => void;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
   mapSection: React.ReactNode;
   notesSection?: React.ReactNode;
   compendiumSection?: React.ReactNode;
@@ -97,6 +341,8 @@ export function DungeonTemplate({
   onUpdateNPC,
   selectedChildId,
   onSelectChild,
+  activeTab,
+  onTabChange,
   mapSection,
   notesSection,
   compendiumSection,
@@ -122,6 +368,11 @@ export function DungeonTemplate({
   const totalRoomTreasure = childPois.flatMap((c) => c.treasure ?? []);
   const activeRoomTraps = totalRoomTraps.filter((t) => !t.disarmed).length;
   const uncollectedRoomTreasure = totalRoomTreasure.filter((t) => !t.collected).length;
+
+  const selectedRoom = selectedChildId
+    ? childPois.find((c) => c.id === selectedChildId) ?? null
+    : null;
+  const selectedRoomIndex = selectedRoom ? childPois.indexOf(selectedRoom) : -1;
 
   const [layout, setLayout] = useState<"columns" | "stacked">(() => {
     try {
@@ -184,7 +435,7 @@ export function DungeonTemplate({
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="rooms">
+      <Tabs value={activeTab ?? "rooms"} onValueChange={onTabChange}>
         <TabsList variant="line" className="w-full">
           <TabsTrigger value="rooms">
             <MapPin className="size-4" />
@@ -234,8 +485,8 @@ export function DungeonTemplate({
           <div
             className={`grid gap-4 ${layout === "columns" ? "md:grid-cols-2" : ""}`}
           >
-            {/* Map — taller in stacked mode on desktop */}
-            <div>
+            {/* Map + Wandering Monsters — sticky in columns mode */}
+            <div className={layout === "columns" ? "md:sticky md:top-0 md:self-start md:max-h-screen md:overflow-y-auto" : ""}>
               <div
                 className={layout === "stacked"
                   ? "md:h-[90vh] md:[&>*]:h-full md:[&>*]:!flex md:[&>*]:!flex-col md:[&>*>*+*]:!flex-1 md:[&>*>*+*]:!h-auto md:[&>*>*+*]:min-h-0"
@@ -257,9 +508,24 @@ export function DungeonTemplate({
               </div>
             </div>
 
-            {/* Room cards */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
+            {/* Detail panel + Room list */}
+            <div className="space-y-3">
+              {/* Room detail panel */}
+              {selectedRoom ? (
+                <RoomDetailPanel
+                  room={selectedRoom}
+                  index={selectedRoomIndex}
+                  npcs={npcsByPoiId[selectedRoom.id] ?? []}
+                  onUpdateNPC={onUpdateNPC}
+                />
+              ) : childPois.length > 0 ? (
+                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  Select a room to see details
+                </div>
+              ) : null}
+
+              {/* Room list header */}
+              <div className="flex items-center justify-between">
                 <h4 className="text-sm font-semibold flex items-center gap-2">
                   Rooms & Areas
                   {childPois.length > 0 && (
@@ -273,220 +539,93 @@ export function DungeonTemplate({
                   Add Room
                 </Button>
               </div>
+
+              {/* Compact room cards */}
               {childPois.length > 0 ? (
                 <div className="space-y-1.5">
-                  {childPois.map((child) => {
+                  {childPois.map((child, idx) => {
                     const isSelected = selectedChildId === child.id;
                     const childNpcList = npcsByPoiId[child.id] ?? [];
                     const hasActiveTraps = child.traps?.some((t) => !t.disarmed);
                     const hasUncollectedTreasure = child.treasure?.some((t) => !t.collected);
                     const tagEmojis = getTagEmojis(child.tags);
-                    const unmappedTags = getUnmappedTags(child.tags);
                     return (
-                      <Collapsible key={child.id} open={isSelected} onOpenChange={(open) => onSelectChild(open ? child.id : null)}>
-                        <div
-                          className={`rounded-md border p-2.5 cursor-pointer transition-colors ${
-                            isSelected
-                              ? "ring-2 ring-primary bg-accent"
-                              : "hover:bg-accent"
-                          } ${child.visited ? "border-l-2 border-l-green-500" : ""}`}
-                          onClick={() =>
-                            onSelectChild(isSelected ? null : child.id)
-                          }
-                        >
-                          {/* Title row */}
-                          <div className="flex items-center gap-1.5">
-                            {/* Visited toggle */}
-                            <button
-                              className="shrink-0 p-0.5 rounded hover:bg-muted-foreground/20 transition-colors"
-                              title={child.visited ? "Mark unvisited" : "Mark visited"}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                db.pois.update(child.id, { visited: !child.visited, updatedAt: Date.now() });
-                              }}
-                            >
-                              {child.visited ? (
-                                <CheckCircle2 className="size-4 text-green-500" />
-                              ) : (
-                                <Circle className="size-4 text-muted-foreground/40" />
-                              )}
-                            </button>
-                            {/* Chevron */}
-                            <ChevronDown className={`size-3.5 shrink-0 text-muted-foreground transition-transform ${isSelected ? "rotate-180" : ""}`} />
-                            {/* Room name */}
-                            <span className="text-sm font-medium truncate">
-                              {child.name}
-                            </span>
-                            {/* Feature indicators */}
-                            <span className="flex items-center gap-1 shrink-0">
-                              {hasActiveTraps && (
-                                <span title="Active traps"><AlertTriangle className="size-3.5 text-amber-500" /></span>
-                              )}
-                              {hasUncollectedTreasure && (
-                                <span title="Uncollected treasure"><Gem className="size-3.5 text-emerald-500" /></span>
-                              )}
-                              {childNpcList.length > 0 && (
-                                <span title={`${childNpcList.length} NPC${childNpcList.length > 1 ? "s" : ""}`}><Users className="size-3.5 text-blue-400" /></span>
-                              )}
-                              {tagEmojis.map((emoji, i) => (
-                                <span key={i} className="text-sm" title={child.tags[i]}>{emoji}</span>
-                              ))}
-                              {child.lightLevel && (
-                                <span className="text-sm" title={child.lightLevel}>
-                                  {child.lightLevel === "bright" ? "☀️" : child.lightLevel === "dim" ? "🌓" : "🌑"}
-                                </span>
-                              )}
-                            </span>
-                            {/* Right side: type + external link */}
-                            <span className="ml-auto flex items-center gap-1.5 shrink-0">
-                              {child.floor != null && (
-                                <Badge variant="secondary" className="text-xs">
-                                  F{child.floor}
-                                </Badge>
-                              )}
-                              <Badge variant="outline" className="text-xs">
-                                {child.type}
+                      <div
+                        key={child.id}
+                        className={`rounded-md border p-2.5 cursor-pointer transition-colors ${
+                          isSelected
+                            ? "ring-2 ring-primary bg-accent"
+                            : "hover:bg-accent"
+                        } ${child.visited ? "border-l-2 border-l-green-500" : ""}`}
+                        onClick={() =>
+                          onSelectChild(isSelected ? null : child.id)
+                        }
+                      >
+                        {/* Title row */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-mono text-muted-foreground w-5 text-right shrink-0">{idx + 1}.</span>
+                          {/* Visited toggle */}
+                          <button
+                            className="shrink-0 p-0.5 rounded hover:bg-muted-foreground/20 transition-colors"
+                            title={child.visited ? "Mark unvisited" : "Mark visited"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              db.pois.update(child.id, { visited: !child.visited, updatedAt: Date.now() });
+                            }}
+                          >
+                            {child.visited ? (
+                              <CheckCircle2 className="size-4 text-green-500" />
+                            ) : (
+                              <Circle className="size-4 text-muted-foreground/40" />
+                            )}
+                          </button>
+                          {/* Chevron */}
+                          <ChevronRight className={`size-3.5 shrink-0 text-muted-foreground transition-transform ${isSelected ? "rotate-90" : ""}`} />
+                          {/* Room name */}
+                          <span className="text-sm font-medium truncate">
+                            {child.name}
+                          </span>
+                          {/* Feature indicators */}
+                          <span className="flex items-center gap-1 shrink-0">
+                            {hasActiveTraps && (
+                              <span title="Active traps"><AlertTriangle className="size-3.5 text-amber-500" /></span>
+                            )}
+                            {hasUncollectedTreasure && (
+                              <span title="Uncollected treasure"><Gem className="size-3.5 text-emerald-500" /></span>
+                            )}
+                            {childNpcList.length > 0 && (
+                              <span title={`${childNpcList.length} NPC${childNpcList.length > 1 ? "s" : ""}`}><Users className="size-3.5 text-blue-400" /></span>
+                            )}
+                            {tagEmojis.map((emoji, i) => (
+                              <span key={i} className="text-sm" title={child.tags[i]}>{emoji}</span>
+                            ))}
+                            {child.lightLevel && (
+                              <span className="text-sm" title={child.lightLevel}>
+                                {child.lightLevel === "bright" ? "☀️" : child.lightLevel === "dim" ? "🌓" : "🌑"}
+                              </span>
+                            )}
+                          </span>
+                          {/* Right side: type + external link */}
+                          <span className="ml-auto flex items-center gap-1.5 shrink-0">
+                            {child.floor != null && (
+                              <Badge variant="secondary" className="text-xs">
+                                F{child.floor}
                               </Badge>
-                              <Link
-                                to="/realms/pois/$poiId"
-                                params={{ poiId: child.id }}
-                                target="_blank"
-                                className="inline-flex items-center justify-center size-6 rounded-md hover:bg-muted-foreground/20 transition-colors"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <ExternalLink className="size-3.5 text-muted-foreground" />
-                              </Link>
-                            </span>
-                          </div>
-
-                          {/* Expanded content */}
-                          <CollapsibleContent>
-                            <div
-                              className="mt-2.5 space-y-3 border-t pt-2.5"
+                            )}
+                            <Badge variant="outline" className="text-xs">
+                              {child.type}
+                            </Badge>
+                            <Link
+                              to="/realms/pois/$poiId"
+                              params={{ poiId: child.id }}
+                              className="inline-flex items-center justify-center size-6 rounded-md hover:bg-muted-foreground/20 transition-colors"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              {/* Read Aloud */}
-                              {child.readAloud && (
-                                <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5">
-                                  <div className="text-xs font-medium text-amber-500 mb-1">📖 Read Aloud</div>
-                                  <p className="text-sm italic text-foreground/80 leading-relaxed">{child.readAloud}</p>
-                                </div>
-                              )}
-
-                              {/* Description */}
-                              {child.description && (
-                                <p className="text-sm text-muted-foreground leading-relaxed">{child.description}</p>
-                              )}
-
-                              {/* Sensory */}
-                              {child.sensory && (
-                                <p className="text-sm italic text-muted-foreground">
-                                  👃 {child.sensory}
-                                </p>
-                              )}
-
-                              {/* Mood + Dimensions row */}
-                              {(child.mood || child.roomWidth || child.roomLength) && (
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  {child.mood && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      🎭 {child.mood}
-                                    </Badge>
-                                  )}
-                                  {(child.roomWidth || child.roomLength) && (
-                                    <Badge variant="outline" className="text-xs">
-                                      📐 {child.roomWidth && child.roomLength
-                                        ? `${child.roomWidth} × ${child.roomLength} ft`
-                                        : `${child.roomWidth ?? child.roomLength} ft`}
-                                    </Badge>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Traps */}
-                              {child.traps?.length > 0 && (
-                                <div className="space-y-1">
-                                  <div className="text-xs font-semibold text-amber-500 uppercase tracking-wide">⚠️ Traps</div>
-                                  {child.traps.map((trap) => (
-                                    <div key={trap.id} className="flex items-start gap-2 text-sm rounded border border-amber-500/20 bg-amber-500/5 px-2 py-1.5">
-                                      <span className={trap.disarmed ? "line-through text-muted-foreground" : "text-foreground"}>
-                                        {trap.name}
-                                      </span>
-                                      {trap.dc != null && (
-                                        <Badge variant="outline" className="text-xs shrink-0">DC {trap.dc}</Badge>
-                                      )}
-                                      {trap.damage && (
-                                        <span className="text-xs text-red-400 shrink-0">{trap.damage}</span>
-                                      )}
-                                      <span className="ml-auto text-xs shrink-0">
-                                        {trap.disarmed ? "✅ disarmed" : "❌ armed"}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* Treasure */}
-                              {child.treasure?.length > 0 && (
-                                <div className="space-y-1">
-                                  <div className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">💎 Treasure</div>
-                                  {child.treasure.map((item) => (
-                                    <div key={item.id} className="flex items-center gap-2 text-sm rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5">
-                                      <span className={item.collected ? "line-through text-muted-foreground" : "text-foreground"}>
-                                        {item.name}
-                                        {item.quantity > 1 && ` (×${item.quantity})`}
-                                      </span>
-                                      {item.value && (
-                                        <span className="text-xs text-amber-400">{item.value}</span>
-                                      )}
-                                      <span className="ml-auto text-xs shrink-0">
-                                        {item.collected ? "✅ collected" : "💰 loot"}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* NPCs */}
-                              {childNpcList.length > 0 && (
-                                <div className="space-y-1">
-                                  <div className="text-xs font-semibold text-blue-400 uppercase tracking-wide">👤 NPCs</div>
-                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                    {childNpcList.map((n) => (
-                                      <span
-                                        key={n.id}
-                                        className="inline-flex items-center gap-1 text-sm text-amber-500"
-                                      >
-                                        {n.name}
-                                        <Link
-                                          to="/realms/npcs/$npcId"
-                                          params={{ npcId: n.id }}
-                                          target="_blank"
-                                          className="inline-flex items-center justify-center size-4 rounded hover:bg-muted-foreground/20 transition-colors"
-                                          onClick={(e) => e.stopPropagation()}
-                                        >
-                                          <ExternalLink className="size-3 text-muted-foreground" />
-                                        </Link>
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Remaining tags */}
-                              {unmappedTags.length > 0 && (
-                                <div className="flex items-center gap-1 flex-wrap">
-                                  {unmappedTags.map((tag) => (
-                                    <Badge key={tag} variant="outline" className="text-xs">
-                                      {tag}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </CollapsibleContent>
+                              <ExternalLink className="size-3.5 text-muted-foreground" />
+                            </Link>
+                          </span>
                         </div>
-                      </Collapsible>
+                      </div>
                     );
                   })}
                 </div>

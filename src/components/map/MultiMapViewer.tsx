@@ -16,6 +16,8 @@ interface MultiMapViewerProps {
   className?: string
   parentPoiId?: string | null
   highlightPoiId?: string | null
+  /** Called when a POI marker is clicked (for room selection) */
+  onPoiSelect?: (poiId: string) => void
   emptyTitle?: string
   emptyDescription?: string
 }
@@ -26,6 +28,7 @@ export function MultiMapViewer({
   className = 'h-[300px] md:h-[500px]',
   parentPoiId,
   highlightPoiId,
+  onPoiSelect,
   emptyTitle = 'No maps yet',
   emptyDescription = 'Upload a map image to get started',
 }: MultiMapViewerProps) {
@@ -119,6 +122,7 @@ export function MultiMapViewer({
         className={className}
         parentPoiId={parentPoiId ?? undefined}
         highlightPoiId={highlightPoiId}
+        onPoiSelect={onPoiSelect}
       />
 
       <ConfirmDialog
