@@ -41,6 +41,15 @@ await rk.pois.update(id, { mood: 'tense', trouble: 'bandits at the gate' })
 await rk.regions.update(id, { dangers: ['wolves', 'quicksand'] })
 ```
 
+**Delete entities** — cascade-safe for POIs (unlinks NPCs, deletes paths/events/presences):
+```js
+await rk.pois.delete(id)                    // cascade delete POI + children
+await rk.pois.deleteChildren(parentPoiId)   // delete all children of a parent (returns count)
+await rk.pois.listChildren(parentPoiId)     // list children before deleting
+await rk.npcs.delete(id)                    // simple delete
+await rk.factions.delete(id)               // simple delete
+```
+
 **Set faction relationships** (-6 to +6):
 ```js
 await rk.relationships.set(factionA, factionB, 3, 'Trade alliance formed')
@@ -63,7 +72,8 @@ await rk.relationships.set(factionA, factionB, 3, 'Trade alliance formed')
 ## Rules
 
 - **Always list first** before creating — avoid duplicates
-- **No delete operations** — safety measure, use the UI for deletions
+- **POI delete is cascade-safe** — unlinks NPCs, removes paths, events, presences, recurses into children
+- **Confirm with user before deleting** — always list what will be deleted first
 - **UI auto-refreshes** — Dexie live queries mean changes appear instantly
 - **Store returned IDs** — use them to link entities (e.g., set `leaderNpcId` after creating the NPC)
 - **Confirm with user** before bulk operations (creating 5+ entities)

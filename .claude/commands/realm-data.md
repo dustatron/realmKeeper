@@ -45,6 +45,7 @@ All methods return Promises (use `await`). `worldId` defaults to active world wh
 | `factions.get(id)` | id: string | Faction |
 | `factions.add(data)` | `{worldId, name, ...}` | Faction |
 | `factions.update(id, partial)` | id, partial fields | Faction |
+| `factions.delete(id)` | id: string | void |
 
 **Required fields for add:** `worldId`, `name`
 
@@ -57,6 +58,7 @@ Optional: `description`, `type`, `status` ('active'\|'dormant'\|'disbanded'\|'de
 | `npcs.get(id)` | id: string | NPC |
 | `npcs.add(data)` | `{worldId, name, ...}` | NPC |
 | `npcs.update(id, partial)` | id, partial fields | NPC |
+| `npcs.delete(id)` | id: string | void |
 
 **Required fields for add:** `worldId`, `name`
 
@@ -67,9 +69,12 @@ Optional: `race` ('human'\|'elf'\|'dwarf'\|'halfling'\|'half-orc'\|'half-elf'\|'
 |--------|------|---------|
 | `pois.list(regionId?)` | regionId?: string | POI[] (defaults to active world) |
 | `pois.listByWorld(worldId?)` | worldId?: string | POI[] |
+| `pois.listChildren(parentPoiId)` | parentPoiId: string | POI[] |
 | `pois.get(id)` | id: string | POI |
 | `pois.add(data)` | `{regionId, name, ...}` | POI |
 | `pois.update(id, partial)` | id, partial fields | POI |
+| `pois.delete(id)` | id: string | void (cascade: children, NPCs unlinked, paths, events) |
+| `pois.deleteChildren(parentPoiId)` | parentPoiId: string | number (count deleted) |
 
 **Required fields for add:** `regionId`, `name`
 
@@ -234,7 +239,7 @@ await rk.compendium.add({
 
 ## Tips
 
-- **No delete operations** — safety measure. Remove entities through the UI.
+- **Delete operations** — `pois.delete(id)` cascade-deletes children, unlinks NPCs, removes paths/events/presences. `pois.deleteChildren(parentId)` deletes all children of a parent. `npcs.delete(id)` and `factions.delete(id)` are simple deletes.
 - **Partial updates** — `update()` spreads partial onto existing, auto-bumps `updatedAt`.
 - **Dexie live queries** — UI refreshes instantly when data changes, no reload needed.
 - **IDs** — auto-generated ULIDs. Store returned `.id` for linking entities.

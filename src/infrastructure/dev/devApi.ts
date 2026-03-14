@@ -59,6 +59,42 @@ const worlds = {
 }
 
 // ---------------------------------------------------------------------------
+// Cascade delete helper (used by pois.delete / pois.deleteChildren)
+// ---------------------------------------------------------------------------
+
+async function cascadeDeletePoi(id: string): Promise<void> {
+  // Recurse into children first
+  const children = await db.pois.where('parentPoiId').equals(id).toArray()
+  for (const child of children) {
+    await cascadeDeletePoi(child.id)
+  }
+  // Unlink NPCs
+  const linkedNpcs = await db.npcs.where('poiId').equals(id).toArray()
+  for (const npc of linkedNpcs) {
+    await db.npcs.update(npc.id, { poiId: null, updatedAt: now() })
+  }
+  // Delete paths referencing this POI
+  const pathsFrom = await db.paths.where('fromPoiId').equals(id).toArray()
+  const pathsTo = await db.paths.where('toPoiId').equals(id).toArray()
+  const pathIds = new Set([...pathsFrom, ...pathsTo].map((p) => p.id))
+  for (const pid of pathIds) {
+    await db.paths.delete(pid)
+  }
+  // Delete faction presences
+  const presences = await db.factionPresences.where('poiId').equals(id).toArray()
+  for (const fp of presences) {
+    await db.factionPresences.delete(fp.id)
+  }
+  // Delete POI events
+  const events = await db.poiEvents.where('poiId').equals(id).toArray()
+  for (const ev of events) {
+    await db.poiEvents.delete(ev.id)
+  }
+  // Delete the POI
+  await db.pois.delete(id)
+}
+
+// ---------------------------------------------------------------------------
 // Factions
 // ---------------------------------------------------------------------------
 
@@ -106,6 +142,10 @@ const factions = {
     const updated = { ...existing, ...partial, updatedAt: now() }
     await db.factions.put(updated)
     return updated
+  },
+
+  async delete(id: string): Promise<void> {
+    await db.factions.delete(id)
   },
 }
 
@@ -169,6 +209,10 @@ const npcs = {
     const updated = { ...existing, ...partial, updatedAt: now() }
     await db.npcs.put(updated)
     return updated
+  },
+
+  async delete(id: string): Promise<void> {
+    await db.npcs.delete(id)
   },
 }
 
@@ -251,6 +295,22 @@ const pois = {
     const updated = { ...existing, ...partial, updatedAt: now() }
     await db.pois.put(updated)
     return updated
+  },
+
+  async listChildren(parentPoiId: string): Promise<POI[]> {
+    return db.pois.where('parentPoiId').equals(parentPoiId).toArray()
+  },
+
+  async delete(id: string): Promise<void> {
+    await cascadeDeletePoi(id)
+  },
+
+  async deleteChildren(parentPoiId: string): Promise<number> {
+    const children = await db.pois.where('parentPoiId').equals(parentPoiId).toArray()
+    for (const child of children) {
+      await cascadeDeletePoi(child.id)
+    }
+    return children.length
   },
 }
 
