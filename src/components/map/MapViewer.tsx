@@ -85,7 +85,7 @@ const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }
 function MarkerIcon({ type, name, color, hasOwnMaps, showLabel }: { type: PoiType; name: string; color?: string | null; hasOwnMaps?: boolean; showLabel?: boolean }) {
   const Icon = POI_TYPE_ICONS[type] || MapPin
   return (
-    <div className="group relative flex flex-col items-center cursor-pointer">
+    <div className="group relative flex flex-col items-center cursor-pointer" role="button" style={{ touchAction: 'manipulation' }}>
       <div
         className={`relative flex items-center justify-center size-9 rounded-full shadow-md border-2 border-background hover:scale-110 transition-transform ${color ? '' : 'bg-primary text-primary-foreground'}`}
         style={color ? { backgroundColor: color, color: '#fff' } : undefined}
@@ -403,7 +403,18 @@ export function MapViewer({
         .setLngLat([lng, lat])
         .addTo(instance)
 
+      // Use both click and touchend for iPad/touch compatibility
+      // iOS Safari doesn't reliably fire click on non-interactive divs
       el.addEventListener('click', (e) => {
+        e.stopPropagation()
+        onPoiClickRef.current?.(poi)
+      })
+      let touchMoved = false
+      el.addEventListener('touchstart', () => { touchMoved = false }, { passive: true })
+      el.addEventListener('touchmove', () => { touchMoved = true }, { passive: true })
+      el.addEventListener('touchend', (e) => {
+        if (touchMoved) return // was a pan/drag, not a tap
+        e.preventDefault() // prevent delayed click
         e.stopPropagation()
         onPoiClickRef.current?.(poi)
       })

@@ -63,19 +63,18 @@ function LocationDetailPanel({
       {/* Header */}
       <div className="flex items-center gap-2">
         <LocIcon className="size-4 shrink-0 text-muted-foreground" />
-        <h4 className="text-sm font-semibold truncate">{location.name}</h4>
+        <Link
+          to="/realms/pois/$poiId"
+          params={{ poiId: location.id }}
+          className="text-sm font-semibold truncate hover:underline"
+        >
+          {location.name}
+        </Link>
         {location.subtypeLabel && (
           <Badge variant="secondary" className="text-xs shrink-0">
             {location.subtypeLabel}
           </Badge>
         )}
-        <Link
-          to="/realms/pois/$poiId"
-          params={{ poiId: location.id }}
-          className="ml-auto inline-flex items-center justify-center size-6 rounded-md hover:bg-muted-foreground/20 transition-colors shrink-0"
-        >
-          <ExternalLink className="size-3.5 text-muted-foreground" />
-        </Link>
       </div>
 
       {/* Read Aloud */}
@@ -228,6 +227,7 @@ interface SettlementTemplateProps {
   onToggleTrapDisarmed?: (trapId: string) => void;
   onUpdateNPC?: (npc: NPC) => void;
   mapSection: React.ReactNode;
+  watabouSection?: React.ReactNode;
   notesSection?: React.ReactNode;
 }
 
@@ -259,6 +259,7 @@ export function SettlementTemplate({
   onToggleTrapDisarmed,
   onUpdateNPC,
   mapSection,
+  watabouSection,
   notesSection,
 }: SettlementTemplateProps) {
   // Group child NPCs by their poiId
@@ -432,6 +433,7 @@ export function SettlementTemplate({
               >
                 {mapSection}
               </div>
+              {watabouSection}
             </div>
 
             {/* Detail panel + Location list */}
