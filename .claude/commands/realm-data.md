@@ -1,12 +1,12 @@
-# Realm Keeper — Data Import via Dev API
+# Realm Keeper — Data Import via RealmKeeper API
 
 Import factions, NPCs, POIs, regions, and custom compendium entries into Realm Keeper from markdown notes using the Chrome MCP browser automation tools.
 
 ## Prerequisites
 
-- Realm Keeper dev server running (`npm run dev`)
-- Chrome MCP tab open to the app (localhost:3000)
-- `window.__realmKeeper` available (auto-installed in dev mode)
+- Realm Keeper app open in Chrome — dev: `localhost:3000` / prod: `https://pointcrawler.vercel.app/`
+- Chrome MCP tab open to the app
+- `window.__realmKeeper` available (auto-installed on page load)
 
 ## Workflow
 

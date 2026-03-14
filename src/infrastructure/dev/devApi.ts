@@ -1,7 +1,7 @@
 /**
- * Dev-only API exposed on window.__realmKeeper for Chrome MCP automation.
+ * API exposed on window.__realmKeeper for Chrome MCP automation.
  * Imports Dexie db directly — bypasses React context / DI container.
- * Tree-shaken from production builds via dynamic import + import.meta.env.DEV guard.
+ * Available in all environments (dev + prod).
  */
 
 import { db } from '@infrastructure/dexie/db'
@@ -233,6 +233,9 @@ const pois = {
       visited: data.visited ?? false,
       lightLevel: data.lightLevel ?? null,
       wanderingMonsters: data.wanderingMonsters ?? [],
+      watabouSeed: data.watabouSeed ?? null,
+      watabouGenerator: data.watabouGenerator ?? null,
+      watabouData: data.watabouData ?? null,
       sessionLog: data.sessionLog ?? [],
       starred: data.starred ?? false,
       createdAt: ts,
