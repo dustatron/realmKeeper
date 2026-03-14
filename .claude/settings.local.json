@@ -55,7 +55,14 @@
       "mcp__chrome-devtools__press_key",
       "mcp__chrome-devtools__evaluate_script",
       "mcp__chrome-devtools__select_page",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "WebFetch(domain:watabou.github.io)",
+      "WebFetch(domain:watabou.itch.io)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:cartographyassets.com)",
+      "Bash(git push:*)",
+      "Bash(curl:*)",
+      "WebFetch(domain:gitlab.com)"
     ]
   }
 }

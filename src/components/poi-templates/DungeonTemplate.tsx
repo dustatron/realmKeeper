@@ -313,6 +313,7 @@ interface DungeonTemplateProps {
   activeTab?: string;
   onTabChange?: (tab: string) => void;
   mapSection: React.ReactNode;
+  watabouSection?: React.ReactNode;
   notesSection?: React.ReactNode;
   compendiumSection?: React.ReactNode;
   dungeonEventsPanel?: React.ReactNode;
@@ -344,6 +345,7 @@ export function DungeonTemplate({
   activeTab,
   onTabChange,
   mapSection,
+  watabouSection,
   notesSection,
   compendiumSection,
   dungeonEventsPanel,
@@ -503,6 +505,7 @@ export function DungeonTemplate({
               >
                 {mapSection}
               </div>
+              {watabouSection}
 
               {/* ⚔️ Wandering Monsters d6 Table */}
               <div className="mt-3">

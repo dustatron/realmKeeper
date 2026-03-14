@@ -593,6 +593,9 @@ db.version(32).stores(storesV26).upgrade(async (tx) => {
 // v33: Add disposition to NPCs (no index change needed)
 db.version(33).stores(storesV26)
 
+// v34: Add watabou map fields to POIs (no index change needed)
+db.version(34).stores(storesV26)
+
 // Normalize Realms on read — ensures starred arrays have defaults
 db.worlds.hook('reading', (realm) => {
   if (!realm) return realm
@@ -628,6 +631,9 @@ db.pois.hook('reading', (poi) => {
     spellRefs: [],
     equipmentRefs: [],
     wanderingMonsters: [],
+    watabouSeed: null,
+    watabouGenerator: null,
+    watabouData: null,
   }
   for (const [key, val] of Object.entries(defaults)) {
     if (rec[key] === undefined) {

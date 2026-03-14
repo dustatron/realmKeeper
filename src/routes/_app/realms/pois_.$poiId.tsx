@@ -42,6 +42,9 @@ import { NPCEditSheet } from '~/components/shared/NPCEditSheet'
 import { MapUploadDialog } from '~/components/map/MapUploadDialog'
 import { MultiMapViewer } from '~/components/map/MultiMapViewer'
 
+import { WatabouMapSection } from '~/components/watabou/WatabouMapSection'
+import type { WatabouCityData } from '@domain/value-objects/WatabouCityData'
+import type { WatabouDungeonData } from '@domain/value-objects/WatabouDungeonData'
 import { SettlementTemplate } from '~/components/poi-templates/SettlementTemplate'
 import { DungeonTemplate } from '~/components/poi-templates/DungeonTemplate'
 import { BuildingTemplate } from '~/components/poi-templates/BuildingTemplate'
@@ -475,6 +478,22 @@ function POIDetailPage() {
     )
   }
 
+  const handleImportWatabou = async (data: WatabouCityData | WatabouDungeonData, seed: string | null) => {
+    if (!poi) return
+    await executeUpdatePOI(
+      { ...poi, watabouData: data, watabouSeed: seed, watabouGenerator: data.type === 'mfcg' ? 'mfcg' : 'opd' },
+      { poiRepo: container.poiRepo }
+    )
+  }
+
+  const handleClearWatabou = async () => {
+    if (!poi) return
+    await executeUpdatePOI(
+      { ...poi, watabouData: null, watabouSeed: null, watabouGenerator: null },
+      { poiRepo: container.poiRepo }
+    )
+  }
+
   // Compute compass connections from paths with direction set
   // (must be before early returns to satisfy hook rules)
   const compassConnections: CompassConnection[] = useMemo(() => {
@@ -516,6 +535,18 @@ function POIDetailPage() {
       parentPoiId={poiId}
       highlightPoiId={selectedChildId}
       onPoiSelect={setSelectedChildId}
+    />
+  ) : null
+
+  // Watabou procedural map section
+  const watabouGenerator = poi.type === 'settlement' ? 'mfcg' as const : poi.type === 'dungeon' ? 'opd' as const : null
+  const watabouSection = watabouGenerator ? (
+    <WatabouMapSection
+      data={poi.watabouData}
+      seed={poi.watabouSeed}
+      generator={watabouGenerator}
+      onImport={handleImportWatabou}
+      onClear={handleClearWatabou}
     />
   ) : null
 
@@ -610,6 +641,7 @@ function POIDetailPage() {
             onToggleTrapDisarmed={handleToggleTrapDisarmed}
             onUpdateNPC={handleUpdateNPC}
             mapSection={mapSection}
+            watabouSection={watabouSection}
             notesSection={notesSection}
           />
         )
@@ -637,6 +669,7 @@ function POIDetailPage() {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             mapSection={mapSection}
+            watabouSection={watabouSection}
             notesSection={notesSection}
             systemId={realm?.systemId ?? null}
             worldId={realm?.id ?? null}

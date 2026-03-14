@@ -6,6 +6,8 @@ import type { SessionLogEntry } from '@domain/value-objects/SessionLogEntry'
 import type { CompendiumRef } from '@domain/entities/Compendium'
 import type { LocationSeed } from '@domain/value-objects/LocationSeed'
 import type { WanderingMonsterEntry } from '@domain/value-objects/WanderingMonster'
+import type { WatabouCityData } from '@domain/value-objects/WatabouCityData'
+import type { WatabouDungeonData } from '@domain/value-objects/WatabouDungeonData'
 
 export interface POI {
   id: string
@@ -39,6 +41,9 @@ export interface POI {
   visited: boolean
   lightLevel: 'bright' | 'dim' | 'dark' | null
   wanderingMonsters: WanderingMonsterEntry[]
+  watabouSeed: string | null
+  watabouGenerator: 'mfcg' | 'opd' | null
+  watabouData: WatabouCityData | WatabouDungeonData | null
   sessionLog: SessionLogEntry[]
   starred: boolean
   createdAt: number
