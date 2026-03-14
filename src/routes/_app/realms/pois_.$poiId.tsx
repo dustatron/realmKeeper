@@ -527,8 +527,11 @@ function POIDetailPage() {
     <NotesPanel ownerType="poi" ownerId={poiId} worldId={region.worldId} />
   ) : null
 
-  // Shared map section
-  const mapSection = poiMaps.length > 0 ? (
+  // Watabou generator type — determines whether Generate tab appears in map dialog
+  const watabouGenerator = poi.type === 'settlement' ? 'mfcg' as const : poi.type === 'dungeon' ? 'opd' as const : null
+
+  // Shared map section (includes inline watabou SVG when data exists)
+  const multiMapViewer = poiMaps.length > 0 ? (
     <MultiMapViewer
       maps={poiMaps}
       onUpload={handleUploadMap}
@@ -538,9 +541,7 @@ function POIDetailPage() {
     />
   ) : null
 
-  // Watabou procedural map section
-  const watabouGenerator = poi.type === 'settlement' ? 'mfcg' as const : poi.type === 'dungeon' ? 'opd' as const : null
-  const watabouSection = watabouGenerator ? (
+  const watabouInline = watabouGenerator && poi.watabouData ? (
     <WatabouMapSection
       data={poi.watabouData}
       seed={poi.watabouSeed}
@@ -548,6 +549,13 @@ function POIDetailPage() {
       onImport={handleImportWatabou}
       onClear={handleClearWatabou}
     />
+  ) : null
+
+  const mapSection = (multiMapViewer || watabouInline) ? (
+    <>
+      {multiMapViewer}
+      {watabouInline}
+    </>
   ) : null
 
   // Parent dungeon map — compact map inherited from parent POI
@@ -641,7 +649,6 @@ function POIDetailPage() {
             onToggleTrapDisarmed={handleToggleTrapDisarmed}
             onUpdateNPC={handleUpdateNPC}
             mapSection={mapSection}
-            watabouSection={watabouSection}
             notesSection={notesSection}
           />
         )
@@ -669,7 +676,6 @@ function POIDetailPage() {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             mapSection={mapSection}
-            watabouSection={watabouSection}
             notesSection={notesSection}
             systemId={realm?.systemId ?? null}
             worldId={realm?.id ?? null}
@@ -1066,6 +1072,10 @@ function POIDetailPage() {
         open={mapUploadDialogOpen}
         onOpenChange={setMapUploadDialogOpen}
         onUpload={handleUploadMap}
+        generator={watabouGenerator}
+        onWatabouImport={watabouGenerator ? handleImportWatabou : undefined}
+        existingWatabouData={poi.watabouData}
+        existingSeed={poi.watabouSeed}
       />
 
       {/* NPC Edit Sheet */}

@@ -47,7 +47,7 @@ import type { ResolvedPath } from "~/ui/hooks/useResolvedPaths";
 import type { POIEvent } from "@domain/entities/POIEvent";
 import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
 
-function RoomNPCRow({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) => void }) {
+function RoomNPCCard({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) => void }) {
   const sb = npc.systemBlock;
   const isDead = npc.lifeStatus !== "alive";
   const [editingHp, setEditingHp] = useState(false);
@@ -67,23 +67,28 @@ function RoomNPCRow({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) =
   };
 
   return (
-    <div className={`flex items-center gap-2 text-sm rounded border px-2 py-1.5 ${isDead ? "opacity-50" : ""}`}>
-      {isDead ? (
-        <span title={npc.lifeStatus}><Skull className="size-3.5 text-muted-foreground shrink-0" /></span>
-      ) : (
-        <Heart className="size-3.5 text-green-500 fill-green-500 shrink-0" />
-      )}
-      <Link
-        to="/realms/npcs/$npcId"
-        params={{ npcId: npc.id }}
-        className="font-medium text-amber-500 hover:underline truncate"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {npc.name}
-      </Link>
-      <DispositionBadge npc={npc} onUpdateNPC={onUpdateNPC} />
-      {sb && (
-        <span className="ml-auto flex items-center gap-1.5 shrink-0">
+    <div className={`rounded-md border bg-card/50 p-2.5 space-y-2 ${isDead ? "opacity-50" : ""}`}>
+      {/* Name + Disposition */}
+      <div className="flex items-center gap-2">
+        {isDead ? (
+          <span title={npc.lifeStatus}><Skull className="size-3.5 text-muted-foreground shrink-0" /></span>
+        ) : (
+          <Heart className="size-3.5 text-green-500 fill-green-500 shrink-0" />
+        )}
+        <Link
+          to="/realms/npcs/$npcId"
+          params={{ npcId: npc.id }}
+          className="font-medium text-amber-500 hover:underline truncate text-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {npc.name}
+        </Link>
+        <DispositionBadge npc={npc} onUpdateNPC={onUpdateNPC} />
+      </div>
+
+      {/* Stat bar: HP + AC */}
+      {sb && (sb.maxHp > 0 || sb.armor > 0) && (
+        <div className="flex items-center gap-2 flex-wrap">
           {sb.maxHp > 0 && (
             <span className="inline-flex items-center gap-0.5">
               {onUpdateNPC && (
@@ -105,20 +110,20 @@ function RoomNPCRow({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) =
                     if (e.key === "Escape") setEditingHp(false);
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  className="w-10 h-5 text-[10px] font-mono text-center px-0.5"
+                  className="w-12 h-6 text-xs font-mono text-center px-0.5"
                   autoFocus
                 />
               ) : (
                 <Badge
                   variant={sb.hp <= sb.maxHp * 0.25 ? "destructive" : sb.hp <= sb.maxHp * 0.5 ? "secondary" : "outline"}
-                  className={`text-[10px] font-mono px-1.5 py-0 gap-0.5 ${onUpdateNPC ? "cursor-pointer" : ""}`}
+                  className={`text-xs font-mono px-2 py-0.5 gap-1 ${onUpdateNPC ? "cursor-pointer" : ""}`}
                   onClick={onUpdateNPC ? (e) => {
                     e.stopPropagation();
                     setHpInput(String(sb.hp));
                     setEditingHp(true);
                   } : undefined}
                 >
-                  <Heart className="size-2.5" />
+                  <Heart className="size-3" />
                   {sb.hp}/{sb.maxHp}
                 </Badge>
               )}
@@ -133,21 +138,63 @@ function RoomNPCRow({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) =
             </span>
           )}
           {sb.armor > 0 && (
-            <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0 gap-0.5">
-              <Shield className="size-2.5" />
-              {sb.armor}
+            <Badge variant="outline" className="text-xs font-mono px-2 py-0.5 gap-1">
+              <Shield className="size-3" />
+              AC {sb.armor}
             </Badge>
           )}
-          {sb.attacks.length > 0 && (
-            <span className="text-[10px] font-mono text-muted-foreground flex items-center gap-0.5">
-              <Swords className="size-2.5" />
-              {sb.attacks[0].name} ({sb.attacks[0].damage})
-            </span>
-          )}
-        </span>
+        </div>
+      )}
+
+      {/* Attacks */}
+      {sb && sb.attacks.length > 0 && (
+        <div className="space-y-1">
+          {sb.attacks.map((atk, i) => (
+            <div key={i} className="flex items-center gap-2 text-xs">
+              <Swords className="size-3 text-red-400 shrink-0" />
+              <span className="font-medium">{atk.name}</span>
+              <span className="font-mono text-muted-foreground">{atk.damage}</span>
+              {atk.description && <span className="text-muted-foreground truncate">{atk.description}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Abilities */}
+      {sb && sb.abilities && sb.abilities.length > 0 && (
+        <div className="text-xs text-muted-foreground space-y-0.5">
+          {sb.abilities.map((ability, i) => (
+            <div key={i}>{ability}</div>
+          ))}
+        </div>
+      )}
+
+      {/* Description */}
+      {npc.description && (
+        <p className="text-xs text-muted-foreground italic">{npc.description}</p>
       )}
     </div>
   );
+}
+
+function parseRoomConnections(description: string, siblings: POI[]) {
+  if (!description) return [];
+  const segments = description.split('|').map((s) => s.trim());
+  return segments.map((seg) => {
+    const match = seg.match(/^([NSEW]+)\s*→\s*(.+)$/);
+    if (!match) return { dir: '', label: seg, roomId: null };
+    const dir = match[1];
+    const label = match[2];
+    // Try to match by room number prefix
+    const numMatch = label.match(/^(\d+)\./);
+    let roomId: string | null = null;
+    if (numMatch) {
+      const num = numMatch[1];
+      const sibling = siblings.find((s) => s.name.startsWith(num + '.'));
+      if (sibling) roomId = sibling.id;
+    }
+    return { dir, label, roomId };
+  });
 }
 
 function RoomDetailPanel({
@@ -155,13 +202,18 @@ function RoomDetailPanel({
   index,
   npcs,
   onUpdateNPC,
+  siblings,
+  onSelectChild,
 }: {
   room: POI;
   index: number;
   npcs: NPC[];
   onUpdateNPC?: (npc: NPC) => void;
+  siblings: POI[];
+  onSelectChild?: (id: string) => void;
 }) {
   const unmappedTags = getUnmappedTags(room.tags);
+  const connections = parseRoomConnections(room.description, siblings);
   return (
     <div className="rounded-md border bg-card p-3 space-y-3">
       {/* Header */}
@@ -177,17 +229,37 @@ function RoomDetailPanel({
         </Link>
       </div>
 
+      {/* Room Connections */}
+      {connections.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {connections.map((conn, i) => (
+            conn.roomId ? (
+              <button
+                key={i}
+                onClick={() => onSelectChild?.(conn.roomId!)}
+                className="inline-flex items-center gap-1 text-xs rounded-md border px-1.5 py-0.5 hover:bg-muted-foreground/20 transition-colors text-blue-400 hover:text-blue-300"
+              >
+                <span className="font-mono text-muted-foreground">{conn.dir}</span>
+                <span>{conn.label}</span>
+              </button>
+            ) : (
+              <span key={i} className="inline-flex items-center gap-1 text-xs rounded-md border px-1.5 py-0.5 text-muted-foreground">
+                <span className="font-mono">{conn.dir}</span>
+                <span>{conn.label}</span>
+              </span>
+            )
+          ))}
+        </div>
+      )}
+
       {/* Read Aloud */}
       {room.readAloud && (
         <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5">
           <div className="text-xs font-medium text-amber-500 mb-1">📖 Read Aloud</div>
-          <p className="text-sm italic text-foreground/80 leading-relaxed">{room.readAloud}</p>
+          <div className="text-sm italic text-foreground/80 leading-relaxed prose prose-sm prose-invert max-w-none">
+            <ReactMarkdown {...markdownOptions}>{room.readAloud}</ReactMarkdown>
+          </div>
         </div>
-      )}
-
-      {/* Description */}
-      {room.description && (
-        <p className="text-sm text-muted-foreground leading-relaxed">{room.description}</p>
       )}
 
       {/* Sensory */}
@@ -261,12 +333,22 @@ function RoomDetailPanel({
 
       {/* NPCs */}
       {npcs.length > 0 && (
-        <div className="space-y-1.5">
-          <div className="text-xs font-semibold text-blue-400 uppercase tracking-wide">👤 NPCs</div>
-          <div className="space-y-1">
+        <div className="space-y-2">
+          <div className="text-xs font-semibold text-blue-400 uppercase tracking-wide">👤 Denizens</div>
+          <div className="space-y-2">
             {npcs.map((n) => (
-              <RoomNPCRow key={n.id} npc={n} onUpdateNPC={onUpdateNPC} />
+              <RoomNPCCard key={n.id} npc={n} onUpdateNPC={onUpdateNPC} />
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* GM Notes */}
+      {room.gmNotes && (
+        <div className="space-y-1">
+          <div className="text-xs font-semibold text-purple-400 uppercase tracking-wide">📋 GM Notes</div>
+          <div className="rounded border border-purple-500/20 bg-purple-500/5 p-2.5 prose prose-sm prose-invert max-w-none">
+            <ReactMarkdown {...markdownOptions}>{room.gmNotes}</ReactMarkdown>
           </div>
         </div>
       )}
@@ -313,7 +395,6 @@ interface DungeonTemplateProps {
   activeTab?: string;
   onTabChange?: (tab: string) => void;
   mapSection: React.ReactNode;
-  watabouSection?: React.ReactNode;
   notesSection?: React.ReactNode;
   compendiumSection?: React.ReactNode;
   dungeonEventsPanel?: React.ReactNode;
@@ -345,7 +426,6 @@ export function DungeonTemplate({
   activeTab,
   onTabChange,
   mapSection,
-  watabouSection,
   notesSection,
   compendiumSection,
   dungeonEventsPanel,
@@ -505,7 +585,6 @@ export function DungeonTemplate({
               >
                 {mapSection}
               </div>
-              {watabouSection}
 
               {/* ⚔️ Wandering Monsters d6 Table */}
               <div className="mt-3">
@@ -530,6 +609,8 @@ export function DungeonTemplate({
                   index={selectedRoomIndex}
                   npcs={npcsByPoiId[selectedRoom.id] ?? []}
                   onUpdateNPC={onUpdateNPC}
+                  siblings={childPois}
+                  onSelectChild={onSelectChild}
                 />
               ) : childPois.length > 0 ? (
                 <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">

@@ -227,7 +227,6 @@ interface SettlementTemplateProps {
   onToggleTrapDisarmed?: (trapId: string) => void;
   onUpdateNPC?: (npc: NPC) => void;
   mapSection: React.ReactNode;
-  watabouSection?: React.ReactNode;
   notesSection?: React.ReactNode;
 }
 
@@ -259,7 +258,6 @@ export function SettlementTemplate({
   onToggleTrapDisarmed,
   onUpdateNPC,
   mapSection,
-  watabouSection,
   notesSection,
 }: SettlementTemplateProps) {
   // Group child NPCs by their poiId
@@ -433,7 +431,6 @@ export function SettlementTemplate({
               >
                 {mapSection}
               </div>
-              {watabouSection}
             </div>
 
             {/* Detail panel + Location list */}
