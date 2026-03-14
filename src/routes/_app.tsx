@@ -16,7 +16,7 @@ function AppLayout() {
   return (
     <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="max-h-svh overflow-y-auto">
         <Header />
         <Main>
           <Outlet />

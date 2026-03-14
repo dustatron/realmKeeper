@@ -28,6 +28,7 @@ import {
   Skull,
   Shield,
   Swords,
+  Minus,
 } from "lucide-react";
 import { DispositionBadge } from "~/components/shared/DispositionBadge";
 import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
@@ -50,6 +51,7 @@ import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
 function RoomNPCCard({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) => void }) {
   const sb = npc.systemBlock;
   const isDead = npc.lifeStatus !== "alive";
+  const [expanded, setExpanded] = useState(false);
   const [editingHp, setEditingHp] = useState(false);
   const [hpInput, setHpInput] = useState("");
 
@@ -67,9 +69,13 @@ function RoomNPCCard({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) 
   };
 
   return (
-    <div className={`rounded-md border bg-card/50 p-2.5 space-y-2 ${isDead ? "opacity-50" : ""}`}>
-      {/* Name + Disposition */}
-      <div className="flex items-center gap-2">
+    <div className={`rounded-md border bg-card/50 ${isDead ? "opacity-50" : ""}`}>
+      {/* Header: Name + HP/AC — always visible, clickable to toggle */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-2 w-full p-2.5 text-left hover:bg-muted-foreground/5 transition-colors"
+      >
+        <ChevronRight className={`size-4 text-muted-foreground shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`} />
         {isDead ? (
           <span title={npc.lifeStatus}><Skull className="size-3.5 text-muted-foreground shrink-0" /></span>
         ) : (
@@ -84,94 +90,98 @@ function RoomNPCCard({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) 
           {npc.name}
         </Link>
         <DispositionBadge npc={npc} onUpdateNPC={onUpdateNPC} />
-      </div>
+        {/* HP + AC on right */}
+        {sb && (
+          <span className="ml-auto flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+            {sb.maxHp > 0 && (
+              <span className="inline-flex items-center gap-0.5">
+                {onUpdateNPC && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); updateHp(sb.hp - 1); }}
+                    className="size-6 rounded flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Minus className="size-3" />
+                  </button>
+                )}
+                {editingHp ? (
+                  <Input
+                    type="number"
+                    value={hpInput}
+                    onChange={(e) => setHpInput(e.target.value)}
+                    onBlur={commitHpEdit}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitHpEdit();
+                      if (e.key === "Escape") setEditingHp(false);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-12 h-6 text-xs font-mono text-center px-0.5"
+                    autoFocus
+                  />
+                ) : (
+                  <Badge
+                    variant={sb.hp <= sb.maxHp * 0.25 ? "destructive" : sb.hp <= sb.maxHp * 0.5 ? "secondary" : "outline"}
+                    className={`text-xs font-mono px-2 py-0.5 gap-1 ${onUpdateNPC ? "cursor-pointer" : ""}`}
+                    onClick={onUpdateNPC ? (e) => {
+                      e.stopPropagation();
+                      setHpInput(String(sb.hp));
+                      setEditingHp(true);
+                    } : undefined}
+                  >
+                    <Heart className="size-3" />
+                    {sb.hp}/{sb.maxHp}
+                  </Badge>
+                )}
+                {onUpdateNPC && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); updateHp(sb.hp + 1); }}
+                    className="size-6 rounded flex items-center justify-center hover:bg-green-500/20 text-muted-foreground hover:text-green-600 transition-colors"
+                  >
+                    <Plus className="size-3" />
+                  </button>
+                )}
+              </span>
+            )}
+            {sb.armor > 0 && (
+              <Badge variant="outline" className="text-xs font-mono px-2 py-0.5 gap-1">
+                <Shield className="size-3" />
+                {sb.armor}
+              </Badge>
+            )}
+          </span>
+        )}
+      </button>
 
-      {/* Stat bar: HP + AC */}
-      {sb && (sb.maxHp > 0 || sb.armor > 0) && (
-        <div className="flex items-center gap-2 flex-wrap">
-          {sb.maxHp > 0 && (
-            <span className="inline-flex items-center gap-0.5">
-              {onUpdateNPC && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); updateHp(sb.hp - 1); }}
-                  className="size-7 rounded flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
-                >
-                  <ChevronDown className="size-4" />
-                </button>
-              )}
-              {editingHp ? (
-                <Input
-                  type="number"
-                  value={hpInput}
-                  onChange={(e) => setHpInput(e.target.value)}
-                  onBlur={commitHpEdit}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") commitHpEdit();
-                    if (e.key === "Escape") setEditingHp(false);
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-12 h-6 text-xs font-mono text-center px-0.5"
-                  autoFocus
-                />
-              ) : (
-                <Badge
-                  variant={sb.hp <= sb.maxHp * 0.25 ? "destructive" : sb.hp <= sb.maxHp * 0.5 ? "secondary" : "outline"}
-                  className={`text-xs font-mono px-2 py-0.5 gap-1 ${onUpdateNPC ? "cursor-pointer" : ""}`}
-                  onClick={onUpdateNPC ? (e) => {
-                    e.stopPropagation();
-                    setHpInput(String(sb.hp));
-                    setEditingHp(true);
-                  } : undefined}
-                >
-                  <Heart className="size-3" />
-                  {sb.hp}/{sb.maxHp}
-                </Badge>
-              )}
-              {onUpdateNPC && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); updateHp(sb.hp + 1); }}
-                  className="size-7 rounded flex items-center justify-center hover:bg-green-500/20 text-muted-foreground hover:text-green-600 transition-colors"
-                >
-                  <ChevronUp className="size-4" />
-                </button>
-              )}
-            </span>
-          )}
-          {sb.armor > 0 && (
-            <Badge variant="outline" className="text-xs font-mono px-2 py-0.5 gap-1">
-              <Shield className="size-3" />
-              AC {sb.armor}
-            </Badge>
-          )}
-        </div>
-      )}
-
-      {/* Attacks */}
-      {sb && sb.attacks.length > 0 && (
-        <div className="space-y-1">
-          {sb.attacks.map((atk, i) => (
-            <div key={i} className="flex items-center gap-2 text-xs">
-              <Swords className="size-3 text-red-400 shrink-0" />
-              <span className="font-medium">{atk.name}</span>
-              <span className="font-mono text-muted-foreground">{atk.damage}</span>
-              {atk.description && <span className="text-muted-foreground truncate">{atk.description}</span>}
+      {/* Collapsible body */}
+      {expanded && (
+        <div className="px-2.5 pb-2.5 space-y-2 border-t border-border/50 pt-2">
+          {/* Attacks */}
+          {sb && sb.attacks.length > 0 && (
+            <div className="space-y-1">
+              {sb.attacks.map((atk, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs">
+                  <Swords className="size-3 text-red-400 shrink-0" />
+                  <span className="font-medium">{atk.name}</span>
+                  <span className="font-mono text-muted-foreground">{atk.damage}</span>
+                  {atk.description && <span className="text-muted-foreground truncate">{atk.description}</span>}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          )}
 
-      {/* Abilities */}
-      {sb && sb.abilities && sb.abilities.length > 0 && (
-        <div className="text-xs text-muted-foreground space-y-0.5">
-          {sb.abilities.map((ability, i) => (
-            <div key={i}>{ability}</div>
-          ))}
-        </div>
-      )}
+          {/* Abilities */}
+          {sb && sb.abilities && sb.abilities.length > 0 && (
+            <div className="text-xs text-muted-foreground space-y-0.5">
+              {sb.abilities.map((ability, i) => (
+                <div key={i}>{ability}</div>
+              ))}
+            </div>
+          )}
 
-      {/* Description */}
-      {npc.description && (
-        <p className="text-xs text-muted-foreground italic">{npc.description}</p>
+          {/* Description */}
+          {npc.description && (
+            <p className="text-xs text-muted-foreground italic">{npc.description}</p>
+          )}
+        </div>
       )}
     </div>
   );
