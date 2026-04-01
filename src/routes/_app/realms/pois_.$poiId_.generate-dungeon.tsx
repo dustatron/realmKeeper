@@ -186,7 +186,7 @@ function GenerateDungeonPage() {
     existing?.treasureLevel ?? 'standard'
   )
   const [dangerLevel, setDangerLevel] = useState<DungeonGenOptions['dangerLevel']>(
-    existing?.dangerLevel ?? 'standard'
+    ((existing?.dangerLevel as string) === 'standard' ? 'medium' : existing?.dangerLevel) ?? 'medium'
   )
   const [includeMagicItems, setIncludeMagicItems] = useState(existing?.includeMagicItems ?? false)
   const [exitPoiIds, setExitPoiIds] = useState<string[]>(existing?.exitPoiIds ?? [])
@@ -411,9 +411,10 @@ function GenerateDungeonPage() {
         <Select value={dangerLevel} onValueChange={(v) => setDangerLevel(v as DungeonGenOptions['dangerLevel'])}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="low">Low — fewer monsters, lighter traps</SelectItem>
-            <SelectItem value="standard">Standard</SelectItem>
-            <SelectItem value="deadly">Deadly — heavy encounter density</SelectItem>
+            <SelectItem value="low">Low — sparse encounters, light traps</SelectItem>
+            <SelectItem value="medium">Medium — standard difficulty</SelectItem>
+            <SelectItem value="deadly">Deadly — dense encounters, lethal traps</SelectItem>
+            <SelectItem value="very_deadly">Very Deadly — punishing, no mercy</SelectItem>
           </SelectContent>
         </Select>
       </div>

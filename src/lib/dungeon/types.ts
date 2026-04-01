@@ -359,7 +359,7 @@ export interface DungeonGenOptions {
   theme: DungeonTheme
   size: DungeonSize
   treasureLevel: 'poor' | 'standard' | 'rich' | 'hoard'
-  dangerLevel: 'low' | 'standard' | 'deadly'
+  dangerLevel: 'low' | 'medium' | 'deadly' | 'very_deadly'
   includeMagicItems: boolean
   exitPoiIds: string[]
 }
