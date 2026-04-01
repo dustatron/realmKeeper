@@ -351,12 +351,24 @@ function RoomDetailPanel({
         </div>
       )}
 
-      {/* NPCs */}
-      {npcs.length > 0 && (
+      {/* Creatures (battle encounters) */}
+      {npcs.filter((n) => n.tags?.includes('creature')).length > 0 && (
+        <div className="space-y-2">
+          <div className="text-xs font-semibold text-red-400 uppercase tracking-wide">⚔ Creatures</div>
+          <div className="space-y-2">
+            {npcs.filter((n) => n.tags?.includes('creature')).map((n) => (
+              <RoomNPCCard key={n.id} npc={n} onUpdateNPC={onUpdateNPC} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* NPCs (roleplay opportunities) */}
+      {npcs.filter((n) => !n.tags?.includes('creature')).length > 0 && (
         <div className="space-y-2">
           <div className="text-xs font-semibold text-blue-400 uppercase tracking-wide">👤 Denizens</div>
           <div className="space-y-2">
-            {npcs.map((n) => (
+            {npcs.filter((n) => !n.tags?.includes('creature')).map((n) => (
               <RoomNPCCard key={n.id} npc={n} onUpdateNPC={onUpdateNPC} />
             ))}
           </div>

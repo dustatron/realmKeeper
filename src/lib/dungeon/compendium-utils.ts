@@ -3,6 +3,12 @@ import type { CompendiumMonster } from '@domain/entities/Compendium'
 import type { SystemBlock } from '@domain/value-objects/SystemBlock'
 import type { SeededRandom } from './SeededRandom'
 
+/** Get the compendium description for a monster entry */
+export function getMonsterDescription(id: string): string {
+  const entry = getCompendiumById(id) as CompendiumMonster | undefined
+  return entry?.description ?? ''
+}
+
 export function slugToName(slug: string): string {
   return slug.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 }

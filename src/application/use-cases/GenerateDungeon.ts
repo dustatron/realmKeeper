@@ -11,7 +11,7 @@ import type { DungeonGenOptions } from '~/lib/dungeon/types'
 import { generateDungeon } from '~/lib/dungeon/DungeonGenerator'
 import { getBlueprint } from '~/lib/dungeon/dungeon/DungeonBlueprints'
 import { generateRoomTreasure } from '~/lib/dungeon/treasure-gen'
-import { resolveCreature, systemBlockFromMonster, fallbackSystemBlock } from '~/lib/dungeon/compendium-utils'
+import { resolveCreature, systemBlockFromMonster, fallbackSystemBlock, getMonsterDescription } from '~/lib/dungeon/compendium-utils'
 import { generateNPCName } from '~/lib/dungeon/npc-names'
 import { executeDeletePOIWithChildren } from './DeletePOIWithChildren'
 import type { IFactionPresenceRepository } from '@application/ports/IFactionPresenceRepository'
@@ -272,7 +272,10 @@ export async function executeGenerateDungeon(
       poiId: roomIdToPoiId.get(room.id) ?? poiId,
       lifeStatus: 'alive',
       movementStatus: 'present',
-      description: `${creatureName} — ${room.activity ?? 'guarding'}.`,
+      description: [
+        compendiumId ? getMonsterDescription(compendiumId) : '',
+        `Activity: ${room.activity ?? 'guarding'}.`,
+      ].filter(Boolean).join('\n\n'),
       traits: [],
       motivation: '',
       appearance: '',
