@@ -355,30 +355,43 @@ function RoomDetailPanel({
       {room.treasure?.length > 0 && (
         <div className="space-y-1">
           <div className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">💎 Treasure</div>
-          {room.treasure.map((item) => (
-            <button
-              key={item.id}
-              className="w-full flex items-center gap-2 text-sm rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5 hover:bg-emerald-500/10 transition-colors text-left"
-              onClick={() => {
-                const updated = room.treasure.map((t) =>
-                  t.id === item.id ? { ...t, collected: !t.collected } : t
-                )
-                db.pois.update(room.id, { treasure: updated, updatedAt: Date.now() })
-              }}
-              title={item.collected ? 'Mark as loot' : 'Mark as collected'}
-            >
-              <span className="text-base leading-none shrink-0">
-                {item.collected ? '✅' : '💰'}
-              </span>
-              <span className={item.collected ? 'line-through text-muted-foreground flex-1' : 'flex-1'}>
-                {item.name}
-                {item.quantity > 1 && ` (×${item.quantity})`}
-              </span>
-              {item.value && (
-                <span className="text-xs text-amber-400 shrink-0">{item.value}</span>
-              )}
-            </button>
-          ))}
+          {room.treasure.map((item) => {
+            const isScroll = item.name.startsWith('Scroll of')
+            const isWeapon = item.description?.includes('Damage:')
+            const isGear = !item.isMagic && !isWeapon && item.description?.startsWith('Condition:')
+            const icon = item.collected ? '✅'
+              : item.isMagic && isScroll ? '📜'
+              : item.isMagic ? '✨'
+              : isWeapon ? '⚔'
+              : isGear ? '🎒'
+              : '💰'
+            return (
+              <div key={item.id} className="rounded border border-emerald-500/20 bg-emerald-500/5 overflow-hidden">
+                <button
+                  className="w-full flex items-center gap-2 text-sm px-2 py-1.5 hover:bg-emerald-500/10 transition-colors text-left"
+                  onClick={() => {
+                    const updated = room.treasure.map((t) =>
+                      t.id === item.id ? { ...t, collected: !t.collected } : t
+                    )
+                    db.pois.update(room.id, { treasure: updated, updatedAt: Date.now() })
+                  }}
+                >
+                  <span className="text-base leading-none shrink-0">{icon}</span>
+                  <span className={item.collected ? 'line-through text-muted-foreground flex-1' : 'flex-1'}>
+                    {item.name}
+                    {item.quantity > 1 && ` (×${item.quantity})`}
+                  </span>
+                  {item.value && <span className="text-xs text-amber-400 shrink-0">{item.value}</span>}
+                  {isWeapon && item.description && (
+                    <span className="text-xs text-muted-foreground shrink-0">{item.description.replace('Damage: ', '')}</span>
+                  )}
+                </button>
+                {item.description && !isWeapon && (
+                  <p className="text-xs text-muted-foreground px-2 pb-1.5 italic">{item.description}</p>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 

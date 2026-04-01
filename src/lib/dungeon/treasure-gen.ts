@@ -112,38 +112,67 @@ export function generateSpellScrolls(
   return result
 }
 
-/** Generate weapon loot for a room */
-export function generateWeaponLoot(
-  room: SpatialRoom,
+/** Distribute weapons across rooms — guarantees at least 1, more based on treasure level */
+export function generateWeapons(
+  rooms: SpatialRoom[],
+  treasureLevel: string,
   systemId: string,
   rng: SeededRandom
-): TreasureItem | null {
-  const weapon = pickWeapon(systemId, rng)
-  if (!weapon) return null
-  return {
-    id: newId(),
-    name: weapon.name,
-    description: weapon.damage ? `Damage: ${weapon.damage}` : '',
-    value: '',
-    quantity: 1,
-    collected: false,
+): Map<string, TreasureItem[]> {
+  const result = new Map<string, TreasureItem[]>()
+  const counts: Record<string, number> = { poor: 1, standard: 2, rich: 3, hoard: 4 }
+  const count = counts[treasureLevel] ?? 2
+  const eligible = rooms.filter((r) => r.type !== 'entrance' && r.type !== 'exit')
+  if (eligible.length === 0) return result
+
+  for (let i = 0; i < count; i++) {
+    const room = rng.pick(eligible)
+    const weapon = pickWeapon(systemId, rng.child(`weapon-${i}`))
+    if (!weapon) continue
+    const existing = result.get(room.id) ?? []
+    existing.push({
+      id: newId(),
+      name: weapon.name,
+      description: [
+        weapon.damage ? `Damage: ${weapon.damage}` : '',
+        `Condition: ${weapon.condition}`,
+      ].filter(Boolean).join(' · '),
+      value: '',
+      quantity: 1,
+      collected: false,
+    })
+    result.set(room.id, existing)
   }
+  return result
 }
 
-/** Generate gear loot for a room */
-export function generateGearLoot(
-  room: SpatialRoom,
+/** Distribute gear across rooms — guarantees at least 1, more based on treasure level */
+export function generateGear(
+  rooms: SpatialRoom[],
+  treasureLevel: string,
   systemId: string,
   rng: SeededRandom
-): TreasureItem | null {
-  const gear = pickGear(systemId, rng)
-  if (!gear) return null
-  return {
-    id: newId(),
-    name: gear.name,
-    description: '',
-    value: '',
-    quantity: 1,
-    collected: false,
+): Map<string, TreasureItem[]> {
+  const result = new Map<string, TreasureItem[]>()
+  const counts: Record<string, number> = { poor: 1, standard: 2, rich: 3, hoard: 4 }
+  const count = counts[treasureLevel] ?? 2
+  const eligible = rooms.filter((r) => r.type !== 'entrance' && r.type !== 'exit')
+  if (eligible.length === 0) return result
+
+  for (let i = 0; i < count; i++) {
+    const room = rng.pick(eligible)
+    const gear = pickGear(systemId, rng.child(`gear-${i}`))
+    if (!gear) continue
+    const existing = result.get(room.id) ?? []
+    existing.push({
+      id: newId(),
+      name: gear.name,
+      description: `Condition: ${gear.condition}`,
+      value: '',
+      quantity: 1,
+      collected: false,
+    })
+    result.set(room.id, existing)
   }
+  return result
 }

@@ -11,7 +11,7 @@ import type { TreasureItem } from '@domain/value-objects/TreasureItem'
 import type { DungeonGenOptions } from '~/lib/dungeon/types'
 import { generateDungeon } from '~/lib/dungeon/DungeonGenerator'
 import { getBlueprint } from '~/lib/dungeon/dungeon/DungeonBlueprints'
-import { generateRoomTreasure, generateMagicItems, generateSpellScrolls, generateWeaponLoot, generateGearLoot } from '~/lib/dungeon/treasure-gen'
+import { generateRoomTreasure, generateMagicItems, generateSpellScrolls, generateWeapons, generateGear } from '~/lib/dungeon/treasure-gen'
 import { resolveCreature, systemBlockFromMonster, fallbackSystemBlock, getMonsterDescription } from '~/lib/dungeon/compendium-utils'
 import { generateNPCName } from '~/lib/dungeon/npc-names'
 import { executeDeletePOIWithChildren } from './DeletePOIWithChildren'
@@ -165,22 +165,13 @@ export async function executeGenerateDungeon(
   // Spells: same
   const spellsByRoom = generateSpellScrolls(generated.rooms, options.spellCount, systemId, rng.child('spells'))
 
-  // Weapons & gear: probabilistic per room based on treasureLevel
-  const weaponChance = { poor: 0.1, standard: 0.2, rich: 0.35, hoard: 0.5 }[options.treasureLevel] ?? 0.2
-  const weaponsByRoom = new Map<string, TreasureItem[]>()
-  const gearByRoom = new Map<string, TreasureItem[]>()
-
-  for (const room of generated.rooms) {
-    if (room.type === 'entrance' || room.type === 'exit') continue
-    if (options.includeWeapons && rng.child(`wpn-${room.id}`).chance(weaponChance)) {
-      const item = generateWeaponLoot(room, systemId, rng.child(`wpn-pick-${room.id}`))
-      if (item) weaponsByRoom.set(room.id, [item])
-    }
-    if (options.includeGear && rng.child(`gear-${room.id}`).chance(weaponChance)) {
-      const item = generateGearLoot(room, systemId, rng.child(`gear-pick-${room.id}`))
-      if (item) gearByRoom.set(room.id, [item])
-    }
-  }
+  // Weapons & gear: guaranteed distribution based on treasureLevel
+  const weaponsByRoom = options.includeWeapons
+    ? generateWeapons(generated.rooms, options.treasureLevel, systemId, rng.child('weapons'))
+    : new Map<string, TreasureItem[]>()
+  const gearByRoom = options.includeGear
+    ? generateGear(generated.rooms, options.treasureLevel, systemId, rng.child('gear'))
+    : new Map<string, TreasureItem[]>()
 
   // Apply the extra items to the already-created child POIs
   const allExtraByRoom = new Map<string, TreasureItem[]>()

@@ -443,7 +443,7 @@ function GenerateDungeonPage() {
         <div className="flex gap-2 items-center">
           <Input
             type="number"
-            min={0} max={20}
+            min={0}
             value={magicItemCount}
             onChange={(e) => setMagicItemCount(Math.max(0, parseInt(e.target.value) || 0))}
             className="w-24 font-mono"
@@ -464,7 +464,7 @@ function GenerateDungeonPage() {
         <div className="flex gap-2 items-center">
           <Input
             type="number"
-            min={0} max={20}
+            min={0}
             value={spellCount}
             onChange={(e) => setSpellCount(Math.max(0, parseInt(e.target.value) || 0))}
             className="w-24 font-mono"

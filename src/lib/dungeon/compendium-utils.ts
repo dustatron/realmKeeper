@@ -5,8 +5,8 @@ import type { SeededRandom } from './SeededRandom'
 
 const CONDITIONS = ['rusty', 'battered', 'worn', 'cracked', 'well-used', 'new', 'masterwork']
 
-/** Pick a random weapon from the system compendium with a condition tag */
-export function pickWeapon(systemId: string, rng: SeededRandom): { name: string; damage: string } | null {
+/** Pick a random weapon from the system compendium */
+export function pickWeapon(systemId: string, rng: SeededRandom): { name: string; condition: string; damage: string } | null {
   const equipment = getEquipmentBySystemId(systemId)
   const weapons = equipment.filter((e) => {
     const sd = e.systemData
@@ -22,11 +22,11 @@ export function pickWeapon(systemId: string, rng: SeededRandom): { name: string;
     : picked.systemData.system === 'cairn'
     ? picked.systemData.data.damage ?? ''
     : ''
-  return { name: `${condition} ${picked.name}`.trim(), damage }
+  return { name: picked.name, condition, damage }
 }
 
 /** Pick a random piece of gear (armor, tools) from the system compendium */
-export function pickGear(systemId: string, rng: SeededRandom): { name: string } | null {
+export function pickGear(systemId: string, rng: SeededRandom): { name: string; condition: string } | null {
   const equipment = getEquipmentBySystemId(systemId)
   const gear = equipment.filter((e) => {
     const sd = e.systemData
@@ -37,7 +37,7 @@ export function pickGear(systemId: string, rng: SeededRandom): { name: string } 
   if (gear.length === 0) return null
   const picked = rng.pick(gear)
   const condition = rng.pick(CONDITIONS)
-  return { name: `${condition} ${picked.name}`.trim() }
+  return { name: picked.name, condition }
 }
 
 /** Pick a random spell scroll from the system compendium */
