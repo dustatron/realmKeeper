@@ -260,15 +260,23 @@ export async function executeGenerateDungeon(
 
   // === 7. Convert wandering monsters to realmKeeper format (with compendium lookup) ===
 
-  const wanderingMonsters: WanderingMonsterEntry[] = (generated.wanderingMonsters?.entries ?? []).map((e) => ({
-    name: slugToName(e.creatureType),
-    creatureType: e.creatureType,
-    count: e.count,
-    activity: e.activity,
-    compendiumId: findCompendiumId(e.creatureType, systemId),
-    npcId: null,
-    customStats: null,
-  }))
+  const wanderingMonsters: WanderingMonsterEntry[] = (generated.wanderingMonsters?.entries ?? []).map((e) => {
+    const compendiumId = findCompendiumId(e.creatureType, systemId)
+    const fallback = fallbackSystemBlock(generated.depth, options.dangerLevel)
+    return {
+      name: slugToName(e.creatureType),
+      creatureType: e.creatureType,
+      count: e.count,
+      activity: e.activity,
+      compendiumId,
+      npcId: null,
+      customStats: compendiumId ? null : {
+        ac: fallback.armor,
+        hp: fallback.hp,
+        attacks: fallback.attacks[0]?.damage ?? '1d6',
+      },
+    }
+  })
 
   // === 7b. Place room creatures based on danger level ===
 
