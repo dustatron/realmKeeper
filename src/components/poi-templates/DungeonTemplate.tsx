@@ -158,11 +158,15 @@ function RoomNPCCard({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) 
           {sb && sb.attacks.length > 0 && (
             <div className="space-y-1">
               {sb.attacks.map((atk, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs">
-                  <Swords className="size-3 text-red-400 shrink-0" />
-                  <span className="font-medium">{atk.name}</span>
-                  <span className="font-mono text-muted-foreground">{atk.damage}</span>
-                  {atk.description && <span className="text-muted-foreground truncate">{atk.description}</span>}
+                <div key={i} className="text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <Swords className="size-3 text-red-400 shrink-0" />
+                    <span className="font-medium">{atk.name}</span>
+                  </div>
+                  <div className="pl-5 text-muted-foreground">
+                    <span className="font-mono">{atk.damage}</span>
+                    {atk.description && <span className="ml-1">{atk.description}</span>}
+                  </div>
                 </div>
               ))}
             </div>
