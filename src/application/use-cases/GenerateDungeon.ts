@@ -1,4 +1,6 @@
 import { newId } from '@shared/ulid'
+import { SeededRandom } from '~/lib/dungeon/SeededRandom'
+import type { SpatialRoom } from '~/lib/dungeon/types'
 import type { IPOIRepository } from '@application/ports/IPOIRepository'
 import type { INPCRepository } from '@application/ports/INPCRepository'
 import type { IPathRepository } from '@application/ports/IPathRepository'
@@ -69,7 +71,8 @@ export async function executeGenerateDungeon(
 
   // === 2. Generate dungeon ===
 
-  const generated = generateDungeon(poiId, options)
+  const generated = generateDungeon(options.seed, options)
+  const rng = new SeededRandom(`${options.seed}-use-case`)
 
   // === 3. Build a room ID → child POI ID map ===
   // We need this so dungeonNPCs can be placed in the right child POI
@@ -91,15 +94,13 @@ export async function executeGenerateDungeon(
       disarmed: false,
     }))
 
-    // Map dungeon treasure → realmKeeper TreasureItem[]
-    const treasure: TreasureItem[] = room.treasure.map((t) => ({
-      id: newId(),
-      name: t.name,
-      description: t.description ?? '',
-      value: t.value ?? '',
-      quantity: 1,
-      collected: false,
-    }))
+    // Generate treasure based on level and room type
+    const treasure: TreasureItem[] = generateRoomTreasure(
+      room,
+      options.treasureLevel,
+      options.includeMagicItems,
+      rng.child(`room-${room.id}`)
+    )
 
     // Build GM notes from historical clues and discoveries
     const gmNotesParts: string[] = []
@@ -175,7 +176,26 @@ export async function executeGenerateDungeon(
 
   // === 5. Create NPC entities for generated dungeon NPCs ===
 
-  for (const dungeonNPC of generated.dungeonNPCs ?? []) {
+  // Guarantee at least one NPC for dungeons with 3+ rooms
+  const dungeonNPCs = generated.dungeonNPCs ?? []
+  if (dungeonNPCs.length === 0 && generated.rooms.length >= 3) {
+    const inhabitantRoom = generated.rooms
+      .filter((r) => r.type !== 'entrance')
+      .sort((a, b) => b.depth - a.depth)[0]
+    if (inhabitantRoom) {
+      const inhabitants = generated.ecology?.currentInhabitants ?? 'dungeon denizen'
+      dungeonNPCs.push({
+        npcId: `inhabitant-${newId()}`,
+        category: 'faction_leader',
+        roomId: inhabitantRoom.id,
+        disposition: 'hostile',
+        hasInfo: `Leader of the ${inhabitants}. Knows the dungeon's secrets.`,
+        wants: ['power', 'wealth'],
+      })
+    }
+  }
+
+  for (const dungeonNPC of dungeonNPCs) {
     // Find which child POI this NPC belongs to
     const npcPoiId = roomIdToPoiId.get(dungeonNPC.roomId) ?? poiId
 
@@ -280,6 +300,66 @@ function parseDC(save?: string): number | null {
 
 function formatCreatureName(slug: string): string {
   return slug.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
+// Treasure tables by level
+const COIN_TREASURE: Record<string, { name: string; value: string }[]> = {
+  poor:     [{ name: 'Handful of copper pieces', value: '1d6 cp' }, { name: 'Tarnished silver coins', value: '2d6 sp' }],
+  standard: [{ name: 'Silver coins', value: '2d10 sp' }, { name: 'Gold pieces', value: '1d6 gp' }, { name: 'Gem (rough)', value: '10 gp' }],
+  rich:     [{ name: 'Gold pieces', value: '3d6 gp' }, { name: 'Polished gem', value: '50 gp' }, { name: 'Jeweled goblet', value: '100 gp' }],
+  hoard:    [{ name: 'Gold & platinum coins', value: '5d10 gp' }, { name: 'Precious gem', value: '250 gp' }, { name: 'Ornate art object', value: '500 gp' }, { name: 'Ancient coin cache', value: '1d6 × 100 gp' }],
+}
+
+const MAGIC_ITEM_NAMES = [
+  'Potion of Healing', 'Scroll of Arcane Knowledge', 'Enchanted Blade Fragment',
+  'Ring of Minor Ward', 'Wand of Sparks', 'Amulet of Whispers',
+  'Vial of Witch-Fire', 'Cloak of Shadows (tattered)', 'Lens of True Sight',
+  'Boot of Silent Step', 'Dagger of Returning', 'Horn of the Fallen',
+]
+
+function generateRoomTreasure(
+  room: SpatialRoom,
+  level: string,
+  includeMagicItems: boolean,
+  rng: SeededRandom
+): TreasureItem[] {
+  const isTreasureRoom = room.themeRoomType === 'treasure_vault' ||
+    room.themeRoomType === 'loot_storage' ||
+    room.themeRoomType === 'treasure_grotto'
+
+  const chances: Record<string, { deadEnd: number; treasure: number; other: number }> = {
+    poor:     { deadEnd: 0.35, treasure: 0.85, other: 0.05 },
+    standard: { deadEnd: 0.60, treasure: 1.00, other: 0.15 },
+    rich:     { deadEnd: 0.85, treasure: 1.00, other: 0.35 },
+    hoard:    { deadEnd: 1.00, treasure: 1.00, other: 0.55 },
+  }
+  const chance = chances[level] ?? chances.standard
+  const roll = isTreasureRoom ? chance.treasure : room.isDeadEnd ? chance.deadEnd : chance.other
+
+  if (!rng.chance(roll)) return []
+
+  const items: TreasureItem[] = []
+  const pool = COIN_TREASURE[level] ?? COIN_TREASURE.standard
+  const count = isTreasureRoom ? rng.between(2, 4) : rng.between(1, 2)
+
+  for (let i = 0; i < count; i++) {
+    const pick = rng.pick(pool)
+    items.push({ id: newId(), name: pick.name, description: '', value: pick.value, quantity: 1, collected: false })
+  }
+
+  // Magic item chance
+  if (includeMagicItems && (isTreasureRoom || room.isDeadEnd) && rng.chance(0.35)) {
+    items.push({
+      id: newId(),
+      name: rng.pick(MAGIC_ITEM_NAMES),
+      description: 'A magical item found among the dungeon\'s treasures.',
+      value: 'priceless',
+      quantity: 1,
+      collected: false,
+    })
+  }
+
+  return items
 }
 
 function generateNPCName(category: string): string {

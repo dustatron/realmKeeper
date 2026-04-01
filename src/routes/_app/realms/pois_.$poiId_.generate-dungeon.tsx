@@ -17,9 +17,13 @@ import {
   SelectValue,
 } from '~/components/ui/select'
 import { Switch } from '~/components/ui/switch'
-import { ArrowLeft, AlertTriangle, Wand2, RefreshCw } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, Wand2, RefreshCw, Shuffle, ChevronsUpDown, Check } from 'lucide-react'
 import type { DungeonGenOptions, DungeonTheme, DungeonSize } from '~/lib/dungeon/types'
 import { SeededRandom } from '~/lib/dungeon/SeededRandom'
+import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
+import {
+  Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
+} from '~/components/ui/command'
 
 export const Route = createFileRoute('/_app/realms/pois_/$poiId_/generate-dungeon')({
   component: GenerateDungeonPage,
@@ -99,11 +103,62 @@ const DUNGEON_NOUNS: Record<DungeonTheme, string[]> = {
   floating_keep: ['Keep', 'Citadel', 'Tower', 'Fortress', 'Spire'],
 }
 
+function rollSeed(): string {
+  return String(Math.floor(100000 + Math.random() * 900000))
+}
+
 function rollDungeonName(theme: DungeonTheme): string {
   const rng = new SeededRandom(Date.now())
   const adj = rng.pick(DUNGEON_ADJECTIVES)
   const noun = rng.pick(DUNGEON_NOUNS[theme])
   return `The ${adj} ${noun}`
+}
+
+function ThemeCombobox({
+  groups, value, onSelect,
+}: {
+  groups: typeof THEME_GROUPS
+  value: DungeonTheme
+  onSelect: (v: DungeonTheme) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const allThemes = groups.flatMap((g) => g.themes)
+  const selected = allThemes.find((t) => t.value === value)
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" aria-expanded={open} className="flex-1 justify-between">
+          <span>{selected?.label ?? 'Select type…'}</span>
+          <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[320px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search location types…" />
+          <CommandList>
+            <CommandEmpty>No match.</CommandEmpty>
+            {groups.map((group) => (
+              <CommandGroup key={group.label} heading={`${group.icon} ${group.label}`}>
+                {group.themes.map((t) => (
+                  <CommandItem
+                    key={t.value}
+                    value={`${t.label} ${t.desc}`}
+                    onSelect={() => { onSelect(t.value); setOpen(false) }}
+                  >
+                    <Check className={`mr-2 h-4 w-4 ${value === t.value ? 'opacity-100' : 'opacity-0'}`} />
+                    <div>
+                      <div className="text-sm font-medium">{t.label}</div>
+                      <div className="text-xs text-muted-foreground">{t.desc}</div>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 function GenerateDungeonPage() {
@@ -124,6 +179,7 @@ function GenerateDungeonPage() {
   const [parentPoiId, setParentPoiId] = useState<string | null>(null)
 
   // Generation options
+  const [seed, setSeed] = useState<string>(existing?.seed ?? rollSeed())
   const [theme, setTheme] = useState<DungeonTheme>(existing?.theme ?? 'cave')
   const [size, setSize] = useState<DungeonSize>(existing?.size ?? 'small')
   const [treasureLevel, setTreasureLevel] = useState<DungeonGenOptions['treasureLevel']>(
@@ -168,7 +224,7 @@ function GenerateDungeonPage() {
         { poiRepo: container.poiRepo }
       )
 
-      const options: DungeonGenOptions = { theme, size, treasureLevel, dangerLevel, includeMagicItems, exitPoiIds }
+      const options: DungeonGenOptions = { seed, theme, size, treasureLevel, dangerLevel, includeMagicItems, exitPoiIds }
       await executeGenerateDungeon(
         { poiId, worldId: realm.id, options },
         {
@@ -268,33 +324,50 @@ function GenerateDungeonPage() {
         </div>
       </div>
 
-      {/* Theme — grouped by location category */}
-      <div className="space-y-3">
-        <Label>Location Type</Label>
-        {THEME_GROUPS.map((group) => (
-          <div key={group.label} className="space-y-1.5">
-            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <span>{group.icon}</span>
-              <span className="uppercase tracking-wide font-medium">{group.label}</span>
-            </p>
-            <div className="grid grid-cols-2 gap-1.5">
-              {group.themes.map((t) => (
-                <button
-                  key={t.value}
-                  onClick={() => { setTheme(t.value); rollName() }}
-                  className={`flex flex-col items-start p-2.5 rounded-md border text-left transition-colors ${
-                    theme === t.value
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border hover:border-primary/50 hover:bg-accent'
-                  }`}
-                >
-                  <span className="text-sm font-medium">{t.label}</span>
-                  <span className="text-xs text-muted-foreground leading-tight mt-0.5">{t.desc}</span>
-                </button>
-              ))}
+      {/* Location Type — searchable combobox */}
+      {(() => {
+        const allThemes = THEME_GROUPS.flatMap((g) => g.themes.map((t) => ({ ...t, group: g.label, icon: g.icon })))
+        const selected = allThemes.find((t) => t.value === theme)
+        const randomTheme = () => {
+          const pick = allThemes[Math.floor(Math.random() * allThemes.length)]
+          setTheme(pick.value)
+        }
+        return (
+          <div className="space-y-1.5">
+            <Label>Location Type</Label>
+            <div className="flex gap-2">
+              <ThemeCombobox
+                groups={THEME_GROUPS}
+                value={theme}
+                onSelect={(v) => setTheme(v)}
+              />
+              <Button variant="outline" size="icon" onClick={randomTheme} title="Random type">
+                <Shuffle className="h-4 w-4" />
+              </Button>
             </div>
+            {selected && (
+              <p className="text-xs text-muted-foreground">{selected.icon} {selected.group} — {selected.desc}</p>
+            )}
           </div>
-        ))}
+        )
+      })()}
+
+      {/* Seed */}
+      <div className="space-y-1.5">
+        <Label htmlFor="dungeon-seed">Seed</Label>
+        <div className="flex gap-2">
+          <Input
+            id="dungeon-seed"
+            value={seed}
+            onChange={(e) => setSeed(e.target.value)}
+            placeholder="123456"
+            className="flex-1 font-mono"
+          />
+          <Button variant="outline" size="icon" onClick={() => setSeed(rollSeed())} title="New random seed">
+            <Shuffle className="h-4 w-4" />
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">Same seed + options = same dungeon every time.</p>
       </div>
 
       {/* Size */}

@@ -355,6 +355,7 @@ export interface GeneratedDungeon {
 
 /** Options used to generate a dungeon — persisted for regen */
 export interface DungeonGenOptions {
+  seed: string
   theme: DungeonTheme
   size: DungeonSize
   treasureLevel: 'poor' | 'standard' | 'rich' | 'hoard'
