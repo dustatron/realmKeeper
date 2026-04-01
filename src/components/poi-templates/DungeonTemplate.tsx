@@ -79,7 +79,7 @@ function RoomNPCCard({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) 
         {isDead ? (
           <Skull className="size-3.5 text-muted-foreground shrink-0" />
         ) : npc.tags?.includes('creature') ? (
-          <Swords className="size-3.5 text-red-400 shrink-0" />
+          <Skull className="size-3.5 text-red-400 shrink-0" />
         ) : (
           <Heart className="size-3.5 text-green-500 fill-green-500 shrink-0" />
         )}
