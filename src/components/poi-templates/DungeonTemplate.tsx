@@ -505,21 +505,6 @@ export function DungeonTemplate({
         </div>
       )}
 
-      {/* At A Glance — uses room rollup stats for traps/treasure/NPCs */}
-      <AtAGlancePanel
-        mood={poi.mood}
-        trouble={poi.trouble}
-        factionPresences={factionPresences}
-        npcCount={allNPCs.length}
-        activeEvents={activeEvents}
-        paths={paths}
-        currentPoiId={poi.id}
-        traps={totalRoomTraps.length > 0 ? totalRoomTraps : poi.traps}
-        onToggleTrapDisarmed={onToggleTrapDisarmed}
-        treasure={totalRoomTreasure.length > 0 ? totalRoomTreasure : poi.treasure}
-        lightLevel={poi.lightLevel}
-      />
-
       {/* Read Aloud */}
       <ReadAloudBlock text={poi.readAloud} />
 
@@ -535,7 +520,7 @@ export function DungeonTemplate({
         </details>
       )}
 
-      {/* Dungeon Lore — shows generated ecology data */}
+      {/* Dungeon Lore — shows generated ecology data (above tabs, always visible) */}
       {poi.spatialDungeon?.ecology && (() => {
         const { builderCulture, currentInhabitants, history, historyLayers } = poi.spatialDungeon.ecology
         if (!builderCulture && !currentInhabitants && !history) return null
@@ -581,7 +566,7 @@ export function DungeonTemplate({
           </TabsTrigger>
           <TabsTrigger value="denizens">
             <Users className="size-4" />
-            Denizens ({allNPCs.length})
+            Details
           </TabsTrigger>
           <TabsTrigger value="encounters">
             <Dices className="size-4" />
@@ -779,8 +764,23 @@ export function DungeonTemplate({
           </div>
         </TabsContent>
 
-        {/* Denizens tab */}
+        {/* Details tab */}
         <TabsContent value="denizens" className="space-y-4 pt-3">
+          {/* At A Glance stats — aggregate dungeon status */}
+          <AtAGlancePanel
+            mood={poi.mood}
+            trouble={poi.trouble}
+            factionPresences={factionPresences}
+            npcCount={allNPCs.length}
+            activeEvents={activeEvents}
+            paths={paths}
+            currentPoiId={poi.id}
+            traps={totalRoomTraps.length > 0 ? totalRoomTraps : poi.traps}
+            onToggleTrapDisarmed={onToggleTrapDisarmed}
+            treasure={totalRoomTreasure.length > 0 ? totalRoomTreasure : poi.treasure}
+            lightLevel={poi.lightLevel}
+          />
+
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-sm font-semibold flex items-center gap-2">
               <Users className="size-4" />
