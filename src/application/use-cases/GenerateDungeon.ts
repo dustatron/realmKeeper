@@ -456,15 +456,33 @@ function systemBlockFromMonster(id: string): SystemBlock {
 
   if (sd.system === 'cairn') {
     const d = sd.data
+    const s = d.stats ?? ''
+    // Parse: "4 HP, 1 Armor, 8 STR, 11 DEX, 14 WIL, claws (d6)"
+    const hp = parseInt(s.match(/(\d+)\s*HP/i)?.[1] ?? '0')
+    const armor = parseInt(s.match(/(\d+)\s*Armor/i)?.[1] ?? '0')
+    const str = parseInt(s.match(/(\d+)\s*STR/i)?.[1] ?? '0')
+    const dex = parseInt(s.match(/(\d+)\s*DEX/i)?.[1] ?? '0')
+    const wil = parseInt(s.match(/(\d+)\s*WIL/i)?.[1] ?? '0')
+    // Last token with a damage die: "claws (d6)" or "bite (d8+d6)"
+    const attackMatch = s.match(/([^,]+\([\dd+]+\))[^,]*$/)
+    const attackStr = attackMatch?.[1]?.trim() ?? ''
+    const [attackName, attackDamage] = attackStr.includes('(')
+      ? [attackStr.slice(0, attackStr.indexOf('(')).trim(), attackStr.match(/\(([\dd+]+)\)/)?.[1] ?? '']
+      : [attackStr, '']
+
     return {
-      stats: [],
-      hp: 0,
-      maxHp: 0,
-      armor: 0,
-      attacks: d.stats ? [{ name: 'Attack', damage: d.stats, description: '' }] : [],
+      stats: [
+        ...(str > 0 ? [{ key: 'STR', value: str }] : []),
+        ...(dex > 0 ? [{ key: 'DEX', value: dex }] : []),
+        ...(wil > 0 ? [{ key: 'WIL', value: wil }] : []),
+      ],
+      hp,
+      maxHp: hp,
+      armor,
+      attacks: attackDamage ? [{ name: attackName || 'Attack', damage: attackDamage, description: '' }] : [],
       inventory: [],
       abilities: d.details ?? [],
-      notes: '',
+      notes: s,
     }
   }
 
