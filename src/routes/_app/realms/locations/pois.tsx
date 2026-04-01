@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useRegions } from '~/ui/hooks/useRegions'
@@ -65,6 +65,7 @@ import {
   Sparkles,
   MapPin,
   Star,
+  Wand2,
 } from 'lucide-react'
 import { db } from '@infrastructure/dexie/db'
 
@@ -89,6 +90,7 @@ const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }
 }
 
 function POIsPage() {
+  const navigate = useNavigate()
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const regions = useRegions(activeRealmId)
   const [selectedRegionId, setSelectedRegionId] = useState<string>('all')
@@ -158,7 +160,7 @@ function POIsPage() {
 
   const handleCreate = async () => {
     if (!createForm.name.trim()) return
-    await executeCreatePOI(
+    const poi = await executeCreatePOI(
       {
         name: createForm.name,
         description: createForm.description,
@@ -182,6 +184,10 @@ function POIsPage() {
       floor: null,
       tags: [],
     })
+    // For dungeon POIs, go straight to the generate dungeon route
+    if (createForm.type === 'dungeon') {
+      navigate({ to: '/realms/pois/$poiId/generate-dungeon', params: { poiId: poi.id } })
+    }
   }
 
   const handleEdit = async () => {
@@ -211,12 +217,31 @@ function POIsPage() {
     setEditingPOI(null)
   }
 
-  const openCreateDialog = () => {
+  const handleGenerateDungeon = async () => {
+    const regionId = selectedRegionId !== 'all' ? selectedRegionId : regions[0]?.id
+    if (!regionId) return
+    const poi = await executeCreatePOI(
+      {
+        name: 'New Dungeon',
+        description: '',
+        type: 'dungeon',
+        regionId,
+        parentPoiId: null,
+        subtypeLabel: null,
+        floor: null,
+        tags: [],
+      },
+      { poiRepo: container.poiRepo }
+    )
+    navigate({ to: '/realms/pois/$poiId/generate-dungeon', params: { poiId: poi.id } })
+  }
+
+  const openCreateDialog = (presetType?: PoiType) => {
     const defaultRegion = selectedRegionId !== 'all' ? selectedRegionId : (regions[0]?.id ?? '')
     setCreateForm({
       name: '',
       description: '',
-      type: 'settlement',
+      type: presetType ?? 'settlement',
       regionId: defaultRegion,
       parentPoiId: null,
       subtypeLabel: '',
@@ -302,7 +327,11 @@ function POIsPage() {
             className="pl-9"
           />
         </div>
-        <Button onClick={openCreateDialog}>
+        <Button variant="outline" onClick={handleGenerateDungeon} disabled={regions.length === 0}>
+          <Wand2 className="mr-2 size-4" />
+          Generate Dungeon
+        </Button>
+        <Button onClick={() => openCreateDialog()}>
           <Plus className="mr-2 size-4" />
           New POI
         </Button>
@@ -315,7 +344,7 @@ function POIsPage() {
           title="No POIs yet"
           description="Add points of interest to your realm"
           action={
-            <Button onClick={openCreateDialog}>
+            <Button onClick={() => openCreateDialog()}>
               <Plus className="mr-2 size-4" />
               New POI
             </Button>

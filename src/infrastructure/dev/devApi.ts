@@ -280,6 +280,8 @@ const pois = {
       watabouSeed: data.watabouSeed ?? null,
       watabouGenerator: data.watabouGenerator ?? null,
       watabouData: data.watabouData ?? null,
+      spatialDungeon: data.spatialDungeon ?? null,
+      dungeonGenOptions: data.dungeonGenOptions ?? null,
       sessionLog: data.sessionLog ?? [],
       starred: data.starred ?? false,
       createdAt: ts,

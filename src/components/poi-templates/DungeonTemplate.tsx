@@ -77,7 +77,9 @@ function RoomNPCCard({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) 
       >
         <ChevronRight className={`size-4 text-muted-foreground shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`} />
         {isDead ? (
-          <span title={npc.lifeStatus}><Skull className="size-3.5 text-muted-foreground shrink-0" /></span>
+          <Skull className="size-3.5 text-muted-foreground shrink-0" />
+        ) : npc.tags?.includes('creature') ? (
+          <Skull className="size-3.5 text-red-400 shrink-0" />
         ) : (
           <Heart className="size-3.5 text-green-500 fill-green-500 shrink-0" />
         )}
@@ -158,29 +160,54 @@ function RoomNPCCard({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) 
           {sb && sb.attacks.length > 0 && (
             <div className="space-y-1">
               {sb.attacks.map((atk, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs">
-                  <Swords className="size-3 text-red-400 shrink-0" />
-                  <span className="font-medium">{atk.name}</span>
-                  <span className="font-mono text-muted-foreground">{atk.damage}</span>
-                  {atk.description && <span className="text-muted-foreground truncate">{atk.description}</span>}
+                <div key={i} className="text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <Swords className="size-3 text-red-400 shrink-0" />
+                    <span className="font-medium">{atk.name}</span>
+                  </div>
+                  <div className="pl-5 text-muted-foreground">
+                    <span className="font-mono">{atk.damage}</span>
+                    {atk.description && <span className="ml-1">{atk.description}</span>}
+                  </div>
                 </div>
               ))}
             </div>
           )}
 
-          {/* Abilities */}
+          {/* Abilities — render HTML from compendium (strong → bold, em → italic) */}
           {sb && sb.abilities && sb.abilities.length > 0 && (
-            <div className="text-xs text-muted-foreground space-y-0.5">
+            <div className="text-xs text-muted-foreground space-y-1">
               {sb.abilities.map((ability, i) => (
-                <div key={i}>{ability}</div>
+                <div
+                  key={i}
+                  // eslint-disable-next-line react/no-danger
+                  dangerouslySetInnerHTML={{ __html: ability }}
+                  className="[&_strong]:font-semibold [&_strong]:text-foreground [&_em]:italic"
+                />
               ))}
             </div>
           )}
 
-          {/* Description */}
-          {npc.description && (
-            <p className="text-xs text-muted-foreground italic">{npc.description}</p>
-          )}
+          {/* Description — eye icon + lore text, activity as badge */}
+          {npc.description && (() => {
+            const [lore, ...rest] = npc.description.split('\n\nActivity:')
+            const activity = rest.length > 0 ? rest.join('').trim() : null
+            return (
+              <div className="space-y-1.5 pt-1 border-t border-border/30">
+                {lore && (
+                  <p className="text-xs text-muted-foreground flex gap-1.5">
+                    <span className="shrink-0 mt-0.5">👁</span>
+                    <span>{lore.trim()}</span>
+                  </p>
+                )}
+                {activity && (
+                  <span className="inline-block text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground capitalize">
+                    {activity}
+                  </span>
+                )}
+              </div>
+            )
+          })()}
         </div>
       )}
     </div>
@@ -324,29 +351,86 @@ function RoomDetailPanel({
       {room.treasure?.length > 0 && (
         <div className="space-y-1">
           <div className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">💎 Treasure</div>
-          {room.treasure.map((item) => (
-            <div key={item.id} className="flex items-center gap-2 text-sm rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5">
-              <span className={item.collected ? "line-through text-muted-foreground" : "text-foreground"}>
-                {item.name}
-                {item.quantity > 1 && ` (×${item.quantity})`}
-              </span>
-              {item.value && (
-                <span className="text-xs text-amber-400">{item.value}</span>
-              )}
-              <span className="ml-auto text-xs shrink-0">
-                {item.collected ? "✅ collected" : "💰 loot"}
-              </span>
-            </div>
-          ))}
+          {room.treasure.map((item) => {
+            const isScroll = item.name.startsWith('Scroll of')
+            const isWeapon = item.description?.includes('Damage:')
+            const isGear = !item.isMagic && !isWeapon && item.description?.startsWith('Condition:')
+            const icon = item.collected ? '✅'
+              : item.isMagic && isScroll ? '📜'
+              : item.isMagic ? '✨'
+              : isWeapon ? '⚔'
+              : isGear ? '🎒'
+              : '💰'
+            return (
+              <div key={item.id} className="rounded border border-emerald-500/20 bg-emerald-500/5 overflow-hidden">
+                <button
+                  className="w-full flex items-center gap-2 text-sm px-2 py-1.5 hover:bg-emerald-500/10 transition-colors text-left"
+                  onClick={() => {
+                    const updated = room.treasure.map((t) =>
+                      t.id === item.id ? { ...t, collected: !t.collected } : t
+                    )
+                    db.pois.update(room.id, { treasure: updated, updatedAt: Date.now() })
+                  }}
+                >
+                  <span className="text-base leading-none shrink-0">{icon}</span>
+                  <span className={item.collected ? 'line-through text-muted-foreground flex-1' : 'flex-1'}>
+                    {item.name}
+                    {item.quantity > 1 && ` (×${item.quantity})`}
+                  </span>
+                  {item.value && <span className="text-xs text-amber-400 shrink-0">{item.value}</span>}
+                  {isWeapon && item.description && (
+                    <span className="text-xs text-muted-foreground shrink-0">{item.description.replace('Damage: ', '')}</span>
+                  )}
+                </button>
+                {item.description && !isWeapon && (
+                  <div className="flex items-start justify-between gap-2 px-2 pb-1.5">
+                    <p className="text-xs text-muted-foreground italic flex-1">{item.description}</p>
+                    {item.compendiumId && item.isMagic && !isScroll && (
+                      <Link
+                        to="/realms/compendium/magic-items/$itemId"
+                        params={{ itemId: item.compendiumId }}
+                        className="text-xs text-amber-500 hover:underline shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Details →
+                      </Link>
+                    )}
+                    {item.compendiumId && item.isMagic && isScroll && (
+                      <Link
+                        to="/realms/compendium/spells/$spellId"
+                        params={{ spellId: item.compendiumId }}
+                        className="text-xs text-purple-400 hover:underline shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Spell →
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 
-      {/* NPCs */}
-      {npcs.length > 0 && (
+      {/* Creatures (battle encounters) */}
+      {npcs.filter((n) => n.tags?.includes('creature')).length > 0 && (
+        <div className="space-y-2">
+          <div className="text-xs font-semibold text-red-400 uppercase tracking-wide">⚔ Creatures</div>
+          <div className="space-y-2">
+            {npcs.filter((n) => n.tags?.includes('creature')).map((n) => (
+              <RoomNPCCard key={n.id} npc={n} onUpdateNPC={onUpdateNPC} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* NPCs (roleplay opportunities) */}
+      {npcs.filter((n) => !n.tags?.includes('creature')).length > 0 && (
         <div className="space-y-2">
           <div className="text-xs font-semibold text-blue-400 uppercase tracking-wide">👤 Denizens</div>
           <div className="space-y-2">
-            {npcs.map((n) => (
+            {npcs.filter((n) => !n.tags?.includes('creature')).map((n) => (
               <RoomNPCCard key={n.id} npc={n} onUpdateNPC={onUpdateNPC} />
             ))}
           </div>
@@ -357,7 +441,7 @@ function RoomDetailPanel({
       {room.gmNotes && (
         <div className="space-y-1">
           <div className="text-xs font-semibold text-purple-400 uppercase tracking-wide">📋 GM Notes</div>
-          <div className="rounded border border-purple-500/20 bg-purple-500/5 p-2.5 prose prose-sm prose-invert max-w-none">
+          <div className="rounded border border-purple-500/20 bg-purple-500/5 p-2.5 prose prose-xs prose-invert max-w-none text-xs [&_p]:my-1 [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs [&_ul]:my-1 [&_li]:my-0">
             <ReactMarkdown {...markdownOptions}>{room.gmNotes}</ReactMarkdown>
           </div>
         </div>
@@ -505,21 +589,6 @@ export function DungeonTemplate({
         </div>
       )}
 
-      {/* At A Glance — uses room rollup stats for traps/treasure/NPCs */}
-      <AtAGlancePanel
-        mood={poi.mood}
-        trouble={poi.trouble}
-        factionPresences={factionPresences}
-        npcCount={allNPCs.length}
-        activeEvents={activeEvents}
-        paths={paths}
-        currentPoiId={poi.id}
-        traps={totalRoomTraps.length > 0 ? totalRoomTraps : poi.traps}
-        onToggleTrapDisarmed={onToggleTrapDisarmed}
-        treasure={totalRoomTreasure.length > 0 ? totalRoomTreasure : poi.treasure}
-        lightLevel={poi.lightLevel}
-      />
-
       {/* Read Aloud */}
       <ReadAloudBlock text={poi.readAloud} />
 
@@ -535,6 +604,43 @@ export function DungeonTemplate({
         </details>
       )}
 
+      {/* Dungeon Lore — shows generated ecology data (above tabs, always visible) */}
+      {poi.spatialDungeon?.ecology && (() => {
+        const { builderCulture, currentInhabitants, history, historyLayers } = poi.spatialDungeon.ecology
+        if (!builderCulture && !currentInhabitants && !history) return null
+        return (
+          <div className="rounded-lg border border-stone-600/50 bg-stone-900/40 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs">🏚</span>
+              <span className="text-xs font-semibold text-stone-300 uppercase tracking-wide">Dungeon Lore</span>
+            </div>
+            {history && (
+              <p className="text-sm italic text-stone-300">{history}</p>
+            )}
+            <div className="flex gap-4 text-xs text-stone-400">
+              {builderCulture && (
+                <span>Built by: <span className="text-stone-200 font-medium capitalize">{builderCulture}</span></span>
+              )}
+              {currentInhabitants && (
+                <span>Inhabitants: <span className="text-stone-200 font-medium capitalize">{currentInhabitants}</span></span>
+              )}
+            </div>
+            {historyLayers && historyLayers.length > 0 && (
+              <div className="space-y-1 pt-1 border-t border-stone-700">
+                <span className="text-xs text-stone-500 uppercase tracking-wide">History Layers</span>
+                {historyLayers.map((layer, i) => (
+                  <div key={i} className="text-xs">
+                    <span className="font-medium text-stone-300 capitalize">{layer.builders}</span>
+                    <span className="text-stone-500 ml-1">({layer.era})</span>
+                    {layer.fate && <p className="text-stone-400 italic ml-2">{layer.fate}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
       {/* Tabs */}
       <Tabs value={activeTab ?? "rooms"} onValueChange={onTabChange}>
         <TabsList variant="line" className="w-full">
@@ -544,7 +650,7 @@ export function DungeonTemplate({
           </TabsTrigger>
           <TabsTrigger value="denizens">
             <Users className="size-4" />
-            Denizens ({allNPCs.length})
+            Details
           </TabsTrigger>
           <TabsTrigger value="encounters">
             <Dices className="size-4" />
@@ -716,9 +822,11 @@ export function DungeonTemplate({
                                 F{child.floor}
                               </Badge>
                             )}
-                            <Badge variant="outline" className="text-xs">
-                              {child.type}
-                            </Badge>
+                            {child.subtypeLabel && (
+                              <Badge variant="outline" className="text-xs">
+                                {child.subtypeLabel}
+                              </Badge>
+                            )}
                             <Link
                               to="/realms/pois/$poiId"
                               params={{ poiId: child.id }}
@@ -742,29 +850,209 @@ export function DungeonTemplate({
           </div>
         </TabsContent>
 
-        {/* Denizens tab */}
+        {/* Details tab */}
         <TabsContent value="denizens" className="space-y-4 pt-3">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-sm font-semibold flex items-center gap-2">
-              <Users className="size-4" />
-              Denizens ({allNPCs.length})
-            </h4>
-            <Button size="sm" variant="outline" onClick={onCreateNPC}>
-              <Plus className="mr-1.5 size-3.5" />
-              Add NPC
-            </Button>
-          </div>
-          {allNPCs.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {allNPCs.map((npc) => (
-                <NPCMiniCard key={npc.id} npc={npc} poiName={npc.poiId ? poiNameMap.get(npc.poiId) : undefined} onUpdateNPC={onUpdateNPC} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No denizens present.
-            </p>
-          )}
+          {/* At A Glance stats — aggregate dungeon status */}
+          <AtAGlancePanel
+            mood={poi.mood}
+            trouble={poi.trouble}
+            factionPresences={factionPresences}
+            npcCount={allNPCs.length}
+            activeEvents={activeEvents}
+            paths={paths}
+            currentPoiId={poi.id}
+            traps={totalRoomTraps.length > 0 ? totalRoomTraps : poi.traps}
+            onToggleTrapDisarmed={onToggleTrapDisarmed}
+            treasure={totalRoomTreasure.length > 0 ? totalRoomTreasure : poi.treasure}
+            lightLevel={poi.lightLevel}
+          />
+
+          {/* Treasure manifest — all notable loot across rooms */}
+          {(() => {
+            const allLoot = childPois.flatMap((c) =>
+              (c.treasure ?? []).map((t) => ({ ...t, roomName: c.name }))
+            )
+            const weapons  = allLoot.filter((t) => !t.isMagic && t.description?.startsWith('Damage:'))
+            const gear     = allLoot.filter((t) => !t.isMagic && !t.description?.startsWith('Damage:') && t.value === '')
+            const magic    = allLoot.filter((t) => t.isMagic && !t.name.startsWith('Scroll of'))
+            const scrolls  = allLoot.filter((t) => t.isMagic && t.name.startsWith('Scroll of'))
+            if (weapons.length + gear.length + magic.length + scrolls.length === 0) return null
+            return (
+              <div className="space-y-3 rounded-md border p-3 bg-muted/20">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Loot Manifest</p>
+                {magic.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-amber-400">✨ Magic Items</p>
+                    {magic.map((t) => (
+                      <div key={t.id} className={`flex items-center gap-2 text-xs ${t.collected ? 'line-through text-muted-foreground' : ''}`}>
+                        <span className="font-medium flex-1">{t.name}</span>
+                        <span className="text-muted-foreground">{t.roomName}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {scrolls.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-purple-400">📜 Spell Scrolls</p>
+                    {scrolls.map((t) => (
+                      <div key={t.id} className={`flex items-center gap-2 text-xs ${t.collected ? 'line-through text-muted-foreground' : ''}`}>
+                        <span className="font-medium flex-1">{t.name}</span>
+                        <span className="text-muted-foreground">{t.roomName}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {weapons.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-red-400">⚔ Weapons</p>
+                    {weapons.map((t) => (
+                      <div key={t.id} className={`flex items-center gap-2 text-xs ${t.collected ? 'line-through text-muted-foreground' : ''}`}>
+                        <span className="font-medium flex-1">{t.name}</span>
+                        <span className="text-muted-foreground">{t.description?.replace('Damage: ', '')} · {t.roomName}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {gear.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-stone-400">🎒 Gear</p>
+                    {gear.map((t) => (
+                      <div key={t.id} className={`flex items-center gap-2 text-xs ${t.collected ? 'line-through text-muted-foreground' : ''}`}>
+                        <span className="font-medium flex-1">{t.name}</span>
+                        <span className="text-muted-foreground">{t.roomName}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* ── Creature Roster — compact battle reference ── */}
+          {(() => {
+            const creatures = allNPCs.filter((n) => n.tags?.includes('creature'))
+            if (creatures.length === 0) return null
+            return (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-red-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <Skull className="size-3.5" /> Creatures ({creatures.length})
+                </p>
+                <div className="rounded-md border overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/40 border-b">
+                      <tr>
+                        <th className="text-left px-2 py-1.5 font-medium text-muted-foreground">Room</th>
+                        <th className="text-left px-2 py-1.5 font-medium text-muted-foreground">Creature</th>
+                        <th className="text-center px-2 py-1.5 font-medium text-muted-foreground w-10">AC</th>
+                        <th className="text-center px-2 py-1.5 font-medium text-muted-foreground w-14">HP</th>
+                        <th className="text-left px-2 py-1.5 font-medium text-muted-foreground">Attack</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {creatures.map((npc, i) => {
+                        const sb = npc.systemBlock
+                        const roomName = npc.poiId ? poiNameMap.get(npc.poiId) ?? '—' : '—'
+                        const isDead = npc.lifeStatus !== 'alive'
+                        return (
+                          <tr key={npc.id} className={`border-t ${i % 2 === 0 ? '' : 'bg-muted/20'} ${isDead ? 'opacity-40' : ''}`}>
+                            <td className="px-2 py-1.5 text-muted-foreground truncate max-w-[100px]">{roomName}</td>
+                            <td className="px-2 py-1.5">
+                              <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="font-medium hover:underline text-foreground">
+                                {npc.name}
+                              </Link>
+                            </td>
+                            <td className="px-2 py-1.5 text-center font-mono">{sb?.armor ?? '—'}</td>
+                            <td className="px-2 py-1.5 text-center">
+                              {sb && sb.maxHp > 0 ? (
+                                <span className={`font-mono ${sb.hp <= sb.maxHp * 0.25 ? 'text-destructive' : sb.hp <= sb.maxHp * 0.5 ? 'text-amber-400' : 'text-green-500'}`}>
+                                  {sb.hp}/{sb.maxHp}
+                                </span>
+                              ) : '—'}
+                            </td>
+                            <td className="px-2 py-1.5 text-muted-foreground truncate max-w-[120px]">
+                              {sb?.attacks?.[0] ? `${sb.attacks[0].name} ${sb.attacks[0].damage}` : '—'}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* ── Named NPCs — role-play opportunities ── */}
+          {(() => {
+            const named = allNPCs.filter((n) => !n.tags?.includes('creature'))
+            return (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-blue-400 uppercase tracking-wide flex items-center gap-1.5">
+                    <Heart className="size-3.5" /> Named NPCs ({named.length})
+                  </p>
+                  <Button size="sm" variant="outline" onClick={onCreateNPC}>
+                    <Plus className="mr-1.5 size-3.5" />
+                    Add NPC
+                  </Button>
+                </div>
+                {named.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {named.map((npc) => {
+                      const roomName = npc.poiId ? poiNameMap.get(npc.poiId) : undefined
+                      const sb = npc.systemBlock
+                      const wants = npc.want ? npc.want.split(',').map((w) => w.trim()).filter(Boolean) : []
+                      return (
+                        <div key={npc.id} className="rounded-md border bg-card/50 overflow-hidden">
+                          {/* Header row */}
+                          <div className="flex items-center gap-2 px-3 py-2 flex-wrap">
+                            <Heart className={`size-3.5 shrink-0 ${npc.lifeStatus === 'alive' ? 'text-green-500 fill-green-500' : 'text-muted-foreground'}`} />
+                            <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="font-medium text-sm text-amber-500 hover:underline">
+                              {npc.name}
+                            </Link>
+                            <DispositionBadge npc={npc} />
+                            {/* Stats */}
+                            {sb && sb.maxHp > 0 && (
+                              <Badge variant="outline" className="text-xs font-mono gap-1 ml-auto">
+                                <Heart className="size-2.5" /> {sb.hp}/{sb.maxHp}
+                              </Badge>
+                            )}
+                            {sb && sb.armor > 0 && (
+                              <Badge variant="outline" className="text-xs font-mono gap-1">
+                                <Shield className="size-2.5" /> {sb.armor}
+                              </Badge>
+                            )}
+                          </div>
+                          {/* Details row */}
+                          <div className="px-3 pb-2 space-y-1.5 border-t border-border/30 pt-1.5">
+                            {roomName && (
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <MapPin className="size-3 shrink-0" />
+                                {roomName}
+                              </div>
+                            )}
+                            {wants.length > 0 && (
+                              <div className="flex items-center gap-1 flex-wrap">
+                                <span className="text-xs text-muted-foreground mr-0.5">Wants:</span>
+                                {wants.map((w) => (
+                                  <Badge key={w} variant="secondary" className="text-xs capitalize px-1.5 py-0">{w}</Badge>
+                                ))}
+                              </div>
+                            )}
+                            {npc.description && (
+                              <p className="text-xs text-muted-foreground italic leading-snug line-clamp-2">{npc.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No named NPCs yet.</p>
+                )}
+              </div>
+            )
+          })()}
 
           {factionPresences.length > 0 && (
             <div>

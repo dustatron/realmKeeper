@@ -43,6 +43,7 @@ import { MapUploadDialog } from '~/components/map/MapUploadDialog'
 import { MultiMapViewer } from '~/components/map/MultiMapViewer'
 
 import { WatabouMapSection } from '~/components/watabou/WatabouMapSection'
+import { SpatialDungeonRenderer } from '~/components/dungeon/SpatialDungeonRenderer'
 import type { WatabouCityData } from '@domain/value-objects/WatabouCityData'
 import type { WatabouDungeonData } from '@domain/value-objects/WatabouDungeonData'
 import { SettlementTemplate } from '~/components/poi-templates/SettlementTemplate'
@@ -107,6 +108,7 @@ import {
   Sun,
   Moon,
   CloudMoon,
+  Wand2,
 } from 'lucide-react'
 import { POI_TYPE_ICONS } from '@shared/poi-icons'
 import { POI_TYPES, POI_EVENT_TYPES, SEASONS, type PoiType, type POIEventType, type Season } from '@shared/constants'
@@ -551,8 +553,24 @@ function POIDetailPage() {
     />
   ) : null
 
-  const mapSection = (multiMapViewer || watabouInline) ? (
+  // Spatial dungeon renderer — shown for dungeon POIs with generated data
+  const spatialDungeonMap = poi.type === 'dungeon' && poi.spatialDungeon ? (() => {
+    const roomPoiMap = poi.spatialDungeon.roomPoiMap ?? {}
+    const roomIdToPoiId = new Map(Object.entries(roomPoiMap))
+    return (
+      <SpatialDungeonRenderer
+        dungeon={poi.spatialDungeon}
+        selectedRoomPoiId={selectedChildId ?? undefined}
+        roomIdToPoiId={roomIdToPoiId}
+        onRoomClick={(childPoiId) => setSelectedChildId(childPoiId)}
+        className="h-[300px] md:h-[400px]"
+      />
+    )
+  })() : null
+
+  const mapSection = (multiMapViewer || watabouInline || spatialDungeonMap) ? (
     <>
+      {spatialDungeonMap}
       {multiMapViewer}
       {watabouInline}
     </>
@@ -771,10 +789,17 @@ function POIDetailPage() {
 
       {/* Action bar */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="flex items-center gap-2 mr-auto">
+        <span className="flex items-center gap-2 mr-auto flex-wrap">
           <Icon className="size-5" />
           <span className="font-medium">{poi.name}</span>
           <Badge variant="outline" className="text-xs">{poi.type}</Badge>
+          {poi.type === 'dungeon' && poi.spatialDungeon && (
+            <>
+              <Badge variant="secondary" className="text-xs capitalize">{poi.spatialDungeon.theme.replace(/_/g, ' ')}</Badge>
+              <Badge variant="secondary" className="text-xs">Depth {poi.spatialDungeon.depth}</Badge>
+              <Badge variant="secondary" className="text-xs capitalize">{poi.spatialDungeon.size}</Badge>
+            </>
+          )}
         </span>
         {/* Run mode toggle */}
         <Button
@@ -818,6 +843,14 @@ function POIDetailPage() {
         >
           <Star className={`size-4 ${poi.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
         </Button>
+        {poi.type === 'dungeon' && (
+          <Link to="/realms/pois/$poiId/generate-dungeon" params={{ poiId }}>
+            <Button size="sm" variant="outline">
+              <Wand2 className="mr-2 size-4" />
+              {poi.spatialDungeon ? 'Regenerate' : 'Generate'}
+            </Button>
+          </Link>
+        )}
         <Button size="sm" variant="outline" onClick={() => setMapUploadDialogOpen(true)}>
           <MapPinned className="mr-2 size-4" />
           {poiMaps.length > 0 ? 'Edit Map' : 'Add Map'}

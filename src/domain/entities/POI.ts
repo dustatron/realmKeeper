@@ -8,6 +8,7 @@ import type { LocationSeed } from '@domain/value-objects/LocationSeed'
 import type { WanderingMonsterEntry } from '@domain/value-objects/WanderingMonster'
 import type { WatabouCityData } from '@domain/value-objects/WatabouCityData'
 import type { WatabouDungeonData } from '@domain/value-objects/WatabouDungeonData'
+import type { GeneratedDungeon, DungeonGenOptions } from '~/lib/dungeon/types'
 
 export interface POI {
   id: string
@@ -45,6 +46,8 @@ export interface POI {
   watabouGenerator: 'mfcg' | 'opd' | null
   watabouData: WatabouCityData | WatabouDungeonData | null
   sessionLog: SessionLogEntry[]
+  spatialDungeon: GeneratedDungeon | null
+  dungeonGenOptions: DungeonGenOptions | null
   starred: boolean
   createdAt: number
   updatedAt: number

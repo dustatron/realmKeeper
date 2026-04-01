@@ -1,0 +1,59 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "World" [ref=e9] [cursor=pointer]:
+            - /url: /world/world-obojima-v2
+            - img [ref=e11]
+            - generic [ref=e14]: World
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]: Navigation
+          - list [ref=e19]:
+            - listitem [ref=e20]:
+              - link "Map" [ref=e21] [cursor=pointer]:
+                - /url: /world/world-obojima-v2
+                - img [ref=e22]
+                - generic [ref=e24]: Map
+            - listitem [ref=e25]:
+              - button "Set as Current" [ref=e26] [cursor=pointer]:
+                - img [ref=e27]
+                - generic [ref=e29]: Set as Current
+        - generic [ref=e30]:
+          - generic [ref=e31]: Atlas
+          - list [ref=e33]:
+            - listitem [ref=e34]:
+              - link "Events" [ref=e35] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=events
+                - img [ref=e36]
+                - generic [ref=e38]: Events
+            - listitem [ref=e39]:
+              - link "Travel" [ref=e40] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=travel
+                - img [ref=e41]
+                - generic [ref=e43]: Travel
+            - listitem [ref=e44]:
+              - link "Factions" [ref=e45] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=factions
+                - img [ref=e46]
+                - generic [ref=e48]: Factions
+            - listitem [ref=e49]:
+              - link "Settlements" [ref=e50] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=settlements
+                - img [ref=e51]
+                - generic [ref=e53]: Settlements
+            - listitem [ref=e54]:
+              - link "Dungeons" [ref=e55] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=dungeons
+                - img [ref=e56]
+                - generic [ref=e58]: Dungeons
+      - list [ref=e60]:
+        - listitem [ref=e61]:
+          - link "All Worlds" [ref=e62] [cursor=pointer]:
+            - /url: /
+            - img [ref=e63]
+            - generic [ref=e65]: All Worlds
+      - button "Toggle Sidebar" [ref=e66]
+    - main [ref=e67]
+  - region "Notifications alt+T"

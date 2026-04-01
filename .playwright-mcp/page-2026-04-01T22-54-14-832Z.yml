@@ -1,0 +1,87 @@
+- generic [ref=e2]:
+  - generic [ref=e5]:
+    - list [ref=e7]:
+      - listitem [ref=e8]:
+        - button "No Realm Create one to begin" [ref=e9] [cursor=pointer]:
+          - img [ref=e11]
+          - generic [ref=e13]:
+            - generic [ref=e14]: No Realm
+            - generic [ref=e15]: Create one to begin
+          - img [ref=e16]
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21]: Overview
+        - list [ref=e22]:
+          - listitem [ref=e23]:
+            - link "Dashboard" [ref=e24] [cursor=pointer]:
+              - /url: /realms
+              - img [ref=e25]
+              - generic [ref=e30]: Dashboard
+          - listitem [ref=e31]:
+            - link "Maps" [ref=e32] [cursor=pointer]:
+              - /url: /realms/maps
+              - img [ref=e33]
+              - generic [ref=e37]: Maps
+          - listitem [ref=e38]:
+            - link "Search" [ref=e39] [cursor=pointer]:
+              - /url: /search
+              - img [ref=e40]
+              - generic [ref=e43]: Search
+          - listitem [ref=e44]:
+            - link "Calendar" [ref=e45] [cursor=pointer]:
+              - /url: /realms/calendar
+              - img [ref=e46]
+              - generic [ref=e49]: Calendar
+      - generic [ref=e50]:
+        - generic [ref=e51]: World
+        - list [ref=e52]:
+          - listitem [ref=e53]:
+            - link "Locations" [ref=e54] [cursor=pointer]:
+              - /url: /realms/locations
+              - img [ref=e55]
+              - generic [ref=e57]: Locations
+          - listitem [ref=e58]:
+            - link "NPCs" [ref=e59] [cursor=pointer]:
+              - /url: /realms/npcs
+              - img [ref=e60]
+              - generic [ref=e65]: NPCs
+          - listitem [ref=e66]:
+            - link "Factions" [ref=e67] [cursor=pointer]:
+              - /url: /realms/factions
+              - img [ref=e68]
+              - generic [ref=e77]: Factions
+      - generic [ref=e78]:
+        - generic [ref=e79]: Tools
+        - list [ref=e80]:
+          - listitem [ref=e81]:
+            - link "Compendium" [ref=e82] [cursor=pointer]:
+              - /url: /realms/compendium
+              - img [ref=e83]
+              - generic [ref=e85]: Compendium
+          - listitem [ref=e86]:
+            - link "Tables" [ref=e87] [cursor=pointer]:
+              - /url: /realms/tables
+              - img [ref=e88]
+              - generic [ref=e90]: Tables
+          - listitem [ref=e91]:
+            - link "Notes" [ref=e92] [cursor=pointer]:
+              - /url: /realms/notes
+              - img [ref=e93]
+              - generic [ref=e96]: Notes
+    - button "Toggle Sidebar" [ref=e98]
+  - main [ref=e99]:
+    - generic [ref=e100]:
+      - generic [ref=e101]:
+        - button "Toggle Sidebar" [ref=e102] [cursor=pointer]:
+          - img
+          - generic [ref=e103]: Toggle Sidebar
+        - generic [ref=e104]: Locations
+      - generic [ref=e105]:
+        - button "Login to sync" [ref=e106] [cursor=pointer]:
+          - img
+          - generic [ref=e107]: Login to sync
+        - button "Toggle theme" [ref=e108] [cursor=pointer]:
+          - img
+          - generic [ref=e109]: Toggle theme
+    - main [ref=e110]:
+      - generic [ref=e111]: Loading...

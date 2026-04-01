@@ -1,0 +1,241 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Obojima" [ref=e9] [cursor=pointer]:
+            - /url: /world/world-obojima-v2
+            - img [ref=e11]
+            - generic [ref=e14]: Obojima
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]: Navigation
+          - list [ref=e19]:
+            - listitem [ref=e20]:
+              - link "Map" [ref=e21] [cursor=pointer]:
+                - /url: /world/world-obojima-v2
+                - img [ref=e22]
+                - generic: Map
+            - listitem [ref=e24]:
+              - button "Set as Current" [ref=e25] [cursor=pointer]:
+                - img [ref=e26]
+                - generic: Set as Current
+        - generic [ref=e28]:
+          - generic [ref=e29]: Atlas
+          - list [ref=e31]:
+            - listitem [ref=e32]:
+              - link "Events" [ref=e33] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=events
+                - img [ref=e34]
+                - generic: Events
+            - listitem [ref=e36]:
+              - link "Travel" [ref=e37] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=travel
+                - img [ref=e38]
+                - generic: Travel
+            - listitem [ref=e40]:
+              - link "Factions" [ref=e41] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=factions
+                - img [ref=e42]
+                - generic: Factions
+            - listitem [ref=e44]:
+              - link "Settlements" [ref=e45] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=settlements
+                - img [ref=e46]
+                - generic: Settlements
+            - listitem [ref=e48]:
+              - link "Dungeons" [ref=e49] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=dungeons
+                - img [ref=e50]
+                - generic: Dungeons
+      - list [ref=e53]:
+        - listitem [ref=e54]:
+          - link "All Worlds" [ref=e55] [cursor=pointer]:
+            - /url: /
+            - img [ref=e56]
+            - generic: All Worlds
+      - button "Toggle Sidebar" [ref=e58]
+    - main [ref=e59]:
+      - generic [ref=e60]:
+        - generic [ref=e62]:
+          - generic [ref=e63]:
+            - button "Toggle Sidebar" [ref=e64] [cursor=pointer]:
+              - img
+              - generic [ref=e65]: Toggle Sidebar
+            - heading "The Crawling Canopy" [level=1] [ref=e66]
+          - button [ref=e67] [cursor=pointer]:
+            - button [ref=e68]:
+              - img
+        - generic [ref=e70]:
+          - generic [ref=e71]:
+            - generic [ref=e73]:
+              - heading "The Crawling Canopy" [level=2] [ref=e74]
+              - generic [ref=e75]:
+                - generic [ref=e76]: Shrine
+                - generic [ref=e77]: Depth 1
+                - generic [ref=e78]: lair
+            - paragraph [ref=e79]: A mysterious, ever-moving magical forest that crawls across the Gale Fields. It may remain in one spot for months, tempting the curious — then uproot itself without warning, bewildering anyone caught inside the confounding swirl of moving trees. Most creatures live in the canopy, riding the trees as the forest lumbers across the plains. Dead wood burns longer and hotter than normal; bows of living wood are magical; arrows of living wood fly farther. Demons lurk in the depths.
+          - generic [ref=e80]:
+            - generic [ref=e81]:
+              - img [ref=e82]
+              - heading "Dungeon Lore" [level=3] [ref=e84]
+            - paragraph [ref=e85]: Built by the nature spirit decades ago, now claimed by desecrators.
+            - generic [ref=e86]:
+              - generic [ref=e87]: Built by:nature spirit
+              - generic [ref=e88]: Inhabitants:desecrators
+            - generic [ref=e89]:
+              - heading "History Layers" [level=4] [ref=e90]
+              - generic [ref=e91]:
+                - generic [ref=e92]:
+                  - generic [ref=e93]:
+                    - generic [ref=e94]: fallen kingdom
+                    - generic [ref=e95]: (decades ago)
+                  - paragraph [ref=e96]: sacked during the last war
+                - generic [ref=e97]:
+                  - generic [ref=e98]:
+                    - generic [ref=e99]: necromancer
+                    - generic [ref=e100]: (decades ago)
+                  - paragraph [ref=e101]: destroyed by adventurers
+          - generic [ref=e102]:
+            - button "Map & Rooms 3" [ref=e103] [cursor=pointer]:
+              - img [ref=e104]
+              - text: Map & Rooms
+              - generic [ref=e106]: "3"
+            - button "Overview" [ref=e107] [cursor=pointer]:
+              - img [ref=e108]
+              - text: Overview
+          - generic [ref=e110]:
+            - generic [ref=e111]:
+              - generic [ref=e112]:
+                - generic [ref=e113]:
+                  - img [ref=e114]
+                  - heading "Dungeon Map" [level=3] [ref=e116]
+                - generic [ref=e117]:
+                  - generic [ref=e118]:
+                    - button "Zoom In" [ref=e119] [cursor=pointer]:
+                      - img [ref=e120]
+                    - button "Zoom Out" [ref=e122] [cursor=pointer]:
+                      - img [ref=e123]
+                    - button "Reset View" [ref=e125] [cursor=pointer]:
+                      - img [ref=e126]
+                  - img [ref=e128]:
+                    - img [ref=e134]
+                    - generic [ref=e136]:
+                      - generic [ref=e137] [cursor=pointer]:
+                        - img [ref=e141]
+                        - generic: "1"
+                      - generic [ref=e143] [cursor=pointer]:
+                        - img [ref=e147]
+                        - generic: "2"
+                      - generic [ref=e149] [cursor=pointer]:
+                        - img [ref=e153]
+                        - generic: "3"
+                - paragraph [ref=e155]: Click a room to see details. Pan and zoom with gestures.
+              - generic [ref=e157]:
+                - generic [ref=e158]:
+                  - generic [ref=e159]:
+                    - img [ref=e160]
+                    - heading "Wandering Monsters" [level=3] [ref=e162]
+                  - generic [ref=e163]: 1d7
+                - paragraph [ref=e164]: "Check: every 4 turns or on desecration"
+                - table [ref=e166]:
+                  - rowgroup [ref=e167]:
+                    - row "# Creature Lv AC HP Atk" [ref=e168]:
+                      - columnheader "#" [ref=e169]
+                      - columnheader "Creature" [ref=e170]
+                      - columnheader "Lv" [ref=e171]
+                      - columnheader "AC" [ref=e172]
+                      - columnheader "HP" [ref=e173]
+                      - columnheader "Atk" [ref=e174]
+                  - rowgroup [ref=e175]:
+                    - row "1 1d2 watchwood_tree returning to their lair — ? ? ?" [ref=e176]:
+                      - cell "1" [ref=e177]
+                      - cell "1d2 watchwood_tree returning to their lair" [ref=e178]:
+                        - generic [ref=e179]: 1d2 watchwood_tree
+                        - generic [ref=e180]: returning to their lair
+                      - cell "—" [ref=e181]
+                      - cell "?" [ref=e182]
+                      - cell "?" [ref=e183]
+                      - cell "?" [ref=e184]
+                    - row "2 1d4 mossling arguing with each other — ? ? ?" [ref=e185]:
+                      - cell "2" [ref=e186]
+                      - cell "1d4 mossling arguing with each other" [ref=e187]:
+                        - generic [ref=e188]: 1d4 mossling
+                        - generic [ref=e189]: arguing with each other
+                      - cell "—" [ref=e190]
+                      - cell "?" [ref=e191]
+                      - cell "?" [ref=e192]
+                      - cell "?" [ref=e193]
+                    - row "3 1d3 pixie returning to their lair — ? ? ?" [ref=e194]:
+                      - cell "3" [ref=e195]
+                      - cell "1d3 pixie returning to their lair" [ref=e196]:
+                        - generic [ref=e197]: 1d3 pixie
+                        - generic [ref=e198]: returning to their lair
+                      - cell "—" [ref=e199]
+                      - cell "?" [ref=e200]
+                      - cell "?" [ref=e201]
+                      - cell "?" [ref=e202]
+                    - row "4 1d2 giant_bora_bug performing a ritual — ? ? ?" [ref=e203]:
+                      - cell "4" [ref=e204]
+                      - cell "1d2 giant_bora_bug performing a ritual" [ref=e205]:
+                        - generic [ref=e206]: 1d2 giant_bora_bug
+                        - generic [ref=e207]: performing a ritual
+                      - cell "—" [ref=e208]
+                      - cell "?" [ref=e209]
+                      - cell "?" [ref=e210]
+                      - cell "?" [ref=e211]
+                    - row "5 1d4 watchwood_tree guarding a key location — ? ? ?" [ref=e212]:
+                      - cell "5" [ref=e213]
+                      - cell "1d4 watchwood_tree guarding a key location" [ref=e214]:
+                        - generic [ref=e215]: 1d4 watchwood_tree
+                        - generic [ref=e216]: guarding a key location
+                      - cell "—" [ref=e217]
+                      - cell "?" [ref=e218]
+                      - cell "?" [ref=e219]
+                      - cell "?" [ref=e220]
+                    - row "6 1d3 lions_blume fleeing from something else — ? ? ?" [ref=e221]:
+                      - cell "6" [ref=e222]
+                      - cell "1d3 lions_blume fleeing from something else" [ref=e223]:
+                        - generic [ref=e224]: 1d3 lions_blume
+                        - generic [ref=e225]: fleeing from something else
+                      - cell "—" [ref=e226]
+                      - cell "?" [ref=e227]
+                      - cell "?" [ref=e228]
+                      - cell "?" [ref=e229]
+                    - row "7 1d4 mossling sleeping in the passage — ? ? ?" [ref=e230]:
+                      - cell "7" [ref=e231]
+                      - cell "1d4 mossling sleeping in the passage" [ref=e232]:
+                        - generic [ref=e233]: 1d4 mossling
+                        - generic [ref=e234]: sleeping in the passage
+                      - cell "—" [ref=e235]
+                      - cell "?" [ref=e236]
+                      - cell "?" [ref=e237]
+                      - cell "?" [ref=e238]
+            - generic [ref=e239]:
+              - heading "Room Layout" [level=3] [ref=e240]
+              - generic [ref=e241]:
+                - generic [ref=e243]:
+                  - button "1 entrance Small" [ref=e244] [cursor=pointer]:
+                    - img [ref=e245]
+                    - generic [ref=e247]: "1"
+                    - generic [ref=e248]: entrance
+                    - generic [ref=e249]: Small
+                    - img [ref=e251]
+                  - paragraph [ref=e254]: Where the Crawling Canopy currently rests. The trees at the edge shift and creak — roots lift and resettle like sleeping limbs. A woodcutter's dog whimpers at the boundary, refusing to enter. Fallen branches of magical living wood litter the ground.
+                - button "2 chamber Small" [ref=e257] [cursor=pointer]:
+                  - img [ref=e258]
+                  - generic [ref=e260]: "2"
+                  - generic [ref=e261]: chamber
+                  - img [ref=e263]
+                  - generic [ref=e265]: Small
+                  - img [ref=e267]
+                - button "3 shrine Small" [ref=e271] [cursor=pointer]:
+                  - img [ref=e272]
+                  - generic [ref=e274]: "3"
+                  - generic [ref=e275]: shrine
+                  - generic [ref=e276]:
+                    - img [ref=e277]
+                    - img [ref=e279]
+                  - generic [ref=e281]: Small
+                  - img [ref=e283]
+  - region "Notifications alt+T"

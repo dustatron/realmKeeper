@@ -1,0 +1,232 @@
+[     175ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ http://localhost:3000/realms/pois/01KN5FACD18K79H2TNC127V9B5?room=01KN5G421HT41GN2QJGEABB2HX&tab=rooms:0
+[     571ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:20102
+[    1154ms] [LOG] %c[RealmKeeper] Dev API installed → window.__realmKeeper color: #22d3ee; font-weight: bold @ http://localhost:3000/src/infrastructure/dev/devApi.ts:347
+[    1684ms] [ERROR] In HTML, %s cannot be a descendant of <%s>.
+This will cause a hydration error.%s <button> button 
+
+  ...
+    <Primitive.div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="group/tabs..." ref={null}>
+      <div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="group/tabs..." ref={null}>
+        <TabsList>
+        <TabsContent value="rooms" className="space-y-4 ...">
+          <TabsContent data-slot="tabs-content" className="flex-1 out..." value="rooms">
+            <Presence present={true}>
+              <Primitive.div data-state="active" data-orientation="horizontal" role="tabpanel" ...>
+                <div data-state="active" data-orientation="horizontal" role="tabpanel" aria-labelledby="radix-_r_0..." ...>
+                  <div>
+                  <div className="grid gap-4...">
+                    <div>
+                    <div className="space-y-3">
+                      <div>
+                      <RoomDetailPanel room={{id:"01KN5G...", ...}} index={1} npcs={[...]} ...>
+                        <div className="rounded-md...">
+                          <div>
+                          <div>
+                          <div>
+                          <div>
+                          <div>
+                          <div className="space-y-2">
+                            <div>
+                            <div className="space-y-2">
+                              <RoomNPCCard npc={{id:"01KN5G...", ...}} onUpdateNPC={function handleUpdateNPC}>
+                                <div className={"rounded-..."}>
+>                                 <button
+>                                   onClick={function onClick}
+>                                   className="flex items-center gap-2 w-full p-2.5 text-left hover:bg-muted-foregroun..."
+>                                 >
+                                    <ChevronRight>
+                                    <Heart>
+                                    <a>
+                                    <DispositionBadge npc={{id:"01KN5G...", ...}} onUpdateNPC={function handleUpdateNPC}>
+                                      <span className="inline-fle...">
+                                        <Badge>
+>                                       <button
+>                                         onClick={function handleRoll}
+>                                         className="size-5 rounded flex items-center justify-center hover:bg-muted-fo..."
+>                                         title="Roll disposition (2d6)"
+>                                       >
+                                    ...
+                          ...
+                      ...
+        ...
+ @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2155
+[    1684ms] [ERROR] <%s> cannot contain a nested %s.
+See this log for the ancestor stack trace. button <button> @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2162
+[  319043ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
+[  319054ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
+[  371350ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
+[  371356ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
+[  386494ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
+[  386496ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
+[ 1108209ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ http://localhost:3000/realms/pois/01KN5FA3NGXMHD752N0HEWCJ8E?room=01KN5GP1N7992JY5B9ZKWRGY5D&tab=denizens:0
+[ 1108323ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:20102
+[ 1108600ms] [LOG] %c[RealmKeeper] Dev API installed → window.__realmKeeper color: #22d3ee; font-weight: bold @ http://localhost:3000/src/infrastructure/dev/devApi.ts:347
+[ 1116832ms] [ERROR] In HTML, %s cannot be a descendant of <%s>.
+This will cause a hydration error.%s <button> button 
+
+  ...
+    <Primitive.div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="group/tabs..." ref={null}>
+      <div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="group/tabs..." ref={null}>
+        <TabsList>
+        <TabsContent value="rooms" className="space-y-4 ...">
+          <TabsContent data-slot="tabs-content" className="flex-1 out..." value="rooms">
+            <Presence present={true}>
+              <Primitive.div data-state="active" data-orientation="horizontal" role="tabpanel" ...>
+                <div data-state="active" data-orientation="horizontal" role="tabpanel" aria-labelledby="radix-_r_0..." ...>
+                  <div>
+                  <div className="grid gap-4...">
+                    <div>
+                    <div className="space-y-3">
+                      <div>
+                      <RoomDetailPanel room={{id:"01KN5G...", ...}} index={5} npcs={[...]} ...>
+                        <div className="rounded-md...">
+                          <div>
+                          <div>
+                          <div>
+                          <div>
+                          <div className="space-y-2">
+                            <div>
+                            <div className="space-y-2">
+                              <RoomNPCCard npc={{id:"01KN5G...", ...}} onUpdateNPC={function handleUpdateNPC}>
+                                <div className={"rounded-..."}>
+>                                 <button
+>                                   onClick={function onClick}
+>                                   className="flex items-center gap-2 w-full p-2.5 text-left hover:bg-muted-foregroun..."
+>                                 >
+                                    <ChevronRight>
+                                    <Skull>
+                                    <a>
+                                    <DispositionBadge npc={{id:"01KN5G...", ...}} onUpdateNPC={function handleUpdateNPC}>
+                                      <span className="inline-fle...">
+                                        <Badge>
+>                                       <button
+>                                         onClick={function handleRoll}
+>                                         className="size-5 rounded flex items-center justify-center hover:bg-muted-fo..."
+>                                         title="Roll disposition (2d6)"
+>                                       >
+                                    ...
+                          ...
+                      ...
+        ...
+ @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2155
+[ 1116832ms] [ERROR] <%s> cannot contain a nested %s.
+See this log for the ancestor stack trace. button <button> @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2162
+[ 1431106ms] [INFO] [hmr] /src/routes/_app/realms/pois_.$poiId_.generate-dungeon.tsx?tsr-split=component failed to apply HMR as it's within a circular import. Reloading page to reset the execution order. To debug and break the circular import, you can run `vite --debug hmr` to log the circular dependency path if a file change triggered it. @ http://localhost:3000/@vite/client:817
+[ 1431106ms] [ERROR] [vite] SyntaxError: The requested module '/src/lib/dungeon/treasure-gen.ts?t=1775081590931' does not provide an export named 'generateGearLoot' @ http://localhost:3000/@vite/client:808
+[ 1431106ms] [ERROR] [vite] Failed to reload /src/routes/_app/realms/pois_.$poiId_.generate-dungeon.tsx?tsr-split=component. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:3000/@vite/client:808
+[ 1432367ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ http://localhost:3000/realms/pois/01KN5HF2D84E1FYRG29YF17FWF?tab=rooms&room=01KN5HGK52NY9KETXRCGGSM6VS:0
+[ 1435362ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:20102
+[ 1438714ms] [LOG] %c[RealmKeeper] Dev API installed → window.__realmKeeper color: #22d3ee; font-weight: bold @ http://localhost:3000/src/infrastructure/dev/devApi.ts:347
+[ 1495709ms] [ERROR] In HTML, %s cannot be a descendant of <%s>.
+This will cause a hydration error.%s <button> button 
+
+  ...
+    <Primitive.div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="group/tabs..." ref={null}>
+      <div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="group/tabs..." ref={null}>
+        <TabsList>
+        <TabsContent value="rooms" className="space-y-4 ...">
+          <TabsContent data-slot="tabs-content" className="flex-1 out..." value="rooms">
+            <Presence present={true}>
+              <Primitive.div data-state="active" data-orientation="horizontal" role="tabpanel" ...>
+                <div data-state="active" data-orientation="horizontal" role="tabpanel" aria-labelledby="radix-_r_1..." ...>
+                  <div>
+                  <div className="grid gap-4...">
+                    <div>
+                    <div className="space-y-3">
+                      <div>
+                      <RoomDetailPanel room={{id:"01KN5H...", ...}} index={1} npcs={[...]} ...>
+                        <div className="rounded-md...">
+                          <div>
+                          <div>
+                          <div>
+                          <div>
+                          <div className="space-y-2">
+                            <div>
+                            <div className="space-y-2">
+                              <RoomNPCCard npc={{id:"01KN5H...", ...}} onUpdateNPC={function handleUpdateNPC}>
+                                <div className={"rounded-..."}>
+>                                 <button
+>                                   onClick={function onClick}
+>                                   className="flex items-center gap-2 w-full p-2.5 text-left hover:bg-muted-foregroun..."
+>                                 >
+                                    <ChevronRight>
+                                    <Skull>
+                                    <a>
+                                    <DispositionBadge npc={{id:"01KN5H...", ...}} onUpdateNPC={function handleUpdateNPC}>
+                                      <span className="inline-fle...">
+                                        <Badge>
+>                                       <button
+>                                         onClick={function handleRoll}
+>                                         className="size-5 rounded flex items-center justify-center hover:bg-muted-fo..."
+>                                         title="Roll disposition (2d6)"
+>                                       >
+                                    ...
+                      ...
+        ...
+ @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2155
+[ 1495709ms] [ERROR] <%s> cannot contain a nested %s.
+See this log for the ancestor stack trace. button <button> @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2162
+[ 1673026ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1673055ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1673626ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1824258ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ http://localhost:3000/realms/pois/01KN5HF2D84E1FYRG29YF17FWF?room=01KN5J166GS529CMTZ6AB17RT2:0
+[ 1824540ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:20102
+[ 1825232ms] [LOG] %c[RealmKeeper] Dev API installed → window.__realmKeeper color: #22d3ee; font-weight: bold @ http://localhost:3000/src/infrastructure/dev/devApi.ts:347
+[ 1825670ms] [ERROR] In HTML, %s cannot be a descendant of <%s>.
+This will cause a hydration error.%s <button> button 
+
+  ...
+    <Primitive.div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="group/tabs..." ref={null}>
+      <div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="group/tabs..." ref={null}>
+        <TabsList>
+        <TabsContent value="rooms" className="space-y-4 ...">
+          <TabsContent data-slot="tabs-content" className="flex-1 out..." value="rooms">
+            <Presence present={true}>
+              <Primitive.div data-state="active" data-orientation="horizontal" role="tabpanel" ...>
+                <div data-state="active" data-orientation="horizontal" role="tabpanel" aria-labelledby="radix-_r_0..." ...>
+                  <div>
+                  <div className="grid gap-4...">
+                    <div>
+                    <div className="space-y-3">
+                      <div>
+                      <RoomDetailPanel room={{id:"01KN5J...", ...}} index={1} npcs={[...]} ...>
+                        <div className="rounded-md...">
+                          <div>
+                          <div>
+                          <div>
+                          <div>
+                          <div className="space-y-2">
+                            <div>
+                            <div className="space-y-2">
+                              <RoomNPCCard npc={{id:"01KN5J...", ...}} onUpdateNPC={function handleUpdateNPC}>
+                                <div className={"rounded-..."}>
+>                                 <button
+>                                   onClick={function onClick}
+>                                   className="flex items-center gap-2 w-full p-2.5 text-left hover:bg-muted-foregroun..."
+>                                 >
+                                    <ChevronRight>
+                                    <Skull>
+                                    <a>
+                                    <DispositionBadge npc={{id:"01KN5J...", ...}} onUpdateNPC={function handleUpdateNPC}>
+                                      <span className="inline-fle...">
+                                        <Badge>
+>                                       <button
+>                                         onClick={function handleRoll}
+>                                         className="size-5 rounded flex items-center justify-center hover:bg-muted-fo..."
+>                                         title="Roll disposition (2d6)"
+>                                       >
+                                    ...
+                          ...
+                      ...
+        ...
+ @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2155
+[ 1825670ms] [ERROR] <%s> cannot contain a nested %s.
+See this log for the ancestor stack trace. button <button> @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2162
+[ 1973160ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1973656ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1973704ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1973776ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1974064ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1974096ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1974159ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1974356ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703

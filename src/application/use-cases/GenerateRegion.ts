@@ -74,6 +74,8 @@ function makePoi(regionId: string, name: string, type: PoiType, description: str
     watabouSeed: null,
     watabouGenerator: null,
     watabouData: null,
+    spatialDungeon: null,
+    dungeonGenOptions: null,
     sessionLog: [],
     starred: false,
     createdAt: now,

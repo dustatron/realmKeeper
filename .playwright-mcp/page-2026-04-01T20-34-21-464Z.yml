@@ -1,0 +1,60 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Obojima" [ref=e9] [cursor=pointer]:
+            - /url: /world/world-obojima-v2
+            - img [ref=e11]
+            - generic [ref=e14]: Obojima
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]: Navigation
+          - list [ref=e19]:
+            - listitem [ref=e20]:
+              - link "Map" [ref=e21] [cursor=pointer]:
+                - /url: /world/world-obojima-v2
+                - img [ref=e22]
+                - generic [ref=e24]: Map
+        - generic [ref=e25]:
+          - generic [ref=e26]: Atlas
+          - list [ref=e28]:
+            - listitem [ref=e29]:
+              - link "Events" [ref=e30] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=events
+                - img [ref=e31]
+                - generic [ref=e33]: Events
+              - generic: "2"
+            - listitem [ref=e34]:
+              - link "Travel" [ref=e35] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=travel
+                - img [ref=e36]
+                - generic [ref=e38]: Travel
+              - generic: "0"
+            - listitem [ref=e39]:
+              - link "Factions" [ref=e40] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=factions
+                - img [ref=e41]
+                - generic [ref=e43]: Factions
+              - generic: "17"
+            - listitem [ref=e44]:
+              - link "Settlements" [ref=e45] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=settlements
+                - img [ref=e46]
+                - generic [ref=e48]: Settlements
+              - generic: "32"
+            - listitem [ref=e49]:
+              - link "Dungeons" [ref=e50] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=dungeons
+                - img [ref=e51]
+                - generic [ref=e53]: Dungeons
+              - generic: "35"
+      - list [ref=e55]:
+        - listitem [ref=e56]:
+          - link "All Worlds" [ref=e57] [cursor=pointer]:
+            - /url: /
+            - img [ref=e58]
+            - generic [ref=e60]: All Worlds
+      - button "Toggle Sidebar" [ref=e61]
+    - main [ref=e62]
+  - region "Notifications alt+T"

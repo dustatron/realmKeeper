@@ -43,12 +43,14 @@ export function AtAGlancePanel({
   const armedTraps = traps?.filter((t) => !t.disarmed).length ?? 0
   const treasureCount = treasure?.length ?? 0
   const uncollectedTreasure = treasure?.filter((t) => !t.collected).length ?? 0
+  const magicItems = treasure?.filter((t) => t.isMagic) ?? []
   const hasDimensions = roomWidth != null && roomLength != null
   const hasAnything = mood || trouble || factionPresences.length > 0 || npcCount > 0 || activeEvents > 0 || paths.length > 0 || trapCount > 0 || treasureCount > 0 || hasDimensions || lightLevel
   if (!hasAnything) return null
 
   return (
     <div className="rounded-md border bg-muted/30 p-3 space-y-3 overflow-hidden">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">At a Glance</p>
       {/* Top line: dimensions + light + mood + trouble */}
       {(hasDimensions || mood || trouble || lightLevel) && (
         <div className="space-y-1.5">

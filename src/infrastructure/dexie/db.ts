@@ -596,6 +596,16 @@ db.version(33).stores(storesV26)
 // v34: Add watabou map fields to POIs (no index change needed)
 db.version(34).stores(storesV26)
 
+// v35: Add spatialDungeon + dungeonGenOptions to POIs
+db.version(35).stores(storesV26).upgrade(async (tx) => {
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.spatialDungeon === undefined) {
+      await tx.table('pois').put({ ...poi, spatialDungeon: null, dungeonGenOptions: null })
+    }
+  }
+})
+
 // Normalize Realms on read — ensures starred arrays have defaults
 db.worlds.hook('reading', (realm) => {
   if (!realm) return realm
@@ -634,6 +644,8 @@ db.pois.hook('reading', (poi) => {
     watabouSeed: null,
     watabouGenerator: null,
     watabouData: null,
+    spatialDungeon: null,
+    dungeonGenOptions: null,
   }
   for (const [key, val] of Object.entries(defaults)) {
     if (rec[key] === undefined) {
