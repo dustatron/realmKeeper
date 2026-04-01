@@ -62,7 +62,11 @@
       "WebFetch(domain:cartographyassets.com)",
       "Bash(git push:*)",
       "Bash(curl:*)",
-      "WebFetch(domain:gitlab.com)"
+      "WebFetch(domain:gitlab.com)",
+      "WebFetch(domain:johnny.sh)",
+      "WebFetch(domain:zero.rocicorp.dev)",
+      "WebFetch(domain:www.solberg.is)",
+      "WebFetch(domain:ratulmaharaj.com)"
     ]
   }
 }
