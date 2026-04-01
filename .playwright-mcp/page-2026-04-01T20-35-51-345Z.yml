@@ -1,0 +1,208 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Obojima" [ref=e9] [cursor=pointer]:
+            - /url: /world/world-obojima-v2
+            - img [ref=e11]
+            - generic [ref=e14]: Obojima
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]: Navigation
+          - list [ref=e19]:
+            - listitem [ref=e20]:
+              - link "Map" [ref=e21] [cursor=pointer]:
+                - /url: /world/world-obojima-v2
+                - img [ref=e22]
+                - generic: Map
+            - listitem [ref=e24]:
+              - button "Set as Current" [ref=e25] [cursor=pointer]:
+                - img [ref=e26]
+                - generic: Set as Current
+        - generic [ref=e28]:
+          - generic [ref=e29]: Atlas
+          - list [ref=e31]:
+            - listitem [ref=e32]:
+              - link "Events" [ref=e33] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=events
+                - img [ref=e34]
+                - generic: Events
+            - listitem [ref=e36]:
+              - link "Travel" [ref=e37] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=travel
+                - img [ref=e38]
+                - generic: Travel
+            - listitem [ref=e40]:
+              - link "Factions" [ref=e41] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=factions
+                - img [ref=e42]
+                - generic: Factions
+            - listitem [ref=e44]:
+              - link "Settlements" [ref=e45] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=settlements
+                - img [ref=e46]
+                - generic: Settlements
+            - listitem [ref=e48]:
+              - link "Dungeons" [ref=e49] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=dungeons
+                - img [ref=e50]
+                - generic: Dungeons
+      - list [ref=e53]:
+        - listitem [ref=e54]:
+          - link "All Worlds" [ref=e55] [cursor=pointer]:
+            - /url: /
+            - img [ref=e56]
+            - generic: All Worlds
+      - button "Toggle Sidebar" [ref=e58]
+    - main [ref=e59]:
+      - generic [ref=e60]:
+        - generic [ref=e62]:
+          - generic [ref=e63]:
+            - button "Toggle Sidebar" [ref=e64] [cursor=pointer]:
+              - img
+              - generic [ref=e65]: Toggle Sidebar
+            - heading "The Crawling Canopy" [level=1] [ref=e66]
+          - button [ref=e67] [cursor=pointer]:
+            - button [ref=e68]:
+              - img
+        - generic [ref=e70]:
+          - generic [ref=e71]:
+            - generic [ref=e73]:
+              - heading "The Crawling Canopy" [level=2] [ref=e74]
+              - generic [ref=e75]:
+                - generic [ref=e76]: Shrine
+                - generic [ref=e77]: Depth 1
+                - generic [ref=e78]: lair
+            - paragraph [ref=e79]: A mysterious, ever-moving magical forest that crawls across the Gale Fields. It may remain in one spot for months, tempting the curious — then uproot itself without warning, bewildering anyone caught inside the confounding swirl of moving trees. Most creatures live in the canopy, riding the trees as the forest lumbers across the plains. Dead wood burns longer and hotter than normal; bows of living wood are magical; arrows of living wood fly farther. Demons lurk in the depths.
+          - generic [ref=e80]:
+            - generic [ref=e81]:
+              - img [ref=e82]
+              - heading "Dungeon Lore" [level=3] [ref=e84]
+            - paragraph [ref=e85]: Built by the nature spirit decades ago, now claimed by desecrators.
+            - generic [ref=e86]:
+              - generic [ref=e87]: Built by:nature spirit
+              - generic [ref=e88]: Inhabitants:desecrators
+            - generic [ref=e89]:
+              - heading "History Layers" [level=4] [ref=e90]
+              - generic [ref=e91]:
+                - generic [ref=e92]:
+                  - generic [ref=e93]:
+                    - generic [ref=e94]: fallen kingdom
+                    - generic [ref=e95]: (decades ago)
+                  - paragraph [ref=e96]: sacked during the last war
+                - generic [ref=e97]:
+                  - generic [ref=e98]:
+                    - generic [ref=e99]: necromancer
+                    - generic [ref=e100]: (decades ago)
+                  - paragraph [ref=e101]: destroyed by adventurers
+          - generic [ref=e102]:
+            - button "Map & Rooms 3" [ref=e103] [cursor=pointer]:
+              - img [ref=e104]
+              - text: Map & Rooms
+              - generic [ref=e106]: "3"
+            - button "Overview" [ref=e107] [cursor=pointer]:
+              - img [ref=e108]
+              - text: Overview
+          - generic [ref=e304]:
+            - generic [ref=e305]:
+              - heading "Encounter Table" [level=3] [ref=e306]
+              - button "Re-roll" [ref=e307] [cursor=pointer]:
+                - img [ref=e308]
+                - text: Re-roll
+            - table [ref=e311]:
+              - rowgroup [ref=e312]:
+                - row "d6 Result" [ref=e313]:
+                  - columnheader "d6" [ref=e314]
+                  - columnheader "Result" [ref=e315]
+              - rowgroup [ref=e316]:
+                - row "1* Monster" [ref=e317] [cursor=pointer]:
+                  - cell "1*" [ref=e318]
+                  - cell "Monster" [ref=e319]
+                - row "2 NPC" [ref=e320] [cursor=pointer]:
+                  - cell "2" [ref=e321]
+                  - cell "NPC" [ref=e322]
+                - row "3 Treasure" [ref=e323] [cursor=pointer]:
+                  - cell "3" [ref=e324]
+                  - cell "Treasure" [ref=e325]
+                - row "4 Omen" [ref=e326] [cursor=pointer]:
+                  - cell "4" [ref=e327]
+                  - cell "Omen" [ref=e328]
+                - row "5 Complication" [ref=e329] [cursor=pointer]:
+                  - cell "5" [ref=e330]
+                  - cell "Complication" [ref=e331]
+                - row "6 Local Color" [ref=e332] [cursor=pointer]:
+                  - cell "6" [ref=e333]
+                  - cell "Local Color" [ref=e334]
+            - generic [ref=e335]:
+              - generic [ref=e337]: Monster
+              - generic [ref=e338]:
+                - generic [ref=e339]:
+                  - generic [ref=e340]: Bear, Brown
+                  - generic [ref=e341]:
+                    - generic [ref=e342]: LV 5
+                    - generic [ref=e343]: shadowdark
+                - generic [ref=e344]:
+                  - generic [ref=e345]: AC 13
+                  - text: "|"
+                  - generic [ref=e346]: HP 25
+                - generic [ref=e347]: 2 claw +4 (1d8)
+          - generic [ref=e348]:
+            - heading "Summary" [level=3] [ref=e349]
+            - generic [ref=e350]:
+              - generic [ref=e351]:
+                - generic [ref=e352]: "3"
+                - generic [ref=e353]: Total Rooms
+              - generic [ref=e354]:
+                - generic [ref=e355]:
+                  - img [ref=e356]
+                  - text: "0"
+                - generic [ref=e358]: Monsters Left
+              - generic [ref=e359]:
+                - generic [ref=e360]:
+                  - img [ref=e361]
+                  - text: "0"
+                - generic [ref=e363]: Treasure Left
+          - generic [ref=e364]:
+            - generic [ref=e365]:
+              - img [ref=e366]
+              - heading "Dungeon Denizens" [level=3] [ref=e368]
+            - generic [ref=e370]:
+              - generic [ref=e371]:
+                - img [ref=e372]
+                - generic [ref=e374]: Rival Adventurers
+                - generic [ref=e375]: "Room #2"
+                - generic [ref=e376]: neutral
+              - paragraph [ref=e377]: Yuri the Silent, a Wizard, leads a party of 2. They seek treasure and glory.
+              - generic [ref=e378]:
+                - generic [ref=e379]: "Wants:"
+                - generic [ref=e380]:
+                  - generic [ref=e381]: wealth
+                  - generic [ref=e382]: information
+          - generic [ref=e383]:
+            - generic [ref=e384]:
+              - img [ref=e385]
+              - heading "Traps & Hazards (1)" [level=3] [ref=e387]
+            - generic [ref=e388]:
+              - heading "Passage Traps" [level=4] [ref=e389]
+              - generic [ref=e390]:
+                - generic [ref=e391]:
+                  - img [ref=e392]
+                  - generic [ref=e394]: Covered Pit
+                  - generic [ref=e395]: STR
+                  - generic [ref=e396]: Room 1 → 2
+                - paragraph [ref=e397]: A 10-foot pit covered with rotting canvas and debris
+                - paragraph [ref=e398]: "⚡ Trigger: Stepping onto the center of the covered section"
+                - paragraph [ref=e399]: "👂 Passive: The floor sounds hollow when walked on"
+                - paragraph [ref=e400]: "🔍 Active: Seams in the dust outline a rectangular section of floor"
+                - generic [ref=e401]:
+                  - generic [ref=e402]: "Dmg: 1d6 STR (fall damage)"
+                  - generic [ref=e403]: "Save: DC 12 DEX to grab the edge"
+                - generic [ref=e404]:
+                  - paragraph [ref=e405]: ✓ Disarm Methods
+                  - list [ref=e406]:
+                    - listitem [ref=e407]: Walk along the walls where the floor is solid
+                    - listitem [ref=e408]: Probe ahead with a 10-foot pole
+                    - listitem [ref=e409]: Throw heavy objects to trigger it safely
+                - paragraph [ref=e410]: "Consequence: The pit remains open, blocking direct passage"
+  - region "Notifications alt+T"

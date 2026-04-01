@@ -1,0 +1,327 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - list [ref=e74]:
+        - listitem [ref=e75]:
+          - link "Obojima" [ref=e76] [cursor=pointer]:
+            - /url: /world/world-obojima-v2
+            - img [ref=e78]
+            - generic [ref=e81]: Obojima
+      - generic [ref=e82]:
+        - generic [ref=e83]:
+          - generic [ref=e84]: Navigation
+          - list [ref=e86]:
+            - listitem [ref=e87]:
+              - link "Map" [ref=e88] [cursor=pointer]:
+                - /url: /world/world-obojima-v2
+                - img [ref=e89]
+                - generic [ref=e91]: Map
+        - generic [ref=e92]:
+          - generic [ref=e93]: Atlas
+          - list [ref=e95]:
+            - listitem [ref=e96]:
+              - link "Events" [ref=e97] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=events
+                - img [ref=e98]
+                - generic [ref=e100]: Events
+              - generic: "2"
+            - listitem [ref=e101]:
+              - link "Travel" [ref=e102] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=travel
+                - img [ref=e103]
+                - generic [ref=e105]: Travel
+              - generic: "0"
+            - listitem [ref=e106]:
+              - link "Factions" [ref=e107] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=factions
+                - img [ref=e108]
+                - generic [ref=e110]: Factions
+              - generic: "17"
+            - listitem [ref=e111]:
+              - link "Settlements" [ref=e112] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=settlements
+                - img [ref=e113]
+                - generic [ref=e115]: Settlements
+              - generic: "32"
+            - listitem [ref=e116]:
+              - link "Dungeons" [active] [ref=e117] [cursor=pointer]:
+                - /url: /atlas/world-obojima-v2?tab=dungeons
+                - img [ref=e118]
+                - generic [ref=e120]: Dungeons
+              - generic: "35"
+      - list [ref=e122]:
+        - listitem [ref=e123]:
+          - link "All Worlds" [ref=e124] [cursor=pointer]:
+            - /url: /
+            - img [ref=e125]
+            - generic [ref=e127]: All Worlds
+      - button "Toggle Sidebar" [ref=e66]
+    - main [ref=e67]:
+      - generic [ref=e163]:
+        - generic [ref=e165]:
+          - button "Toggle Sidebar" [ref=e166] [cursor=pointer]:
+            - img
+            - generic [ref=e167]: Toggle Sidebar
+          - generic [ref=e168]:
+            - heading "Obojima" [level=1] [ref=e169]
+            - paragraph [ref=e170]: "Seed: 321536"
+        - main [ref=e171]:
+          - generic [ref=e172]:
+            - generic [ref=e173]:
+              - generic [ref=e174]:
+                - generic [ref=e175]:
+                  - img [ref=e176]
+                  - text: Day 1, Year 1
+                - paragraph [ref=e178]: spring
+              - generic [ref=e179]:
+                - generic [ref=e180]:
+                  - img [ref=e181]
+                  - generic [ref=e183]: clear
+                - paragraph [ref=e184]: 68° / 82°F
+                - paragraph [ref=e185]:
+                  - img [ref=e186]
+                  - text: Waxing
+            - generic [ref=e188]:
+              - button "Previous Day" [disabled] [ref=e189]:
+                - img [ref=e190]
+                - text: Previous Day
+              - button "Next Day" [ref=e192] [cursor=pointer]:
+                - text: Next Day
+                - img [ref=e193]
+          - generic [ref=e195]:
+            - button "Events 2" [ref=e196] [cursor=pointer]:
+              - img [ref=e197]
+              - generic [ref=e199]: Events
+              - generic [ref=e200]: "2"
+            - button "Travel 0" [ref=e201] [cursor=pointer]:
+              - img [ref=e202]
+              - generic [ref=e204]: Travel
+              - generic [ref=e205]: "0"
+            - button "Factions 17" [ref=e206] [cursor=pointer]:
+              - img [ref=e207]
+              - generic [ref=e209]: Factions
+              - generic [ref=e210]: "17"
+            - button "Settlements 32" [ref=e211] [cursor=pointer]:
+              - img [ref=e212]
+              - generic [ref=e214]: Settlements
+              - generic [ref=e215]: "32"
+            - button "Dungeons 35" [ref=e216] [cursor=pointer]:
+              - img [ref=e217]
+              - generic [ref=e219]: Dungeons
+              - generic [ref=e220]: "35"
+          - generic [ref=e221]:
+            - heading "Dungeons (35)" [level=2] [ref=e222]:
+              - img [ref=e223]
+              - text: Dungeons (35)
+            - list [ref=e225]:
+              - listitem [ref=e226]:
+                - generic [ref=e227]:
+                  - link "Sunken Town & Underwater Depot" [ref=e228] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-sunken-town
+                  - paragraph [ref=e229]: sea_cave · medium
+                - generic [ref=e230]: Active
+              - listitem [ref=e231]:
+                - generic [ref=e232]:
+                  - link "The Coral Castle" [ref=e233] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-coral-castle
+                  - paragraph [ref=e234]: fortress · large
+                - generic [ref=e235]: Active
+              - listitem [ref=e236]:
+                - generic [ref=e237]:
+                  - link "Crak Caves" [ref=e238] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-crak-caves
+                  - paragraph [ref=e239]: cave · medium
+                - generic [ref=e240]: Active
+              - listitem [ref=e241]:
+                - generic [ref=e242]:
+                  - link "Temple of Shoom" [ref=e243] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-temple-of-shoom
+                  - paragraph [ref=e244]: temple · large
+                - generic [ref=e245]: Active
+              - listitem [ref=e246]:
+                - generic [ref=e247]:
+                  - link "Glittering Depot" [ref=e248] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-glittering-depot
+                  - paragraph [ref=e249]: mine · medium
+                - generic [ref=e250]: Active
+              - listitem [ref=e251]:
+                - generic [ref=e252]:
+                  - link "Prison of Oghmai" [ref=e253] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-prison-oghmai
+                  - paragraph [ref=e254]: temple · large
+                - generic [ref=e255]: Active
+              - listitem [ref=e256]:
+                - generic [ref=e257]:
+                  - link "Salty Sue" [ref=e258] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-sally-sue
+                  - paragraph [ref=e259]: sea_cave · lair
+                - generic [ref=e260]: Active
+              - listitem [ref=e261]:
+                - generic [ref=e262]:
+                  - link "Master Chen's Water Clock" [ref=e263] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-water-clock
+                  - paragraph [ref=e264]: fortress · small
+                - generic [ref=e265]: Active
+              - listitem [ref=e266]:
+                - generic [ref=e267]:
+                  - link "The Way Gate" [ref=e268] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-way-gate
+                  - paragraph [ref=e269]: fortress · small
+                - generic [ref=e270]: Active
+              - listitem [ref=e271]:
+                - generic [ref=e272]:
+                  - link "Ten Wheels Grove" [ref=e273] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-ten-wheels
+                  - paragraph [ref=e274]: beast_den · lair
+                - generic [ref=e275]: Active
+              - listitem [ref=e276]:
+                - generic [ref=e277]:
+                  - link "Crumpled Hut" [ref=e278] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-crumpled-hut
+                  - paragraph [ref=e279]: witch_hut · lair
+                - generic [ref=e280]: Active
+              - listitem [ref=e281]:
+                - generic [ref=e282]:
+                  - link "The Crawling Canopy" [ref=e283] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-crawling-canopy
+                  - paragraph [ref=e284]: shrine · lair
+                - generic [ref=e285]: Active
+              - listitem [ref=e286]:
+                - generic [ref=e287]:
+                  - link "The Shade Wood" [ref=e288] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-shade-wood
+                  - paragraph [ref=e289]: crypt · small
+                - generic [ref=e290]: Active
+              - listitem [ref=e291]:
+                - generic [ref=e292]:
+                  - link "New Moon Lagoon" [ref=e293] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-new-moon-lagoon
+                  - paragraph [ref=e294]: sea_cave · small
+                - generic [ref=e295]: Active
+              - listitem [ref=e296]:
+                - generic [ref=e297]:
+                  - link "Corrupted Coastline" [ref=e298] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-corrupted-coastline
+                  - paragraph [ref=e299]: cave · small
+                - generic [ref=e300]: Active
+              - listitem [ref=e301]:
+                - generic [ref=e302]:
+                  - link "The Forgotten Spire" [ref=e303] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-hJPFOfw-
+                  - paragraph [ref=e304]: floating_keep · lair
+                - generic [ref=e305]: Active
+              - listitem [ref=e306]:
+                - generic [ref=e307]:
+                  - link "The Sunken Temple" [ref=e308] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-onAPqrlv
+                  - paragraph [ref=e309]: cultist_lair · lair
+                - generic [ref=e310]: Active
+              - listitem [ref=e311]:
+                - generic [ref=e312]:
+                  - link "The Forsaken Nest" [ref=e313] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-2VyARstD
+                  - paragraph [ref=e314]: beast_den · lair
+                - generic [ref=e315]: Active
+              - listitem [ref=e316]:
+                - generic [ref=e317]:
+                  - link "The Twisted Citadel" [ref=e318] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-LPY20SQw
+                  - paragraph [ref=e319]: floating_keep · lair
+                - generic [ref=e320]: Active
+              - listitem [ref=e321]:
+                - generic [ref=e322]:
+                  - link "The Sunken Camp" [ref=e323] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-OGMi3JY0
+                  - paragraph [ref=e324]: bandit_hideout · lair
+                - generic [ref=e325]: Active
+              - listitem [ref=e326]:
+                - generic [ref=e327]:
+                  - link "The Forgotten Keep" [ref=e328] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-9wbelqKs
+                  - paragraph [ref=e329]: floating_keep · lair
+                - generic [ref=e330]: Active
+              - listitem [ref=e331]:
+                - generic [ref=e332]:
+                  - link "The Ancient Den" [ref=e333] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-NVNj46Xp
+                  - paragraph [ref=e334]: beast_den · lair
+                - generic [ref=e335]: Active
+              - listitem [ref=e336]:
+                - generic [ref=e337]:
+                  - link "The Cursed Sanctum" [ref=e338] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-mKMlQh5O
+                  - paragraph [ref=e339]: witch_hut · lair
+                - generic [ref=e340]: Active
+              - listitem [ref=e341]:
+                - generic [ref=e342]:
+                  - link "The Hidden Keep" [ref=e343] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-pRQpSCOF
+                  - paragraph [ref=e344]: floating_keep · lair
+                - generic [ref=e345]: Active
+              - listitem [ref=e346]:
+                - generic [ref=e347]:
+                  - link "The Shadowed Altar" [ref=e348] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-jfYkxvwT
+                  - paragraph [ref=e349]: cultist_lair · lair
+                - generic [ref=e350]: Active
+              - listitem [ref=e351]:
+                - generic [ref=e352]:
+                  - link "The Hidden Hovel" [ref=e353] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-pmacu-ME
+                  - paragraph [ref=e354]: witch_hut · lair
+                - generic [ref=e355]: Active
+              - listitem [ref=e356]:
+                - generic [ref=e357]:
+                  - link "The Ancient Cove" [ref=e358] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-A5WVq6Uv
+                  - paragraph [ref=e359]: sea_cave · lair
+                - generic [ref=e360]: Active
+              - listitem [ref=e361]:
+                - generic [ref=e362]:
+                  - link "The Cursed Temple" [ref=e363] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-ZnUdUU5E
+                  - paragraph [ref=e364]: cultist_lair · lair
+                - generic [ref=e365]: Active
+              - listitem [ref=e366]:
+                - generic [ref=e367]:
+                  - link "The Hidden Sanctum" [ref=e368] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-aJKghAqJ
+                  - paragraph [ref=e369]: cultist_lair · lair
+                - generic [ref=e370]: Active
+              - listitem [ref=e371]:
+                - generic [ref=e372]:
+                  - link "The Shadowed Sanctum" [ref=e373] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-daGs30Sz
+                  - paragraph [ref=e374]: witch_hut · lair
+                - generic [ref=e375]: Active
+              - listitem [ref=e376]:
+                - generic [ref=e377]:
+                  - link "The Haunted Warren" [ref=e378] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-dASJkdYN
+                  - paragraph [ref=e379]: beast_den · lair
+                - generic [ref=e380]: Active
+              - listitem [ref=e381]:
+                - generic [ref=e382]:
+                  - link "The Twisted Hovel" [ref=e383] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-4E-iQQ4p
+                  - paragraph [ref=e384]: witch_hut · lair
+                - generic [ref=e385]: Active
+              - listitem [ref=e386]:
+                - generic [ref=e387]:
+                  - link "The Shadowed Hovel" [ref=e388] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-DX4j8JNn
+                  - paragraph [ref=e389]: witch_hut · lair
+                - generic [ref=e390]: Active
+              - listitem [ref=e391]:
+                - generic [ref=e392]:
+                  - link "The Cursed Den" [ref=e393] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-YBmBuN8m
+                  - paragraph [ref=e394]: bandit_hideout · lair
+                - generic [ref=e395]: Active
+              - listitem [ref=e396]:
+                - generic [ref=e397]:
+                  - link "The Hidden Temple" [ref=e398] [cursor=pointer]:
+                    - /url: /world/world-obojima-v2/location/dungeon-MQyhGKgE
+                  - paragraph [ref=e399]: cultist_lair · lair
+                - generic [ref=e400]: Active
+  - region "Notifications alt+T"

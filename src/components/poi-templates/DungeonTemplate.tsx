@@ -535,6 +535,43 @@ export function DungeonTemplate({
         </details>
       )}
 
+      {/* Dungeon Lore — shows generated ecology data */}
+      {poi.spatialDungeon?.ecology && (() => {
+        const { builderCulture, currentInhabitants, history, historyLayers } = poi.spatialDungeon.ecology
+        if (!builderCulture && !currentInhabitants && !history) return null
+        return (
+          <div className="rounded-lg border border-stone-600/50 bg-stone-900/40 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs">🏚</span>
+              <span className="text-xs font-semibold text-stone-300 uppercase tracking-wide">Dungeon Lore</span>
+            </div>
+            {history && (
+              <p className="text-sm italic text-stone-300">{history}</p>
+            )}
+            <div className="flex gap-4 text-xs text-stone-400">
+              {builderCulture && (
+                <span>Built by: <span className="text-stone-200 font-medium capitalize">{builderCulture}</span></span>
+              )}
+              {currentInhabitants && (
+                <span>Inhabitants: <span className="text-stone-200 font-medium capitalize">{currentInhabitants}</span></span>
+              )}
+            </div>
+            {historyLayers && historyLayers.length > 0 && (
+              <div className="space-y-1 pt-1 border-t border-stone-700">
+                <span className="text-xs text-stone-500 uppercase tracking-wide">History Layers</span>
+                {historyLayers.map((layer, i) => (
+                  <div key={i} className="text-xs">
+                    <span className="font-medium text-stone-300 capitalize">{layer.builders}</span>
+                    <span className="text-stone-500 ml-1">({layer.era})</span>
+                    {layer.fate && <p className="text-stone-400 italic ml-2">{layer.fate}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
       {/* Tabs */}
       <Tabs value={activeTab ?? "rooms"} onValueChange={onTabChange}>
         <TabsList variant="line" className="w-full">

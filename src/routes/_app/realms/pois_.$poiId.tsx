@@ -789,10 +789,17 @@ function POIDetailPage() {
 
       {/* Action bar */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="flex items-center gap-2 mr-auto">
+        <span className="flex items-center gap-2 mr-auto flex-wrap">
           <Icon className="size-5" />
           <span className="font-medium">{poi.name}</span>
           <Badge variant="outline" className="text-xs">{poi.type}</Badge>
+          {poi.type === 'dungeon' && poi.spatialDungeon && (
+            <>
+              <Badge variant="secondary" className="text-xs capitalize">{poi.spatialDungeon.theme.replace(/_/g, ' ')}</Badge>
+              <Badge variant="secondary" className="text-xs">Depth {poi.spatialDungeon.depth}</Badge>
+              <Badge variant="secondary" className="text-xs capitalize">{poi.spatialDungeon.size}</Badge>
+            </>
+          )}
         </span>
         {/* Run mode toggle */}
         <Button
