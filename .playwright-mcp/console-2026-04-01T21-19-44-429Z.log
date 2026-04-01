@@ -259,3 +259,4 @@ This will cause a hydration error.%s <button> button
  @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2155
 [ 4084744ms] [ERROR] <%s> cannot contain a nested %s.
 See this log for the ancestor stack trace. button <button> @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2162
+[ 4294925ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:3000/@vite/client:864

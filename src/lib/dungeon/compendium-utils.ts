@@ -75,15 +75,6 @@ export function getMonsterDescription(id: string): string {
     .trim()
 }
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/<\/?(p|br|div|li)[^>]*>/gi, ' ')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ')
-    .replace(/\s{2,}/g, ' ')
-    .trim()
-}
-
 export function slugToName(slug: string): string {
   return slug.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 }
@@ -197,7 +188,7 @@ export function systemBlockFromMonster(id: string): SystemBlock {
       hp, maxHp: hp, armor,
       attacks: attackDamage ? [{ name: attackName || 'Attack', damage: attackDamage, description: '' }] : [],
       inventory: [],
-      abilities: (d.details ?? []).map(stripHtml),
+      abilities: d.details ?? [],
       notes: s,
     }
   }

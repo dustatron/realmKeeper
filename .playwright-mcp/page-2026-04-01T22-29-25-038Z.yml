@@ -1,0 +1,363 @@
+- generic [ref=e2]:
+  - generic [ref=e5]:
+    - list [ref=e7]:
+      - listitem [ref=e8]:
+        - button "bad goat Cairn 2e" [ref=e9] [cursor=pointer]:
+          - img [ref=e11]
+          - generic:
+            - generic: bad goat
+            - generic: Cairn 2e
+          - img [ref=e13]
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: Overview
+        - list [ref=e19]:
+          - listitem [ref=e20]:
+            - link "Dashboard" [ref=e21] [cursor=pointer]:
+              - /url: /realms
+              - img [ref=e22]
+              - generic: Dashboard
+          - listitem [ref=e27]:
+            - link "Maps" [ref=e28] [cursor=pointer]:
+              - /url: /realms/maps
+              - img [ref=e29]
+              - generic: Maps
+          - listitem [ref=e33]:
+            - link "Search" [ref=e34] [cursor=pointer]:
+              - /url: /search
+              - img [ref=e35]
+              - generic: Search
+          - listitem [ref=e38]:
+            - link "Calendar" [ref=e39] [cursor=pointer]:
+              - /url: /realms/calendar
+              - img [ref=e40]
+              - generic: Calendar
+      - generic [ref=e43]:
+        - generic [ref=e44]: World
+        - list [ref=e45]:
+          - listitem [ref=e46]:
+            - link "Locations" [ref=e47] [cursor=pointer]:
+              - /url: /realms/locations
+              - img [ref=e48]
+              - generic: Locations
+          - listitem [ref=e50]:
+            - link "NPCs" [ref=e51] [cursor=pointer]:
+              - /url: /realms/npcs
+              - img [ref=e52]
+              - generic: NPCs
+          - listitem [ref=e57]:
+            - link "Factions" [ref=e58] [cursor=pointer]:
+              - /url: /realms/factions
+              - img [ref=e59]
+              - generic: Factions
+      - generic [ref=e68]:
+        - generic [ref=e69]: Tools
+        - list [ref=e70]:
+          - listitem [ref=e71]:
+            - link "Compendium" [ref=e72] [cursor=pointer]:
+              - /url: /realms/compendium
+              - img [ref=e73]
+              - generic: Compendium
+          - listitem [ref=e75]:
+            - link "Tables" [ref=e76] [cursor=pointer]:
+              - /url: /realms/tables
+              - img [ref=e77]
+              - generic: Tables
+          - listitem [ref=e79]:
+            - link "Notes" [ref=e80] [cursor=pointer]:
+              - /url: /realms/notes
+              - img [ref=e81]
+              - generic: Notes
+    - button "Toggle Sidebar" [ref=e85]
+  - main [ref=e86]:
+    - generic [ref=e87]:
+      - generic [ref=e88]:
+        - button "Toggle Sidebar" [ref=e89] [cursor=pointer]:
+          - img
+          - generic [ref=e90]: Toggle Sidebar
+        - generic [ref=e92]:
+          - link "POIs" [ref=e93] [cursor=pointer]:
+            - /url: /realms/locations/pois
+          - img [ref=e94]
+          - link "The Dunes" [ref=e96] [cursor=pointer]:
+            - /url: /realms/regions/01KN5FA3NFYWS0M6Z13FEMDJPR
+          - img [ref=e97]
+          - generic [ref=e99]: The Blighted Caves
+      - generic [ref=e100]:
+        - button "Login to sync" [ref=e101] [cursor=pointer]:
+          - img
+          - generic [ref=e102]: Login to sync
+        - button "Toggle theme" [ref=e103] [cursor=pointer]:
+          - img
+          - generic [ref=e104]: Toggle theme
+    - main [ref=e105]:
+      - generic [ref=e106]:
+        - generic [ref=e107]:
+          - generic [ref=e108]:
+            - img [ref=e109]
+            - generic [ref=e114]: The Blighted Caves
+            - generic [ref=e115]: dungeon
+            - generic [ref=e116]: cave
+            - generic [ref=e117]: Depth 1
+            - generic [ref=e118]: small
+          - button "Run" [ref=e119] [cursor=pointer]:
+            - img
+            - text: Run
+          - button "Mark as visited" [ref=e120] [cursor=pointer]:
+            - img
+          - 'button "Light: not set" [ref=e121] [cursor=pointer]':
+            - img
+          - button "Star" [ref=e122] [cursor=pointer]:
+            - img
+          - link "Regenerate" [ref=e123] [cursor=pointer]:
+            - /url: /realms/pois/01KN5FACD18K79H2TNC127V9B5/generate-dungeon
+            - button "Regenerate" [ref=e124]:
+              - img
+              - text: Regenerate
+          - button "Add Map" [ref=e125] [cursor=pointer]:
+            - img
+            - text: Add Map
+          - link "Edit" [ref=e126] [cursor=pointer]:
+            - /url: /realms/pois/01KN5FACD18K79H2TNC127V9B5/edit
+            - button "Edit" [ref=e127]:
+              - img
+              - text: Edit
+        - generic [ref=e128]:
+          - generic [ref=e129]:
+            - generic [ref=e130]:
+              - generic [ref=e131]: 🏚
+              - generic [ref=e132]: Dungeon Lore
+            - paragraph [ref=e133]: The giant burrowers abandoned this place long ago. Beast pack moved in.
+            - generic [ref=e134]:
+              - generic [ref=e135]: "Built by: giant burrowers"
+              - generic [ref=e136]: "Inhabitants: beast pack"
+            - generic [ref=e137]:
+              - text: History Layers
+              - generic [ref=e138]:
+                - text: giant burrowers
+                - generic [ref=e139]: (ages ago)
+                - paragraph [ref=e140]: abandoned when the creatures moved on
+          - generic [ref=e141]:
+            - tablist [ref=e142]:
+              - tab "Rooms (5)" [selected] [ref=e143] [cursor=pointer]:
+                - img
+                - text: Rooms (5)
+              - tab "Details" [ref=e144] [cursor=pointer]:
+                - img
+                - text: Details
+              - tab "Encounters" [ref=e145] [cursor=pointer]:
+                - img
+                - text: Encounters
+              - tab "Notes" [ref=e146] [cursor=pointer]:
+                - img
+                - text: Notes
+            - tabpanel "Rooms (5)" [ref=e147]:
+              - button "Stacked" [ref=e149] [cursor=pointer]:
+                - img
+                - text: Stacked
+              - generic [ref=e150]:
+                - generic [ref=e151]:
+                  - generic [ref=e153]:
+                    - img [ref=e154]:
+                      - generic [ref=e162] [cursor=pointer]:
+                        - generic: ⛩
+                        - generic: "1"
+                      - generic [ref=e164] [cursor=pointer]:
+                        - generic: ◈
+                        - generic: ☻
+                        - generic: "!"
+                        - generic: "2"
+                      - generic [ref=e166] [cursor=pointer]:
+                        - generic: ◈
+                        - generic: ☻
+                        - generic: "3"
+                      - generic [ref=e168] [cursor=pointer]:
+                        - generic: ◈
+                        - generic: "!"
+                        - generic: "4"
+                      - generic [ref=e170] [cursor=pointer]:
+                        - generic: ⚠
+                        - generic: ◈
+                        - generic: ☻
+                        - generic: "!"
+                        - generic: "5"
+                      - generic [ref=e172]: 🔑
+                    - generic [ref=e173]:
+                      - generic [ref=e174]:
+                        - generic [ref=e175]: ⚠
+                        - text: Trap
+                      - generic [ref=e176]:
+                        - generic [ref=e177]: ◈
+                        - text: Treasure
+                      - generic [ref=e178]:
+                        - generic [ref=e179]: ☻
+                        - text: NPC
+                      - generic [ref=e180]:
+                        - generic [ref=e181]: "?"
+                        - text: Secret
+                      - generic [ref=e182]:
+                        - generic [ref=e183]: "!"
+                        - text: Discovery
+                  - generic [ref=e185]:
+                    - generic [ref=e186]:
+                      - heading "Wandering Monsters 1d4" [level=4] [ref=e187]:
+                        - img [ref=e188]
+                        - text: Wandering Monsters
+                        - generic [ref=e191]: 1d4
+                      - generic [ref=e192]:
+                        - button "Add" [ref=e193] [cursor=pointer]:
+                          - img
+                          - text: Add
+                        - button "Roll" [ref=e194] [cursor=pointer]:
+                          - img
+                          - text: Roll
+                    - table [ref=e196]:
+                      - rowgroup [ref=e197]:
+                        - row "# Creature AC HP Atk" [ref=e198]:
+                          - columnheader "#" [ref=e199]
+                          - columnheader "Creature" [ref=e200]
+                          - columnheader "AC" [ref=e201]
+                          - columnheader "HP" [ref=e202]
+                          - columnheader "Atk" [ref=e203]
+                          - columnheader [ref=e204]
+                      - rowgroup [ref=e205]:
+                        - row "1 1d3 Goblin Goblin · Core Rules · guarding a key location — 4 Small, grotesque humanoids with skin in earthly tones of green, brown, and grey" [ref=e206] [cursor=pointer]:
+                          - cell "1" [ref=e207]
+                          - cell "1d3 Goblin Goblin · Core Rules · guarding a key location" [ref=e208]:
+                            - generic [ref=e209]: 1d3 Goblin
+                            - generic [ref=e210]:
+                              - text: Goblin · Core Rules
+                              - generic [ref=e211]: · guarding a key location
+                          - cell "—" [ref=e212]
+                          - cell "4" [ref=e213]
+                          - cell "Small, grotesque humanoids with skin in earthly tones of green, brown, and grey" [ref=e214]
+                          - cell [ref=e215]:
+                            - button [ref=e216]:
+                              - img
+                        - row "2 1d2 Lion Goblin · Core Rules · sleeping in the passage — 5 Carnivorous hunters that live in the savannah or other similarly dry lands" [ref=e217] [cursor=pointer]:
+                          - cell "2" [ref=e218]
+                          - cell "1d2 Lion Goblin · Core Rules · sleeping in the passage" [ref=e219]:
+                            - generic [ref=e220]: 1d2 Lion
+                            - generic [ref=e221]:
+                              - text: Goblin · Core Rules
+                              - generic [ref=e222]: · sleeping in the passage
+                          - cell "—" [ref=e223]
+                          - cell "5" [ref=e224]
+                          - cell "Carnivorous hunters that live in the savannah or other similarly dry lands" [ref=e225]
+                          - cell [ref=e226]:
+                            - button [ref=e227]:
+                              - img
+                        - row "3 1d3 Purple Worm Purple Worm · Core Rules · patrolling the area 1 18 Gargantuan worms that lair in enormous burrows deep underground, only coming to the surface to eat" [ref=e228] [cursor=pointer]:
+                          - cell "3" [ref=e229]
+                          - cell "1d3 Purple Worm Purple Worm · Core Rules · patrolling the area" [ref=e230]:
+                            - generic [ref=e231]: 1d3 Purple Worm
+                            - generic [ref=e232]:
+                              - text: Purple Worm · Core Rules
+                              - generic [ref=e233]: · patrolling the area
+                          - cell "1" [ref=e234]
+                          - cell "18" [ref=e235]
+                          - cell "Gargantuan worms that lair in enormous burrows deep underground, only coming to the surface to eat" [ref=e236]
+                          - cell [ref=e237]:
+                            - button [ref=e238]:
+                              - img
+                        - row "4 1d4 Warp Panther Purple Worm · Core Rules · dragging a recent kill — 8 Grotesque panther-like predators with long razored tentacles growing out of their backs" [ref=e239] [cursor=pointer]:
+                          - cell "4" [ref=e240]
+                          - cell "1d4 Warp Panther Purple Worm · Core Rules · dragging a recent kill" [ref=e241]:
+                            - generic [ref=e242]: 1d4 Warp Panther
+                            - generic [ref=e243]:
+                              - text: Purple Worm · Core Rules
+                              - generic [ref=e244]: · dragging a recent kill
+                          - cell "—" [ref=e245]
+                          - cell "8" [ref=e246]
+                          - cell "Grotesque panther-like predators with long razored tentacles growing out of their backs" [ref=e247]
+                          - cell [ref=e248]:
+                            - button [ref=e249]:
+                              - img
+                - generic [ref=e250]:
+                  - generic [ref=e251]: Select a room to see details
+                  - generic [ref=e252]:
+                    - heading "Rooms & Areas ✅ 0/5 explored" [level=4] [ref=e253]:
+                      - text: Rooms & Areas
+                      - generic [ref=e254]: ✅ 0/5 explored
+                    - button "Add Room" [ref=e255] [cursor=pointer]:
+                      - img
+                      - text: Add Room
+                  - generic [ref=e256]:
+                    - generic [ref=e258] [cursor=pointer]:
+                      - generic [ref=e259]: "1."
+                      - button "Mark visited" [ref=e260]:
+                        - img [ref=e261]
+                      - img [ref=e263]
+                      - generic [ref=e265]: Gatehouse
+                      - generic [ref=e266]:
+                        - generic [ref=e267]: Entrance
+                        - link [ref=e268]:
+                          - /url: /realms/pois/01KN5JJ9DX1A786ZHQFZP78ZES
+                          - img [ref=e269]
+                    - generic [ref=e274] [cursor=pointer]:
+                      - generic [ref=e275]: "2."
+                      - button "Mark visited" [ref=e276]:
+                        - img [ref=e277]
+                      - img [ref=e279]
+                      - generic [ref=e281]: Mushroom Garden
+                      - generic [ref=e282]:
+                        - generic "Uncollected treasure" [ref=e283]:
+                          - img [ref=e284]
+                        - generic "1 NPC" [ref=e287]:
+                          - img [ref=e288]
+                      - generic [ref=e293]:
+                        - generic [ref=e294]: Mushroom Garden
+                        - link [ref=e295]:
+                          - /url: /realms/pois/01KN5JJ9DY799NESGJY2P899N1
+                          - img [ref=e296]
+                    - generic [ref=e301] [cursor=pointer]:
+                      - generic [ref=e302]: "3."
+                      - button "Mark visited" [ref=e303]:
+                        - img [ref=e304]
+                      - img [ref=e306]
+                      - generic [ref=e308]: Mushroom Garden
+                      - generic [ref=e309]:
+                        - generic "Uncollected treasure" [ref=e310]:
+                          - img [ref=e311]
+                        - generic "1 NPC" [ref=e314]:
+                          - img [ref=e315]
+                      - generic [ref=e320]:
+                        - generic [ref=e321]: Mushroom Garden
+                        - link [ref=e322]:
+                          - /url: /realms/pois/01KN5JJ9DZNHE78W913CHRRZZF
+                          - img [ref=e323]
+                    - generic [ref=e328] [cursor=pointer]:
+                      - generic [ref=e329]: "4."
+                      - button "Mark visited" [ref=e330]:
+                        - img [ref=e331]
+                      - img [ref=e333]
+                      - generic [ref=e335]: Underground Pool
+                      - generic "Uncollected treasure" [ref=e337]:
+                        - img [ref=e338]
+                      - generic [ref=e341]:
+                        - generic [ref=e342]: Underground Pool
+                        - link [ref=e343]:
+                          - /url: /realms/pois/01KN5JJ9E1TJ2XXZKNNQRZR3JN
+                          - img [ref=e344]
+                    - generic [ref=e349] [cursor=pointer]:
+                      - generic [ref=e350]: "5."
+                      - button "Mark visited" [ref=e351]:
+                        - img [ref=e352]
+                      - img [ref=e354]
+                      - generic [ref=e356]: Creature Nest
+                      - generic [ref=e357]:
+                        - generic "Active traps" [ref=e358]:
+                          - img [ref=e359]
+                        - generic "Uncollected treasure" [ref=e361]:
+                          - img [ref=e362]
+                        - generic "1 NPC" [ref=e365]:
+                          - img [ref=e366]
+                      - generic [ref=e371]:
+                        - generic [ref=e372]: Creature Nest
+                        - link [ref=e373]:
+                          - /url: /realms/pois/01KN5JJ9E4MBY7XNH8G7EKEHTJ
+                          - img [ref=e374]
+        - button "Session Log" [ref=e380] [cursor=pointer]:
+          - img [ref=e381]
+          - img [ref=e383]
+          - text: Session Log

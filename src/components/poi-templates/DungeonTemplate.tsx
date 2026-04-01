@@ -174,21 +174,17 @@ function RoomNPCCard({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) 
             </div>
           )}
 
-          {/* Abilities — bold the name before the first colon */}
+          {/* Abilities — render HTML from compendium (strong → bold, em → italic) */}
           {sb && sb.abilities && sb.abilities.length > 0 && (
             <div className="text-xs text-muted-foreground space-y-1">
-              {sb.abilities.map((ability, i) => {
-                const colonIdx = ability.indexOf(':')
-                if (colonIdx > 0 && colonIdx < 30) {
-                  return (
-                    <div key={i}>
-                      <span className="font-semibold text-foreground">{ability.slice(0, colonIdx)}</span>
-                      <span>{ability.slice(colonIdx)}</span>
-                    </div>
-                  )
-                }
-                return <div key={i}>{ability}</div>
-              })}
+              {sb.abilities.map((ability, i) => (
+                <div
+                  key={i}
+                  // eslint-disable-next-line react/no-danger
+                  dangerouslySetInnerHTML={{ __html: ability }}
+                  className="[&_strong]:font-semibold [&_strong]:text-foreground [&_em]:italic"
+                />
+              ))}
             </div>
           )}
 
