@@ -2,3 +2,13 @@
 [    1697ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:3000/favicon.ico:0
 [    1825ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:20102
 [    2228ms] [LOG] %c[RealmKeeper] Dev API installed → window.__realmKeeper color: #22d3ee; font-weight: bold @ http://localhost:3000/src/infrastructure/dev/devApi.ts:347
+[   35778ms] [WARNING] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. @ http://localhost:3000/node_modules/.vite/deps/chunk-RA6KIKMJ.js?v=4c344736:2148
+[   35779ms] [WARNING] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. @ http://localhost:3000/node_modules/.vite/deps/chunk-RA6KIKMJ.js?v=4c344736:2148
+[  125333ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[  125360ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[  125418ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[  125566ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[  125766ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[  125797ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[  125850ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[  125942ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703

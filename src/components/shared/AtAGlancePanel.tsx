@@ -49,6 +49,7 @@ export function AtAGlancePanel({
 
   return (
     <div className="rounded-md border bg-muted/30 p-3 space-y-3 overflow-hidden">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">At a Glance</p>
       {/* Top line: dimensions + light + mood + trouble */}
       {(hasDimensions || mood || trouble || lightLevel) && (
         <div className="space-y-1.5">
