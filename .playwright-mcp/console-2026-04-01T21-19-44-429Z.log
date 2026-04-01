@@ -260,3 +260,12 @@ This will cause a hydration error.%s <button> button
 [ 4084744ms] [ERROR] <%s> cannot contain a nested %s.
 See this log for the ancestor stack trace. button <button> @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2162
 [ 4294925ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:3000/@vite/client:864
+[ 4468571ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 4468590ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 4468611ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 4468627ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 4468645ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 4468661ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 4986971ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ http://localhost:3000/realms/pois/01KN5FACD18K79H2TNC127V9B5?room=01KN5JJ9E4MBY7XNH8G7EKEHTJ&tab=denizens:0
+[ 4988300ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:20102
+[ 4989457ms] [LOG] %c[RealmKeeper] Dev API installed → window.__realmKeeper color: #22d3ee; font-weight: bold @ http://localhost:3000/src/infrastructure/dev/devApi.ts:347

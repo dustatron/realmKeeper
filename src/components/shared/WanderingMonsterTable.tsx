@@ -1035,7 +1035,7 @@ function MonsterStatBlock({ monster }: { monster: CompendiumMonster }) {
         <>
           <div className="text-muted-foreground">{d.data.stats}</div>
           {d.data.details.map((detail, i) => (
-            <div key={i} className="text-muted-foreground">{detail}</div>
+            <div key={i} className="text-muted-foreground [&_strong]:font-semibold [&_strong]:text-foreground [&_em]:italic" dangerouslySetInnerHTML={{ __html: detail }} />
           ))}
         </>
       )}
@@ -1050,7 +1050,7 @@ function MonsterStatBlock({ monster }: { monster: CompendiumMonster }) {
         </div>
       )}
       {monster.description && (
-        <p className="italic text-muted-foreground pt-0.5 border-t border-border/50">{monster.description}</p>
+        <p className="italic text-muted-foreground pt-0.5 border-t border-border/50 [&_strong]:font-semibold [&_strong]:not-italic [&_strong]:text-foreground" dangerouslySetInnerHTML={{ __html: monster.description }} />
       )}
     </div>
   )

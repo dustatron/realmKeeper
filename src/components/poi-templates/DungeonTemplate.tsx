@@ -906,27 +906,102 @@ export function DungeonTemplate({
             )
           })()}
 
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-sm font-semibold flex items-center gap-2">
-              <Users className="size-4" />
-              Denizens ({allNPCs.length})
-            </h4>
-            <Button size="sm" variant="outline" onClick={onCreateNPC}>
-              <Plus className="mr-1.5 size-3.5" />
-              Add NPC
-            </Button>
-          </div>
-          {allNPCs.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {allNPCs.map((npc) => (
-                <NPCMiniCard key={npc.id} npc={npc} poiName={npc.poiId ? poiNameMap.get(npc.poiId) : undefined} onUpdateNPC={onUpdateNPC} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No denizens present.
-            </p>
-          )}
+          {/* ── Creature Roster — compact battle reference ── */}
+          {(() => {
+            const creatures = allNPCs.filter((n) => n.tags?.includes('creature'))
+            if (creatures.length === 0) return null
+            return (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-red-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <Skull className="size-3.5" /> Creatures ({creatures.length})
+                </p>
+                <div className="rounded-md border overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/40 border-b">
+                      <tr>
+                        <th className="text-left px-2 py-1.5 font-medium text-muted-foreground">Room</th>
+                        <th className="text-left px-2 py-1.5 font-medium text-muted-foreground">Creature</th>
+                        <th className="text-center px-2 py-1.5 font-medium text-muted-foreground w-10">AC</th>
+                        <th className="text-center px-2 py-1.5 font-medium text-muted-foreground w-14">HP</th>
+                        <th className="text-left px-2 py-1.5 font-medium text-muted-foreground">Attack</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {creatures.map((npc, i) => {
+                        const sb = npc.systemBlock
+                        const roomName = npc.poiId ? poiNameMap.get(npc.poiId) ?? '—' : '—'
+                        const isDead = npc.lifeStatus !== 'alive'
+                        return (
+                          <tr key={npc.id} className={`border-t ${i % 2 === 0 ? '' : 'bg-muted/20'} ${isDead ? 'opacity-40' : ''}`}>
+                            <td className="px-2 py-1.5 text-muted-foreground truncate max-w-[100px]">{roomName}</td>
+                            <td className="px-2 py-1.5">
+                              <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="font-medium hover:underline text-foreground">
+                                {npc.name}
+                              </Link>
+                            </td>
+                            <td className="px-2 py-1.5 text-center font-mono">{sb?.armor ?? '—'}</td>
+                            <td className="px-2 py-1.5 text-center">
+                              {sb && sb.maxHp > 0 ? (
+                                <span className={`font-mono ${sb.hp <= sb.maxHp * 0.25 ? 'text-destructive' : sb.hp <= sb.maxHp * 0.5 ? 'text-amber-400' : 'text-green-500'}`}>
+                                  {sb.hp}/{sb.maxHp}
+                                </span>
+                              ) : '—'}
+                            </td>
+                            <td className="px-2 py-1.5 text-muted-foreground truncate max-w-[120px]">
+                              {sb?.attacks?.[0] ? `${sb.attacks[0].name} ${sb.attacks[0].damage}` : '—'}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* ── Named NPCs — role-play opportunities ── */}
+          {(() => {
+            const named = allNPCs.filter((n) => !n.tags?.includes('creature'))
+            return (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-blue-400 uppercase tracking-wide flex items-center gap-1.5">
+                    <Heart className="size-3.5" /> Named NPCs ({named.length})
+                  </p>
+                  <Button size="sm" variant="outline" onClick={onCreateNPC}>
+                    <Plus className="mr-1.5 size-3.5" />
+                    Add NPC
+                  </Button>
+                </div>
+                {named.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {named.map((npc) => {
+                      const roomName = npc.poiId ? poiNameMap.get(npc.poiId) : undefined
+                      return (
+                        <div key={npc.id} className="flex items-start gap-3 rounded-md border px-3 py-2 bg-card/50">
+                          <Heart className={`size-3.5 mt-0.5 shrink-0 ${npc.lifeStatus === 'alive' ? 'text-green-500 fill-green-500' : 'text-muted-foreground'}`} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="font-medium text-sm text-amber-500 hover:underline">
+                                {npc.name}
+                              </Link>
+                              <DispositionBadge npc={npc} />
+                              {roomName && <span className="text-xs text-muted-foreground">· {roomName}</span>}
+                            </div>
+                            {npc.want && <p className="text-xs text-muted-foreground mt-0.5 truncate">Wants: {npc.want}</p>}
+                            {!npc.want && npc.description && <p className="text-xs text-muted-foreground mt-0.5 truncate">{npc.description}</p>}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No named NPCs yet.</p>
+                )}
+              </div>
+            )
+          })()}
 
           {factionPresences.length > 0 && (
             <div>
