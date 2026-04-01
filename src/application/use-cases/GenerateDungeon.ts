@@ -12,7 +12,9 @@ import type { WanderingMonsterEntry } from '@domain/value-objects/WanderingMonst
 import type { DungeonGenOptions } from '~/lib/dungeon/types'
 import { generateDungeon } from '~/lib/dungeon/DungeonGenerator'
 import { getBlueprint } from '~/lib/dungeon/dungeon/DungeonBlueprints'
-import { searchCompendium } from '@domain/data/compendium'
+import { searchCompendium, getCompendiumById } from '@domain/data/compendium'
+import type { CompendiumMonster } from '@domain/entities/Compendium'
+import type { SystemBlock } from '@domain/value-objects/SystemBlock'
 import { executeDeletePOIWithChildren } from './DeletePOIWithChildren'
 import type { IFactionPresenceRepository } from '@application/ports/IFactionPresenceRepository'
 import type { IPOIEventRepository } from '@application/ports/IPOIEventRepository'
@@ -313,16 +315,7 @@ export async function executeGenerateDungeon(
       want: '',
       tags: ['creature', options.theme],
       imageUrl: null,
-      systemBlock: {
-        stats: [],
-        hp: 0,
-        maxHp: 0,
-        armor: 0,
-        attacks: [],
-        inventory: [],
-        abilities: compendiumId ? [] : [`See ${creatureName} stat block`],
-        notes: compendiumId ? '' : `Creature type: ${creatureSlug}`,
-      },
+      systemBlock: compendiumId ? systemBlockFromMonster(compendiumId) : emptySystemBlock(),
       disposition: 'hostile',
       starred: false,
       createdAt: now,
@@ -428,6 +421,55 @@ function generateRoomTreasure(
   }
 
   return items
+}
+
+/** Build a SystemBlock from a compendium monster entry */
+function systemBlockFromMonster(id: string): SystemBlock {
+  const entry = getCompendiumById(id) as CompendiumMonster | undefined
+  if (!entry) return emptySystemBlock()
+
+  const sd = entry.systemData
+  if (sd.system === 'shadowdark') {
+    const d = sd.data
+    return {
+      stats: [
+        { key: 'STR', value: d.strength },
+        { key: 'DEX', value: d.dexterity },
+        { key: 'CON', value: d.constitution },
+        { key: 'INT', value: d.intelligence },
+        { key: 'WIS', value: d.wisdom },
+        { key: 'CHA', value: d.charisma },
+      ],
+      hp: d.hitPoints,
+      maxHp: d.hitPoints,
+      armor: d.armorClass,
+      level: d.level,
+      attacks: d.attacks ? [{ name: 'Attack', damage: d.attacks, description: '' }] : [],
+      inventory: [],
+      abilities: d.traits?.map((t) => `${t.name}: ${t.description}`) ?? [],
+      notes: [d.armorType, d.movement, d.alignment].filter(Boolean).join(' | '),
+    }
+  }
+
+  if (sd.system === 'cairn') {
+    const d = sd.data
+    return {
+      stats: [],
+      hp: 0,
+      maxHp: 0,
+      armor: 0,
+      attacks: d.stats ? [{ name: 'Attack', damage: d.stats, description: '' }] : [],
+      inventory: [],
+      abilities: d.details ?? [],
+      notes: '',
+    }
+  }
+
+  return emptySystemBlock()
+}
+
+function emptySystemBlock(): SystemBlock {
+  return { stats: [], hp: 0, maxHp: 0, armor: 0, attacks: [], inventory: [], abilities: [], notes: '' }
 }
 
 /** Convert a creature slug to display name, e.g. "giant_spider" → "Giant Spider" */
