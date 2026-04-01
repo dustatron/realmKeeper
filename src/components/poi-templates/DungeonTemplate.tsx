@@ -325,18 +325,28 @@ function RoomDetailPanel({
         <div className="space-y-1">
           <div className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">💎 Treasure</div>
           {room.treasure.map((item) => (
-            <div key={item.id} className="flex items-center gap-2 text-sm rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5">
-              <span className={item.collected ? "line-through text-muted-foreground" : "text-foreground"}>
+            <button
+              key={item.id}
+              className="w-full flex items-center gap-2 text-sm rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5 hover:bg-emerald-500/10 transition-colors text-left"
+              onClick={() => {
+                const updated = room.treasure.map((t) =>
+                  t.id === item.id ? { ...t, collected: !t.collected } : t
+                )
+                db.pois.update(room.id, { treasure: updated, updatedAt: Date.now() })
+              }}
+              title={item.collected ? 'Mark as loot' : 'Mark as collected'}
+            >
+              <span className="text-base leading-none shrink-0">
+                {item.collected ? '✅' : '💰'}
+              </span>
+              <span className={item.collected ? 'line-through text-muted-foreground flex-1' : 'flex-1'}>
                 {item.name}
                 {item.quantity > 1 && ` (×${item.quantity})`}
               </span>
               {item.value && (
-                <span className="text-xs text-amber-400">{item.value}</span>
+                <span className="text-xs text-amber-400 shrink-0">{item.value}</span>
               )}
-              <span className="ml-auto text-xs shrink-0">
-                {item.collected ? "✅ collected" : "💰 loot"}
-              </span>
-            </div>
+            </button>
           ))}
         </div>
       )}
