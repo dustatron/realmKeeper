@@ -20,7 +20,8 @@
       "@application/*": ["./src/application/*"],
       "@infrastructure/*": ["./src/infrastructure/*"],
       "@ui/*": ["./src/ui/*"],
-      "@shared/*": ["./src/shared/*"]
+      "@shared/*": ["./src/shared/*"],
+      "@generators/*": ["./src/generators/*"]
     },
     "noEmit": true
   }

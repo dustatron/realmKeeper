@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useRegions } from '~/ui/hooks/useRegions'
@@ -67,6 +67,9 @@ import {
   Star,
 } from 'lucide-react'
 import { db } from '@infrastructure/dexie/db'
+import { NewDungeonDialog } from '~/components/dungeon/NewDungeonDialog'
+import { executeGenerateDungeon } from '@application/use-cases/GenerateDungeon'
+import type { DungeonGenerationConfig } from '@generators/dungeon/index'
 
 export const Route = createFileRoute('/_app/realms/locations/pois')({
   component: POIsPage,
@@ -96,9 +99,11 @@ function POIsPage() {
   const allPois = useRealmPOIs(activeRealmId)
   const pois = selectedRegionId === 'all' ? allPois : poisByRegion
   const container = useContainer()
+  const navigate = useNavigate()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [dungeonDialogOpen, setDungeonDialogOpen] = useState(false)
   const [editingPOI, setEditingPOI] = useState<POI | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deletingPOIId, setDeletingPOIId] = useState<string | null>(null)
@@ -211,6 +216,19 @@ function POIsPage() {
     setEditingPOI(null)
   }
 
+  const handleGenerateDungeon = async (
+    name: string,
+    regionId: string,
+    connectedPoiId: string | null,
+    config: DungeonGenerationConfig
+  ) => {
+    const result = await executeGenerateDungeon(
+      { name, regionId, connectedPoiId, config },
+      { poiRepo: container.poiRepo, pathRepo: container.pathRepo }
+    )
+    navigate({ to: '/realms/pois/$poiId', params: { poiId: result.dungeonPoi.id } })
+  }
+
   const openCreateDialog = () => {
     const defaultRegion = selectedRegionId !== 'all' ? selectedRegionId : (regions[0]?.id ?? '')
     setCreateForm({
@@ -302,6 +320,10 @@ function POIsPage() {
             className="pl-9"
           />
         </div>
+        <Button variant="outline" onClick={() => setDungeonDialogOpen(true)}>
+          <Skull className="mr-2 size-4" />
+          New Dungeon
+        </Button>
         <Button onClick={openCreateDialog}>
           <Plus className="mr-2 size-4" />
           New POI
@@ -702,6 +724,16 @@ function POIsPage() {
         confirmLabel="Delete"
         variant="destructive"
         onConfirm={handleDelete}
+      />
+
+      {/* New Dungeon Dialog */}
+      <NewDungeonDialog
+        open={dungeonDialogOpen}
+        onOpenChange={setDungeonDialogOpen}
+        regions={regions}
+        allPois={allPois}
+        defaultRegionId={selectedRegionId !== 'all' ? selectedRegionId : regions[0]?.id}
+        onGenerate={handleGenerateDungeon}
       />
     </div>
   )

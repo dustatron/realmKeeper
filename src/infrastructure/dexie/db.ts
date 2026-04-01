@@ -596,6 +596,9 @@ db.version(33).stores(storesV26)
 // v34: Add watabou map fields to POIs (no index change needed)
 db.version(34).stores(storesV26)
 
+// v35: Add spatial_dungeon type to watabouData (no index change needed)
+db.version(35).stores(storesV26)
+
 // Normalize Realms on read — ensures starred arrays have defaults
 db.worlds.hook('reading', (realm) => {
   if (!realm) return realm

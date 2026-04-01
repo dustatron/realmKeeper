@@ -45,6 +45,10 @@ import { MultiMapViewer } from '~/components/map/MultiMapViewer'
 import { WatabouMapSection } from '~/components/watabou/WatabouMapSection'
 import type { WatabouCityData } from '@domain/value-objects/WatabouCityData'
 import type { WatabouDungeonData } from '@domain/value-objects/WatabouDungeonData'
+import { SpatialDungeonMapSection } from '~/components/dungeon/SpatialDungeonMapSection'
+import { RegenerateDungeonSheet } from '~/components/dungeon/RegenerateDungeonSheet'
+import { executeRegenerateDungeon } from '@application/use-cases/RegenerateDungeon'
+import type { DungeonGenerationConfig } from '@generators/dungeon/index'
 import { SettlementTemplate } from '~/components/poi-templates/SettlementTemplate'
 import { DungeonTemplate } from '~/components/poi-templates/DungeonTemplate'
 import { BuildingTemplate } from '~/components/poi-templates/BuildingTemplate'
@@ -206,6 +210,8 @@ function POIDetailPage() {
   const [runMode, setRunMode] = useState(false)
   const [mapUploadDialogOpen, setMapUploadDialogOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [regenSheetOpen, setRegenSheetOpen] = useState(false)
+  const [selectedRoomPoiId, setSelectedRoomPoiId] = useState<string | null>(null)
   const [createChildDialogOpen, setCreateChildDialogOpen] = useState(false)
   const [createEventDialogOpen, setCreateEventDialogOpen] = useState(false)
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null)
@@ -494,6 +500,21 @@ function POIDetailPage() {
     )
   }
 
+  const handleRegenerate = async (config: DungeonGenerationConfig) => {
+    if (!poi) return
+    await executeRegenerateDungeon(
+      { dungeonPoiId: poi.id, config },
+      {
+        poiRepo: container.poiRepo,
+        pathRepo: container.pathRepo,
+        npcRepo: container.npcRepo,
+        factionPresenceRepo: container.factionPresenceRepo,
+        poiEventRepo: container.poiEventRepo,
+      }
+    )
+    setRegenSheetOpen(false)
+  }
+
   // Compute compass connections from paths with direction set
   // (must be before early returns to satisfy hook rules)
   const compassConnections: CompassConnection[] = useMemo(() => {
@@ -541,13 +562,25 @@ function POIDetailPage() {
     />
   ) : null
 
-  const watabouInline = watabouGenerator && poi.watabouData ? (
+  // Spatial dungeon (generated) takes precedence over legacy watabou OPD
+  const isSpatialDungeon = poi.type === 'dungeon' && poi.watabouData?.type === 'spatial_dungeon'
+  const spatialDungeonData = isSpatialDungeon ? (poi.watabouData as import('@domain/value-objects/GeneratedDungeonData').GeneratedDungeonData) : null
+
+  const watabouInline = !isSpatialDungeon && watabouGenerator && poi.watabouData ? (
     <WatabouMapSection
-      data={poi.watabouData}
+      data={poi.watabouData as WatabouCityData | WatabouDungeonData}
       seed={poi.watabouSeed}
       generator={watabouGenerator}
       onImport={handleImportWatabou}
       onClear={handleClearWatabou}
+    />
+  ) : spatialDungeonData ? (
+    <SpatialDungeonMapSection
+      layout={spatialDungeonData.layout}
+      childPois={childPois}
+      selectedRoomPoiId={selectedRoomPoiId}
+      onSelectRoom={setSelectedRoomPoiId}
+      onRegenerate={() => setRegenSheetOpen(true)}
     />
   ) : null
 
@@ -1073,10 +1106,20 @@ function POIDetailPage() {
         onOpenChange={setMapUploadDialogOpen}
         onUpload={handleUploadMap}
         generator={watabouGenerator}
-        onWatabouImport={watabouGenerator ? handleImportWatabou : undefined}
-        existingWatabouData={poi.watabouData}
+        onWatabouImport={watabouGenerator && !isSpatialDungeon ? handleImportWatabou : undefined}
+        existingWatabouData={isSpatialDungeon ? null : poi.watabouData}
         existingSeed={poi.watabouSeed}
       />
+
+      {/* Regenerate Dungeon Sheet */}
+      {isSpatialDungeon && spatialDungeonData && (
+        <RegenerateDungeonSheet
+          open={regenSheetOpen}
+          onOpenChange={setRegenSheetOpen}
+          initialConfig={spatialDungeonData.config}
+          onRegenerate={handleRegenerate}
+        />
+      )}
 
       {/* NPC Edit Sheet */}
       {editingNPC && (
