@@ -86,12 +86,13 @@ function waypointsToPath(waypoints: Passage['waypoints']): string {
   return `M ${pts[0]} L ${pts.slice(1).join(' L ')}`
 }
 
-function RoomShape({ room, theme, isSelected, roomNumber, hasNPCs, onClick }: {
+function RoomShape({ room, theme, isSelected, roomNumber, hasNPCs, hasTreasure, onClick }: {
   room: SpatialRoom
   theme: DungeonTheme
   isSelected: boolean
   roomNumber: number
   hasNPCs: boolean
+  hasTreasure: boolean
   onClick?: () => void
 }) {
   const themeColors = THEME_COLORS[theme] ?? THEME_COLORS.cave
@@ -104,49 +105,69 @@ function RoomShape({ room, theme, isSelected, roomNumber, hasNPCs, onClick }: {
   const y = px(room.bounds.y)
   const w = px(room.bounds.width)
   const h = px(room.bounds.height)
-  const centerX = x + w / 2
-  const centerY = y + h / 2
 
-  const symbol = ROOM_SYMBOLS[room.type] ?? '□'
-  const hasTraps = room.hazards.some((h) => !h.disarmed)
-  const hasTreasure = room.treasure.some((t) => !t.looted)
+  // Content icons to display — collect what this room has
+  const icons: { icon: string; color: string }[] = []
+  if (room.hazards.some((h) => !h.disarmed))      icons.push({ icon: '⚠', color: '#f97316' })
+  if (hasTreasure)                                 icons.push({ icon: '◈', color: '#eab308' })
+  if (hasNPCs)                                     icons.push({ icon: '☻', color: '#93c5fd' })
+  if (room.secrets?.some((s) => !s.discovered))   icons.push({ icon: '?', color: '#a78bfa' })
+  if (room.discoveries?.some((d) => !d.found))    icons.push({ icon: '!', color: '#6ee7b7' })
+
+  // Icon size and layout
+  const iconSize = Math.max(5, Math.min(w, h) * 0.38)
+  const iconPad = 2
+  const contentCenterX = x + w / 2
+  const contentCenterY = y + h / 2
+
+  // If icons fit in one row, spread them; otherwise stack
+  const iconSpacing = iconSize + 1.5
+  const totalIconWidth = icons.length * iconSpacing - 1.5
+  const iconStartX = contentCenterX - totalIconWidth / 2
+
+  // Room number — top-right corner
+  const numSize = Math.max(5, Math.min(w, h) * 0.35)
 
   return (
     <g onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
       <rect x={x} y={y} width={w} height={h} fill={fill} stroke={stroke} strokeWidth={strokeWidth} rx={2} />
 
-      {/* Type symbol centered */}
-      <text
-        x={centerX} y={centerY}
-        textAnchor="middle" dominantBaseline="central"
-        fontSize={Math.min(w, h) * 0.4}
-        fill="rgba(255,255,255,0.5)"
-        style={{ pointerEvents: 'none', userSelect: 'none' }}
-      >
-        {symbol}
-      </text>
-
-      {/* Status indicators — top-left: traps, top-right: treasure, bottom-left: NPCs */}
-      {hasTraps && <circle cx={x + 3} cy={y + 3} r={2} fill="#f97316" />}
-      {hasTreasure && <circle cx={x + w - 3} cy={y + 3} r={2} fill="#eab308" />}
-      {hasNPCs && (
+      {/* Content icons centered in room */}
+      {icons.length > 0 ? (
+        icons.map((ic, i) => (
+          <text
+            key={i}
+            x={iconStartX + i * iconSpacing + iconSpacing / 2}
+            y={contentCenterY}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={iconSize}
+            fill={ic.color}
+            style={{ pointerEvents: 'none', userSelect: 'none' }}
+          >
+            {ic.icon}
+          </text>
+        ))
+      ) : (
+        /* Empty room — show faint type symbol so it's not a blank square */
         <text
-          x={x + 2} y={y + h - 2}
-          fontSize={Math.max(4, Math.min(w, h) * 0.35)}
-          fill="rgba(147,197,253,0.9)"
+          x={contentCenterX} y={contentCenterY}
+          textAnchor="middle" dominantBaseline="central"
+          fontSize={Math.max(6, Math.min(w, h) * 0.45)}
+          fill="rgba(255,255,255,0.2)"
           style={{ pointerEvents: 'none', userSelect: 'none' }}
         >
-          👤
+          {ROOM_SYMBOLS[room.type] ?? '·'}
         </text>
       )}
 
-      {/* Room number bottom-right */}
+      {/* Room number — top-right */}
       <text
-        x={x + w - 2} y={y + h - 2}
+        x={x + w - iconPad} y={y + iconPad + numSize * 0.7}
         textAnchor="end"
-        fontSize={Math.max(6, Math.min(w, h) * 0.4)}
+        fontSize={numSize}
         fontWeight="bold"
-        fill="rgba(255,255,255,0.9)"
+        fill="rgba(255,255,255,0.75)"
         style={{ pointerEvents: 'none', userSelect: 'none' }}
       >
         {roomNumber}
@@ -274,8 +295,9 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
   // Build reverse lookup: generated room.id → 1-based display number
   const roomNumberMap = new Map(dungeon.rooms.map((r, i) => [r.id, i + 1]))
 
-  // Which rooms have generated NPCs
+  // Which rooms have generated NPCs / treasure
   const roomsWithNPCs = new Set((dungeon.dungeonNPCs ?? []).map((n) => n.roomId))
+  const roomsWithTreasure = new Set(dungeon.roomHasTreasure ?? [])
 
   // Reverse lookup: child POI id → generated room id (for highlighting)
   const selectedRoomId = selectedRoomPoiId && roomIdToPoiId
@@ -322,6 +344,7 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
               isSelected={room.id === selectedRoomId}
               roomNumber={roomNumberMap.get(room.id) ?? 0}
               hasNPCs={roomsWithNPCs.has(room.id)}
+              hasTreasure={roomsWithTreasure.has(room.id)}
               onClick={onRoomClick && poiId ? () => onRoomClick(poiId) : undefined}
             />
           )
@@ -341,19 +364,12 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
       </svg>
 
       {/* Legend */}
-      <div className="absolute bottom-2 left-2 flex gap-3 text-xs bg-stone-900/80 border border-stone-700 rounded px-2 py-1">
-        <span className="flex items-center gap-1 text-stone-300">
-          <span className="inline-block w-2 h-2 rounded-full bg-orange-500" /> Trap
-        </span>
-        <span className="flex items-center gap-1 text-stone-300">
-          <span className="inline-block w-2 h-2 rounded-full bg-yellow-500" /> Treasure
-        </span>
-        <span className="flex items-center gap-1 text-stone-300">
-          👤 NPC
-        </span>
-        <span className="flex items-center gap-1 text-stone-300">
-          <span className="inline-block w-2 h-2 rounded-full bg-green-700" /> Entrance
-        </span>
+      <div className="absolute bottom-2 left-2 flex gap-3 text-xs bg-stone-900/80 border border-stone-700 rounded px-2 py-1 text-stone-300">
+        <span className="flex items-center gap-1"><span className="text-orange-400 font-bold">⚠</span> Trap</span>
+        <span className="flex items-center gap-1"><span className="text-yellow-400 font-bold">◈</span> Treasure</span>
+        <span className="flex items-center gap-1"><span className="text-blue-300 font-bold">☻</span> NPC</span>
+        <span className="flex items-center gap-1"><span className="text-purple-400 font-bold">?</span> Secret</span>
+        <span className="flex items-center gap-1"><span className="text-emerald-300 font-bold">!</span> Discovery</span>
       </div>
 
       {viewBox && (

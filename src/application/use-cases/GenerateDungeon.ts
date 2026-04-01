@@ -77,6 +77,7 @@ export async function executeGenerateDungeon(
   // === 3. Build a room ID → child POI ID map ===
   // We need this so dungeonNPCs can be placed in the right child POI
   const roomIdToPoiId = new Map<string, string>()
+  const roomHasTreasure: string[] = []
 
   // === 4. Create child POIs for each room ===
 
@@ -101,6 +102,7 @@ export async function executeGenerateDungeon(
       options.includeMagicItems,
       rng.child(`room-${room.id}`)
     )
+    if (treasure.length > 0) roomHasTreasure.push(room.id)
 
     // Build GM notes from historical clues and discoveries
     const gmNotesParts: string[] = []
@@ -277,6 +279,7 @@ export async function executeGenerateDungeon(
   const generatedWithMap = {
     ...generated,
     roomPoiMap: Object.fromEntries(roomIdToPoiId),
+    roomHasTreasure,
   }
 
   const updatedPoi: POI = {

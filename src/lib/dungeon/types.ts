@@ -351,6 +351,8 @@ export interface GeneratedDungeon {
   keyLockPairs?: KeyLockPair[]
   /** Maps generated room.id → child POI id (populated by use case after creating child POIs) */
   roomPoiMap?: Record<string, string>
+  /** Room IDs that received generated treasure (populated by use case) */
+  roomHasTreasure?: string[]
 }
 
 /** Options used to generate a dungeon — persisted for regen */
