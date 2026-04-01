@@ -227,7 +227,7 @@ export async function executeGenerateDungeon(
       want: motivation,
       tags: [dungeonNPC.category, dungeonNPC.disposition],
       imageUrl: null,
-      systemBlock: fallbackSystemBlock(generated.depth, options.dangerLevel),
+      systemBlock: fallbackSystemBlock(generated.depth, options.dangerLevel, systemId),
       disposition: dungeonNPC.disposition as NPC['disposition'],
       starred: false,
       createdAt: now,
@@ -262,7 +262,7 @@ export async function executeGenerateDungeon(
 
   const wanderingMonsters: WanderingMonsterEntry[] = (generated.wanderingMonsters?.entries ?? []).map((e) => {
     const compendiumId = findCompendiumId(e.creatureType, systemId)
-    const fallback = fallbackSystemBlock(generated.depth, options.dangerLevel)
+    const fallback = fallbackSystemBlock(generated.depth, options.dangerLevel, systemId)
     return {
       name: slugToName(e.creatureType),
       creatureType: e.creatureType,
@@ -317,7 +317,7 @@ export async function executeGenerateDungeon(
       imageUrl: null,
       systemBlock: compendiumId
         ? systemBlockFromMonster(compendiumId)
-        : fallbackSystemBlock(room.depth, options.dangerLevel),
+        : fallbackSystemBlock(room.depth, options.dangerLevel, systemId),
       disposition: 'hostile',
       starred: false,
       createdAt: now,
@@ -476,22 +476,32 @@ function emptySystemBlock(): SystemBlock {
 }
 
 /**
- * Fallback stat block based on dungeon depth + danger level.
- * Used when the creature isn't found in any compendium.
- * Tiers: weak → standard → tough → deadly
+ * Fallback stat block based on dungeon depth + danger level + system.
+ * Cairn uses armor 0–3 and HP 2–14. Shadowdark uses AC 10–17 and higher HP.
  */
-function fallbackSystemBlock(depth: number, dangerLevel: string): SystemBlock {
+function fallbackSystemBlock(depth: number, dangerLevel: string, systemId = ''): SystemBlock {
   const dangerBonus = { low: -1, medium: 0, deadly: 1, very_deadly: 2 }[dangerLevel] ?? 0
   const tier = Math.max(0, Math.min(3, (depth - 1) + dangerBonus))
 
-  const tiers: { hp: number; armor: number; attack: string; level: number; note: string }[] = [
-    { hp: 4,  armor: 10, attack: '1d6',  level: 1, note: 'Weak creature'     },
-    { hp: 10, armor: 12, attack: '1d8',  level: 2, note: 'Average creature'  },
-    { hp: 16, armor: 14, attack: '1d10', level: 4, note: 'Tough creature'    },
-    { hp: 24, armor: 16, attack: '1d12', level: 6, note: 'Dangerous creature' },
+  const isCairn = systemId.toLowerCase().includes('cairn')
+
+  // Cairn: armor 0-3, HP 2-14, attack d4–d10 (d12 basically unheard of)
+  const cairnTiers = [
+    { hp: 3,  armor: 0, attack: 'd6',  level: 1, note: 'Weak creature'      },
+    { hp: 6,  armor: 1, attack: 'd6',  level: 2, note: 'Average creature'   },
+    { hp: 10, armor: 2, attack: 'd8',  level: 4, note: 'Tough creature'     },
+    { hp: 14, armor: 3, attack: 'd10', level: 6, note: 'Dangerous creature' },
   ]
 
-  const t = tiers[tier]
+  // Shadowdark / generic: D&D-style AC 11–17, HP 4–24
+  const shadowdarkTiers = [
+    { hp: 4,  armor: 11, attack: '1d6',  level: 1, note: 'Weak creature'      },
+    { hp: 10, armor: 13, attack: '1d8',  level: 2, note: 'Average creature'   },
+    { hp: 16, armor: 15, attack: '1d10', level: 4, note: 'Tough creature'     },
+    { hp: 24, armor: 17, attack: '1d12', level: 6, note: 'Dangerous creature' },
+  ]
+
+  const t = (isCairn ? cairnTiers : shadowdarkTiers)[tier]
   return {
     stats: [],
     hp: t.hp,
