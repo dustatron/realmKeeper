@@ -12,7 +12,7 @@ import type { WanderingMonsterEntry } from '@domain/value-objects/WanderingMonst
 import type { DungeonGenOptions } from '~/lib/dungeon/types'
 import { generateDungeon } from '~/lib/dungeon/DungeonGenerator'
 import { getBlueprint } from '~/lib/dungeon/dungeon/DungeonBlueprints'
-import { searchCompendium, getCompendiumById } from '@domain/data/compendium'
+import { searchCompendium, getCompendiumById, getMonstersBySystemId } from '@domain/data/compendium'
 import type { CompendiumMonster } from '@domain/entities/Compendium'
 import type { SystemBlock } from '@domain/value-objects/SystemBlock'
 import { executeDeletePOIWithChildren } from './DeletePOIWithChildren'
@@ -260,21 +260,17 @@ export async function executeGenerateDungeon(
 
   // === 7. Convert wandering monsters to realmKeeper format (with compendium lookup) ===
 
+  const wmRng = rng.child('wandering-resolve')
   const wanderingMonsters: WanderingMonsterEntry[] = (generated.wanderingMonsters?.entries ?? []).map((e) => {
-    const compendiumId = findCompendiumId(e.creatureType, systemId)
-    const fallback = fallbackSystemBlock(generated.depth, options.dangerLevel, systemId)
+    const resolved = resolveCreature(e.creatureType, systemId, wmRng)
     return {
-      name: slugToName(e.creatureType),
+      name: resolved?.name ?? slugToName(e.creatureType),
       creatureType: e.creatureType,
       count: e.count,
       activity: e.activity,
-      compendiumId,
+      compendiumId: resolved?.id ?? null,
       npcId: null,
-      customStats: compendiumId ? null : {
-        ac: fallback.armor,
-        hp: fallback.hp,
-        attacks: fallback.attacks[0]?.damage ?? '1d6',
-      },
+      customStats: null, // compendiumId always set via resolveCreature
     }
   })
 
@@ -293,8 +289,9 @@ export async function executeGenerateDungeon(
     if (!creatureRng.chance(dangerChances[options.dangerLevel] ?? 0.45)) continue
 
     const creatureSlug = creatureRng.pick(creaturePool)
-    const creatureName = slugToName(creatureSlug)
-    const compendiumId = findCompendiumId(creatureSlug, systemId)
+    const resolved = resolveCreature(creatureSlug, systemId, creatureRng)
+    const creatureName = resolved?.name ?? slugToName(creatureSlug)
+    const compendiumId = resolved?.id ?? null
     const roomPoiId = roomIdToPoiId.get(room.id) ?? poiId
     const activity = room.activity ?? 'guarding'
 
@@ -543,6 +540,34 @@ function findCompendiumId(slug: string, systemId: string): string | null {
   const name = slugToName(slug)
   const results = searchCompendium(name, systemId, 'monster')
   return results[0]?.id ?? null
+}
+
+// Cache per systemId so we don't rebuild on every call
+const _systemMonsterCache = new Map<string, import('@domain/entities/Compendium').CompendiumMonster[]>()
+
+/**
+ * Resolve a creature slug to a compendium entry.
+ * If no direct match in the system's compendium, pick a random real creature
+ * from that system instead of falling back to a fake slug with no stats.
+ */
+function resolveCreature(
+  slug: string,
+  systemId: string,
+  rng: SeededRandom
+): { id: string; name: string } | null {
+  // Try exact slug match first
+  const exactId = findCompendiumId(slug, systemId)
+  if (exactId) return { id: exactId, name: slugToName(slug) }
+
+  // No match — pick a random real monster from the system
+  if (!_systemMonsterCache.has(systemId)) {
+    _systemMonsterCache.set(systemId, getMonstersBySystemId(systemId))
+  }
+  const monsters = _systemMonsterCache.get(systemId)!
+  if (monsters.length === 0) return null
+
+  const picked = rng.pick(monsters)
+  return { id: picked.id, name: picked.name }
 }
 
 function generateNPCName(category: string): string {

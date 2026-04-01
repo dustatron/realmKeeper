@@ -64,3 +64,5 @@ This will cause a hydration error.%s <button> button
  @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2155
 [  181250ms] [ERROR] <%s> cannot contain a nested %s.
 See this log for the ancestor stack trace. button <button> @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2162
+[  680139ms] [WARNING] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. @ http://localhost:3000/node_modules/.vite/deps/chunk-RA6KIKMJ.js?v=4c344736:2148
+[  680140ms] [WARNING] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. @ http://localhost:3000/node_modules/.vite/deps/chunk-RA6KIKMJ.js?v=4c344736:2148
