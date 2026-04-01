@@ -1,7 +1,67 @@
-import { searchCompendium, getCompendiumById, getMonstersBySystemId } from '@domain/data/compendium'
+import { searchCompendium, getCompendiumById, getMonstersBySystemId, getEquipmentBySystemId, getSpellsBySystemId, getMagicItemsBySystemId } from '@domain/data/compendium'
 import type { CompendiumMonster } from '@domain/entities/Compendium'
 import type { SystemBlock } from '@domain/value-objects/SystemBlock'
 import type { SeededRandom } from './SeededRandom'
+
+const CONDITIONS = ['rusty', 'battered', 'worn', 'cracked', 'well-used', 'new', 'masterwork']
+
+/** Pick a random weapon from the system compendium with a condition tag */
+export function pickWeapon(systemId: string, rng: SeededRandom): { name: string; damage: string } | null {
+  const equipment = getEquipmentBySystemId(systemId)
+  const weapons = equipment.filter((e) => {
+    const sd = e.systemData
+    if (sd.system === 'shadowdark') return sd.data.itemType === 'weapon'
+    if (sd.system === 'cairn') return sd.data.category === 'weapon'
+    return false
+  })
+  if (weapons.length === 0) return null
+  const picked = rng.pick(weapons)
+  const condition = rng.pick(CONDITIONS)
+  const damage = picked.systemData.system === 'shadowdark'
+    ? picked.systemData.data.damage ?? ''
+    : picked.systemData.system === 'cairn'
+    ? picked.systemData.data.damage ?? ''
+    : ''
+  return { name: `${condition} ${picked.name}`.trim(), damage }
+}
+
+/** Pick a random piece of gear (armor, tools) from the system compendium */
+export function pickGear(systemId: string, rng: SeededRandom): { name: string } | null {
+  const equipment = getEquipmentBySystemId(systemId)
+  const gear = equipment.filter((e) => {
+    const sd = e.systemData
+    if (sd.system === 'shadowdark') return sd.data.itemType !== 'weapon'
+    if (sd.system === 'cairn') return sd.data.category === 'armor' || sd.data.category === 'gear'
+    return false
+  })
+  if (gear.length === 0) return null
+  const picked = rng.pick(gear)
+  const condition = rng.pick(CONDITIONS)
+  return { name: `${condition} ${picked.name}`.trim() }
+}
+
+/** Pick a random spell scroll from the system compendium */
+export function pickSpellScroll(systemId: string, rng: SeededRandom): { name: string; description: string } | null {
+  const spells = getSpellsBySystemId(systemId)
+  if (spells.length === 0) return null
+  const picked = rng.pick(spells)
+  return { name: `Scroll of ${picked.name}`, description: picked.description }
+}
+
+/** Pick a random magic item name from the system compendium */
+export function pickMagicItem(systemId: string, rng: SeededRandom): { name: string; description: string } | null {
+  const items = getMagicItemsBySystemId(systemId)
+  if (items.length > 0) {
+    const picked = rng.pick(items)
+    return { name: picked.name, description: picked.description }
+  }
+  // Fallback generic names
+  const GENERIC = [
+    'Potion of Healing', 'Wand of Sparks', 'Ring of Minor Ward', 'Amulet of Whispers',
+    'Cloak of Shadows', 'Dagger of Returning', 'Lens of True Sight', 'Horn of the Fallen',
+  ]
+  return { name: rng.pick(GENERIC), description: 'A magical item of unknown origin.' }
+}
 
 /** Get the compendium description for a monster entry */
 export function getMonsterDescription(id: string): string {

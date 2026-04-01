@@ -188,7 +188,10 @@ function GenerateDungeonPage() {
   const [dangerLevel, setDangerLevel] = useState<DungeonGenOptions['dangerLevel']>(
     ((existing?.dangerLevel as string) === 'standard' ? 'medium' : existing?.dangerLevel) ?? 'medium'
   )
-  const [includeMagicItems, setIncludeMagicItems] = useState(existing?.includeMagicItems ?? true)
+  const [includeWeapons, setIncludeWeapons] = useState(existing?.includeWeapons ?? true)
+  const [includeGear, setIncludeGear] = useState(existing?.includeGear ?? true)
+  const [magicItemCount, setMagicItemCount] = useState(existing?.magicItemCount ?? 1)
+  const [spellCount, setSpellCount] = useState(existing?.spellCount ?? 0)
   const [exitPoiIds, setExitPoiIds] = useState<string[]>(existing?.exitPoiIds ?? [])
   const [isGenerating, setIsGenerating] = useState(false)
 
@@ -224,7 +227,7 @@ function GenerateDungeonPage() {
         { poiRepo: container.poiRepo }
       )
 
-      const options: DungeonGenOptions = { seed, theme, size, treasureLevel, dangerLevel, includeMagicItems, exitPoiIds }
+      const options: DungeonGenOptions = { seed, theme, size, treasureLevel, dangerLevel, includeWeapons, includeGear, magicItemCount, spellCount, exitPoiIds }
       await executeGenerateDungeon(
         { poiId, worldId: realm.id, systemId: realm.systemId, options },
         {
@@ -419,10 +422,61 @@ function GenerateDungeonPage() {
         </Select>
       </div>
 
-      {/* Magic Items */}
-      <div className="flex items-center gap-3">
-        <Switch id="magic-items" checked={includeMagicItems} onCheckedChange={setIncludeMagicItems} />
-        <Label htmlFor="magic-items">Include magic items in treasure</Label>
+      {/* Loot toggles */}
+      <div className="space-y-2">
+        <Label>Loot</Label>
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-3">
+            <Switch id="include-weapons" checked={includeWeapons} onCheckedChange={setIncludeWeapons} />
+            <Label htmlFor="include-weapons">Weapons — system-specific, with condition</Label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Switch id="include-gear" checked={includeGear} onCheckedChange={setIncludeGear} />
+            <Label htmlFor="include-gear">Gear — armor, tools, supplies</Label>
+          </div>
+        </div>
+      </div>
+
+      {/* Magic Items count */}
+      <div className="space-y-1.5">
+        <Label>Magic Items</Label>
+        <div className="flex gap-2 items-center">
+          <Input
+            type="number"
+            min={0} max={20}
+            value={magicItemCount}
+            onChange={(e) => setMagicItemCount(Math.max(0, parseInt(e.target.value) || 0))}
+            className="w-24 font-mono"
+          />
+          <Button variant="outline" size="sm" onClick={() => {
+            const roll = Math.ceil(Math.random() * 20)
+            setMagicItemCount(roll >= 20 ? 4 : roll >= 16 ? 3 : roll >= 11 ? 2 : roll >= 6 ? 1 : 0)
+          }}>
+            🎲 d20
+          </Button>
+          <span className="text-xs text-muted-foreground">guaranteed across dungeon</span>
+        </div>
+      </div>
+
+      {/* Spell Scrolls count */}
+      <div className="space-y-1.5">
+        <Label>Spell Scrolls</Label>
+        <div className="flex gap-2 items-center">
+          <Input
+            type="number"
+            min={0} max={20}
+            value={spellCount}
+            onChange={(e) => setSpellCount(Math.max(0, parseInt(e.target.value) || 0))}
+            className="w-24 font-mono"
+          />
+          <Button variant="outline" size="sm" onClick={() => {
+            const roll = Math.ceil(Math.random() * 20)
+            setSpellCount(roll >= 20 ? 4 : roll >= 16 ? 3 : roll >= 11 ? 2 : roll >= 6 ? 1 : 0)
+          }}>
+            🎲 d20
+          </Button>
+          <span className="text-xs text-muted-foreground">system spells as scrolls</span>
+        </div>
       </div>
 
       {/* Exit Connections */}

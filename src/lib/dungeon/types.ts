@@ -362,7 +362,10 @@ export interface DungeonGenOptions {
   size: DungeonSize
   treasureLevel: 'poor' | 'standard' | 'rich' | 'hoard'
   dangerLevel: 'low' | 'medium' | 'deadly' | 'very_deadly'
-  includeMagicItems: boolean
+  includeWeapons: boolean
+  includeGear: boolean
+  magicItemCount: number
+  spellCount: number
   exitPoiIds: string[]
 }
 

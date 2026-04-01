@@ -7,10 +7,11 @@ import type { POI } from '@domain/entities/POI'
 import type { NPC } from '@domain/entities/NPC'
 import type { Trap } from '@domain/value-objects/Trap'
 import type { WanderingMonsterEntry } from '@domain/value-objects/WanderingMonster'
+import type { TreasureItem } from '@domain/value-objects/TreasureItem'
 import type { DungeonGenOptions } from '~/lib/dungeon/types'
 import { generateDungeon } from '~/lib/dungeon/DungeonGenerator'
 import { getBlueprint } from '~/lib/dungeon/dungeon/DungeonBlueprints'
-import { generateRoomTreasure } from '~/lib/dungeon/treasure-gen'
+import { generateRoomTreasure, generateMagicItems, generateSpellScrolls, generateWeaponLoot, generateGearLoot } from '~/lib/dungeon/treasure-gen'
 import { resolveCreature, systemBlockFromMonster, fallbackSystemBlock, getMonsterDescription } from '~/lib/dungeon/compendium-utils'
 import { generateNPCName } from '~/lib/dungeon/npc-names'
 import { executeDeletePOIWithChildren } from './DeletePOIWithChildren'
@@ -90,7 +91,7 @@ export async function executeGenerateDungeon(
       disarmed: false,
     }))
 
-    const treasure = generateRoomTreasure(room, options.treasureLevel, options.includeMagicItems, rng.child(`room-${room.id}`))
+    const treasure = generateRoomTreasure(room, options.treasureLevel, rng.child(`room-${room.id}`))
     if (treasure.length > 0) roomHasTreasure.push(room.id)
 
     const gmNotesParts: string[] = []
@@ -155,6 +156,47 @@ export async function executeGenerateDungeon(
     }
 
     await deps.poiRepo.create(childPoi)
+  }
+
+  // === 4b. Distribute magic items, spells, weapons, gear across rooms ===
+
+  // Magic items: guaranteed count, distributed to best rooms
+  const magicByRoom = generateMagicItems(generated.rooms, options.magicItemCount, systemId, rng.child('magic-items'))
+  // Spells: same
+  const spellsByRoom = generateSpellScrolls(generated.rooms, options.spellCount, systemId, rng.child('spells'))
+
+  // Weapons & gear: probabilistic per room based on treasureLevel
+  const weaponChance = { poor: 0.1, standard: 0.2, rich: 0.35, hoard: 0.5 }[options.treasureLevel] ?? 0.2
+  const weaponsByRoom = new Map<string, TreasureItem[]>()
+  const gearByRoom = new Map<string, TreasureItem[]>()
+
+  for (const room of generated.rooms) {
+    if (room.type === 'entrance' || room.type === 'exit') continue
+    if (options.includeWeapons && rng.child(`wpn-${room.id}`).chance(weaponChance)) {
+      const item = generateWeaponLoot(room, systemId, rng.child(`wpn-pick-${room.id}`))
+      if (item) weaponsByRoom.set(room.id, [item])
+    }
+    if (options.includeGear && rng.child(`gear-${room.id}`).chance(weaponChance)) {
+      const item = generateGearLoot(room, systemId, rng.child(`gear-pick-${room.id}`))
+      if (item) gearByRoom.set(room.id, [item])
+    }
+  }
+
+  // Apply the extra items to the already-created child POIs
+  const allExtraByRoom = new Map<string, TreasureItem[]>()
+  for (const [roomId, items] of [...magicByRoom, ...spellsByRoom, ...weaponsByRoom, ...gearByRoom]) {
+    const existing = allExtraByRoom.get(roomId) ?? []
+    allExtraByRoom.set(roomId, [...existing, ...items])
+  }
+
+  for (const [roomId, extraItems] of allExtraByRoom) {
+    const childPoiId = roomIdToPoiId.get(roomId)
+    if (!childPoiId) continue
+    const child = await deps.poiRepo.getById(childPoiId)
+    if (!child) continue
+    const merged = [...child.treasure, ...extraItems]
+    await deps.poiRepo.update({ ...child, treasure: merged, updatedAt: now })
+    if (merged.length > 0 && !roomHasTreasure.includes(roomId)) roomHasTreasure.push(roomId)
   }
 
   // === 5. Create NPC entities ===

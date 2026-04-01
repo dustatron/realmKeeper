@@ -836,6 +836,67 @@ export function DungeonTemplate({
             lightLevel={poi.lightLevel}
           />
 
+          {/* Treasure manifest — all notable loot across rooms */}
+          {(() => {
+            const allLoot = childPois.flatMap((c) =>
+              (c.treasure ?? []).map((t) => ({ ...t, roomName: c.name }))
+            )
+            const weapons  = allLoot.filter((t) => !t.isMagic && t.description?.startsWith('Damage:'))
+            const gear     = allLoot.filter((t) => !t.isMagic && !t.description?.startsWith('Damage:') && t.value === '')
+            const magic    = allLoot.filter((t) => t.isMagic && !t.name.startsWith('Scroll of'))
+            const scrolls  = allLoot.filter((t) => t.isMagic && t.name.startsWith('Scroll of'))
+            if (weapons.length + gear.length + magic.length + scrolls.length === 0) return null
+            return (
+              <div className="space-y-3 rounded-md border p-3 bg-muted/20">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Loot Manifest</p>
+                {magic.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-amber-400">✨ Magic Items</p>
+                    {magic.map((t) => (
+                      <div key={t.id} className={`flex items-center gap-2 text-xs ${t.collected ? 'line-through text-muted-foreground' : ''}`}>
+                        <span className="font-medium flex-1">{t.name}</span>
+                        <span className="text-muted-foreground">{t.roomName}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {scrolls.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-purple-400">📜 Spell Scrolls</p>
+                    {scrolls.map((t) => (
+                      <div key={t.id} className={`flex items-center gap-2 text-xs ${t.collected ? 'line-through text-muted-foreground' : ''}`}>
+                        <span className="font-medium flex-1">{t.name}</span>
+                        <span className="text-muted-foreground">{t.roomName}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {weapons.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-red-400">⚔ Weapons</p>
+                    {weapons.map((t) => (
+                      <div key={t.id} className={`flex items-center gap-2 text-xs ${t.collected ? 'line-through text-muted-foreground' : ''}`}>
+                        <span className="font-medium flex-1">{t.name}</span>
+                        <span className="text-muted-foreground">{t.description?.replace('Damage: ', '')} · {t.roomName}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {gear.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-stone-400">🎒 Gear</p>
+                    {gear.map((t) => (
+                      <div key={t.id} className={`flex items-center gap-2 text-xs ${t.collected ? 'line-through text-muted-foreground' : ''}`}>
+                        <span className="font-medium flex-1">{t.name}</span>
+                        <span className="text-muted-foreground">{t.roomName}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-sm font-semibold flex items-center gap-2">
               <Users className="size-4" />
