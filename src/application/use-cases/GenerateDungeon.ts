@@ -286,22 +286,36 @@ export async function executeGenerateDungeon(
     return acc
   }, [])
 
-  // === 7b. Room creatures ===
+  // === 7b. Room creatures — picked from wandering monster table for ecological consistency ===
 
   const dangerChances: Record<string, number> = { low: 0.25, medium: 0.45, deadly: 0.70, very_deadly: 0.90 }
-  const creaturePool = getBlueprint(options.theme).creaturePool
   const creatureRng = rng.child('room-creatures')
   const roomsWithNPC = new Set(dungeonNPCs.map((n) => n.roomId))
+
+  // Build a pool from the wandering monster table (already resolved, deduplicated, depth-filtered)
+  const wmPool = wanderingMonsters.filter((e) => e.compendiumId !== null)
+  // Fall back to blueprint pool only if wandering table is empty
+  const useBlueprintFallback = wmPool.length === 0
 
   for (const room of generated.rooms) {
     if (room.type === 'entrance' || room.type === 'exit') continue
     if (roomsWithNPC.has(room.id)) continue
     if (!creatureRng.chance(dangerChances[options.dangerLevel] ?? 0.45)) continue
 
-    const creatureSlug = creatureRng.pick(creaturePool)
-    const resolved = resolveCreature(creatureSlug, systemId, creatureRng, room.depth)
-    const creatureName = resolved?.name ?? creatureSlug
-    const compendiumId = resolved?.id ?? null
+    let creatureName: string
+    let compendiumId: string | null
+
+    if (!useBlueprintFallback) {
+      // Pick from the wandering monster table — same creatures that haunt this dungeon
+      const wmEntry = creatureRng.pick(wmPool)
+      creatureName = wmEntry.name
+      compendiumId = wmEntry.compendiumId
+    } else {
+      const creatureSlug = creatureRng.pick(getBlueprint(options.theme).creaturePool)
+      const resolved = resolveCreature(creatureSlug, systemId, creatureRng, room.depth)
+      creatureName = resolved?.name ?? creatureSlug
+      compendiumId = resolved?.id ?? null
+    }
 
     const creatureNpc: NPC = {
       id: newId(),
