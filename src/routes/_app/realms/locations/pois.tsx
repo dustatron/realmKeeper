@@ -291,7 +291,13 @@ function POIsPage() {
     return (
       <EmptyState
         icon={Compass}
-        title="Create regions first before adding POIs"
+        title="No regions yet"
+        description="POIs belong to regions. Create a region first, then you can start adding points of interest."
+        action={
+          <Link to="/realms/locations/regions">
+            <Button>Go to Regions</Button>
+          </Link>
+        }
       />
     )
   }
