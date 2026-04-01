@@ -226,7 +226,7 @@ function GenerateDungeonPage() {
 
       const options: DungeonGenOptions = { seed, theme, size, treasureLevel, dangerLevel, includeMagicItems, exitPoiIds }
       await executeGenerateDungeon(
-        { poiId, worldId: realm.id, options },
+        { poiId, worldId: realm.id, systemId: realm.systemId, options },
         {
           poiRepo: container.poiRepo,
           npcRepo: container.npcRepo,

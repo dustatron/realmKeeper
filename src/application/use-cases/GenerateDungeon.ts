@@ -22,6 +22,7 @@ import type { IPOIEventRepository } from '@application/ports/IPOIEventRepository
 export interface GenerateDungeonInput {
   poiId: string
   worldId: string
+  systemId: string
   options: DungeonGenOptions
 }
 
@@ -37,7 +38,7 @@ export async function executeGenerateDungeon(
   input: GenerateDungeonInput,
   deps: GenerateDungeonDeps
 ): Promise<void> {
-  const { poiId, worldId, options } = input
+  const { poiId, worldId, systemId, options } = input
   const now = Date.now()
 
   const poi = await deps.poiRepo.getById(poiId)
@@ -264,7 +265,7 @@ export async function executeGenerateDungeon(
     creatureType: e.creatureType,
     count: e.count,
     activity: e.activity,
-    compendiumId: findCompendiumId(e.creatureType),
+    compendiumId: findCompendiumId(e.creatureType, systemId),
     npcId: null,
     customStats: null,
   }))
@@ -285,7 +286,7 @@ export async function executeGenerateDungeon(
 
     const creatureSlug = creatureRng.pick(creaturePool)
     const creatureName = slugToName(creatureSlug)
-    const compendiumId = findCompendiumId(creatureSlug)
+    const compendiumId = findCompendiumId(creatureSlug, systemId)
     const roomPoiId = roomIdToPoiId.get(room.id) ?? poiId
     const activity = room.activity ?? 'guarding'
 
@@ -500,10 +501,10 @@ function slugToName(slug: string): string {
   return slug.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 }
 
-/** Look up a creature slug in the compendium by name match */
-function findCompendiumId(slug: string): string | null {
+/** Look up a creature slug in the compendium by name, filtered to the realm's system */
+function findCompendiumId(slug: string, systemId: string): string | null {
   const name = slugToName(slug)
-  const results = searchCompendium(name, undefined, 'monster')
+  const results = searchCompendium(name, systemId, 'monster')
   return results[0]?.id ?? null
 }
 
