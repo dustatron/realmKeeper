@@ -789,9 +789,11 @@ export function DungeonTemplate({
                                 F{child.floor}
                               </Badge>
                             )}
-                            <Badge variant="outline" className="text-xs">
-                              {child.type}
-                            </Badge>
+                            {child.subtypeLabel && (
+                              <Badge variant="outline" className="text-xs">
+                                {child.subtypeLabel}
+                              </Badge>
+                            )}
                             <Link
                               to="/realms/pois/$poiId"
                               params={{ poiId: child.id }}

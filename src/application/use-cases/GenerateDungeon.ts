@@ -124,7 +124,7 @@ export async function executeGenerateDungeon(
       position: null,
       mapRef: null,
       markerColor: null,
-      readAloud: room.features.map((f) => f.description).join(' '),
+      readAloud: room.features.map((f) => f.description).join('. '),
       gmNotes: gmNotesParts.join('\n\n'),
       trouble: '',
       mood: '',
@@ -234,7 +234,7 @@ export async function executeGenerateDungeon(
 
   const wmRng = rng.child('wandering-resolve')
   const wanderingMonsters: WanderingMonsterEntry[] = (generated.wanderingMonsters?.entries ?? []).map((e) => {
-    const resolved = resolveCreature(e.creatureType, systemId, wmRng)
+    const resolved = resolveCreature(e.creatureType, systemId, wmRng, generated.depth)
     return {
       name: resolved?.name ?? e.creatureType,
       creatureType: e.creatureType,
@@ -259,7 +259,7 @@ export async function executeGenerateDungeon(
     if (!creatureRng.chance(dangerChances[options.dangerLevel] ?? 0.45)) continue
 
     const creatureSlug = creatureRng.pick(creaturePool)
-    const resolved = resolveCreature(creatureSlug, systemId, creatureRng)
+    const resolved = resolveCreature(creatureSlug, systemId, creatureRng, room.depth)
     const creatureName = resolved?.name ?? creatureSlug
     const compendiumId = resolved?.id ?? null
 

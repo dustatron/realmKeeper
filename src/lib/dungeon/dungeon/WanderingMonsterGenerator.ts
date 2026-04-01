@@ -33,14 +33,20 @@ export function generateWanderingMonsters(theme: DungeonTheme, dungeonDepth: num
   const entryCount = rng.between(4, 8)
   const effectiveDepth = Math.min(dungeonDepth, 4)
 
+  // Build a shuffled activity pool so entries don't repeat activities
+  const themeActivities = THEME_ACTIVITIES[theme]
+  const basePool = [...WANDERING_ACTIVITIES]
+  const themePool = themeActivities ? [...themeActivities] : []
+  // Interleave theme-specific and generic activities, then shuffle
+  const mixedPool = rng.shuffle([...themePool, ...themePool, ...basePool])
+  let activityIdx = 0
+
   for (let i = 0; i < entryCount; i++) {
     const creature = rng.pick(creaturePool)
     const countOptions = COUNT_BY_DEPTH[effectiveDepth] ?? COUNT_BY_DEPTH[0]
     const count = rng.pick(countOptions)
-    const themeActivities = THEME_ACTIVITIES[theme]
-    const activity = (themeActivities && rng.chance(0.5))
-      ? rng.pick(themeActivities)
-      : rng.pick(WANDERING_ACTIVITIES)
+    const activity = mixedPool[activityIdx % mixedPool.length]
+    activityIdx++
     entries.push({ creatureType: creature, count, weight: entryCount - i, activity })
   }
 
