@@ -168,19 +168,44 @@ function RoomNPCCard({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) 
             </div>
           )}
 
-          {/* Abilities */}
+          {/* Abilities — bold the name before the first colon */}
           {sb && sb.abilities && sb.abilities.length > 0 && (
-            <div className="text-xs text-muted-foreground space-y-0.5">
-              {sb.abilities.map((ability, i) => (
-                <div key={i}>{ability}</div>
-              ))}
+            <div className="text-xs text-muted-foreground space-y-1">
+              {sb.abilities.map((ability, i) => {
+                const colonIdx = ability.indexOf(':')
+                if (colonIdx > 0 && colonIdx < 30) {
+                  return (
+                    <div key={i}>
+                      <span className="font-semibold text-foreground">{ability.slice(0, colonIdx)}</span>
+                      <span>{ability.slice(colonIdx)}</span>
+                    </div>
+                  )
+                }
+                return <div key={i}>{ability}</div>
+              })}
             </div>
           )}
 
-          {/* Description */}
-          {npc.description && (
-            <p className="text-xs text-muted-foreground italic">{npc.description}</p>
-          )}
+          {/* Description — eye icon + lore text, activity as badge */}
+          {npc.description && (() => {
+            const [lore, ...rest] = npc.description.split('\n\nActivity:')
+            const activity = rest.length > 0 ? rest.join('').trim() : null
+            return (
+              <div className="space-y-1.5 pt-1 border-t border-border/30">
+                {lore && (
+                  <p className="text-xs text-muted-foreground flex gap-1.5">
+                    <span className="shrink-0 mt-0.5">👁</span>
+                    <span>{lore.trim()}</span>
+                  </p>
+                )}
+                {activity && (
+                  <span className="inline-block text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground capitalize">
+                    {activity}
+                  </span>
+                )}
+              </div>
+            )
+          })()}
         </div>
       )}
     </div>
