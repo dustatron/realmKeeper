@@ -86,11 +86,12 @@ function waypointsToPath(waypoints: Passage['waypoints']): string {
   return `M ${pts[0]} L ${pts.slice(1).join(' L ')}`
 }
 
-function RoomShape({ room, theme, isSelected, roomNumber, onClick }: {
+function RoomShape({ room, theme, isSelected, roomNumber, hasNPCs, onClick }: {
   room: SpatialRoom
   theme: DungeonTheme
   isSelected: boolean
   roomNumber: number
+  hasNPCs: boolean
   onClick?: () => void
 }) {
   const themeColors = THEME_COLORS[theme] ?? THEME_COLORS.cave
@@ -125,9 +126,19 @@ function RoomShape({ room, theme, isSelected, roomNumber, onClick }: {
         {symbol}
       </text>
 
-      {/* Status dots */}
+      {/* Status indicators — top-left: traps, top-right: treasure, bottom-left: NPCs */}
       {hasTraps && <circle cx={x + 3} cy={y + 3} r={2} fill="#f97316" />}
       {hasTreasure && <circle cx={x + w - 3} cy={y + 3} r={2} fill="#eab308" />}
+      {hasNPCs && (
+        <text
+          x={x + 2} y={y + h - 2}
+          fontSize={Math.max(4, Math.min(w, h) * 0.35)}
+          fill="rgba(147,197,253,0.9)"
+          style={{ pointerEvents: 'none', userSelect: 'none' }}
+        >
+          👤
+        </text>
+      )}
 
       {/* Room number bottom-right */}
       <text
@@ -263,6 +274,9 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
   // Build reverse lookup: generated room.id → 1-based display number
   const roomNumberMap = new Map(dungeon.rooms.map((r, i) => [r.id, i + 1]))
 
+  // Which rooms have generated NPCs
+  const roomsWithNPCs = new Set((dungeon.dungeonNPCs ?? []).map((n) => n.roomId))
+
   // Reverse lookup: child POI id → generated room id (for highlighting)
   const selectedRoomId = selectedRoomPoiId && roomIdToPoiId
     ? [...roomIdToPoiId.entries()].find(([, poiId]) => poiId === selectedRoomPoiId)?.[0]
@@ -307,6 +321,7 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
               theme={dungeon.theme}
               isSelected={room.id === selectedRoomId}
               roomNumber={roomNumberMap.get(room.id) ?? 0}
+              hasNPCs={roomsWithNPCs.has(room.id)}
               onClick={onRoomClick && poiId ? () => onRoomClick(poiId) : undefined}
             />
           )
@@ -332,6 +347,9 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
         </span>
         <span className="flex items-center gap-1 text-stone-300">
           <span className="inline-block w-2 h-2 rounded-full bg-yellow-500" /> Treasure
+        </span>
+        <span className="flex items-center gap-1 text-stone-300">
+          👤 NPC
         </span>
         <span className="flex items-center gap-1 text-stone-300">
           <span className="inline-block w-2 h-2 rounded-full bg-green-700" /> Entrance
