@@ -36,6 +36,7 @@ import {
   Users,
   X,
   Paintbrush,
+  Star,
 } from "lucide-react";
 import { NPC_RACES } from "@shared/constants";
 import { Input } from "~/components/ui/input";
@@ -254,9 +255,11 @@ function CompendiumPage() {
   };
 
   const [filterSource, setFilterSource] = useState<SourceFilter>("all");
+  const [showStarredOnly, setShowStarredOnly] = useState(false);
 
   const filteredMonsters = useMemo(() => {
     let result = applySourceFilter(monsters, filterSource);
+    if (showStarredOnly) result = result.filter((m) => starredMonsterIds.includes(m.id));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -266,10 +269,11 @@ function CompendiumPage() {
       );
     }
     return result;
-  }, [monsters, searchQuery, filterSource]);
+  }, [monsters, searchQuery, filterSource, showStarredOnly, starredMonsterIds]);
 
   const filteredSpells = useMemo(() => {
     let result = applySourceFilter(spells, filterSource);
+    if (showStarredOnly) result = result.filter((s) => starredSpellIds.includes(s.id));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -279,10 +283,11 @@ function CompendiumPage() {
       );
     }
     return result;
-  }, [spells, searchQuery, filterSource]);
+  }, [spells, searchQuery, filterSource, showStarredOnly, starredSpellIds]);
 
   const filteredMagicItems = useMemo(() => {
     let result = applySourceFilter(magicItems, filterSource);
+    if (showStarredOnly) result = result.filter((i) => starredMagicItemIds.includes(i.id));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -292,7 +297,7 @@ function CompendiumPage() {
       );
     }
     return result;
-  }, [magicItems, searchQuery, filterSource]);
+  }, [magicItems, searchQuery, filterSource, showStarredOnly, starredMagicItemIds]);
 
   const filteredEquipment = useMemo(() => {
     let result = applySourceFilter(equipment, filterSource);
@@ -576,6 +581,15 @@ function CompendiumPage() {
                 onChange={(v) => setFilterSource(v as SourceFilter)}
                 options={sourceFilterOptions}
               />
+              <Button
+                size="sm"
+                variant={showStarredOnly ? "default" : "outline"}
+                onClick={() => setShowStarredOnly((v) => !v)}
+                className="gap-1.5"
+              >
+                <Star className="size-3.5" />
+                Starred
+              </Button>
             </FilterBar>
             {filteredMonsters.length === 0 ? (
               <EmptyState
@@ -610,6 +624,15 @@ function CompendiumPage() {
                 onChange={(v) => setFilterSource(v as SourceFilter)}
                 options={sourceFilterOptions}
               />
+              <Button
+                size="sm"
+                variant={showStarredOnly ? "default" : "outline"}
+                onClick={() => setShowStarredOnly((v) => !v)}
+                className="gap-1.5"
+              >
+                <Star className="size-3.5" />
+                Starred
+              </Button>
             </FilterBar>
             {filteredSpells.length === 0 ? (
               <EmptyState
@@ -644,6 +667,15 @@ function CompendiumPage() {
                 onChange={(v) => setFilterSource(v as SourceFilter)}
                 options={sourceFilterOptions}
               />
+              <Button
+                size="sm"
+                variant={showStarredOnly ? "default" : "outline"}
+                onClick={() => setShowStarredOnly((v) => !v)}
+                className="gap-1.5"
+              >
+                <Star className="size-3.5" />
+                Starred
+              </Button>
             </FilterBar>
             {filteredMagicItems.length === 0 ? (
               <EmptyState
