@@ -104,8 +104,6 @@ function POIsPage() {
   const [editingPOI, setEditingPOI] = useState<POI | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deletingPOIId, setDeletingPOIId] = useState<string | null>(null)
-  const [generateDialogOpen, setGenerateDialogOpen] = useState(false)
-  const [generateForm, setGenerateForm] = useState({ name: '', regionId: '' })
 
   // Create form state
   const [createForm, setCreateForm] = useState({
@@ -220,11 +218,11 @@ function POIsPage() {
   }
 
   const handleGenerateDungeon = async () => {
-    const regionId = generateForm.regionId || regions[0]?.id
+    const regionId = selectedRegionId !== 'all' ? selectedRegionId : regions[0]?.id
     if (!regionId) return
     const poi = await executeCreatePOI(
       {
-        name: generateForm.name.trim() || 'New Dungeon',
+        name: 'New Dungeon',
         description: '',
         type: 'dungeon',
         regionId,
@@ -235,8 +233,6 @@ function POIsPage() {
       },
       { poiRepo: container.poiRepo }
     )
-    setGenerateDialogOpen(false)
-    setGenerateForm({ name: '', regionId: '' })
     navigate({ to: '/realms/pois/$poiId/generate-dungeon', params: { poiId: poi.id } })
   }
 
@@ -331,10 +327,7 @@ function POIsPage() {
             className="pl-9"
           />
         </div>
-        <Button variant="outline" onClick={() => {
-          setGenerateForm({ name: '', regionId: selectedRegionId !== 'all' ? selectedRegionId : (regions[0]?.id ?? '') })
-          setGenerateDialogOpen(true)
-        }}>
+        <Button variant="outline" onClick={handleGenerateDungeon} disabled={regions.length === 0}>
           <Wand2 className="mr-2 size-4" />
           Generate Dungeon
         </Button>
@@ -446,53 +439,6 @@ function POIsPage() {
       )}
 
       {/* Create Dialog */}
-      {/* Generate Dungeon Dialog */}
-      <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Wand2 className="h-5 w-5" />
-              Generate Dungeon
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="gen-name">Name <span className="text-muted-foreground">(optional)</span></Label>
-              <Input
-                id="gen-name"
-                value={generateForm.name}
-                onChange={(e) => setGenerateForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="New Dungeon"
-                onKeyDown={(e) => e.key === 'Enter' && handleGenerateDungeon()}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="gen-region">Region *</Label>
-              <Select
-                value={generateForm.regionId}
-                onValueChange={(v) => setGenerateForm((f) => ({ ...f, regionId: v }))}
-              >
-                <SelectTrigger id="gen-region">
-                  <SelectValue placeholder="Select region" />
-                </SelectTrigger>
-                <SelectContent>
-                  {regions.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleGenerateDungeon} disabled={!generateForm.regionId && regions.length > 1}>
-              <Wand2 className="mr-2 h-4 w-4" />
-              Continue to Generator
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>

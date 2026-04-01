@@ -1,10 +1,13 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
+import { useRegions } from '~/ui/hooks/useRegions'
 import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { executeGenerateDungeon } from '@application/use-cases/GenerateDungeon'
+import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
 import { Button } from '~/components/ui/button'
+import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import {
   Select,
@@ -14,8 +17,9 @@ import {
   SelectValue,
 } from '~/components/ui/select'
 import { Switch } from '~/components/ui/switch'
-import { ArrowLeft, AlertTriangle, Wand2 } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, Wand2, RefreshCw } from 'lucide-react'
 import type { DungeonGenOptions, DungeonTheme, DungeonSize } from '~/lib/dungeon/types'
+import { SeededRandom } from '~/lib/dungeon/SeededRandom'
 
 export const Route = createFileRoute('/_app/realms/pois_/$poiId_/generate-dungeon')({
   component: GenerateDungeonPage,
@@ -47,17 +51,55 @@ const SIZES: { value: DungeonSize; label: string; desc: string }[] = [
   { value: 'megadungeon', label: 'Megadungeon', desc: '20–30 rooms' },
 ]
 
+const DUNGEON_ADJECTIVES = [
+  'Forsaken', 'Sunken', 'Ruined', 'Shadowed', 'Haunted', 'Lost',
+  'Ancient', 'Cursed', 'Hidden', 'Forgotten', 'Blighted', 'Twisted',
+  'Shattered', 'Drowned', 'Burning', 'Silent', 'Hollow', 'Ashen',
+]
+
+const DUNGEON_NOUNS: Record<DungeonTheme, string[]> = {
+  tomb: ['Tomb', 'Mausoleum', 'Crypt', 'Barrow', 'Sepulcher'],
+  cave: ['Cavern', 'Grotto', 'Caves', 'Chasm', 'Depths'],
+  temple: ['Temple', 'Sanctuary', 'Shrine', 'Chapel', 'Cathedral'],
+  mine: ['Mines', 'Quarry', 'Pit', 'Excavation', 'Tunnels'],
+  fortress: ['Fortress', 'Keep', 'Stronghold', 'Bastion', 'Citadel'],
+  sewer: ['Sewers', 'Undercity', 'Drains', 'Warrens', 'Tunnels'],
+  crypt: ['Crypt', 'Ossuary', 'Charnel House', 'Vault', 'Catacombs'],
+  lair: ['Lair', 'Den', 'Nest', 'Burrow', 'Hideout'],
+  shrine: ['Shrine', 'Sanctum', 'Fane', 'Sacred Grove', 'Reliquary'],
+  bandit_hideout: ['Hideout', 'Camp', 'Stronghold', 'Outpost', 'Den'],
+  cultist_lair: ['Sanctum', 'Temple', 'Altar', 'Chamber', 'Lair'],
+  witch_hut: ['Hut', 'Cottage', 'Hovel', 'Dwelling', 'Sanctum'],
+  sea_cave: ['Grotto', 'Cove', 'Cavern', 'Hideaway', 'Lair'],
+  beast_den: ['Den', 'Lair', 'Nest', 'Warren', 'Cave'],
+  floating_keep: ['Keep', 'Citadel', 'Tower', 'Fortress', 'Spire'],
+}
+
+function rollDungeonName(theme: DungeonTheme): string {
+  const rng = new SeededRandom(Date.now())
+  const adj = rng.pick(DUNGEON_ADJECTIVES)
+  const noun = rng.pick(DUNGEON_NOUNS[theme])
+  return `The ${adj} ${noun}`
+}
+
 function GenerateDungeonPage() {
   const { poiId } = Route.useParams()
   const navigate = useNavigate()
   const poi = usePOI(poiId)
   const realm = useActiveRealm()
+  const regions = useRegions(realm?.id ?? null)
   const allPois = useRealmPOIs(realm?.id ?? null)
   const container = useContainer()
 
   const existing = poi?.dungeonGenOptions
   const isRegen = !!poi?.spatialDungeon
 
+  // Identity fields (editable on this page)
+  const [name, setName] = useState('')
+  const [regionId, setRegionId] = useState('')
+  const [parentPoiId, setParentPoiId] = useState<string | null>(null)
+
+  // Generation options
   const [theme, setTheme] = useState<DungeonTheme>(existing?.theme ?? 'cave')
   const [size, setSize] = useState<DungeonSize>(existing?.size ?? 'small')
   const [treasureLevel, setTreasureLevel] = useState<DungeonGenOptions['treasureLevel']>(
@@ -70,29 +112,39 @@ function GenerateDungeonPage() {
   const [exitPoiIds, setExitPoiIds] = useState<string[]>(existing?.exitPoiIds ?? [])
   const [isGenerating, setIsGenerating] = useState(false)
 
-  // Same-region POIs for exit connections (exclude self)
+  // Seed identity fields from POI once it loads
+  useEffect(() => {
+    if (!poi) return
+    if (!name) setName(poi.name === 'New Dungeon' ? rollDungeonName(theme) : poi.name)
+    if (!regionId) setRegionId(poi.regionId)
+    if (parentPoiId === null && poi.parentPoiId) setParentPoiId(poi.parentPoiId)
+  }, [poi?.id])
+
+  // When theme changes and name looks auto-generated, refresh it
+  const rollName = () => setName(rollDungeonName(theme))
+
+  // Same-region POIs for exit connections (exclude self, dungeons)
   const sameRegionPois = allPois.filter(
-    (p) => p.regionId === poi?.regionId && p.id !== poiId && p.type !== 'dungeon'
+    (p) => p.regionId === (regionId || poi?.regionId) && p.id !== poiId && p.type !== 'dungeon'
   )
 
-  const toggleExitPoi = (id: string) => {
-    setExitPoiIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    )
-  }
+  // POIs that can be parents (non-dungeon-room POIs in the realm, excluding self)
+  const parentCandidates = allPois.filter((p) => p.id !== poiId && p.type !== 'dungeon')
+
+  const toggleExitPoi = (id: string) =>
+    setExitPoiIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
 
   const handleGenerate = async () => {
-    if (!poi || !realm) return
+    if (!poi || !realm || !regionId) return
     setIsGenerating(true)
     try {
-      const options: DungeonGenOptions = {
-        theme,
-        size,
-        treasureLevel,
-        dangerLevel,
-        includeMagicItems,
-        exitPoiIds,
-      }
+      // Update identity fields on the POI first
+      await executeUpdatePOI(
+        { ...poi, name: name.trim() || poi.name, regionId, parentPoiId, updatedAt: Date.now() },
+        { poiRepo: container.poiRepo }
+      )
+
+      const options: DungeonGenOptions = { theme, size, treasureLevel, dangerLevel, includeMagicItems, exitPoiIds }
       await executeGenerateDungeon(
         { poiId, worldId: realm.id, options },
         {
@@ -120,13 +172,10 @@ function GenerateDungeonPage() {
         <Button variant="ghost" size="icon" onClick={() => navigate({ to: '/realms/pois/$poiId', params: { poiId } })}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div>
-          <h1 className="text-xl font-semibold flex items-center gap-2">
-            <Wand2 className="h-5 w-5" />
-            {isRegen ? 'Regenerate Dungeon' : 'Generate Dungeon'}
-          </h1>
-          <p className="text-sm text-muted-foreground">{poi.name}</p>
-        </div>
+        <h1 className="text-xl font-semibold flex items-center gap-2">
+          <Wand2 className="h-5 w-5" />
+          {isRegen ? 'Regenerate Dungeon' : 'Generate Dungeon'}
+        </h1>
       </div>
 
       {/* Regen warning */}
@@ -136,12 +185,64 @@ function GenerateDungeonPage() {
           <div className="space-y-1">
             <p className="font-medium text-sm">This will wipe all dungeon content</p>
             <p className="text-xs opacity-90">
-              All rooms, NPCs, and generated paths will be permanently deleted and recreated.
-              Any edits you made to individual rooms or NPCs will be lost.
+              All rooms, NPCs, and generated paths will be deleted and recreated.
+              Manual edits to rooms or NPCs will be lost.
             </p>
           </div>
         </div>
       )}
+
+      <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Location</p>
+
+        {/* Name */}
+        <div className="space-y-1.5">
+          <Label htmlFor="dungeon-name">Name</Label>
+          <div className="flex gap-2">
+            <Input
+              id="dungeon-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="The Forsaken Tomb…"
+              className="flex-1"
+            />
+            <Button variant="outline" size="icon" onClick={rollName} title="Generate name">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Region */}
+        <div className="space-y-1.5">
+          <Label>Region</Label>
+          <Select value={regionId} onValueChange={setRegionId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select region" />
+            </SelectTrigger>
+            <SelectContent>
+              {regions.map((r) => (
+                <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Parent POI */}
+        <div className="space-y-1.5">
+          <Label>Parent Location <span className="text-muted-foreground text-xs">(optional)</span></Label>
+          <Select value={parentPoiId ?? 'none'} onValueChange={(v) => setParentPoiId(v === 'none' ? null : v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="None" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              {parentCandidates.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       {/* Theme */}
       <div className="space-y-2">
@@ -183,9 +284,7 @@ function GenerateDungeonPage() {
       <div className="space-y-2">
         <Label>Treasure Level</Label>
         <Select value={treasureLevel} onValueChange={(v) => setTreasureLevel(v as DungeonGenOptions['treasureLevel'])}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
+          <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="poor">Poor — scarce loot</SelectItem>
             <SelectItem value="standard">Standard</SelectItem>
@@ -199,9 +298,7 @@ function GenerateDungeonPage() {
       <div className="space-y-2">
         <Label>Danger Level</Label>
         <Select value={dangerLevel} onValueChange={(v) => setDangerLevel(v as DungeonGenOptions['dangerLevel'])}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
+          <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="low">Low — fewer monsters, lighter traps</SelectItem>
             <SelectItem value="standard">Standard</SelectItem>
@@ -212,19 +309,15 @@ function GenerateDungeonPage() {
 
       {/* Magic Items */}
       <div className="flex items-center gap-3">
-        <Switch
-          id="magic-items"
-          checked={includeMagicItems}
-          onCheckedChange={setIncludeMagicItems}
-        />
+        <Switch id="magic-items" checked={includeMagicItems} onCheckedChange={setIncludeMagicItems} />
         <Label htmlFor="magic-items">Include magic items in treasure</Label>
       </div>
 
       {/* Exit Connections */}
       <div className="space-y-2">
-        <Label>Exit Connections</Label>
+        <Label>Exit Connections <span className="text-muted-foreground text-xs font-normal">— optional</span></Label>
         <p className="text-xs text-muted-foreground">
-          Select same-region locations to connect via exit passages. Optional.
+          Locations in the same region that dungeon exits connect to.
         </p>
         {sameRegionPois.length === 0 ? (
           <p className="text-xs text-muted-foreground italic">No other locations in this region.</p>
@@ -247,15 +340,12 @@ function GenerateDungeonPage() {
 
       {/* Actions */}
       <div className="flex gap-3 pt-2">
-        <Button
-          variant="outline"
-          onClick={() => navigate({ to: '/realms/pois/$poiId', params: { poiId } })}
-        >
+        <Button variant="outline" onClick={() => navigate({ to: '/realms/pois/$poiId', params: { poiId } })}>
           Cancel
         </Button>
         <Button
           onClick={handleGenerate}
-          disabled={isGenerating}
+          disabled={isGenerating || !regionId}
           variant={isRegen ? 'destructive' : 'default'}
           className="flex-1"
         >
