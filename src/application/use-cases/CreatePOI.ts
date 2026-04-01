@@ -62,6 +62,8 @@ export async function executeCreatePOI(
     watabouSeed: null,
     watabouGenerator: null,
     watabouData: null,
+    spatialDungeon: null,
+    dungeonGenOptions: null,
     sessionLog: [],
     starred: false,
     monsterRefs: [],

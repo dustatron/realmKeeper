@@ -1,0 +1,298 @@
+import { newId } from '@shared/ulid'
+import type { IPOIRepository } from '@application/ports/IPOIRepository'
+import type { INPCRepository } from '@application/ports/INPCRepository'
+import type { IPathRepository } from '@application/ports/IPathRepository'
+import type { POI } from '@domain/entities/POI'
+import type { NPC } from '@domain/entities/NPC'
+import type { Trap } from '@domain/value-objects/Trap'
+import type { TreasureItem } from '@domain/value-objects/TreasureItem'
+import type { WanderingMonsterEntry } from '@domain/value-objects/WanderingMonster'
+import type { DungeonGenOptions } from '~/lib/dungeon/types'
+import { generateDungeon } from '~/lib/dungeon/DungeonGenerator'
+import { executeDeletePOIWithChildren } from './DeletePOIWithChildren'
+import type { IFactionPresenceRepository } from '@application/ports/IFactionPresenceRepository'
+import type { IPOIEventRepository } from '@application/ports/IPOIEventRepository'
+
+export interface GenerateDungeonInput {
+  poiId: string
+  worldId: string
+  options: DungeonGenOptions
+}
+
+export interface GenerateDungeonDeps {
+  poiRepo: IPOIRepository
+  npcRepo: INPCRepository
+  pathRepo: IPathRepository
+  factionPresenceRepo: IFactionPresenceRepository
+  poiEventRepo: IPOIEventRepository
+}
+
+export async function executeGenerateDungeon(
+  input: GenerateDungeonInput,
+  deps: GenerateDungeonDeps
+): Promise<void> {
+  const { poiId, worldId, options } = input
+  const now = Date.now()
+
+  const poi = await deps.poiRepo.getById(poiId)
+  if (!poi) throw new Error(`POI ${poiId} not found`)
+
+  // === 1. Wipe existing generated content ===
+
+  // Delete all existing child POIs (rooms from previous generation)
+  const existingChildren = await deps.poiRepo.getChildren(poiId)
+  for (const child of existingChildren) {
+    const grandchildren = await deps.poiRepo.getChildren(child.id)
+    await executeDeletePOIWithChildren(
+      child.id,
+      grandchildren.map((c) => c.id),
+      deps
+    )
+  }
+
+  // Delete NPCs at this dungeon POI (generated NPCs from last run)
+  const existingNPCs = await deps.npcRepo.getByPoiId(poiId)
+  for (const npc of existingNPCs) {
+    await deps.npcRepo.update({ ...npc, poiId: null, updatedAt: now })
+  }
+
+  // Delete paths created by previous generation (exit connections)
+  if (poi.dungeonGenOptions?.exitPoiIds?.length) {
+    const existingPaths = await deps.pathRepo.getByPoi(poiId)
+    for (const path of existingPaths) {
+      const wasGenerated =
+        poi.dungeonGenOptions.exitPoiIds.includes(path.fromPoiId) ||
+        poi.dungeonGenOptions.exitPoiIds.includes(path.toPoiId)
+      if (wasGenerated) await deps.pathRepo.delete(path.id)
+    }
+  }
+
+  // === 2. Generate dungeon ===
+
+  const generated = generateDungeon(poiId, options)
+
+  // === 3. Build a room ID → child POI ID map ===
+  // We need this so dungeonNPCs can be placed in the right child POI
+  const roomIdToPoiId = new Map<string, string>()
+
+  // === 4. Create child POIs for each room ===
+
+  for (const room of generated.rooms) {
+    const childPoiId = newId()
+    roomIdToPoiId.set(room.id, childPoiId)
+
+    // Map dungeon hazards → realmKeeper Trap[]
+    const traps: Trap[] = room.hazards.map((h) => ({
+      id: newId(),
+      name: h.name,
+      description: [h.description, h.trigger, h.passiveHint].filter(Boolean).join(' | '),
+      dc: parseDC(h.save),
+      damage: h.damage ?? '',
+      disarmed: false,
+    }))
+
+    // Map dungeon treasure → realmKeeper TreasureItem[]
+    const treasure: TreasureItem[] = room.treasure.map((t) => ({
+      id: newId(),
+      name: t.name,
+      description: t.description ?? '',
+      value: t.value ?? '',
+      quantity: 1,
+      collected: false,
+    }))
+
+    // Build GM notes from historical clues and discoveries
+    const gmNotesParts: string[] = []
+    if (room.historicalClues?.length) {
+      gmNotesParts.push(room.historicalClues.join('\n'))
+    }
+    if (room.discoveries?.length) {
+      for (const d of room.discoveries) {
+        gmNotesParts.push(`**${d.type.charAt(0).toUpperCase() + d.type.slice(1)}:** ${d.description}`)
+        if (d.content) gmNotesParts.push(d.content)
+      }
+    }
+    if (room.secrets?.length) {
+      for (const s of room.secrets) {
+        gmNotesParts.push(`**Secret:** ${s.description} (${s.trigger})${s.reward ? ` — ${s.reward}` : ''}`)
+      }
+    }
+
+    // Build read aloud from room features
+    const featuresText = room.features.map((f) => f.description).join(' ')
+
+    const subtypeLabel = room.themeRoomType
+      ? room.themeRoomType.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+      : null
+
+    const activityText = room.activity ? `Creatures here are ${room.activity}.` : ''
+
+    const childPoi: POI = {
+      id: childPoiId,
+      regionId: poi.regionId,
+      parentPoiId: poiId,
+      name: room.name,
+      description: room.description + (activityText ? ' ' + activityText : ''),
+      type: 'dungeon',
+      subtypeLabel,
+      floor: null,
+      tags: room.isDeadEnd ? ['dead-end'] : [],
+      position: null,
+      mapRef: null,
+      markerColor: null,
+      readAloud: featuresText,
+      gmNotes: gmNotesParts.join('\n\n'),
+      trouble: '',
+      mood: '',
+      sensory: '',
+      services: [],
+      imageUrl: null,
+      locationSeed: null,
+      traps,
+      treasure,
+      roomWidth: room.bounds.width * 5,
+      roomLength: room.bounds.height * 5,
+      visited: false,
+      lightLevel: null,
+      wanderingMonsters: [],
+      watabouSeed: null,
+      watabouGenerator: null,
+      watabouData: null,
+      spatialDungeon: null,
+      dungeonGenOptions: null,
+      sessionLog: [],
+      starred: false,
+      monsterRefs: [],
+      magicItemRefs: [],
+      spellRefs: [],
+      equipmentRefs: [],
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    await deps.poiRepo.create(childPoi)
+  }
+
+  // === 5. Create NPC entities for generated dungeon NPCs ===
+
+  for (const dungeonNPC of generated.dungeonNPCs ?? []) {
+    // Find which child POI this NPC belongs to
+    const npcPoiId = roomIdToPoiId.get(dungeonNPC.roomId) ?? poiId
+
+    const categoryLabel = dungeonNPC.category.replace(/_/g, ' ')
+    const npcName = generateNPCName(dungeonNPC.category)
+    const motivation = dungeonNPC.wants?.join(', ') ?? ''
+
+    const npc: NPC = {
+      id: newId(),
+      worldId,
+      name: npcName,
+      factionIds: [],
+      regionId: poi.regionId,
+      poiId: npcPoiId,
+      lifeStatus: 'alive',
+      movementStatus: 'present',
+      description: dungeonNPC.hasInfo ?? `A ${categoryLabel} encountered in the dungeon.`,
+      traits: [],
+      motivation,
+      appearance: '',
+      voice: '',
+      want: motivation,
+      tags: [dungeonNPC.category, dungeonNPC.disposition],
+      imageUrl: null,
+      systemBlock: {
+        stats: [],
+        hp: 0,
+        maxHp: 0,
+        armor: 0,
+        attacks: [],
+        inventory: [],
+        abilities: [],
+        notes: '',
+      },
+      disposition: dungeonNPC.disposition as NPC['disposition'],
+      starred: false,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    await deps.npcRepo.create(npc)
+  }
+
+  // === 6. Create paths for exit connections ===
+
+  for (const exitPoiId of options.exitPoiIds) {
+    await deps.pathRepo.create({
+      id: newId(),
+      fromPoiId: poiId,
+      toPoiId: exitPoiId,
+      name: 'Exit Passage',
+      description: 'A passage connecting this dungeon to a nearby location.',
+      type: 'passage',
+      baseTravelWatches: 1,
+      terrain: 'hills',
+      direction: null,
+      hasDoor: true,
+      isLocked: false,
+      doorDescription: '',
+      createdAt: now,
+      updatedAt: now,
+    })
+  }
+
+  // === 7. Convert wandering monsters to realmKeeper format ===
+
+  const wanderingMonsters: WanderingMonsterEntry[] = (generated.wanderingMonsters?.entries ?? []).map((e) => ({
+    name: formatCreatureName(e.creatureType),
+    creatureType: e.creatureType,
+    count: e.count,
+    activity: e.activity,
+    compendiumId: null,
+    npcId: null,
+    customStats: null,
+  }))
+
+  // === 8. Save generated dungeon on parent POI (with room→POI map) ===
+
+  const generatedWithMap = {
+    ...generated,
+    roomPoiMap: Object.fromEntries(roomIdToPoiId),
+  }
+
+  const updatedPoi: POI = {
+    ...poi,
+    spatialDungeon: generatedWithMap,
+    dungeonGenOptions: options,
+    wanderingMonsters,
+    updatedAt: now,
+  }
+
+  await deps.poiRepo.update(updatedPoi)
+}
+
+// === Helpers ===
+
+function parseDC(save?: string): number | null {
+  if (!save) return null
+  const match = save.match(/DC\s*(\d+)/)
+  return match ? parseInt(match[1], 10) : null
+}
+
+function formatCreatureName(slug: string): string {
+  return slug.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
+function generateNPCName(category: string): string {
+  const names: Record<string, string> = {
+    rival_party: 'Rival Adventurer',
+    prisoner: 'Prisoner',
+    hermit: 'Hermit',
+    ghost: 'Restless Spirit',
+    refugee: 'Refugee',
+    faction_leader: 'Faction Leader',
+    faction_lieutenant: 'Faction Lieutenant',
+    faction_member: 'Faction Member',
+    rival_scout: 'Rival Scout',
+  }
+  return names[category] ?? 'Unknown Figure'
+}
