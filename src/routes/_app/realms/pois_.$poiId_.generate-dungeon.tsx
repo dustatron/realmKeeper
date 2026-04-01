@@ -25,22 +25,46 @@ export const Route = createFileRoute('/_app/realms/pois_/$poiId_/generate-dungeo
   component: GenerateDungeonPage,
 })
 
-const THEMES: { value: DungeonTheme; label: string }[] = [
-  { value: 'tomb', label: 'Tomb' },
-  { value: 'cave', label: 'Cave' },
-  { value: 'temple', label: 'Temple' },
-  { value: 'mine', label: 'Mine' },
-  { value: 'fortress', label: 'Fortress' },
-  { value: 'sewer', label: 'Sewer' },
-  { value: 'crypt', label: 'Crypt' },
-  { value: 'lair', label: 'Lair' },
-  { value: 'shrine', label: 'Shrine' },
-  { value: 'bandit_hideout', label: 'Bandit Hideout' },
-  { value: 'cultist_lair', label: 'Cultist Lair' },
-  { value: 'witch_hut', label: 'Witch Hut' },
-  { value: 'sea_cave', label: 'Sea Cave' },
-  { value: 'beast_den', label: 'Beast Den' },
-  { value: 'floating_keep', label: 'Floating Keep' },
+const THEME_GROUPS: { label: string; icon: string; themes: { value: DungeonTheme; label: string; desc: string }[] }[] = [
+  {
+    label: 'Sacred',
+    icon: '⛩',
+    themes: [
+      { value: 'temple',  label: 'Temple',  desc: 'Active or corrupted place of worship' },
+      { value: 'shrine',  label: 'Shrine',  desc: 'Small sacred site or oracle' },
+      { value: 'tomb',    label: 'Tomb',    desc: 'Burial complex with guardians' },
+      { value: 'crypt',   label: 'Crypt',   desc: 'Ossuary or charnel catacombs' },
+    ],
+  },
+  {
+    label: 'Underground',
+    icon: '⛏',
+    themes: [
+      { value: 'cave',    label: 'Cave',    desc: 'Natural cavern system' },
+      { value: 'mine',    label: 'Mine',    desc: 'Abandoned or haunted excavation' },
+      { value: 'sewer',   label: 'Sewer',   desc: 'Undercity tunnels and drains' },
+      { value: 'sea_cave', label: 'Sea Cave', desc: 'Coastal grotto, tidal passages' },
+    ],
+  },
+  {
+    label: 'Stronghold',
+    icon: '🏰',
+    themes: [
+      { value: 'fortress',        label: 'Fortress',        desc: 'Military keep or garrison' },
+      { value: 'bandit_hideout',  label: 'Bandit Hideout',  desc: 'Outlaw camp or smuggler den' },
+      { value: 'floating_keep',   label: 'Floating Keep',   desc: 'Arcane citadel in the sky' },
+    ],
+  },
+  {
+    label: 'Wilderness Lair',
+    icon: '🐾',
+    themes: [
+      { value: 'lair',          label: 'Lair',          desc: 'Monster den or nest' },
+      { value: 'beast_den',     label: 'Beast Den',     desc: 'Large predator territory' },
+      { value: 'witch_hut',     label: 'Witch Hut',     desc: 'Hag dwelling or fey sanctum' },
+      { value: 'cultist_lair',  label: 'Cultist Lair',  desc: 'Dark ritual grounds' },
+    ],
+  },
 ]
 
 const SIZES: { value: DungeonSize; label: string; desc: string }[] = [
@@ -244,19 +268,33 @@ function GenerateDungeonPage() {
         </div>
       </div>
 
-      {/* Theme */}
-      <div className="space-y-2">
-        <Label>Theme</Label>
-        <Select value={theme} onValueChange={(v) => setTheme(v as DungeonTheme)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {THEMES.map((t) => (
-              <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Theme — grouped by location category */}
+      <div className="space-y-3">
+        <Label>Location Type</Label>
+        {THEME_GROUPS.map((group) => (
+          <div key={group.label} className="space-y-1.5">
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <span>{group.icon}</span>
+              <span className="uppercase tracking-wide font-medium">{group.label}</span>
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {group.themes.map((t) => (
+                <button
+                  key={t.value}
+                  onClick={() => { setTheme(t.value); rollName() }}
+                  className={`flex flex-col items-start p-2.5 rounded-md border text-left transition-colors ${
+                    theme === t.value
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border hover:border-primary/50 hover:bg-accent'
+                  }`}
+                >
+                  <span className="text-sm font-medium">{t.label}</span>
+                  <span className="text-xs text-muted-foreground leading-tight mt-0.5">{t.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Size */}
