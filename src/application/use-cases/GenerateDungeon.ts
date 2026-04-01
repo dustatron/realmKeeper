@@ -207,7 +207,7 @@ export async function executeGenerateDungeon(
     const npcPoiId = roomIdToPoiId.get(dungeonNPC.roomId) ?? poiId
 
     const categoryLabel = dungeonNPC.category.replace(/_/g, ' ')
-    const npcName = generateNPCName(dungeonNPC.category)
+    const npcName = generateNPCName(rng.child(`npc-name-${dungeonNPC.npcId}`))
     const motivation = dungeonNPC.wants?.join(', ') ?? ''
 
     const npc: NPC = {
@@ -570,17 +570,32 @@ function resolveCreature(
   return { id: picked.id, name: picked.name }
 }
 
-function generateNPCName(category: string): string {
-  const names: Record<string, string> = {
-    rival_party: 'Rival Adventurer',
-    prisoner: 'Prisoner',
-    hermit: 'Hermit',
-    ghost: 'Restless Spirit',
-    refugee: 'Refugee',
-    faction_leader: 'Faction Leader',
-    faction_lieutenant: 'Faction Lieutenant',
-    faction_member: 'Faction Member',
-    rival_scout: 'Rival Scout',
+const NPC_FIRST_NAMES = [
+  'Aldric', 'Bram', 'Cass', 'Darro', 'Edda', 'Fren', 'Grim', 'Holt',
+  'Issa', 'Jove', 'Kael', 'Lorn', 'Mira', 'Nox', 'Orin', 'Petra',
+  'Quinn', 'Rask', 'Sable', 'Thea', 'Ulric', 'Venn', 'Wren', 'Xara',
+  'Yara', 'Zev', 'Hank', 'Steve', 'Bess', 'Gort', 'Ida', 'Mal',
+  'Pip', 'Ren', 'Tam', 'Una', 'Vex', 'Wulf', 'Zara', 'Bolt',
+  'Crag', 'Dusk', 'Flint', 'Grub', 'Haze', 'Ink', 'Jade', 'Kite',
+]
+
+const NPC_EPITHETS = [
+  'Nine-Fingers', 'One-Eye', 'the Lame', 'Twice-Burned', 'No-Nose',
+  'Half-Ear', 'the Scarred', 'Blackthorn', 'Stonefist', 'Ironjaw',
+  'the Pale', 'the Bent', 'the Loud', 'the Silent', 'the Mad',
+  'the Unlucky', 'the Lucky', 'the Old', 'the Young', 'the Lost',
+  'Copperhead', 'Grimtooth', 'Dustcloak', 'Coldblood', 'Ashbeard',
+  'the Unwashed', 'the Forgotten', 'Bonecleaver', 'Mudshanks', 'Twitch',
+  'Splinters', 'Sixcoins', 'the Coward', 'the Bold', 'the Broken',
+  'Nightcrawler', 'Ratskin', 'Ember', 'Rot', 'Slag',
+]
+
+function generateNPCName(rng: SeededRandom): string {
+  const first = rng.pick(NPC_FIRST_NAMES)
+  // 60% chance of an epithet
+  if (rng.chance(0.6)) {
+    const epithet = rng.pick(NPC_EPITHETS)
+    return `${first} ${epithet}`
   }
-  return names[category] ?? 'Unknown Figure'
+  return first
 }
