@@ -266,9 +266,15 @@ export async function executeGenerateDungeon(
   // === 7. Wandering monsters (with compendium resolution) ===
 
   const wmRng = rng.child('wandering-resolve')
-  const wanderingMonsters: WanderingMonsterEntry[] = (generated.wanderingMonsters?.entries ?? []).map((e) => {
-    const resolved = resolveCreature(e.creatureType, systemId, wmRng, generated.depth)
-    return {
+  const usedCompendiumIds = new Set<string>()
+  const wanderingMonsters: WanderingMonsterEntry[] = (generated.wanderingMonsters?.entries ?? []).reduce<WanderingMonsterEntry[]>((acc, e) => {
+    // Try up to 5 times to get a creature not already in the table
+    let resolved = resolveCreature(e.creatureType, systemId, wmRng, generated.depth)
+    for (let attempt = 0; attempt < 5 && resolved && usedCompendiumIds.has(resolved.id); attempt++) {
+      resolved = resolveCreature(`retry-${attempt}-${e.creatureType}`, systemId, wmRng, generated.depth)
+    }
+    if (resolved) usedCompendiumIds.add(resolved.id)
+    acc.push({
       name: resolved?.name ?? e.creatureType,
       creatureType: e.creatureType,
       count: e.count,
@@ -276,8 +282,9 @@ export async function executeGenerateDungeon(
       compendiumId: resolved?.id ?? null,
       npcId: null,
       customStats: null,
-    }
-  })
+    })
+    return acc
+  }, [])
 
   // === 7b. Room creatures ===
 

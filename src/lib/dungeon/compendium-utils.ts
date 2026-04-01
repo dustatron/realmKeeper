@@ -63,10 +63,16 @@ export function pickMagicItem(systemId: string, rng: SeededRandom): { name: stri
   return { name: rng.pick(GENERIC), description: 'A magical item of unknown origin.' }
 }
 
-/** Get the compendium description for a monster entry */
+/** Get the compendium description for a monster entry, with HTML stripped */
 export function getMonsterDescription(id: string): string {
   const entry = getCompendiumById(id) as CompendiumMonster | undefined
-  return entry?.description ?? ''
+  if (!entry?.description) return ''
+  return entry.description
+    .replace(/<\/?(p|br|div|li)[^>]*>/gi, ' ')  // block elements → space
+    .replace(/<[^>]+>/g, '')                       // strip remaining tags
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
 }
 
 export function slugToName(slug: string): string {
