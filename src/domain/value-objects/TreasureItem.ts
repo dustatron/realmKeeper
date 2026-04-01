@@ -6,4 +6,5 @@ export interface TreasureItem {
   quantity: number
   collected: boolean
   isMagic?: boolean
+  compendiumId?: string
 }

@@ -48,19 +48,19 @@ export function pickSpellScroll(systemId: string, rng: SeededRandom): { name: st
   return { name: `Scroll of ${picked.name}`, description: picked.description }
 }
 
-/** Pick a random magic item name from the system compendium */
-export function pickMagicItem(systemId: string, rng: SeededRandom): { name: string; description: string } | null {
+/** Pick a random magic item from the system compendium */
+export function pickMagicItem(systemId: string, rng: SeededRandom): { id: string | null; name: string; description: string } | null {
   const items = getMagicItemsBySystemId(systemId)
   if (items.length > 0) {
     const picked = rng.pick(items)
-    return { name: picked.name, description: picked.description }
+    return { id: picked.id, name: picked.name, description: picked.description }
   }
   // Fallback generic names
   const GENERIC = [
     'Potion of Healing', 'Wand of Sparks', 'Ring of Minor Ward', 'Amulet of Whispers',
     'Cloak of Shadows', 'Dagger of Returning', 'Lens of True Sight', 'Horn of the Fallen',
   ]
-  return { name: rng.pick(GENERIC), description: 'A magical item of unknown origin.' }
+  return { id: null, name: rng.pick(GENERIC), description: 'A magical item of unknown origin.' }
 }
 
 /** Get the compendium description for a monster entry, with HTML stripped */

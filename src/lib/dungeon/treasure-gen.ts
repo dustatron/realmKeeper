@@ -71,6 +71,7 @@ export function generateMagicItems(
       quantity: 1,
       collected: false,
       isMagic: true,
+      ...(picked.id ? { compendiumId: picked.id } : {}),
     })
     result.set(room.id, existing)
   }

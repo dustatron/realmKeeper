@@ -383,7 +383,19 @@ function RoomDetailPanel({
                   )}
                 </button>
                 {item.description && !isWeapon && (
-                  <p className="text-xs text-muted-foreground px-2 pb-1.5 italic">{item.description}</p>
+                  <div className="flex items-start justify-between gap-2 px-2 pb-1.5">
+                    <p className="text-xs text-muted-foreground italic flex-1">{item.description}</p>
+                    {item.compendiumId && item.isMagic && !isScroll && (
+                      <Link
+                        to="/realms/compendium/magic-items/$itemId"
+                        params={{ itemId: item.compendiumId }}
+                        className="text-xs text-amber-500 hover:underline shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Details →
+                      </Link>
+                    )}
+                  </div>
                 )}
               </div>
             )
@@ -419,7 +431,7 @@ function RoomDetailPanel({
       {room.gmNotes && (
         <div className="space-y-1">
           <div className="text-xs font-semibold text-purple-400 uppercase tracking-wide">📋 GM Notes</div>
-          <div className="rounded border border-purple-500/20 bg-purple-500/5 p-2.5 prose prose-sm prose-invert max-w-none">
+          <div className="rounded border border-purple-500/20 bg-purple-500/5 p-2.5 prose prose-xs prose-invert max-w-none text-xs [&_p]:my-1 [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs [&_ul]:my-1 [&_li]:my-0">
             <ReactMarkdown {...markdownOptions}>{room.gmNotes}</ReactMarkdown>
           </div>
         </div>
