@@ -188,7 +188,7 @@ function GenerateDungeonPage() {
   const [dangerLevel, setDangerLevel] = useState<DungeonGenOptions['dangerLevel']>(
     ((existing?.dangerLevel as string) === 'standard' ? 'medium' : existing?.dangerLevel) ?? 'medium'
   )
-  const [includeMagicItems, setIncludeMagicItems] = useState(existing?.includeMagicItems ?? false)
+  const [includeMagicItems, setIncludeMagicItems] = useState(existing?.includeMagicItems ?? true)
   const [exitPoiIds, setExitPoiIds] = useState<string[]>(existing?.exitPoiIds ?? [])
   const [isGenerating, setIsGenerating] = useState(false)
 
