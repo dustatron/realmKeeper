@@ -226,16 +226,7 @@ export async function executeGenerateDungeon(
       want: motivation,
       tags: [dungeonNPC.category, dungeonNPC.disposition],
       imageUrl: null,
-      systemBlock: {
-        stats: [],
-        hp: 0,
-        maxHp: 0,
-        armor: 0,
-        attacks: [],
-        inventory: [],
-        abilities: [],
-        notes: '',
-      },
+      systemBlock: fallbackSystemBlock(generated.depth, options.dangerLevel),
       disposition: dungeonNPC.disposition as NPC['disposition'],
       starred: false,
       createdAt: now,
@@ -315,7 +306,9 @@ export async function executeGenerateDungeon(
       want: '',
       tags: ['creature', options.theme],
       imageUrl: null,
-      systemBlock: compendiumId ? systemBlockFromMonster(compendiumId) : emptySystemBlock(),
+      systemBlock: compendiumId
+        ? systemBlockFromMonster(compendiumId)
+        : fallbackSystemBlock(room.depth, options.dangerLevel),
       disposition: 'hostile',
       starred: false,
       createdAt: now,
@@ -470,6 +463,36 @@ function systemBlockFromMonster(id: string): SystemBlock {
 
 function emptySystemBlock(): SystemBlock {
   return { stats: [], hp: 0, maxHp: 0, armor: 0, attacks: [], inventory: [], abilities: [], notes: '' }
+}
+
+/**
+ * Fallback stat block based on dungeon depth + danger level.
+ * Used when the creature isn't found in any compendium.
+ * Tiers: weak → standard → tough → deadly
+ */
+function fallbackSystemBlock(depth: number, dangerLevel: string): SystemBlock {
+  const dangerBonus = { low: -1, medium: 0, deadly: 1, very_deadly: 2 }[dangerLevel] ?? 0
+  const tier = Math.max(0, Math.min(3, (depth - 1) + dangerBonus))
+
+  const tiers: { hp: number; armor: number; attack: string; level: number; note: string }[] = [
+    { hp: 4,  armor: 10, attack: '1d6',  level: 1, note: 'Weak creature'     },
+    { hp: 10, armor: 12, attack: '1d8',  level: 2, note: 'Average creature'  },
+    { hp: 16, armor: 14, attack: '1d10', level: 4, note: 'Tough creature'    },
+    { hp: 24, armor: 16, attack: '1d12', level: 6, note: 'Dangerous creature' },
+  ]
+
+  const t = tiers[tier]
+  return {
+    stats: [],
+    hp: t.hp,
+    maxHp: t.hp,
+    armor: t.armor,
+    level: t.level,
+    attacks: [{ name: 'Attack', damage: t.attack, description: '' }],
+    inventory: [],
+    abilities: [],
+    notes: t.note,
+  }
 }
 
 /** Convert a creature slug to display name, e.g. "giant_spider" → "Giant Spider" */
