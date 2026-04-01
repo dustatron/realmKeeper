@@ -41,11 +41,11 @@ export function pickGear(systemId: string, rng: SeededRandom): { name: string; c
 }
 
 /** Pick a random spell scroll from the system compendium */
-export function pickSpellScroll(systemId: string, rng: SeededRandom): { name: string; description: string } | null {
+export function pickSpellScroll(systemId: string, rng: SeededRandom): { id: string; name: string; description: string } | null {
   const spells = getSpellsBySystemId(systemId)
   if (spells.length === 0) return null
   const picked = rng.pick(spells)
-  return { name: `Scroll of ${picked.name}`, description: picked.description }
+  return { id: picked.id, name: `Scroll of ${picked.name}`, description: picked.description }
 }
 
 /** Pick a random magic item from the system compendium */

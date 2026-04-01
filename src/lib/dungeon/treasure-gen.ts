@@ -107,6 +107,7 @@ export function generateSpellScrolls(
       quantity: 1,
       collected: false,
       isMagic: true,
+      compendiumId: picked.id,
     })
     result.set(room.id, existing)
   }

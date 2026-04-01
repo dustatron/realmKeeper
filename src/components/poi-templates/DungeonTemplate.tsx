@@ -395,6 +395,16 @@ function RoomDetailPanel({
                         Details →
                       </Link>
                     )}
+                    {item.compendiumId && item.isMagic && isScroll && (
+                      <Link
+                        to="/realms/compendium/spells/$spellId"
+                        params={{ spellId: item.compendiumId }}
+                        className="text-xs text-purple-400 hover:underline shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Spell →
+                      </Link>
+                    )}
                   </div>
                 )}
               </div>
