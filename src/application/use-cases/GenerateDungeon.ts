@@ -11,6 +11,8 @@ import type { TreasureItem } from '@domain/value-objects/TreasureItem'
 import type { WanderingMonsterEntry } from '@domain/value-objects/WanderingMonster'
 import type { DungeonGenOptions } from '~/lib/dungeon/types'
 import { generateDungeon } from '~/lib/dungeon/DungeonGenerator'
+import { getBlueprint } from '~/lib/dungeon/dungeon/DungeonBlueprints'
+import { searchCompendium } from '@domain/data/compendium'
 import { executeDeletePOIWithChildren } from './DeletePOIWithChildren'
 import type { IFactionPresenceRepository } from '@application/ports/IFactionPresenceRepository'
 import type { IPOIEventRepository } from '@application/ports/IPOIEventRepository'
@@ -262,17 +264,83 @@ export async function executeGenerateDungeon(
     })
   }
 
-  // === 7. Convert wandering monsters to realmKeeper format ===
+  // === 7. Convert wandering monsters to realmKeeper format (with compendium lookup) ===
 
   const wanderingMonsters: WanderingMonsterEntry[] = (generated.wanderingMonsters?.entries ?? []).map((e) => ({
-    name: formatCreatureName(e.creatureType),
+    name: slugToName(e.creatureType),
     creatureType: e.creatureType,
     count: e.count,
     activity: e.activity,
-    compendiumId: null,
+    compendiumId: findCompendiumId(e.creatureType),
     npcId: null,
     customStats: null,
   }))
+
+  // === 7b. Place room creatures based on danger level ===
+
+  const dangerChances: Record<string, number> = {
+    low: 0.25, medium: 0.45, deadly: 0.70, very_deadly: 0.90,
+  }
+  const creaturePool = getBlueprint(options.theme).creaturePool
+  const creatureRng = rng.child('room-creatures')
+  const roomsAlreadyWithNPC = new Set(dungeonNPCs.map((n) => n.roomId))
+
+  for (const room of generated.rooms) {
+    if (room.type === 'entrance' || room.type === 'exit') continue
+    if (roomsAlreadyWithNPC.has(room.id)) continue // already has a named NPC
+    if (!creatureRng.chance(dangerChances[options.dangerLevel] ?? 0.45)) continue
+
+    const creatureSlug = creatureRng.pick(creaturePool)
+    const creatureName = slugToName(creatureSlug)
+    const compendiumId = findCompendiumId(creatureSlug)
+    const roomPoiId = roomIdToPoiId.get(room.id) ?? poiId
+    const activity = room.activity ?? 'guarding'
+
+    const creatureNpc: NPC = {
+      id: newId(),
+      worldId,
+      name: creatureName,
+      factionIds: [],
+      regionId: poi.regionId,
+      poiId: roomPoiId,
+      lifeStatus: 'alive',
+      movementStatus: 'present',
+      description: `${creatureName} — ${activity}.`,
+      traits: [],
+      motivation: '',
+      appearance: '',
+      voice: '',
+      want: '',
+      tags: ['creature', options.theme],
+      imageUrl: null,
+      systemBlock: {
+        stats: [],
+        hp: 0,
+        maxHp: 0,
+        armor: 0,
+        attacks: [],
+        inventory: [],
+        abilities: compendiumId ? [] : [`See ${creatureName} stat block`],
+        notes: compendiumId ? '' : `Creature type: ${creatureSlug}`,
+      },
+      disposition: 'hostile',
+      starred: false,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    // If we have a compendium entry, also add it as a monsterRef on the room POI
+    // (NPC creation handles the room link; compendiumId stored in wandering monsters handles stats)
+    await deps.npcRepo.create(creatureNpc)
+
+    // Track for the map indicator
+    dungeonNPCs.push({
+      npcId: creatureNpc.id,
+      category: 'faction_member',
+      roomId: room.id,
+      disposition: 'hostile',
+    })
+  }
 
   // === 8. Save generated dungeon on parent POI (with room→POI map) ===
 
@@ -301,9 +369,6 @@ function parseDC(save?: string): number | null {
   return match ? parseInt(match[1], 10) : null
 }
 
-function formatCreatureName(slug: string): string {
-  return slug.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-}
 
 // Treasure tables by level
 const COIN_TREASURE: Record<string, { name: string; value: string }[]> = {
@@ -363,6 +428,18 @@ function generateRoomTreasure(
   }
 
   return items
+}
+
+/** Convert a creature slug to display name, e.g. "giant_spider" → "Giant Spider" */
+function slugToName(slug: string): string {
+  return slug.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
+/** Look up a creature slug in the compendium by name match */
+function findCompendiumId(slug: string): string | null {
+  const name = slugToName(slug)
+  const results = searchCompendium(name, undefined, 'monster')
+  return results[0]?.id ?? null
 }
 
 function generateNPCName(category: string): string {
