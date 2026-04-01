@@ -43,6 +43,7 @@ export function AtAGlancePanel({
   const armedTraps = traps?.filter((t) => !t.disarmed).length ?? 0
   const treasureCount = treasure?.length ?? 0
   const uncollectedTreasure = treasure?.filter((t) => !t.collected).length ?? 0
+  const magicItems = treasure?.filter((t) => t.isMagic) ?? []
   const hasDimensions = roomWidth != null && roomLength != null
   const hasAnything = mood || trouble || factionPresences.length > 0 || npcCount > 0 || activeEvents > 0 || paths.length > 0 || trapCount > 0 || treasureCount > 0 || hasDimensions || lightLevel
   if (!hasAnything) return null
@@ -99,6 +100,23 @@ export function AtAGlancePanel({
             treasureCount > 0 && `💰 ${uncollectedTreasure} loot uncollected`,
           ].filter(Boolean).join(' · ')}
         </p>
+      )}
+
+      {/* ── Magic Items ── */}
+      {magicItems.length > 0 && (
+        <div className="space-y-1.5 pt-1 border-t border-border/50">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            ✨ Magic Items ({magicItems.filter((i) => !i.collected).length} unclaimed)
+          </p>
+          {magicItems.map((item) => (
+            <div key={item.id} className="flex items-center gap-2 text-sm min-w-0">
+              <span className="shrink-0">{item.collected ? '✅' : '✨'}</span>
+              <span className={`truncate ${item.collected ? 'line-through text-muted-foreground' : 'font-medium'}`}>
+                {item.name}
+              </span>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* ── Traps ── */}

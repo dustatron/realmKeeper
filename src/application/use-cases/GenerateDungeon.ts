@@ -411,6 +411,7 @@ function generateRoomTreasure(
       value: 'priceless',
       quantity: 1,
       collected: false,
+      isMagic: true,
     })
   }
 

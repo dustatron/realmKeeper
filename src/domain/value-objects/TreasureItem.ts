@@ -5,4 +5,5 @@ export interface TreasureItem {
   value: string // e.g. "500 gp", "priceless"
   quantity: number
   collected: boolean
+  isMagic?: boolean
 }
