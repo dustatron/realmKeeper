@@ -978,19 +978,48 @@ export function DungeonTemplate({
                   <div className="space-y-1.5">
                     {named.map((npc) => {
                       const roomName = npc.poiId ? poiNameMap.get(npc.poiId) : undefined
+                      const sb = npc.systemBlock
+                      const wants = npc.want ? npc.want.split(',').map((w) => w.trim()).filter(Boolean) : []
                       return (
-                        <div key={npc.id} className="flex items-start gap-3 rounded-md border px-3 py-2 bg-card/50">
-                          <Heart className={`size-3.5 mt-0.5 shrink-0 ${npc.lifeStatus === 'alive' ? 'text-green-500 fill-green-500' : 'text-muted-foreground'}`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="font-medium text-sm text-amber-500 hover:underline">
-                                {npc.name}
-                              </Link>
-                              <DispositionBadge npc={npc} />
-                              {roomName && <span className="text-xs text-muted-foreground">· {roomName}</span>}
-                            </div>
-                            {npc.want && <p className="text-xs text-muted-foreground mt-0.5 truncate">Wants: {npc.want}</p>}
-                            {!npc.want && npc.description && <p className="text-xs text-muted-foreground mt-0.5 truncate">{npc.description}</p>}
+                        <div key={npc.id} className="rounded-md border bg-card/50 overflow-hidden">
+                          {/* Header row */}
+                          <div className="flex items-center gap-2 px-3 py-2 flex-wrap">
+                            <Heart className={`size-3.5 shrink-0 ${npc.lifeStatus === 'alive' ? 'text-green-500 fill-green-500' : 'text-muted-foreground'}`} />
+                            <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="font-medium text-sm text-amber-500 hover:underline">
+                              {npc.name}
+                            </Link>
+                            <DispositionBadge npc={npc} />
+                            {/* Stats */}
+                            {sb && sb.maxHp > 0 && (
+                              <Badge variant="outline" className="text-xs font-mono gap-1 ml-auto">
+                                <Heart className="size-2.5" /> {sb.hp}/{sb.maxHp}
+                              </Badge>
+                            )}
+                            {sb && sb.armor > 0 && (
+                              <Badge variant="outline" className="text-xs font-mono gap-1">
+                                <Shield className="size-2.5" /> {sb.armor}
+                              </Badge>
+                            )}
+                          </div>
+                          {/* Details row */}
+                          <div className="px-3 pb-2 space-y-1.5 border-t border-border/30 pt-1.5">
+                            {roomName && (
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <MapPin className="size-3 shrink-0" />
+                                {roomName}
+                              </div>
+                            )}
+                            {wants.length > 0 && (
+                              <div className="flex items-center gap-1 flex-wrap">
+                                <span className="text-xs text-muted-foreground mr-0.5">Wants:</span>
+                                {wants.map((w) => (
+                                  <Badge key={w} variant="secondary" className="text-xs capitalize px-1.5 py-0">{w}</Badge>
+                                ))}
+                              </div>
+                            )}
+                            {npc.description && (
+                              <p className="text-xs text-muted-foreground italic leading-snug line-clamp-2">{npc.description}</p>
+                            )}
                           </div>
                         </div>
                       )
