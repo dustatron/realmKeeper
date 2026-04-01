@@ -73,3 +73,9 @@ See this log for the ancestor stack trace. button <button> @ http://localhost:30
 [ 1023934ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
 [ 1023994ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
 [ 1024044ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1264485ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1264545ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1264660ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1264932ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1264964ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1265029ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
