@@ -266,15 +266,10 @@ export async function executeGenerateDungeon(
   // === 7. Wandering monsters (with compendium resolution) ===
 
   const wmRng = rng.child('wandering-resolve')
-  const usedCompendiumIds = new Set<string>()
-  const wanderingMonsters: WanderingMonsterEntry[] = (generated.wanderingMonsters?.entries ?? []).reduce<WanderingMonsterEntry[]>((acc, e) => {
-    // Try up to 5 times to get a creature not already in the table
-    let resolved = resolveCreature(e.creatureType, systemId, wmRng, generated.depth)
-    for (let attempt = 0; attempt < 5 && resolved && usedCompendiumIds.has(resolved.id); attempt++) {
-      resolved = resolveCreature(`retry-${attempt}-${e.creatureType}`, systemId, wmRng, generated.depth)
-    }
-    if (resolved) usedCompendiumIds.add(resolved.id)
-    acc.push({
+  // First pass: resolve all creatures
+  const wanderingMonsters: WanderingMonsterEntry[] = (generated.wanderingMonsters?.entries ?? []).map((e) => {
+    const resolved = resolveCreature(e.creatureType, systemId, wmRng, generated.depth)
+    return {
       name: resolved?.name ?? e.creatureType,
       creatureType: e.creatureType,
       count: e.count,
@@ -282,9 +277,24 @@ export async function executeGenerateDungeon(
       compendiumId: resolved?.id ?? null,
       npcId: null,
       customStats: null,
-    })
-    return acc
-  }, [])
+    }
+  })
+  // Second pass: deduplicate by replacing repeated compendiumIds with different system picks
+  const dedupRng = rng.child('wandering-dedup')
+  const seenIds = new Set<string>()
+  for (const entry of wanderingMonsters) {
+    if (!entry.compendiumId || !seenIds.has(entry.compendiumId)) {
+      if (entry.compendiumId) seenIds.add(entry.compendiumId)
+      continue
+    }
+    // This entry is a duplicate — find an unseen creature
+    const resolved = resolveCreature(`dedup-${entry.creatureType}-${seenIds.size}`, systemId, dedupRng, generated.depth)
+    if (resolved && !seenIds.has(resolved.id)) {
+      entry.name = resolved.name
+      entry.compendiumId = resolved.id
+      seenIds.add(resolved.id)
+    }
+  }
 
   // === 7b. Room creatures — picked from wandering monster table for ecological consistency ===
 

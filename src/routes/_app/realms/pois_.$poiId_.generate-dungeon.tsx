@@ -200,8 +200,20 @@ function GenerateDungeonPage() {
     if (!poi) return
     if (!name) setName(poi.name === 'New Dungeon' ? rollDungeonName(theme) : poi.name)
     if (!regionId) setRegionId(poi.regionId)
-    if (parentPoiId === null && poi.parentPoiId) setParentPoiId(poi.parentPoiId)
-  }, [poi?.id])
+    if (parentPoiId === null) {
+      if (poi.parentPoiId) {
+        setParentPoiId(poi.parentPoiId)
+      } else {
+        // Pick a random same-region non-dungeon POI as default parent
+        const candidates = allPois.filter(
+          (p) => p.regionId === poi.regionId && p.id !== poi.id && p.type !== 'dungeon'
+        )
+        if (candidates.length > 0) {
+          setParentPoiId(candidates[Math.floor(Math.random() * candidates.length)].id)
+        }
+      }
+    }
+  }, [poi?.id, allPois.length])
 
   // When theme changes and name looks auto-generated, refresh it
   const rollName = () => setName(rollDungeonName(theme))
