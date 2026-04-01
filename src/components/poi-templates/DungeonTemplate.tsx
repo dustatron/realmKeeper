@@ -77,11 +77,11 @@ function RoomNPCCard({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) 
       >
         <ChevronRight className={`size-4 text-muted-foreground shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`} />
         {isDead ? (
-          <Skull className="size-3.5 text-muted-foreground shrink-0" title={npc.lifeStatus} />
+          <Skull className="size-3.5 text-muted-foreground shrink-0" />
         ) : npc.tags?.includes('creature') ? (
-          <Swords className="size-3.5 text-red-400 shrink-0" title="Creature" />
+          <Swords className="size-3.5 text-red-400 shrink-0" />
         ) : (
-          <Heart className="size-3.5 text-green-500 fill-green-500 shrink-0" title="NPC" />
+          <Heart className="size-3.5 text-green-500 fill-green-500 shrink-0" />
         )}
         <Link
           to="/realms/npcs/$npcId"
