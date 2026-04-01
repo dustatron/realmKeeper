@@ -9,11 +9,21 @@ import {
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
 import { Gem, Plus, Trash2, Check, X, Sparkles, Coins, Diamond, Crown } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
 import { newId } from '@shared/ulid'
 import { rollDice } from '@shared/dice'
 import { rollOnTable } from '@domain/services/RandomTableEngine'
 import { treasureTableDefs } from '@domain/data/treasure-tables'
 import type { TreasureItem } from '@domain/value-objects/TreasureItem'
+
+function itemIcon(item: TreasureItem, collected: boolean): string {
+  if (collected) return '✅'
+  if (item.isMagic && item.name.startsWith('Scroll of')) return '📜'
+  if (item.isMagic) return '✨'
+  if (item.description?.includes('Damage:')) return '⚔'
+  if (item.description?.startsWith('Condition:')) return '🎒'
+  return '💰'
+}
 
 interface TreasureSectionProps {
   treasure: TreasureItem[]
@@ -181,39 +191,75 @@ export function TreasureSection({ treasure, onUpdate }: TreasureSectionProps) {
         <p className="text-sm text-muted-foreground">No treasure in this location.</p>
       ) : (
         <div className="space-y-1">
-          {treasure.map((item) => (
-            <div
-              key={item.id}
-              className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm ${item.collected ? 'opacity-50' : ''}`}
-            >
-              <button
-                onClick={() => toggleCollected(item.id)}
-                className="shrink-0 hover:scale-110 transition-transform"
-                title={item.collected ? 'Mark as uncollected' : 'Mark as collected'}
-              >
-                {item.collected ? '✅' : '💰'}
-              </button>
-              <span className={`font-medium ${item.collected ? 'line-through text-muted-foreground' : ''}`}>
-                {item.quantity > 1 && `${item.quantity}x `}{item.name}
-              </span>
-              {item.value && (
-                <Badge variant="outline" className="text-xs shrink-0">
-                  {item.value}
-                </Badge>
-              )}
-              {item.description && (
-                <span className="text-xs text-muted-foreground truncate">{item.description}</span>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="size-6 p-0 ml-auto text-muted-foreground hover:text-destructive shrink-0"
-                onClick={() => removeItem(item.id)}
-              >
-                <Trash2 className="size-3" />
-              </Button>
-            </div>
-          ))}
+          {treasure.map((item) => {
+            const isScroll = item.name.startsWith('Scroll of')
+            const isWeapon = item.description?.includes('Damage:')
+            return (
+              <div key={item.id} className={`rounded-md border overflow-hidden ${item.collected ? 'opacity-50' : ''}`}>
+                {/* Main row */}
+                <div className="flex items-center gap-2 px-3 py-2 text-sm">
+                  <button
+                    onClick={() => toggleCollected(item.id)}
+                    className="shrink-0 text-base leading-none hover:scale-110 transition-transform"
+                    title={item.collected ? 'Mark as uncollected' : 'Mark as collected'}
+                  >
+                    {itemIcon(item, item.collected)}
+                  </button>
+                  <span className={`font-medium flex-1 ${item.collected ? 'line-through text-muted-foreground' : ''}`}>
+                    {item.quantity > 1 && `${item.quantity}× `}{item.name}
+                  </span>
+                  {item.value && (
+                    <Badge variant="outline" className="text-xs shrink-0">{item.value}</Badge>
+                  )}
+                  {isWeapon && item.description && (
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {item.description.replace('Damage: ', '').split(' · ')[0]}
+                    </span>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="size-6 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                    onClick={() => removeItem(item.id)}
+                  >
+                    <Trash2 className="size-3" />
+                  </Button>
+                </div>
+                {/* Description + link row for magic/scrolls */}
+                {item.description && !isWeapon && (
+                  <div className="flex items-start justify-between gap-2 px-3 pb-2 border-t border-border/30 pt-1.5">
+                    <p className="text-xs text-muted-foreground italic flex-1">{item.description}</p>
+                    {item.compendiumId && item.isMagic && !isScroll && (
+                      <Link
+                        to="/realms/compendium/magic-items/$itemId"
+                        params={{ itemId: item.compendiumId }}
+                        className="text-xs text-amber-500 hover:underline shrink-0"
+                      >
+                        Details →
+                      </Link>
+                    )}
+                    {item.compendiumId && item.isMagic && isScroll && (
+                      <Link
+                        to="/realms/compendium/spells/$spellId"
+                        params={{ spellId: item.compendiumId }}
+                        className="text-xs text-purple-400 hover:underline shrink-0"
+                      >
+                        Spell →
+                      </Link>
+                    )}
+                  </div>
+                )}
+                {/* Condition tag for weapons/gear */}
+                {isWeapon && item.description?.includes('Condition:') && (
+                  <div className="px-3 pb-1.5">
+                    <Badge variant="secondary" className="text-xs">
+                      {item.description.split('Condition: ')[1]}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

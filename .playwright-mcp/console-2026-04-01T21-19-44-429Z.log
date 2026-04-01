@@ -490,3 +490,65 @@ This will cause a hydration error.%s <button> button
 See this log for the ancestor stack trace. button <button> @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2162
 [ 5619544ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
 [ 5619551ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
+[ 5667391ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ http://localhost:3000/realms/pois/01KN5FACD18K79H2TNC127V9B5?room=01KN5M00SB2KTTFFYRSF3SS17Q:0
+[ 5667471ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:20102
+[ 5667722ms] [LOG] %c[RealmKeeper] Dev API installed → window.__realmKeeper color: #22d3ee; font-weight: bold @ http://localhost:3000/src/infrastructure/dev/devApi.ts:347
+[ 5680956ms] [ERROR] In HTML, %s cannot be a descendant of <%s>.
+This will cause a hydration error.%s <button> button 
+
+  ...
+    <Primitive.div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="group/tabs..." ref={null}>
+      <div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="group/tabs..." ref={null}>
+        <TabsList>
+        <TabsContent value="rooms" className="space-y-4 ...">
+          <TabsContent data-slot="tabs-content" className="flex-1 out..." value="rooms">
+            <Presence present={true}>
+              <Primitive.div data-state="active" data-orientation="horizontal" role="tabpanel" ...>
+                <div data-state="active" data-orientation="horizontal" role="tabpanel" aria-labelledby="radix-_r_1..." ...>
+                  <div>
+                  <div className="grid gap-4...">
+                    <div>
+                    <div className="space-y-3">
+                      <div>
+                      <RoomDetailPanel room={{id:"01KN5M...", ...}} index={2} npcs={[...]} ...>
+                        <div className="rounded-md...">
+                          <div>
+                          <div>
+                          <div>
+                          <div>
+                          <div>
+                          <div>
+                          <div className="space-y-2">
+                            <div>
+                            <div className="space-y-2">
+                              <RoomNPCCard npc={{id:"01KN5M...", ...}} onUpdateNPC={function handleUpdateNPC}>
+                                <div className={"rounded-..."}>
+>                                 <button
+>                                   onClick={function onClick}
+>                                   className="flex items-center gap-2 w-full p-2.5 text-left hover:bg-muted-foregroun..."
+>                                 >
+                                    <ChevronRight>
+                                    <Heart>
+                                    <a>
+                                    <DispositionBadge npc={{id:"01KN5M...", ...}} onUpdateNPC={function handleUpdateNPC}>
+                                      <span className="inline-fle...">
+                                        <Badge>
+>                                       <button
+>                                         onClick={function handleRoll}
+>                                         className="size-5 rounded flex items-center justify-center hover:bg-muted-fo..."
+>                                         title="Roll disposition (2d6)"
+>                                       >
+                                    ...
+                          ...
+                      ...
+        ...
+ @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2155
+[ 5680956ms] [ERROR] <%s> cannot contain a nested %s.
+See this log for the ancestor stack trace. button <button> @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2162
+[ 5703980ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
+[ 5703987ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
+[ 5709823ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ http://localhost:3000/realms/pois/01KN5M2JKVCQETA0ETWW85J80X:0
+[ 5709886ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:20102
+[ 5710121ms] [LOG] %c[RealmKeeper] Dev API installed → window.__realmKeeper color: #22d3ee; font-weight: bold @ http://localhost:3000/src/infrastructure/dev/devApi.ts:347
+[ 5710367ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
+[ 5710372ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
