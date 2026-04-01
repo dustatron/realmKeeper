@@ -52,3 +52,9 @@ This will cause a hydration error.%s <button> button
  @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2155
 [    1684ms] [ERROR] <%s> cannot contain a nested %s.
 See this log for the ancestor stack trace. button <button> @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2162
+[  319043ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
+[  319054ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
+[  371350ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
+[  371356ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
+[  386494ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
+[  386496ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues. @ http://localhost:3000/node_modules/.vite/deps/chunk-VAQHNJXF.js?v=4c344736:13592
