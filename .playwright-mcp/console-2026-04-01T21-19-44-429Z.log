@@ -66,3 +66,10 @@ This will cause a hydration error.%s <button> button
 See this log for the ancestor stack trace. button <button> @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2162
 [  680139ms] [WARNING] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. @ http://localhost:3000/node_modules/.vite/deps/chunk-RA6KIKMJ.js?v=4c344736:2148
 [  680140ms] [WARNING] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. @ http://localhost:3000/node_modules/.vite/deps/chunk-RA6KIKMJ.js?v=4c344736:2148
+[ 1023561ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1023598ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1023644ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1023694ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1023934ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1023994ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703
+[ 1024044ms] [ERROR] Unable to preventDefault inside passive event listener invocation. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=4c344736:2703

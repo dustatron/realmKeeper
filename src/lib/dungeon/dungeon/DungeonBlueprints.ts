@@ -369,7 +369,7 @@ export const DUNGEON_BLUEPRINTS: Record<DungeonTheme, DungeonBlueprint> = {
       { roomType: 'embalming_room', preferred: ['burial_niches', 'sarcophagus_chamber'], forbidden: ['treasure_vault', 'entrance'] },
       { roomType: 'treasure_vault', preferred: ['sarcophagus_chamber', 'guardian_chamber'], forbidden: ['entrance', 'embalming_room'] },
     ],
-    creaturePool: ['skeleton', 'zombie', 'mummy', 'wight', 'ghost', 'specter'],
+    creaturePool: ['Skeleton', 'Zombie', 'Mummy', 'Wight', 'Ghost', 'Wraith'],
     trapPool: TOMB_TRAPS,
     emptyRoomDescriptions: [
       'Dust motes drift in stale air. An overturned offering bowl lies forgotten.',
@@ -387,7 +387,7 @@ export const DUNGEON_BLUEPRINTS: Record<DungeonTheme, DungeonBlueprint> = {
     adjacencyRules: [
       { roomType: 'underground_pool', preferred: ['mushroom_garden', 'crystal_grotto'], forbidden: ['bat_roost'] },
     ],
-    creaturePool: ['giant_spider', 'giant_bat', 'cave_fisher', 'troglodyte', 'grick', 'purple_worm_young'],
+    creaturePool: ['Spider, Giant', 'Bat, Giant', 'Goblin', 'Grick', 'Troll', 'Purple Worm'],
     trapPool: CAVE_TRAPS,
     emptyRoomDescriptions: [
       'Water drips steadily from stalactites. The sound echoes endlessly.',
@@ -405,7 +405,7 @@ export const DUNGEON_BLUEPRINTS: Record<DungeonTheme, DungeonBlueprint> = {
       { roomType: 'altar_room', preferred: ['nave', 'reliquary'], forbidden: ['meditation_cells'] },
       { roomType: 'clergy_quarters', preferred: ['vestry', 'temple_library'], forbidden: ['altar_room'] },
     ],
-    creaturePool: ['cultist', 'acolyte', 'priest', 'animated_armor', 'gargoyle', 'shadow_demon'],
+    creaturePool: ['Cultist', 'Acolyte', 'Priest', 'Animated Armor', 'Gargoyle', 'Mage'],
     trapPool: TEMPLE_TRAPS,
     emptyRoomDescriptions: [
       'Faded murals depict forgotten gods. Their eyes seem to follow you.',
@@ -421,7 +421,7 @@ export const DUNGEON_BLUEPRINTS: Record<DungeonTheme, DungeonBlueprint> = {
     adjacencyRules: [
       { roomType: 'ore_processing', preferred: ['ore_vein', 'cart_tracks'], forbidden: ['flooded_level'] },
     ],
-    creaturePool: ['kobold', 'dwarf_ghost', 'rust_monster', 'earth_elemental', 'purple_worm_young', 'umber_hulk'],
+    creaturePool: ['Kobold', 'Goblin', 'Rust Monster', 'Elemental, Earth Lesser', 'Purple Worm', 'Duergar'],
     trapPool: [...UNIVERSAL_TRAPS, ...CAVE_TRAPS.filter((t) => t.themes.includes('mine'))],
     emptyRoomDescriptions: [
       'Rusted tools lie abandoned. The miners left in a hurry.',
@@ -438,7 +438,7 @@ export const DUNGEON_BLUEPRINTS: Record<DungeonTheme, DungeonBlueprint> = {
       { roomType: 'barracks', preferred: ['armory', 'mess_hall'], forbidden: ['throne_room', 'prison_block'] },
       { roomType: 'throne_room', preferred: ['war_room', 'secret_escape'], forbidden: ['barracks', 'mess_hall'] },
     ],
-    creaturePool: ['hobgoblin', 'orc', 'ogre', 'knight', 'veteran', 'warlord'],
+    creaturePool: ['Hobgoblin', 'Orc', 'Ogre', 'Knight', 'Guard', 'Orc, Chieftain'],
     trapPool: FORTRESS_TRAPS,
     emptyRoomDescriptions: [
       'Weapon racks stand empty. The garrison stripped it bare.',
@@ -454,7 +454,7 @@ export const DUNGEON_BLUEPRINTS: Record<DungeonTheme, DungeonBlueprint> = {
     adjacencyRules: [
       { roomType: 'smuggler_cache', preferred: ['maintenance_access', 'drain_grate'], forbidden: ['toxic_pool'] },
     ],
-    creaturePool: ['giant_rat', 'otyugh', 'wererat', 'ghoul', 'crocodile', 'black_pudding'],
+    creaturePool: ['Rat, Giant', 'Otyugh', 'Wererat', 'Ghoul', 'Crocodile', 'Black Pudding'],
     trapPool: SEWER_TRAPS,
     emptyRoomDescriptions: [
       'The stench is overwhelming. Something died here recently.',
@@ -470,7 +470,7 @@ export const DUNGEON_BLUEPRINTS: Record<DungeonTheme, DungeonBlueprint> = {
     adjacencyRules: [
       { roomType: 'ossuary', preferred: ['charnel_pit', 'burial_alcoves'], forbidden: ['caretaker_quarters'] },
     ],
-    creaturePool: ['skeleton', 'zombie', 'ghoul', 'wight', 'wraith', 'vampire_spawn'],
+    creaturePool: ['Skeleton', 'Zombie', 'Ghoul', 'Wight', 'Wraith', 'Vampire Spawn'],
     trapPool: CRYPT_TRAPS,
     emptyRoomDescriptions: [
       'Bones spill from cracked ossuary walls. There are too many.',
@@ -486,7 +486,7 @@ export const DUNGEON_BLUEPRINTS: Record<DungeonTheme, DungeonBlueprint> = {
     adjacencyRules: [
       { roomType: 'feeding_area', preferred: ['bone_pile', 'nest'], forbidden: ['entrance'] },
     ],
-    creaturePool: ['owlbear', 'troll', 'chimera', 'manticore', 'dragon_young', 'hydra'],
+    creaturePool: ['Owlbear', 'Troll', 'Chimera', 'Manticore', 'Griffon', 'Hydra'],
     trapPool: UNIVERSAL_TRAPS,
     emptyRoomDescriptions: [
       'Bones crunch underfoot. Meals from many creatures.',
@@ -502,7 +502,7 @@ export const DUNGEON_BLUEPRINTS: Record<DungeonTheme, DungeonBlueprint> = {
     adjacencyRules: [
       { roomType: 'sacred_pool', preferred: ['meditation_garden', 'offering_altar'], forbidden: ['pilgrim_shelter'] },
     ],
-    creaturePool: ['deva', 'couatl', 'guardian_naga', 'ki-rin', 'unicorn'],
+    creaturePool: ['Couatl', 'Unicorn', 'Naga', 'Sprite', 'Dryad', 'Pegasus'],
     trapPool: [...UNIVERSAL_TRAPS, ...TEMPLE_TRAPS.filter((t) => t.themes.includes('shrine'))],
     emptyRoomDescriptions: [
       'Flower petals carpet the floor. Offerings from pilgrims.',
@@ -518,7 +518,7 @@ export const DUNGEON_BLUEPRINTS: Record<DungeonTheme, DungeonBlueprint> = {
     adjacencyRules: [
       { roomType: 'prisoner_hold', preferred: ['sleeping_quarters'], forbidden: ['escape_tunnel', 'entrance'] },
     ],
-    creaturePool: ['bandit', 'bandit_captain', 'thug', 'spy', 'assassin'],
+    creaturePool: ['Bandit', 'Thug', 'Assassin', 'Guard', 'Gladiator', 'Pirate'],
     trapPool: UNIVERSAL_TRAPS,
     emptyRoomDescriptions: [
       'Playing cards scatter across a table. Game interrupted.',
@@ -534,7 +534,7 @@ export const DUNGEON_BLUEPRINTS: Record<DungeonTheme, DungeonBlueprint> = {
     adjacencyRules: [
       { roomType: 'summoning_circle', preferred: ['sacrifice_altar', 'ritual_pool'], forbidden: ['entrance'] },
     ],
-    creaturePool: ['cultist', 'cult_fanatic', 'shadow_demon', 'succubus', 'chain_devil', 'pit_fiend'],
+    creaturePool: ['Cultist', 'Mage', 'Shadow', 'Demon, Dretch', 'Demon, Vrock', 'Demon, Balor'],
     trapPool: CULTIST_TRAPS,
     emptyRoomDescriptions: [
       'Disturbing symbols cover every surface. Madness in paint.',
@@ -550,7 +550,7 @@ export const DUNGEON_BLUEPRINTS: Record<DungeonTheme, DungeonBlueprint> = {
     adjacencyRules: [
       { roomType: 'potion_workshop', preferred: ['ingredient_storage', 'garden_access'], forbidden: [] },
     ],
-    creaturePool: ['hag', 'scarecrow', 'will_o_wisp', 'animated_broom', 'black_cat', 'toad_familiar'],
+    creaturePool: ['Hag, Weald', 'Scarecrow', "Will-o'-wisp", 'Animated Armor', 'Rat', 'Doppelganger'],
     trapPool: UNIVERSAL_TRAPS,
     emptyRoomDescriptions: [
       'Dried herbs hang from every beam. The smell is overwhelming.',
@@ -566,7 +566,7 @@ export const DUNGEON_BLUEPRINTS: Record<DungeonTheme, DungeonBlueprint> = {
     adjacencyRules: [
       { roomType: 'smuggler_dock', preferred: ['treasure_grotto'], forbidden: ['underwater_passage'] },
     ],
-    creaturePool: ['sahuagin', 'merrow', 'sea_hag', 'giant_crab', 'giant_octopus', 'water_elemental'],
+    creaturePool: ['Sahuagin', 'Merfolk', 'Hag, Sea', 'Crab, Giant', 'Octopus, Giant', 'Elemental, Water Lesser'],
     trapPool: SEA_CAVE_TRAPS,
     emptyRoomDescriptions: [
       'Seaweed drapes the walls. High tide reaches here.',
@@ -582,7 +582,7 @@ export const DUNGEON_BLUEPRINTS: Record<DungeonTheme, DungeonBlueprint> = {
     adjacencyRules: [
       { roomType: 'young_nursery', preferred: ['primary_nest', 'water_source'], forbidden: ['entrance', 'territorial_marker'] },
     ],
-    creaturePool: ['dire_wolf', 'cave_bear', 'saber_tooth_tiger', 'giant_boar', 'winter_wolf'],
+    creaturePool: ['Wolf, Dire', 'Bear, Brown', 'Smilodon', 'Boar', 'Wolf, Winter'],
     trapPool: UNIVERSAL_TRAPS,
     emptyRoomDescriptions: [
       'Massive claw marks scar the stone. Territorial warnings.',
@@ -598,7 +598,7 @@ export const DUNGEON_BLUEPRINTS: Record<DungeonTheme, DungeonBlueprint> = {
     adjacencyRules: [
       { roomType: 'arcane_engine', preferred: ['storm_chamber', 'observation_deck'], forbidden: ['entrance'] },
     ],
-    creaturePool: ['air_elemental', 'djinni', 'aarakocra', 'griffon', 'cloud_giant', 'storm_giant'],
+    creaturePool: ['Elemental, Air Lesser', 'Djinni', 'Griffon', 'Giant, Cloud', 'Giant, Storm', 'Roc'],
     trapPool: FLOATING_TRAPS,
     emptyRoomDescriptions: [
       'Windows look out on clouds. The ground is far below.',
