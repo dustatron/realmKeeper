@@ -304,14 +304,13 @@ function POIsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <Label htmlFor="region-select">Region:</Label>
           <Select
             value={selectedRegionId}
             onValueChange={(value) => setSelectedRegionId(value)}
           >
-            <SelectTrigger id="region-select" className="w-48">
+            <SelectTrigger id="region-select" className="w-36 shrink-0">
               <SelectValue placeholder="All Regions" />
             </SelectTrigger>
             <SelectContent>
@@ -323,24 +322,26 @@ function POIsPage() {
               ))}
             </SelectContent>
           </Select>
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search POIs..."
+              className="pl-9"
+            />
+          </div>
         </div>
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search POIs..."
-            className="pl-9"
-          />
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex-1 sm:flex-none" onClick={handleGenerateDungeon} disabled={regions.length === 0}>
+            <Wand2 className="mr-2 size-4" />
+            Generate Dungeon
+          </Button>
+          <Button className="flex-1 sm:flex-none" onClick={() => openCreateDialog()}>
+            <Plus className="mr-2 size-4" />
+            New POI
+          </Button>
         </div>
-        <Button variant="outline" onClick={handleGenerateDungeon} disabled={regions.length === 0}>
-          <Wand2 className="mr-2 size-4" />
-          Generate Dungeon
-        </Button>
-        <Button onClick={() => openCreateDialog()}>
-          <Plus className="mr-2 size-4" />
-          New POI
-        </Button>
       </div>
 
       {/* POI Cards Grid - Grouped by Region */}
