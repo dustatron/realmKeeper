@@ -2,6 +2,8 @@
 
 A local-first Progressive Web App for Game Masters running living sandbox worlds. Built for iPad (works anywhere), fully offline, no account or backend required.
 
+Currently Supports Cairn Rpg and Shadowdark. 
+
 ## Why This Exists
 
 Running an open-world TTRPG campaign means tracking dozens of moving parts — factions scheming, NPCs with motives, weather, time, dungeons, rumors, relationships — all while staying present at the table. Existing tools either lock your data behind servers, require internet, or aren't designed for the GM-as-referee workflow.

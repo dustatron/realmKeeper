@@ -115,10 +115,10 @@ export function EquipmentTable({ items }: { items: CompendiumEquipment[] }) {
         <TableRow>
           {th("Name", "name")}
           {th("Category", "category")}
-          {th("Cost", "cost", "hidden sm:table-cell text-right")}
-          {th("Damage", "damage", "hidden sm:table-cell text-right")}
-          {showArmor && th("Armor", "armor", "hidden sm:table-cell text-right")}
-          {th("Slots", "slots", "hidden sm:table-cell text-right")}
+          {th("Cost", "cost", "hidden sm:table-cell text-left")}
+          {th("Damage", "damage", "hidden sm:table-cell text-left")}
+          {showArmor && th("Armor", "armor", "hidden sm:table-cell text-left")}
+          {th("Slots", "slots", "hidden sm:table-cell text-left")}
           <TableHead className="hidden md:table-cell">Properties</TableHead>
         </TableRow>
       </TableHeader>
@@ -169,18 +169,18 @@ export function EquipmentTable({ items }: { items: CompendiumEquipment[] }) {
                   {category}
                 </Badge>
               </TableCell>
-              <TableCell className="hidden sm:table-cell text-right text-sm tabular-nums">
+              <TableCell className="hidden sm:table-cell text-left text-sm tabular-nums">
                 {cost}
               </TableCell>
-              <TableCell className="hidden sm:table-cell text-right text-sm tabular-nums">
+              <TableCell className="hidden sm:table-cell text-left text-sm tabular-nums">
                 {damage}
               </TableCell>
               {showArmor && (
-                <TableCell className="hidden sm:table-cell text-right text-sm tabular-nums">
+                <TableCell className="hidden sm:table-cell text-left text-sm tabular-nums">
                   {armor}
                 </TableCell>
               )}
-              <TableCell className="hidden sm:table-cell text-right text-sm tabular-nums">
+              <TableCell className="hidden sm:table-cell text-left text-sm tabular-nums">
                 {slots}
               </TableCell>
               <TableCell className="hidden md:table-cell">

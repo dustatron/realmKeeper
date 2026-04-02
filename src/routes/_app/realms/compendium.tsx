@@ -643,6 +643,7 @@ function CompendiumPage() {
                   monsters={filteredMonsters}
                   starredIds={starredMonsterIds}
                   onToggleStar={handleToggleMonsterStar}
+                  systemId={systemId}
                 />
               </ScrollArea>
             )}
@@ -689,6 +690,7 @@ function CompendiumPage() {
                   spells={filteredSpells}
                   starredIds={starredSpellIds}
                   onToggleStar={handleToggleSpellStar}
+                  systemId={systemId}
                 />
               </ScrollArea>
             )}
