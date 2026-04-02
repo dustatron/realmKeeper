@@ -27,7 +27,7 @@ export class WeatherRepository {
 
   async getRecent(worldId: string, limit: number): Promise<WeatherHistory[]> {
     return this.store.query(
-      { query: 'SELECT * FROM weatherHistory WHERE worldId = $worldId ORDER BY createdAt DESC LIMIT $limit', bindValues: { $worldId: worldId, $limit: limit } }
+      { query: `SELECT * FROM weatherHistory WHERE worldId = $worldId ORDER BY createdAt DESC LIMIT ${limit}`, bindValues: { $worldId: worldId } }
     ) as WeatherHistory[]
   }
 

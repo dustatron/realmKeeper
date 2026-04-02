@@ -33,7 +33,7 @@ export class WorldEventRepository {
 
   async getRecent(worldId: string, limit: number): Promise<WorldEvent[]> {
     return this.store.query(
-      { query: 'SELECT * FROM worldEvents WHERE worldId = $worldId ORDER BY createdAt DESC LIMIT $limit', bindValues: { $worldId: worldId, $limit: limit } }
+      { query: `SELECT * FROM worldEvents WHERE worldId = $worldId ORDER BY createdAt DESC LIMIT ${limit}`, bindValues: { $worldId: worldId } }
     ) as WorldEvent[]
   }
 

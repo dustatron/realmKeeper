@@ -20,7 +20,7 @@ export class RollHistoryRepository {
 
   async getRecent(worldId: string, limit: number): Promise<RollHistory[]> {
     return this.store.query(
-      { query: 'SELECT * FROM rollHistory WHERE worldId = $worldId ORDER BY timestamp DESC LIMIT $limit', bindValues: { $worldId: worldId, $limit: limit } }
+      { query: `SELECT * FROM rollHistory WHERE worldId = $worldId ORDER BY timestamp DESC LIMIT ${limit}`, bindValues: { $worldId: worldId } }
     ) as RollHistory[]
   }
 
