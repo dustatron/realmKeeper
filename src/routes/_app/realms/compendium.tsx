@@ -690,6 +690,7 @@ function CompendiumPage() {
                   spells={filteredSpells}
                   starredIds={starredSpellIds}
                   onToggleStar={handleToggleSpellStar}
+                  systemId={systemId}
                 />
               </ScrollArea>
             )}

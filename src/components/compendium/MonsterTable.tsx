@@ -107,7 +107,7 @@ export function MonsterTable({
           <TableHead className="hidden sm:table-cell">Source</TableHead>
           {!isCairn && th("Lvl", "level", "hidden sm:table-cell text-right")}
           {!isCairn && th("AC", "ac", "hidden sm:table-cell text-right")}
-          {th(isCairn ? "Stats" : "HP", "hp", isCairn ? "hidden sm:table-cell" : "text-right")}
+          {th(isCairn ? "Stats" : "HP", "hp", isCairn ? "hidden sm:table-cell w-full" : "text-right")}
           {!isCairn && th("Attacks", "attacks", "hidden sm:table-cell")}
           {!isCairn && th("Align", "alignment", "hidden sm:table-cell")}
           {onToggleStar && <TableHead className="w-8" />}
@@ -169,7 +169,7 @@ export function MonsterTable({
                   {ac}
                 </TableCell>
               )}
-              <TableCell className={`text-sm tabular-nums ${isCairn ? "hidden sm:table-cell text-muted-foreground truncate max-w-[200px]" : "text-right"}`}>
+              <TableCell className={`text-sm tabular-nums ${isCairn ? "hidden sm:table-cell text-muted-foreground max-w-0 truncate" : "text-right"}`}>
                 {hp}
               </TableCell>
               {!isCairn && (

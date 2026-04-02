@@ -57,11 +57,14 @@ export function SpellTable({
   spells,
   starredIds,
   onToggleStar,
+  systemId = "",
 }: {
   spells: CompendiumSpell[];
   starredIds: string[];
   onToggleStar?: (id: string) => void;
+  systemId?: string;
 }) {
+  const isCairn = systemId === "system-cairn-2e";
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -106,10 +109,11 @@ export function SpellTable({
       <TableHeader>
         <TableRow>
           {th("Name", "name")}
-          {th("Tier / #", "tier")}
-          {th("Classes", "classes", "hidden sm:table-cell")}
-          {th("Range", "range", "hidden sm:table-cell")}
-          {th("Duration", "duration", "hidden sm:table-cell")}
+          {!isCairn && th("Tier / #", "tier")}
+          {isCairn && <TableHead className="w-full">Description</TableHead>}
+          {!isCairn && th("Classes", "classes", "hidden sm:table-cell")}
+          {!isCairn && th("Range", "range", "hidden sm:table-cell")}
+          {!isCairn && th("Duration", "duration", "hidden sm:table-cell")}
           {onToggleStar && <TableHead className="w-8" />}
         </TableRow>
       </TableHeader>
@@ -154,24 +158,33 @@ export function SpellTable({
                   {spell.name}
                 </Link>
               </TableCell>
-              <TableCell>
-                <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30 text-xs">
-                  {tier}
-                </Badge>
-              </TableCell>
-              <TableCell className="hidden sm:table-cell">
-                <div className="flex flex-wrap gap-1">
-                  {classes.length > 0
-                    ? classes.map((c) => (
-                        <Badge key={c} variant="outline" className="text-xs">
-                          {c}
-                        </Badge>
-                      ))
-                    : "—"}
-                </div>
-              </TableCell>
-              <TableCell className="hidden sm:table-cell text-sm">{range}</TableCell>
-              <TableCell className="hidden sm:table-cell text-sm">{duration}</TableCell>
+              {!isCairn && (
+                <TableCell>
+                  <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30 text-xs">
+                    {tier}
+                  </Badge>
+                </TableCell>
+              )}
+              {isCairn && (
+                <TableCell className="text-sm text-muted-foreground max-w-0 truncate">
+                  {spell.description || "—"}
+                </TableCell>
+              )}
+              {!isCairn && (
+                <TableCell className="hidden sm:table-cell">
+                  <div className="flex flex-wrap gap-1">
+                    {classes.length > 0
+                      ? classes.map((c) => (
+                          <Badge key={c} variant="outline" className="text-xs">
+                            {c}
+                          </Badge>
+                        ))
+                      : "—"}
+                  </div>
+                </TableCell>
+              )}
+              {!isCairn && <TableCell className="hidden sm:table-cell text-sm">{range}</TableCell>}
+              {!isCairn && <TableCell className="hidden sm:table-cell text-sm">{duration}</TableCell>}
               {onToggleStar && (
                 <TableCell className="text-center">
                   <button

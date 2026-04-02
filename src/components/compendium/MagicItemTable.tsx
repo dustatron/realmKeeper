@@ -92,7 +92,7 @@ export function MagicItemTable({
         <TableRow>
           {th("Name", "name")}
           {th("Source", "source", "hidden sm:table-cell")}
-          {th("Details", "details", "hidden sm:table-cell")}
+          {th("Details", "details", "hidden sm:table-cell w-full")}
           {onToggleStar && <TableHead className="w-8" />}
         </TableRow>
       </TableHeader>
@@ -139,7 +139,7 @@ export function MagicItemTable({
                   {isCustom ? "Custom" : sd.system}
                 </Badge>
               </TableCell>
-              <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+              <TableCell className="hidden sm:table-cell text-sm text-muted-foreground max-w-0 truncate">
                 {details}
               </TableCell>
               {onToggleStar && (
