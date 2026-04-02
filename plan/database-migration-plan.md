@@ -4,9 +4,27 @@
 
 Replace Dexie.js (IndexedDB wrapper) with **PGlite** (SQLite in-browser via WASM) for local storage, and **Electric SQL** as the sync layer between devices (iPad ↔ desktop).
 
-**Why not Dexie Cloud:** Unreliable in practice; adds a third-party dependency on their cloud service.  
-**Why not Convex:** Not a good fit for a local-first, offline-capable app. Requires network for all reads/writes.  
-**Why PGlite + Electric:** True local-first (reads/writes never need network), real SQL queries, Electric SQL handles sync as a separate concern we can bolt on after the local migration is solid.
+### Options Evaluated
+
+| Option | Verdict | Reason |
+|---|---|---|
+| **Dexie Cloud** | ❌ No | Unreliable in practice; sync broke unpredictably; third-party dependency on their cloud |
+| **Convex** | ❌ No | Not local-first — requires network for every read/write; no offline support |
+| **TanStack DB** | ❌ No | Designed for sync-first architectures; no IndexedDB persistence for large data; LocalStorage collection has ~5MB cap; built for small real-time documents not 20MB realm files |
+| **PartyKit / Liveblocks** | ❌ No | Designed for small real-time documents; would choke on 20MB realm files |
+| **Yjs / Automerge (CRDTs)** | ❌ No | CRDT overhead on 20MB structured data is expensive; designed for collaborative text/small docs |
+| **Turso embedded replica** | ❌ No | Embedded replica requires native file I/O — Node.js only. Browser client is HTTP-to-remote only, which requires network for reads/writes. Not local-first. |
+| **Anytype / any-sync** | ❌ No | Their local-first + P2P sync is excellent but built on a custom Go middleware (`anytype-heart`) with a proprietary CRDT protocol — a multi-year engineering investment, not applicable to a browser PWA |
+| **PGlite + Electric SQL** | ✅ Yes | True local-first (WASM SQLite in browser, persists to OPFS/IndexedDB); row-level sync means 20MB realm = only changed rows sync; Electric cloud handles "works from anywhere" without self-hosting; sync is opt-in and additive |
+
+### Why PGlite + Electric SQL
+
+- Reads/writes never need network — app works fully offline
+- Real SQL queries locally
+- Row-level sync — 20MB realm files are irrelevant, only deltas move
+- Electric SQL is opt-in; Phase 1 (local swap) ships independently
+- Electric cloud eliminates the need to self-host a server
+- Each user's PGlite database is isolated in their browser by default — no auth needed for the local phase; Electric tokens handle the sync phase
 
 ---
 
