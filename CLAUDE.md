@@ -52,6 +52,8 @@ npm run preview    # preview production build
 
 **NEVER commit feature work directly to `main`.** Always create a feature branch first:
 
+make sure you do `feature/` or `bugfix/` or `cleanup/` when creating branches
+
 ```bash
 git checkout -b feature/short-description
 # do the work
