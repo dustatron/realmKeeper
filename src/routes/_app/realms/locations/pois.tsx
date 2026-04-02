@@ -441,9 +441,7 @@ function POIsPage() {
                     <td className="px-3 py-2 hidden md:table-cell">
                       {(() => {
                         const isDungeonRoom = poi.type === 'dungeon' && parent?.type === 'dungeon'
-                        const label = isDungeonRoom
-                          ? (poi.subtypeLabel ?? 'Room')
-                          : poi.type
+                        const label = isDungeonRoom ? 'Dungeon Room' : poi.type
                         const variant = poi.type === 'settlement' ? 'default'
                           : isDungeonRoom ? 'secondary'
                           : poi.type === 'dungeon' ? 'destructive'
