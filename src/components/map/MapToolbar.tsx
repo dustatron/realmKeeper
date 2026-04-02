@@ -41,7 +41,7 @@ export function MapToolbar({
   onTogglePoiSelectMode,
 }: MapToolbarProps) {
   return (
-    <div className="flex items-center gap-2 p-2 bg-background/95 backdrop-blur border-b">
+    <div className="flex flex-wrap items-center gap-2 p-2 bg-background/95 backdrop-blur border-b">
       <div className="mr-auto" />
 
       <div className="flex items-center border rounded-md">

@@ -231,12 +231,17 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
         <TabsContent value="overview">
           <div className="space-y-6">
             {/* Favorites */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Map className="size-5 text-amber-500" />
-                    NPCs
+                    <Link
+                      to="/realms/npcs"
+                      className="flex items-center gap-2 hover:underline"
+                    >
+                      <Map className="size-5 text-amber-500" />
+                      NPCs
+                    </Link>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -262,8 +267,14 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Map className="size-5 text-amber-500" />
-                    Monsters
+                    <Link
+                      to="/realms/compendium"
+                      search={{ tab: "monsters" }}
+                      className="flex items-center gap-2 hover:underline"
+                    >
+                      <Map className="size-5 text-amber-500" />
+                      Monsters
+                    </Link>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -289,8 +300,14 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Gem className="size-5 text-amber-500" />
-                    Magic Items
+                    <Link
+                      to="/realms/compendium"
+                      search={{ tab: "magic-items" }}
+                      className="flex items-center gap-2 hover:underline"
+                    >
+                      <Gem className="size-5 text-amber-500" />
+                      Magic Items
+                    </Link>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -324,8 +341,14 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Wand2 className="size-5 text-amber-500" />
-                    Spells
+                    <Link
+                      to="/realms/compendium"
+                      search={{ tab: "spells" }}
+                      className="flex items-center gap-2 hover:underline"
+                    >
+                      <Wand2 className="size-5 text-amber-500" />
+                      Spells
+                    </Link>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -359,8 +382,13 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Map className="size-5 text-amber-500" />
-                    Locations
+                    <Link
+                      to="/realms/locations/starred"
+                      className="flex items-center gap-2 hover:underline"
+                    >
+                      <Map className="size-5 text-amber-500" />
+                      Locations
+                    </Link>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

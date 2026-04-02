@@ -14,9 +14,9 @@ export function FilterBar({
   children,
 }: FilterBarProps) {
   return (
-    <Card className="px-6 w-2/3">
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
+    <Card className="px-6 w-full">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-40">
           <Input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
