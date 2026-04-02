@@ -158,12 +158,14 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
         setData(result);
         setLoading(false);
       }
+    }).catch(() => {
+      if (mounted) setLoading(false);
     });
 
     return () => {
       mounted = false;
     };
-  }, [worldId, container]);
+  }, [worldId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading || !data || !realm) {
     return (

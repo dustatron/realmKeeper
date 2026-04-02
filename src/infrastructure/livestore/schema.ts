@@ -52,6 +52,7 @@ export const tables = {
 
 const state = State.SQLite.makeState({
   tables,
+  migrations: { strategy: 'auto' },
   materializers: {
     // SystemConfig
     'v1.SystemConfigCreated': (event) => systemConfigsTable.insert(event as any).onConflict('id', 'replace'),
