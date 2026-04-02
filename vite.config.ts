@@ -5,10 +5,18 @@ import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { livestoreDevtoolsPlugin } from '@livestore/devtools-vite'
 
 export default defineConfig({
+  worker: {
+    format: 'es',
+  },
   server: {
     port: 3000,
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
   },
   plugins: [
     tailwindcss(),
@@ -20,6 +28,7 @@ export default defineConfig({
     }),
     nitro(),
     viteReact(),
+    livestoreDevtoolsPlugin({ schemaPath: './src/infrastructure/livestore/schema.ts' }),
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
