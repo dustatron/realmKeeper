@@ -51,13 +51,17 @@ export function MonsterTable({
   monsters,
   starredIds,
   onToggleStar,
+  systemId = "",
 }: {
   monsters: CompendiumMonster[];
   starredIds: string[];
   onToggleStar?: (id: string) => void;
+  systemId?: string;
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const isCairn = systemId === "system-cairn-2e";
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -101,11 +105,11 @@ export function MonsterTable({
         <TableRow>
           {th("Name", "name")}
           <TableHead className="hidden sm:table-cell">Source</TableHead>
-          {th("Lvl", "level", "hidden sm:table-cell text-right")}
-          {th("AC", "ac", "hidden sm:table-cell text-right")}
-          {th("HP", "hp", "text-right")}
-          {th("Attacks", "attacks", "hidden sm:table-cell")}
-          {th("Align", "alignment", "hidden sm:table-cell")}
+          {!isCairn && th("Lvl", "level", "hidden sm:table-cell text-right")}
+          {!isCairn && th("AC", "ac", "hidden sm:table-cell text-right")}
+          {th(isCairn ? "Stats" : "HP", "hp", isCairn ? "hidden sm:table-cell" : "text-right")}
+          {!isCairn && th("Attacks", "attacks", "hidden sm:table-cell")}
+          {!isCairn && th("Align", "alignment", "hidden sm:table-cell")}
           {onToggleStar && <TableHead className="w-8" />}
         </TableRow>
       </TableHeader>
@@ -155,15 +159,25 @@ export function MonsterTable({
                   {isCustom ? "Custom" : sd.system}
                 </Badge>
               </TableCell>
-              <TableCell className="hidden sm:table-cell text-right text-sm tabular-nums">
-                {level}
+              {!isCairn && (
+                <TableCell className="hidden sm:table-cell text-right text-sm tabular-nums">
+                  {level}
+                </TableCell>
+              )}
+              {!isCairn && (
+                <TableCell className="hidden sm:table-cell text-right text-sm tabular-nums">
+                  {ac}
+                </TableCell>
+              )}
+              <TableCell className={`text-sm tabular-nums ${isCairn ? "hidden sm:table-cell text-muted-foreground truncate max-w-[200px]" : "text-right"}`}>
+                {hp}
               </TableCell>
-              <TableCell className="hidden sm:table-cell text-right text-sm tabular-nums">
-                {ac}
-              </TableCell>
-              <TableCell className="text-right text-sm tabular-nums">{hp}</TableCell>
-              <TableCell className="hidden sm:table-cell text-sm">{attacks}</TableCell>
-              <TableCell className="hidden sm:table-cell text-sm">{alignment}</TableCell>
+              {!isCairn && (
+                <TableCell className="hidden sm:table-cell text-sm">{attacks}</TableCell>
+              )}
+              {!isCairn && (
+                <TableCell className="hidden sm:table-cell text-sm">{alignment}</TableCell>
+              )}
               {onToggleStar && (
                 <TableCell className="text-center">
                   <button

@@ -643,6 +643,7 @@ function CompendiumPage() {
                   monsters={filteredMonsters}
                   starredIds={starredMonsterIds}
                   onToggleStar={handleToggleMonsterStar}
+                  systemId={systemId}
                 />
               </ScrollArea>
             )}
