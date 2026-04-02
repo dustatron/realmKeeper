@@ -72,7 +72,7 @@ function DevApiInstaller() {
 
 function RootComponent() {
   return (
-    <LiveStoreProvider schema={schema} adapter={adapter} boot={bootStore as any} batchUpdates={batchUpdates}>
+    <LiveStoreProvider schema={schema} adapter={adapter} boot={bootStore as any} batchUpdates={batchUpdates} disableDevtools>
       <ContainerProvider>
         <TooltipProvider>
           <DevApiInstaller />
