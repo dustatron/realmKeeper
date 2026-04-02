@@ -48,6 +48,19 @@ npm run build      # production build
 npm run preview    # preview production build
 ```
 
+## Git Workflow
+
+**NEVER commit feature work directly to `main`.** Always create a feature branch first:
+
+```bash
+git checkout -b feature/short-description
+# do the work
+git push -u origin feature/short-description
+# then open a PR
+```
+
+`main` is the stable branch. Direct commits to main are only acceptable for docs or config tweaks — never for code changes.
+
 ## Issue Tracking
 
 This project uses **bd (beads)** for issue tracking. Issues live in `.beads/issues.jsonl`.
