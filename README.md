@@ -25,7 +25,7 @@ Realm Keeper keeps everything local (your data, your device, your game), advance
 
 ## Getting Started
 
-**Prerequisites:** Node.js 18+ and pnpm
+**Prerequisites:** Node.js 20+ and pnpm
 
 ```bash
 # Install dependencies
@@ -43,17 +43,17 @@ pnpm preview
 
 ## Tech Stack
 
-| Layer | Tool |
-|---|---|
-| Framework | TanStack Start (Vite + React 19) |
-| Language | TypeScript (strict) |
-| Storage | Dexie.js (IndexedDB — no server) |
-| UI state | Zustand |
-| Styling | Tailwind CSS v4 + Radix UI primitives |
-| Rich text | Tiptap + react-markdown + remark-gfm |
-| Maps | MapLibre GL |
-| IDs | ULID (sortable, no server coordination) |
-| PWA | vite-plugin-pwa |
+| Layer     | Tool                                    |
+| --------- | --------------------------------------- |
+| Framework | TanStack Start (Vite + React 19)        |
+| Language  | TypeScript (strict)                     |
+| Storage   | Dexie.js (IndexedDB — no server)        |
+| UI state  | Zustand                                 |
+| Styling   | Tailwind CSS v4 + Radix UI primitives   |
+| Rich text | Tiptap + react-markdown + remark-gfm    |
+| Maps      | MapLibre GL                             |
+| IDs       | ULID (sortable, no server coordination) |
+| PWA       | vite-plugin-pwa                         |
 
 ## Architecture
 
