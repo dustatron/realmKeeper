@@ -4,6 +4,7 @@ import { AppSidebar } from '~/components/layout/app-sidebar'
 import { Header } from '~/components/layout/header'
 import { Main } from '~/components/layout/main'
 import { GlobalSearchPalette } from '~/components/layout/GlobalSearchPalette'
+import { RealmErrorBoundary } from '~/components/shared/RealmErrorBoundary'
 import { SidebarInset, SidebarProvider } from '~/components/ui/sidebar'
 import { useUIStore } from '~/ui/stores/uiStore'
 
@@ -33,7 +34,9 @@ function AppLayout() {
       <SidebarInset className="max-h-svh overflow-y-auto">
         <Header />
         <Main>
-          <Outlet />
+          <RealmErrorBoundary>
+            <Outlet />
+          </RealmErrorBoundary>
         </Main>
       </SidebarInset>
       <GlobalSearchPalette />
