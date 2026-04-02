@@ -27,7 +27,7 @@ export function usePOIBreadcrumb(poiId: string | null): POI[] {
                     )
                     SELECT * FROM breadcrumb ORDER BY depth DESC`,
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $poiId: poiId },
+            bindValues: { poiId },
           }
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [poiId] }

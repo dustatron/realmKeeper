@@ -9,14 +9,14 @@ export class WorldEventRepository {
 
   async getById(id: string): Promise<WorldEvent | undefined> {
     const rows = this.store.query(
-      { query: 'SELECT * FROM worldEvents WHERE id = $id', bindValues: { $id: id } }
+      { query: 'SELECT * FROM worldEvents WHERE id = $id', bindValues: { id } }
     ) as WorldEvent[]
     return rows[0] ?? undefined
   }
 
   async getByRealmId(worldId: string): Promise<WorldEvent[]> {
     return this.store.query(
-      { query: 'SELECT * FROM worldEvents WHERE worldId = $worldId', bindValues: { $worldId: worldId } }
+      { query: 'SELECT * FROM worldEvents WHERE worldId = $worldId', bindValues: { worldId } }
     ) as WorldEvent[]
   }
 
@@ -27,13 +27,13 @@ export class WorldEventRepository {
     day: number
   ): Promise<WorldEvent[]> {
     return this.store.query(
-      { query: 'SELECT * FROM worldEvents WHERE worldId = $worldId AND year = $year AND season = $season AND day = $day', bindValues: { $worldId: worldId, $year: year, $season: season, $day: day } }
+      { query: 'SELECT * FROM worldEvents WHERE worldId = $worldId AND year = $year AND season = $season AND day = $day', bindValues: { worldId, year, season, day } }
     ) as WorldEvent[]
   }
 
   async getRecent(worldId: string, limit: number): Promise<WorldEvent[]> {
     return this.store.query(
-      { query: `SELECT * FROM worldEvents WHERE worldId = $worldId ORDER BY createdAt DESC LIMIT ${limit}`, bindValues: { $worldId: worldId } }
+      { query: `SELECT * FROM worldEvents WHERE worldId = $worldId ORDER BY createdAt DESC LIMIT ${limit}`, bindValues: { worldId } }
     ) as WorldEvent[]
   }
 

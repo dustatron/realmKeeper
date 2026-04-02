@@ -135,7 +135,7 @@ function RegionDetailPage() {
   const poiIds = pois.map(p => p.id)
   const poiIdKey = poiIds.join(',')
   const poiEventPlaceholders = poiIds.map((_, i) => `$pid${i}`).join(', ')
-  const poiEventBindValues: Record<string, string> = Object.fromEntries(poiIds.map((id, i) => [`$pid${i}`, id]))
+  const poiEventBindValues: Record<string, string> = Object.fromEntries(poiIds.map((id, i) => [`pid${i}`, id]))
   const poiEvents = useQuery(queryDb({
     query: poiIds.length > 0
       ? `SELECT * FROM poiEvents WHERE poiId IN (${poiEventPlaceholders})`
@@ -150,7 +150,7 @@ function RegionDetailPage() {
       ? {
           query: 'SELECT * FROM factions WHERE worldId = $worldId AND regionId = $regionId',
           schema: Schema.Array(Schema.Unknown),
-          bindValues: { $worldId: region.worldId, $regionId: regionId },
+          bindValues: { worldId: region.worldId, regionId },
         }
       : { query: 'SELECT * FROM factions WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
     { deps: `${region?.worldId ?? ''}:${regionId}` }
@@ -158,7 +158,7 @@ function RegionDetailPage() {
 
   // Faction presences at POIs in this region
   const presencePlaceholders = poiIds.map((_, i) => `$ppid${i}`).join(', ')
-  const presenceBindValues: Record<string, string> = Object.fromEntries(poiIds.map((id, i) => [`$ppid${i}`, id]))
+  const presenceBindValues: Record<string, string> = Object.fromEntries(poiIds.map((id, i) => [`ppid${i}`, id]))
   const regionPresences = useQuery(queryDb({
     query: poiIds.length > 0
       ? `SELECT * FROM factionPresences WHERE poiId IN (${presencePlaceholders})`
@@ -173,7 +173,7 @@ function RegionDetailPage() {
       ? {
           query: 'SELECT * FROM factions WHERE worldId = $worldId',
           schema: Schema.Array(Schema.Unknown),
-          bindValues: { $worldId: realm.id },
+          bindValues: { worldId: realm.id },
         }
       : { query: 'SELECT * FROM factions WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
     { deps: realm?.id ?? '' }

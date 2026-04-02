@@ -59,7 +59,7 @@ function EventDetailPage() {
   const eventResults = useQuery(queryDb({
     query: 'SELECT * FROM poiEvents WHERE id = $id LIMIT 1',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: { $id: eventId ?? '' },
+    bindValues: { id: eventId ?? '' },
   }, { deps: eventId })) as POIEvent[]
   const event = eventResults[0]
 

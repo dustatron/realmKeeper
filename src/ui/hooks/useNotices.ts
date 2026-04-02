@@ -8,7 +8,7 @@ export function useNoticesByPoi(poiId: string | null) {
       ? 'SELECT * FROM notices WHERE poiId = $poiId'
       : 'SELECT * FROM notices WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: poiId ? { $poiId: poiId } : {},
+    bindValues: poiId ? { poiId } : {},
   }, { deps: [poiId] })) as Notice[]
 }
 
@@ -18,6 +18,6 @@ export function useNoticesByRegion(regionId: string | null) {
       ? 'SELECT * FROM notices WHERE regionId = $regionId'
       : 'SELECT * FROM notices WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: regionId ? { $regionId: regionId } : {},
+    bindValues: regionId ? { regionId } : {},
   }, { deps: [regionId] })) as Notice[]
 }

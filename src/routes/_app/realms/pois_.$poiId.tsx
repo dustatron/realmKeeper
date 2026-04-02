@@ -91,7 +91,7 @@ function POIDetailPage() {
       ? {
           query: 'SELECT * FROM poiEvents WHERE poiId = $poiId',
           schema: Schema.Array(Schema.Unknown),
-          bindValues: { $poiId: poiId },
+          bindValues: { poiId },
         }
       : { query: 'SELECT * FROM poiEvents WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
     { deps: poiId }

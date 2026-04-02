@@ -119,7 +119,7 @@ function CalendarPage() {
       ? 'SELECT * FROM poiEvents WHERE worldId = $worldId'
       : 'SELECT * FROM poiEvents WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: activeRealmId ? { $worldId: activeRealmId } : {},
+    bindValues: activeRealmId ? { worldId: activeRealmId } : {},
   }, { deps: [activeRealmId] })) as POIEvent[]
 
   const [createForm, setCreateForm] = useState({

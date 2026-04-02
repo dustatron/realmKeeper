@@ -9,7 +9,7 @@ export function usePOIChildren(parentPoiId: string | null) {
         ? {
             query: 'SELECT * FROM pois WHERE parentPoiId = $parentPoiId',
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $parentPoiId: parentPoiId },
+            bindValues: { parentPoiId },
           }
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [parentPoiId] }

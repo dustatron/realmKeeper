@@ -7,21 +7,21 @@ export class RealmNoteRepository {
   constructor(private store: Store<typeof schema>) {}
 
   async getById(id: string): Promise<RealmNote | undefined> {
-    const rows = this.store.query({ query: 'SELECT * FROM realmNotes WHERE id = $id', bindValues: { $id: id } }) as RealmNote[]
+    const rows = this.store.query({ query: 'SELECT * FROM realmNotes WHERE id = $id', bindValues: { id } }) as RealmNote[]
     return rows[0] ?? undefined
   }
 
   async getByRealmId(worldId: string): Promise<RealmNote[]> {
     return this.store.query({
       query: 'SELECT * FROM realmNotes WHERE worldId = $worldId ORDER BY sortOrder ASC',
-      bindValues: { $worldId: worldId },
+      bindValues: { worldId },
     }) as RealmNote[]
   }
 
   async getMainNote(worldId: string): Promise<RealmNote | undefined> {
     const rows = this.store.query({
       query: 'SELECT * FROM realmNotes WHERE worldId = $worldId AND isMain = 1 LIMIT 1',
-      bindValues: { $worldId: worldId },
+      bindValues: { worldId },
     }) as RealmNote[]
     return rows[0] ?? undefined
   }

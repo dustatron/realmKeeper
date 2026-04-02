@@ -8,7 +8,7 @@ export function useTimeline(worldId: string | null, limit = 50) {
       ? `SELECT * FROM worldEvents WHERE worldId = $worldId ORDER BY createdAt DESC LIMIT ${limit}`
       : 'SELECT * FROM worldEvents WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: worldId ? { $worldId: worldId } : {},
+    bindValues: worldId ? { worldId } : {},
   }, { deps: [worldId, limit] })) as WorldEvent[]
 }
 
@@ -18,6 +18,6 @@ export function useAllEvents(worldId: string | null) {
       ? 'SELECT * FROM worldEvents WHERE worldId = $worldId'
       : 'SELECT * FROM worldEvents WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: worldId ? { $worldId: worldId } : {},
+    bindValues: worldId ? { worldId } : {},
   }, { deps: [worldId] })) as WorldEvent[]
 }

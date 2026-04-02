@@ -8,7 +8,7 @@ export function useActiveRealm() {
   const results = useQuery(queryDb({
     query: 'SELECT * FROM worlds WHERE id = $id LIMIT 1',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: { $id: activeRealmId ?? '' },
+    bindValues: { id: activeRealmId ?? '' },
   }, { deps: [activeRealmId] })) as Realm[]
   return (activeRealmId ? results[0] : undefined) as Realm | undefined
 }

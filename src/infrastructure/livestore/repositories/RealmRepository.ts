@@ -7,17 +7,18 @@ import {
   worldUpdated,
   worldDeleted,
 } from '@infrastructure/livestore/events'
+import { worldsTable } from '../tables'
 
 export class RealmRepository implements IRealmRepository {
   constructor(private store: Store<typeof schema>) {}
 
   async getAll(): Promise<Realm[]> {
-    return this.store.query({ query: 'SELECT * FROM worlds', bindValues: {} }) as Realm[]
+    return this.store.query(worldsTable.select()) as Realm[]
   }
 
   async getById(id: string): Promise<Realm | undefined> {
     const results = this.store.query(
-      { query: 'SELECT * FROM worlds WHERE id = $id', bindValues: { $id: id } },
+      worldsTable.select().where({ id }),
     ) as Realm[]
     return results[0] ?? undefined
   }

@@ -7,6 +7,7 @@ import {
   factionRelationshipDeleted,
 } from '../events'
 import type { schema } from '../schema'
+import { factionRelationshipsTable } from '../tables'
 
 export class FactionRelationshipRepository
   implements IFactionRelationshipRepository
@@ -15,14 +16,14 @@ export class FactionRelationshipRepository
 
   async getById(id: string): Promise<FactionRelationship | undefined> {
     const results = this.store.query(
-      { query: 'SELECT * FROM factionRelationships WHERE id = $id', bindValues: { $id: id } }
+      factionRelationshipsTable.select().where({ id })
     ) as FactionRelationship[]
     return results[0] ?? undefined
   }
 
   async getByFactionId(factionId: string): Promise<FactionRelationship[]> {
     return this.store.query(
-      { query: 'SELECT * FROM factionRelationships WHERE factionId = $factionId', bindValues: { $factionId: factionId } }
+      factionRelationshipsTable.select().where({ factionId })
     ) as FactionRelationship[]
   }
 
@@ -31,7 +32,7 @@ export class FactionRelationshipRepository
     targetId: string
   ): Promise<FactionRelationship | undefined> {
     const results = this.store.query(
-      { query: 'SELECT * FROM factionRelationships WHERE factionId = $factionId AND targetId = $targetId LIMIT 1', bindValues: { $factionId: factionId, $targetId: targetId } }
+      { query: 'SELECT * FROM factionRelationships WHERE factionId = $factionId AND targetId = $targetId LIMIT 1', bindValues: { factionId, targetId } }
     ) as FactionRelationship[]
     return results[0] ?? undefined
   }

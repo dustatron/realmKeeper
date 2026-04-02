@@ -11,7 +11,7 @@ export function useEntityNotes(ownerType: 'poi' | 'region', ownerId: string | nu
                     WHERE ownerType = $ownerType AND ownerId = $ownerId
                     ORDER BY sortOrder ASC`,
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $ownerType: ownerType, $ownerId: ownerId },
+            bindValues: { ownerType, ownerId },
           }
         : { query: 'SELECT * FROM entityNotes WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [ownerType, ownerId] }

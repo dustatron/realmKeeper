@@ -41,7 +41,7 @@ export function useDayLog(
         ? {
             query: 'SELECT * FROM poiEvents WHERE worldId = $worldId',
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $worldId: worldId },
+            bindValues: { worldId },
           }
         : { query: 'SELECT * FROM poiEvents WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [worldId] }

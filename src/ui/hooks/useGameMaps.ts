@@ -12,7 +12,7 @@ export function useRealmMaps(worldId: string | null) {
         ? {
             query: 'SELECT * FROM gameMaps WHERE ownerRealmId = $worldId ORDER BY sortOrder ASC',
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $worldId: worldId },
+            bindValues: { worldId },
           }
         : { query: 'SELECT * FROM gameMaps WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [worldId] }
@@ -35,7 +35,7 @@ export function useAllRealmMaps(worldId: string | null) {
                     WHERE r.worldId = $worldId
                     ORDER BY sortOrder ASC`,
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $worldId: worldId },
+            bindValues: { worldId },
           }
         : { query: 'SELECT * FROM gameMaps WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [worldId] }
@@ -50,7 +50,7 @@ export function usePOIMaps(poiId: string | null) {
         ? {
             query: 'SELECT * FROM gameMaps WHERE ownerPoiId = $poiId ORDER BY sortOrder ASC',
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $poiId: poiId },
+            bindValues: { poiId },
           }
         : { query: 'SELECT * FROM gameMaps WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [poiId] }
@@ -65,7 +65,7 @@ export function useGameMap(mapId: string | null) {
         ? {
             query: 'SELECT * FROM gameMaps WHERE id = $mapId LIMIT 1',
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $mapId: mapId },
+            bindValues: { mapId },
           }
         : { query: 'SELECT * FROM gameMaps WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [mapId] }
@@ -81,7 +81,7 @@ export function usePOIsOnMap(mapId: string | null) {
         ? {
             query: 'SELECT * FROM pois WHERE mapRef = $mapId',
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $mapId: mapId },
+            bindValues: { mapId },
           }
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [mapId] }
@@ -99,7 +99,7 @@ export function usePathsOnMap(mapId: string | null) {
                     INNER JOIN pois fp ON paths.fromPoiId = fp.id AND fp.mapRef = $mapId
                     INNER JOIN pois tp ON paths.toPoiId = tp.id AND tp.mapRef = $mapId`,
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $mapId: mapId },
+            bindValues: { mapId },
           }
         : { query: 'SELECT * FROM paths WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [mapId] }

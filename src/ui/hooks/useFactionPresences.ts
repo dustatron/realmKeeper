@@ -9,7 +9,7 @@ export function useFactionPresencesByPoi(poiId: string | null) {
         ? {
             query: 'SELECT * FROM factionPresences WHERE poiId = $poiId',
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $poiId: poiId },
+            bindValues: { poiId },
           }
         : { query: 'SELECT * FROM factionPresences WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [poiId] }
@@ -24,7 +24,7 @@ export function useFactionPresencesByFaction(factionId: string | null) {
         ? {
             query: 'SELECT * FROM factionPresences WHERE factionId = $factionId',
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $factionId: factionId },
+            bindValues: { factionId },
           }
         : {
             query: 'SELECT * FROM factionPresences WHERE 1 = 0',

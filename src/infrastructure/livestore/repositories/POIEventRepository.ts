@@ -8,21 +8,21 @@ export class POIEventRepository implements IPOIEventRepository {
   constructor(private store: Store<typeof schema>) {}
 
   async getById(id: string): Promise<POIEvent | undefined> {
-    const rows = this.store.query({ query: 'SELECT * FROM poiEvents WHERE id = $id', bindValues: { $id: id } }) as POIEvent[]
+    const rows = this.store.query({ query: 'SELECT * FROM poiEvents WHERE id = $id', bindValues: { id } }) as POIEvent[]
     return rows[0] ?? undefined
   }
 
   async getByPoiId(poiId: string): Promise<POIEvent[]> {
-    return this.store.query({ query: 'SELECT * FROM poiEvents WHERE poiId = $poiId', bindValues: { $poiId: poiId } }) as POIEvent[]
+    return this.store.query({ query: 'SELECT * FROM poiEvents WHERE poiId = $poiId', bindValues: { poiId } }) as POIEvent[]
   }
 
   async getByRealmId(worldId: string): Promise<POIEvent[]> {
-    return this.store.query({ query: 'SELECT * FROM poiEvents WHERE worldId = $worldId', bindValues: { $worldId: worldId } }) as POIEvent[]
+    return this.store.query({ query: 'SELECT * FROM poiEvents WHERE worldId = $worldId', bindValues: { worldId } }) as POIEvent[]
   }
 
   async getActive(worldId: string): Promise<POIEvent[]> {
     return this.store.query(
-      { query: 'SELECT * FROM poiEvents WHERE worldId = $worldId AND isActive = 1', bindValues: { $worldId: worldId } },
+      { query: 'SELECT * FROM poiEvents WHERE worldId = $worldId AND isActive = 1', bindValues: { worldId } },
     ) as POIEvent[]
   }
 

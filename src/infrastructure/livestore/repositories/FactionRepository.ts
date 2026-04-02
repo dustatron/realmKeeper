@@ -7,33 +7,34 @@ import {
   factionDeleted,
 } from '../events'
 import type { schema } from '../schema'
+import { factionsTable } from '../tables'
 
 export class FactionRepository implements IFactionRepository {
   constructor(private store: Store<typeof schema>) {}
 
   async getById(id: string): Promise<Faction | undefined> {
     const results = this.store.query(
-      { query: 'SELECT * FROM factions WHERE id = $id', bindValues: { $id: id } }
+      factionsTable.select().where({ id })
     ) as Faction[]
     return results[0] ?? undefined
   }
 
   async getByRealmId(worldId: string): Promise<Faction[]> {
     return this.store.query(
-      { query: 'SELECT * FROM factions WHERE worldId = $worldId', bindValues: { $worldId: worldId } }
+      factionsTable.select().where({ worldId })
     ) as Faction[]
   }
 
   async getPartyFaction(worldId: string): Promise<Faction | undefined> {
     const results = this.store.query(
-      { query: 'SELECT * FROM factions WHERE worldId = $worldId AND isParty = 1 LIMIT 1', bindValues: { $worldId: worldId } }
+      { query: 'SELECT * FROM factions WHERE worldId = $worldId AND isParty = 1 LIMIT 1', bindValues: { worldId } }
     ) as Faction[]
     return results[0] ?? undefined
   }
 
   async getActive(worldId: string): Promise<Faction[]> {
     return this.store.query(
-      { query: "SELECT * FROM factions WHERE worldId = $worldId AND status = 'active'", bindValues: { $worldId: worldId } }
+      { query: "SELECT * FROM factions WHERE worldId = $worldId AND status = 'active'", bindValues: { worldId } }
     ) as Faction[]
   }
 

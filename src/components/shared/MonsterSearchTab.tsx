@@ -30,7 +30,7 @@ export function MonsterSearchTab({
       ? 'SELECT * FROM customCompendiumEntries WHERE worldId = $worldId'
       : 'SELECT * FROM customCompendiumEntries WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: worldId ? { $worldId: worldId } : {},
+    bindValues: worldId ? { worldId } : {},
   }, { deps: [worldId] })) as CustomCompendiumEntry[]
 
   const results = useMemo(() => {

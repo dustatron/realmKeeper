@@ -9,7 +9,7 @@ export function usePOIs(regionId: string | null) {
         ? {
             query: 'SELECT * FROM pois WHERE regionId = $regionId',
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $regionId: regionId },
+            bindValues: { regionId },
           }
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [regionId] }
@@ -24,7 +24,7 @@ export function usePOI(id: string | null) {
         ? {
             query: 'SELECT * FROM pois WHERE id = $id LIMIT 1',
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $id: id },
+            bindValues: { id },
           }
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [id] }
@@ -42,7 +42,7 @@ export function useRealmPOIs(worldId: string | null) {
                     INNER JOIN regions r ON p.regionId = r.id
                     WHERE r.worldId = $worldId`,
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $worldId: worldId },
+            bindValues: { worldId },
           }
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [worldId] }
@@ -61,7 +61,7 @@ export function useRecentVisitedPOIs(worldId: string | null, limit = 5) {
                     ORDER BY p.updatedAt DESC
                     LIMIT ${limit}`,
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $worldId: worldId },
+            bindValues: { worldId },
           }
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [worldId, limit] }
@@ -78,7 +78,7 @@ export function useStarredPOIs(worldId: string | null) {
                     INNER JOIN regions r ON p.regionId = r.id
                     WHERE r.worldId = $worldId AND p.starred = 1`,
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $worldId: worldId },
+            bindValues: { worldId },
           }
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [worldId] }

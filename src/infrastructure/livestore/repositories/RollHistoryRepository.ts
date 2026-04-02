@@ -8,19 +8,19 @@ export class RollHistoryRepository {
 
   async getByRealmId(worldId: string): Promise<RollHistory[]> {
     return this.store.query(
-      { query: 'SELECT * FROM rollHistory WHERE worldId = $worldId', bindValues: { $worldId: worldId } }
+      { query: 'SELECT * FROM rollHistory WHERE worldId = $worldId', bindValues: { worldId } }
     ) as RollHistory[]
   }
 
   async getByTableId(tableId: string): Promise<RollHistory[]> {
     return this.store.query(
-      { query: 'SELECT * FROM rollHistory WHERE tableId = $tableId', bindValues: { $tableId: tableId } }
+      { query: 'SELECT * FROM rollHistory WHERE tableId = $tableId', bindValues: { tableId } }
     ) as RollHistory[]
   }
 
   async getRecent(worldId: string, limit: number): Promise<RollHistory[]> {
     return this.store.query(
-      { query: `SELECT * FROM rollHistory WHERE worldId = $worldId ORDER BY timestamp DESC LIMIT ${limit}`, bindValues: { $worldId: worldId } }
+      { query: `SELECT * FROM rollHistory WHERE worldId = $worldId ORDER BY timestamp DESC LIMIT ${limit}`, bindValues: { worldId } }
     ) as RollHistory[]
   }
 

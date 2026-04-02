@@ -76,7 +76,7 @@ function FactionDetailPage() {
       ? {
           query: 'SELECT * FROM factionPresences WHERE factionId = $factionId',
           schema: Schema.Array(Schema.Unknown),
-          bindValues: { $factionId: factionId },
+          bindValues: { factionId },
         }
       : { query: 'SELECT * FROM factionPresences WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
     { deps: factionId }

@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
+import { queryDb, Schema } from "@livestore/livestore";
+import { useQuery } from "@livestore/react";
 import { useUIStore } from "~/ui/stores/uiStore";
 import { useActiveRealm } from "~/ui/hooks/useActiveRealm";
 import { useTimeline } from "~/ui/hooks/useTimeline";
@@ -12,11 +14,8 @@ import {
   getSpellsBySystemId,
   getMagicItemsBySystemId,
 } from "@domain/data/compendium";
-import {
-  executeGetDashboardData,
-  type DashboardData,
-} from "@application/use-cases/GetDashboardData";
 import { formatWorldDateTime } from "@domain/value-objects/WorldDate";
+import type { Faction } from "@domain/entities/Faction";
 import {
   Card,
   CardContent,
@@ -93,11 +92,25 @@ const WEATHER_SEVERITY_COLORS: Record<string, string> = {
 };
 
 export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
   const container = useContainer();
   const realm = useActiveRealm();
   const setSearchOpen = useUIStore((s) => s.setSearchOpen);
+
+  const factions = useQuery(queryDb({
+    query: worldId ? 'SELECT * FROM factions WHERE worldId = $worldId' : 'SELECT * FROM factions WHERE 1=0',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: { worldId: worldId ?? '' },
+  }, { deps: worldId })) as Faction[]
+
+  const allNPCs = useQuery(queryDb({
+    query: worldId ? 'SELECT id FROM npcs WHERE worldId = $worldId' : 'SELECT id FROM npcs WHERE 1=0',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: { worldId: worldId ?? '' },
+  }, { deps: worldId })) as { id: string }[]
+
+  const activeFactions = factions.filter(f => f.status === 'active' && !f.isParty)
+  const factionCount = factions.length
+  const npcCount = allNPCs.length
 
   // Settings state
   const [settingsDaysPerSeason, setSettingsDaysPerSeason] = useState(30);
@@ -143,31 +156,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
     }
   }, [realm?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    let mounted = true;
-    setLoading(true);
-
-    executeGetDashboardData(worldId, {
-      realmRepo: container.realmRepo,
-      factionRepo: container.factionRepo,
-      npcRepo: container.npcRepo,
-      worldEventRepo: container.worldEventRepo,
-      weatherRepo: container.weatherRepo,
-    }).then((result) => {
-      if (mounted) {
-        setData(result);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, [worldId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (loading || !data || !realm) {
+  if (!realm) {
     return (
       <div className="space-y-6 p-6">
         <Skeleton className="h-32 w-full" />
@@ -182,7 +171,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
     );
   }
 
-  const latestWeather = recentWeather[0] || data.latestWeather;
+  const latestWeather = recentWeather[0];
 
   const handleSaveSettings = async () => {
     await container.realmRepo.update({
@@ -475,15 +464,15 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                 <CardContent>
                   <div className="space-y-2">
                     <div className="text-2xl font-bold">
-                      {data.factionCount}
+                      {factionCount}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {data.activeFactions.length} active
+                      {activeFactions.length} active
                     </div>
-                    {data.activeFactions.length > 0 && (
+                    {activeFactions.length > 0 && (
                       <ScrollArea className="h-16">
                         <div className="flex flex-wrap gap-1">
-                          {data.activeFactions.slice(0, 5).map((faction) => (
+                          {activeFactions.slice(0, 5).map((faction) => (
                             <Badge
                               key={faction.id}
                               variant="outline"
@@ -492,9 +481,9 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                               {faction.name}
                             </Badge>
                           ))}
-                          {data.activeFactions.length > 5 && (
+                          {activeFactions.length > 5 && (
                             <Badge variant="outline" className="text-xs">
-                              +{data.activeFactions.length - 5} more
+                              +{activeFactions.length - 5} more
                             </Badge>
                           )}
                         </div>
@@ -514,7 +503,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    <div className="text-2xl font-bold">{data.npcCount}</div>
+                    <div className="text-2xl font-bold">{npcCount}</div>
                     <div className="text-sm text-muted-foreground">
                       Total characters
                     </div>

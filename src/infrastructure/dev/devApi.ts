@@ -72,7 +72,7 @@ function makeWorlds(store: Store<typeof schema>) {
     },
 
     async get(id: string): Promise<Realm | undefined> {
-      const rows = store.query({ query: 'SELECT * FROM worlds WHERE id = $id', bindValues: { $id: id } }) as Realm[]
+      const rows = store.query({ query: 'SELECT * FROM worlds WHERE id = $id', bindValues: { id } }) as Realm[]
       return rows[0] ?? undefined
     },
 
@@ -88,29 +88,29 @@ function makeWorlds(store: Store<typeof schema>) {
 
 async function cascadeDeletePoi(store: Store<typeof schema>, id: string): Promise<void> {
   // Recurse into children first
-  const children = store.query({ query: 'SELECT * FROM pois WHERE parentPoiId = $id', bindValues: { $id: id } }) as POI[]
+  const children = store.query({ query: 'SELECT * FROM pois WHERE parentPoiId = $id', bindValues: { id } }) as POI[]
   for (const child of children) {
     await cascadeDeletePoi(store, child.id)
   }
   // Unlink NPCs
-  const linkedNpcs = store.query({ query: 'SELECT * FROM npcs WHERE poiId = $id', bindValues: { $id: id } }) as NPC[]
+  const linkedNpcs = store.query({ query: 'SELECT * FROM npcs WHERE poiId = $id', bindValues: { id } }) as NPC[]
   for (const npc of linkedNpcs) {
     store.commit(npcUpdated({ ...npc, poiId: null, updatedAt: now() } as any))
   }
   // Delete paths referencing this POI
-  const pathsFrom = store.query({ query: 'SELECT * FROM paths WHERE fromPoiId = $id', bindValues: { $id: id } }) as Array<{ id: string }>
-  const pathsTo = store.query({ query: 'SELECT * FROM paths WHERE toPoiId = $id', bindValues: { $id: id } }) as Array<{ id: string }>
+  const pathsFrom = store.query({ query: 'SELECT * FROM paths WHERE fromPoiId = $id', bindValues: { id } }) as Array<{ id: string }>
+  const pathsTo = store.query({ query: 'SELECT * FROM paths WHERE toPoiId = $id', bindValues: { id } }) as Array<{ id: string }>
   const pathIds = new Set([...pathsFrom, ...pathsTo].map((p) => p.id))
   for (const pid of pathIds) {
     store.commit(pathDeleted({ id: pid }))
   }
   // Delete faction presences
-  const presences = store.query({ query: 'SELECT * FROM factionPresences WHERE poiId = $id', bindValues: { $id: id } }) as Array<{ id: string }>
+  const presences = store.query({ query: 'SELECT * FROM factionPresences WHERE poiId = $id', bindValues: { id } }) as Array<{ id: string }>
   for (const fp of presences) {
     store.commit(factionPresenceDeleted({ id: fp.id }))
   }
   // Delete POI events
-  const events = store.query({ query: 'SELECT * FROM poiEvents WHERE poiId = $id', bindValues: { $id: id } }) as Array<{ id: string }>
+  const events = store.query({ query: 'SELECT * FROM poiEvents WHERE poiId = $id', bindValues: { id } }) as Array<{ id: string }>
   for (const ev of events) {
     store.commit(poiEventDeleted({ id: ev.id }))
   }
@@ -126,11 +126,11 @@ function makeFactions(store: Store<typeof schema>) {
   return {
     async list(worldId?: string): Promise<Faction[]> {
       const wid = requireWorldId(worldId)
-      return store.query({ query: 'SELECT * FROM factions WHERE worldId = $wid', bindValues: { $wid: wid } }) as Faction[]
+      return store.query({ query: 'SELECT * FROM factions WHERE worldId = $wid', bindValues: { wid } }) as Faction[]
     },
 
     async get(id: string): Promise<Faction | undefined> {
-      const rows = store.query({ query: 'SELECT * FROM factions WHERE id = $id', bindValues: { $id: id } }) as Faction[]
+      const rows = store.query({ query: 'SELECT * FROM factions WHERE id = $id', bindValues: { id } }) as Faction[]
       return rows[0] ?? undefined
     },
 
@@ -163,7 +163,7 @@ function makeFactions(store: Store<typeof schema>) {
     },
 
     async update(id: string, partial: Partial<Omit<Faction, 'id' | 'createdAt'>>): Promise<Faction> {
-      const rows = store.query({ query: 'SELECT * FROM factions WHERE id = $id', bindValues: { $id: id } }) as Faction[]
+      const rows = store.query({ query: 'SELECT * FROM factions WHERE id = $id', bindValues: { id } }) as Faction[]
       const existing = rows[0]
       if (!existing) throw new Error(`Faction ${id} not found`)
       const updated = { ...existing, ...partial, updatedAt: now() }
@@ -185,11 +185,11 @@ function makeNpcs(store: Store<typeof schema>) {
   return {
     async list(worldId?: string): Promise<NPC[]> {
       const wid = requireWorldId(worldId)
-      return store.query({ query: 'SELECT * FROM npcs WHERE worldId = $wid', bindValues: { $wid: wid } }) as NPC[]
+      return store.query({ query: 'SELECT * FROM npcs WHERE worldId = $wid', bindValues: { wid } }) as NPC[]
     },
 
     async get(id: string): Promise<NPC | undefined> {
-      const rows = store.query({ query: 'SELECT * FROM npcs WHERE id = $id', bindValues: { $id: id } }) as NPC[]
+      const rows = store.query({ query: 'SELECT * FROM npcs WHERE id = $id', bindValues: { id } }) as NPC[]
       return rows[0] ?? undefined
     },
 
@@ -234,7 +234,7 @@ function makeNpcs(store: Store<typeof schema>) {
     },
 
     async update(id: string, partial: Partial<Omit<NPC, 'id' | 'createdAt'>>): Promise<NPC> {
-      const rows = store.query({ query: 'SELECT * FROM npcs WHERE id = $id', bindValues: { $id: id } }) as NPC[]
+      const rows = store.query({ query: 'SELECT * FROM npcs WHERE id = $id', bindValues: { id } }) as NPC[]
       const existing = rows[0]
       if (!existing) throw new Error(`NPC ${id} not found`)
       const updated = { ...existing, ...partial, updatedAt: now() }
@@ -256,10 +256,10 @@ function makePois(store: Store<typeof schema>) {
   return {
     async list(regionId?: string): Promise<POI[]> {
       if (regionId) {
-        return store.query({ query: 'SELECT * FROM pois WHERE regionId = $regionId', bindValues: { $regionId: regionId } }) as POI[]
+        return store.query({ query: 'SELECT * FROM pois WHERE regionId = $regionId', bindValues: { regionId } }) as POI[]
       }
       const wid = requireWorldId()
-      const regions = store.query({ query: 'SELECT * FROM regions WHERE worldId = $wid', bindValues: { $wid: wid } }) as Array<{ id: string }>
+      const regions = store.query({ query: 'SELECT * FROM regions WHERE worldId = $wid', bindValues: { wid } }) as Array<{ id: string }>
       if (regions.length === 0) return []
       const ids = regions.map((r) => `'${r.id}'`).join(', ')
       return store.query({ query: `SELECT * FROM pois WHERE regionId IN (${ids})`, bindValues: {} }) as POI[]
@@ -267,14 +267,14 @@ function makePois(store: Store<typeof schema>) {
 
     async listByWorld(worldId?: string): Promise<POI[]> {
       const wid = requireWorldId(worldId)
-      const regions = store.query({ query: 'SELECT * FROM regions WHERE worldId = $wid', bindValues: { $wid: wid } }) as Array<{ id: string }>
+      const regions = store.query({ query: 'SELECT * FROM regions WHERE worldId = $wid', bindValues: { wid } }) as Array<{ id: string }>
       if (regions.length === 0) return []
       const ids = regions.map((r) => `'${r.id}'`).join(', ')
       return store.query({ query: `SELECT * FROM pois WHERE regionId IN (${ids})`, bindValues: {} }) as POI[]
     },
 
     async get(id: string): Promise<POI | undefined> {
-      const rows = store.query({ query: 'SELECT * FROM pois WHERE id = $id', bindValues: { $id: id } }) as POI[]
+      const rows = store.query({ query: 'SELECT * FROM pois WHERE id = $id', bindValues: { id } }) as POI[]
       return rows[0] ?? undefined
     },
 
@@ -329,7 +329,7 @@ function makePois(store: Store<typeof schema>) {
     },
 
     async update(id: string, partial: Partial<Omit<POI, 'id' | 'createdAt'>>): Promise<POI> {
-      const rows = store.query({ query: 'SELECT * FROM pois WHERE id = $id', bindValues: { $id: id } }) as POI[]
+      const rows = store.query({ query: 'SELECT * FROM pois WHERE id = $id', bindValues: { id } }) as POI[]
       const existing = rows[0]
       if (!existing) throw new Error(`POI ${id} not found`)
       const updated = { ...existing, ...partial, updatedAt: now() }
@@ -338,7 +338,7 @@ function makePois(store: Store<typeof schema>) {
     },
 
     async listChildren(parentPoiId: string): Promise<POI[]> {
-      return store.query({ query: 'SELECT * FROM pois WHERE parentPoiId = $parentPoiId', bindValues: { $parentPoiId: parentPoiId } }) as POI[]
+      return store.query({ query: 'SELECT * FROM pois WHERE parentPoiId = $parentPoiId', bindValues: { parentPoiId } }) as POI[]
     },
 
     async delete(id: string): Promise<void> {
@@ -346,7 +346,7 @@ function makePois(store: Store<typeof schema>) {
     },
 
     async deleteChildren(parentPoiId: string): Promise<number> {
-      const children = store.query({ query: 'SELECT * FROM pois WHERE parentPoiId = $parentPoiId', bindValues: { $parentPoiId: parentPoiId } }) as POI[]
+      const children = store.query({ query: 'SELECT * FROM pois WHERE parentPoiId = $parentPoiId', bindValues: { parentPoiId } }) as POI[]
       for (const child of children) {
         await cascadeDeletePoi(store, child.id)
       }
@@ -363,11 +363,11 @@ function makeRegions(store: Store<typeof schema>) {
   return {
     async list(worldId?: string): Promise<Region[]> {
       const wid = requireWorldId(worldId)
-      return store.query({ query: 'SELECT * FROM regions WHERE worldId = $wid', bindValues: { $wid: wid } }) as Region[]
+      return store.query({ query: 'SELECT * FROM regions WHERE worldId = $wid', bindValues: { wid } }) as Region[]
     },
 
     async get(id: string): Promise<Region | undefined> {
-      const rows = store.query({ query: 'SELECT * FROM regions WHERE id = $id', bindValues: { $id: id } }) as Region[]
+      const rows = store.query({ query: 'SELECT * FROM regions WHERE id = $id', bindValues: { id } }) as Region[]
       return rows[0] ?? undefined
     },
 
@@ -396,7 +396,7 @@ function makeRegions(store: Store<typeof schema>) {
     },
 
     async update(id: string, partial: Partial<Omit<Region, 'id' | 'createdAt'>>): Promise<Region> {
-      const rows = store.query({ query: 'SELECT * FROM regions WHERE id = $id', bindValues: { $id: id } }) as Region[]
+      const rows = store.query({ query: 'SELECT * FROM regions WHERE id = $id', bindValues: { id } }) as Region[]
       const existing = rows[0]
       if (!existing) throw new Error(`Region ${id} not found`)
       const updated = { ...existing, ...partial, updatedAt: now() }
@@ -413,13 +413,13 @@ function makeRegions(store: Store<typeof schema>) {
 function makeRelationships(store: Store<typeof schema>) {
   return {
     async list(factionId: string): Promise<FactionRelationship[]> {
-      return store.query({ query: 'SELECT * FROM factionRelationships WHERE factionId = $factionId', bindValues: { $factionId: factionId } }) as FactionRelationship[]
+      return store.query({ query: 'SELECT * FROM factionRelationships WHERE factionId = $factionId', bindValues: { factionId } }) as FactionRelationship[]
     },
 
     async get(factionId: string, targetId: string): Promise<FactionRelationship | undefined> {
       const rows = store.query({
         query: 'SELECT * FROM factionRelationships WHERE factionId = $factionId AND targetId = $targetId LIMIT 1',
-        bindValues: { $factionId: factionId, $targetId: targetId },
+        bindValues: { factionId, targetId },
       }) as FactionRelationship[]
       return rows[0] ?? undefined
     },
@@ -432,7 +432,7 @@ function makeRelationships(store: Store<typeof schema>) {
     ): Promise<FactionRelationship> {
       const rows = store.query({
         query: 'SELECT * FROM factionRelationships WHERE factionId = $factionId AND targetId = $targetId LIMIT 1',
-        bindValues: { $factionId: factionId, $targetId: targetId },
+        bindValues: { factionId, targetId },
       }) as FactionRelationship[]
       const existing = rows[0]
 
@@ -468,19 +468,19 @@ function makeCompendium(store: Store<typeof schema>) {
   return {
     async list(worldId?: string): Promise<CustomCompendiumEntry[]> {
       const wid = requireWorldId(worldId)
-      return store.query({ query: 'SELECT * FROM customCompendiumEntries WHERE worldId = $wid', bindValues: { $wid: wid } }) as CustomCompendiumEntry[]
+      return store.query({ query: 'SELECT * FROM customCompendiumEntries WHERE worldId = $wid', bindValues: { wid } }) as CustomCompendiumEntry[]
     },
 
     async listByKind(kind: CustomCompendiumEntry['kind'], worldId?: string): Promise<CustomCompendiumEntry[]> {
       const wid = requireWorldId(worldId)
       return store.query({
         query: 'SELECT * FROM customCompendiumEntries WHERE worldId = $wid AND kind = $kind',
-        bindValues: { $wid: wid, $kind: kind },
+        bindValues: { wid, kind },
       }) as CustomCompendiumEntry[]
     },
 
     async get(id: string): Promise<CustomCompendiumEntry | undefined> {
-      const rows = store.query({ query: 'SELECT * FROM customCompendiumEntries WHERE id = $id', bindValues: { $id: id } }) as CustomCompendiumEntry[]
+      const rows = store.query({ query: 'SELECT * FROM customCompendiumEntries WHERE id = $id', bindValues: { id } }) as CustomCompendiumEntry[]
       return rows[0] ?? undefined
     },
 
@@ -506,7 +506,7 @@ function makeCompendium(store: Store<typeof schema>) {
     },
 
     async update(id: string, partial: Partial<Omit<CustomCompendiumEntry, 'id' | 'createdAt'>>): Promise<CustomCompendiumEntry> {
-      const rows = store.query({ query: 'SELECT * FROM customCompendiumEntries WHERE id = $id', bindValues: { $id: id } }) as CustomCompendiumEntry[]
+      const rows = store.query({ query: 'SELECT * FROM customCompendiumEntries WHERE id = $id', bindValues: { id } }) as CustomCompendiumEntry[]
       const existing = rows[0]
       if (!existing) throw new Error(`CustomCompendiumEntry ${id} not found`)
       const updated = { ...existing, ...partial, updatedAt: now() }

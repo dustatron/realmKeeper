@@ -9,7 +9,7 @@ export class EncounterTableRepository {
   async getById(id: string): Promise<EncounterTable | undefined> {
     const rows = this.store.query({
       query: 'SELECT * FROM encounterTables WHERE id = $id',
-      bindValues: { $id: id },
+      bindValues: { id },
     }) as EncounterTable[]
     return rows[0] ?? undefined
   }
@@ -17,7 +17,7 @@ export class EncounterTableRepository {
   async getByPoiId(poiId: string): Promise<EncounterTable | undefined> {
     const rows = this.store.query({
       query: 'SELECT * FROM encounterTables WHERE ownerPoiId = $poiId LIMIT 1',
-      bindValues: { $poiId: poiId },
+      bindValues: { poiId },
     }) as EncounterTable[]
     return rows[0] ?? undefined
   }
@@ -25,7 +25,7 @@ export class EncounterTableRepository {
   async getByRegionId(regionId: string): Promise<EncounterTable | undefined> {
     const rows = this.store.query({
       query: 'SELECT * FROM encounterTables WHERE ownerRegionId = $regionId LIMIT 1',
-      bindValues: { $regionId: regionId },
+      bindValues: { regionId },
     }) as EncounterTable[]
     return rows[0] ?? undefined
   }
@@ -33,7 +33,7 @@ export class EncounterTableRepository {
   async getByRealmId(worldId: string): Promise<EncounterTable[]> {
     return this.store.query({
       query: 'SELECT * FROM encounterTables WHERE worldId = $worldId',
-      bindValues: { $worldId: worldId },
+      bindValues: { worldId },
     }) as EncounterTable[]
   }
 

@@ -207,7 +207,7 @@ function CompendiumPage() {
       ? 'SELECT * FROM customCompendiumEntries WHERE worldId = $worldId'
       : 'SELECT * FROM customCompendiumEntries WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: activeRealmId ? { $worldId: activeRealmId } : {},
+    bindValues: activeRealmId ? { worldId: activeRealmId } : {},
   }, { deps: [activeRealmId] })) as import('@domain/entities/CustomCompendiumEntry').CustomCompendiumEntry[];
 
   const customMonsters = useMemo(

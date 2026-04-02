@@ -12,14 +12,14 @@ export class CustomCompendiumRepository {
 
   async getById(id: string): Promise<CustomCompendiumEntry | undefined> {
     const rows = this.store.query(
-      { query: 'SELECT * FROM customCompendiumEntries WHERE id = $id', bindValues: { $id: id } }
+      { query: 'SELECT * FROM customCompendiumEntries WHERE id = $id', bindValues: { id } }
     ) as CustomCompendiumEntry[]
     return rows[0] ?? undefined
   }
 
   async getByWorldId(worldId: string): Promise<CustomCompendiumEntry[]> {
     return this.store.query(
-      { query: 'SELECT * FROM customCompendiumEntries WHERE worldId = $worldId', bindValues: { $worldId: worldId } }
+      { query: 'SELECT * FROM customCompendiumEntries WHERE worldId = $worldId', bindValues: { worldId } }
     ) as CustomCompendiumEntry[]
   }
 
@@ -28,7 +28,7 @@ export class CustomCompendiumRepository {
     kind: CustomCompendiumEntry['kind']
   ): Promise<CustomCompendiumEntry[]> {
     return this.store.query(
-      { query: 'SELECT * FROM customCompendiumEntries WHERE worldId = $worldId AND kind = $kind', bindValues: { $worldId: worldId, $kind: kind } }
+      { query: 'SELECT * FROM customCompendiumEntries WHERE worldId = $worldId AND kind = $kind', bindValues: { worldId, kind } }
     ) as CustomCompendiumEntry[]
   }
 

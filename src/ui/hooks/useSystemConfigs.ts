@@ -11,7 +11,7 @@ export function useSystemConfig(id: string | null) {
   const results = useQuery(queryDb({
     query: 'SELECT * FROM systemConfigs WHERE id = $id LIMIT 1',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: { $id: id ?? '' },
+    bindValues: { id: id ?? '' },
   }, { deps: id ?? '' })) as SystemConfig[]
   return results[0] as SystemConfig | undefined
 }

@@ -8,7 +8,7 @@ export function useRumorsByPoi(poiId: string | null) {
       ? 'SELECT * FROM rumors WHERE poiId = $poiId'
       : 'SELECT * FROM rumors WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: poiId ? { $poiId: poiId } : {},
+    bindValues: poiId ? { poiId } : {},
   }, { deps: [poiId] })) as Rumor[]
 }
 
@@ -18,6 +18,6 @@ export function useRumorsByRegion(regionId: string | null) {
       ? 'SELECT * FROM rumors WHERE regionId = $regionId'
       : 'SELECT * FROM rumors WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: regionId ? { $regionId: regionId } : {},
+    bindValues: regionId ? { regionId } : {},
   }, { deps: [regionId] })) as Rumor[]
 }

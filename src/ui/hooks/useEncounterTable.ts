@@ -15,7 +15,7 @@ export function useEncounterTable(
         ? {
             query: 'SELECT * FROM encounterTables WHERE ownerPoiId = $poiId LIMIT 1',
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $poiId: poiId },
+            bindValues: { poiId },
           }
         : { query: 'SELECT * FROM encounterTables WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [poiId] }
@@ -28,7 +28,7 @@ export function useEncounterTable(
         ? {
             query: 'SELECT * FROM encounterTables WHERE ownerRegionId = $regionId LIMIT 1',
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $regionId: regionId },
+            bindValues: { regionId },
           }
         : { query: 'SELECT * FROM encounterTables WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [regionId] }

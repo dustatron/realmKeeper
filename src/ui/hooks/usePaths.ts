@@ -15,7 +15,7 @@ export function usePathsByPoi(poiId: string | null) {
             query: `SELECT DISTINCT * FROM paths
                     WHERE fromPoiId = $poiId OR toPoiId = $poiId`,
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $poiId: poiId },
+            bindValues: { poiId },
           }
         : { query: 'SELECT * FROM paths WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [poiId] }

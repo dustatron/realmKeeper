@@ -8,20 +8,20 @@ export class RumorRepository implements IRumorRepository {
   constructor(private store: Store<typeof schema>) {}
 
   async getById(id: string): Promise<Rumor | undefined> {
-    const rows = this.store.query({ query: 'SELECT * FROM rumors WHERE id = $id', bindValues: { $id: id } }) as Rumor[]
+    const rows = this.store.query({ query: 'SELECT * FROM rumors WHERE id = $id', bindValues: { id } }) as Rumor[]
     return rows[0] ?? undefined
   }
 
   async getByPoiId(poiId: string): Promise<Rumor[]> {
-    return this.store.query({ query: 'SELECT * FROM rumors WHERE poiId = $poiId', bindValues: { $poiId: poiId } }) as Rumor[]
+    return this.store.query({ query: 'SELECT * FROM rumors WHERE poiId = $poiId', bindValues: { poiId } }) as Rumor[]
   }
 
   async getByRegionId(regionId: string): Promise<Rumor[]> {
-    return this.store.query({ query: 'SELECT * FROM rumors WHERE regionId = $regionId', bindValues: { $regionId: regionId } }) as Rumor[]
+    return this.store.query({ query: 'SELECT * FROM rumors WHERE regionId = $regionId', bindValues: { regionId } }) as Rumor[]
   }
 
   async getByRealmId(worldId: string): Promise<Rumor[]> {
-    return this.store.query({ query: 'SELECT * FROM rumors WHERE worldId = $worldId', bindValues: { $worldId: worldId } }) as Rumor[]
+    return this.store.query({ query: 'SELECT * FROM rumors WHERE worldId = $worldId', bindValues: { worldId } }) as Rumor[]
   }
 
   async create(rumor: Rumor): Promise<void> {

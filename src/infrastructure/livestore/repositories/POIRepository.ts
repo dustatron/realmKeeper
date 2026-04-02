@@ -8,27 +8,27 @@ export class POIRepository implements IPOIRepository {
   constructor(private store: Store<typeof schema>) {}
 
   async getById(id: string): Promise<POI | undefined> {
-    const rows = this.store.query({ query: 'SELECT * FROM pois WHERE id = $id', bindValues: { $id: id } }) as POI[]
+    const rows = this.store.query({ query: 'SELECT * FROM pois WHERE id = $id', bindValues: { id } }) as POI[]
     return rows[0] ?? undefined
   }
 
   async getByRegionId(regionId: string): Promise<POI[]> {
-    return this.store.query({ query: 'SELECT * FROM pois WHERE regionId = $regionId', bindValues: { $regionId: regionId } }) as POI[]
+    return this.store.query({ query: 'SELECT * FROM pois WHERE regionId = $regionId', bindValues: { regionId } }) as POI[]
   }
 
   async getByParentPoiId(parentPoiId: string | null): Promise<POI[]> {
     if (parentPoiId === null) {
       return this.store.query({ query: 'SELECT * FROM pois WHERE parentPoiId IS NULL', bindValues: {} }) as POI[]
     }
-    return this.store.query({ query: 'SELECT * FROM pois WHERE parentPoiId = $parentPoiId', bindValues: { $parentPoiId: parentPoiId } }) as POI[]
+    return this.store.query({ query: 'SELECT * FROM pois WHERE parentPoiId = $parentPoiId', bindValues: { parentPoiId } }) as POI[]
   }
 
   async getChildren(poiId: string): Promise<POI[]> {
-    return this.store.query({ query: 'SELECT * FROM pois WHERE parentPoiId = $poiId', bindValues: { $poiId: poiId } }) as POI[]
+    return this.store.query({ query: 'SELECT * FROM pois WHERE parentPoiId = $poiId', bindValues: { poiId } }) as POI[]
   }
 
   async getByMapRef(mapRef: string): Promise<POI[]> {
-    return this.store.query({ query: 'SELECT * FROM pois WHERE mapRef = $mapRef', bindValues: { $mapRef: mapRef } }) as POI[]
+    return this.store.query({ query: 'SELECT * FROM pois WHERE mapRef = $mapRef', bindValues: { mapRef } }) as POI[]
   }
 
   async create(poi: POI): Promise<void> {

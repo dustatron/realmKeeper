@@ -5,24 +5,25 @@ import {
   systemConfigCreated,
   systemConfigUpdated,
 } from '@infrastructure/livestore/events'
+import { systemConfigsTable } from '../tables'
 
 export class SystemConfigRepository {
   constructor(private store: Store<typeof schema>) {}
 
   async getAll(): Promise<SystemConfig[]> {
-    return this.store.query({ query: 'SELECT * FROM systemConfigs', bindValues: {} }) as SystemConfig[]
+    return this.store.query(systemConfigsTable.select()) as SystemConfig[]
   }
 
   async getById(id: string): Promise<SystemConfig | undefined> {
     const results = this.store.query(
-      { query: 'SELECT * FROM systemConfigs WHERE id = $id', bindValues: { $id: id } },
+      systemConfigsTable.select().where({ id }),
     ) as SystemConfig[]
     return results[0] ?? undefined
   }
 
   async getBySlug(slug: string): Promise<SystemConfig | undefined> {
     const results = this.store.query(
-      { query: 'SELECT * FROM systemConfigs WHERE slug = $slug', bindValues: { $slug: slug } },
+      systemConfigsTable.select().where({ slug }),
     ) as SystemConfig[]
     return results[0] ?? undefined
   }

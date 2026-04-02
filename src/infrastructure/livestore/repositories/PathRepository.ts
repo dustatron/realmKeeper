@@ -8,7 +8,7 @@ export class PathRepository implements IPathRepository {
   constructor(private store: Store<typeof schema>) {}
 
   async getById(id: string): Promise<Path | undefined> {
-    const rows = this.store.query({ query: 'SELECT * FROM paths WHERE id = $id', bindValues: { $id: id } }) as Path[]
+    const rows = this.store.query({ query: 'SELECT * FROM paths WHERE id = $id', bindValues: { id } }) as Path[]
     return rows[0] ?? undefined
   }
 
@@ -16,7 +16,7 @@ export class PathRepository implements IPathRepository {
     const rows = this.store.query(
       {
         query: 'SELECT * FROM paths WHERE fromPoiId = $poiId OR toPoiId = $poiId',
-        bindValues: { $poiId: poiId },
+        bindValues: { poiId },
       },
     ) as Path[]
 

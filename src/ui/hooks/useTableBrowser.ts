@@ -22,7 +22,7 @@ export function useTableSet(id: string | null) {
       ? 'SELECT * FROM tableSets WHERE id = $id LIMIT 1'
       : 'SELECT * FROM tableSets WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: id ? { $id: id } : {},
+    bindValues: id ? { id } : {},
   }, { deps: [id] })) as TableSet[]
   return results[0] ?? undefined
 }
@@ -34,7 +34,7 @@ export function useTablesInSet(setId: string | null) {
       ? 'SELECT * FROM tableDefs WHERE setId = $setId'
       : 'SELECT * FROM tableDefs WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: setId && !isSystem ? { $setId: setId } : {},
+    bindValues: setId && !isSystem ? { setId } : {},
   }, { deps: [setId] })) as TableDef[]
 
   if (setId && isSystem) {
@@ -49,6 +49,6 @@ export function useRollHistory(worldId: string | null, limit = 20) {
       ? `SELECT * FROM rollHistory WHERE worldId = $worldId ORDER BY timestamp DESC LIMIT ${limit}`
       : 'SELECT * FROM rollHistory WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: worldId ? { $worldId: worldId } : {},
+    bindValues: worldId ? { worldId } : {},
   }, { deps: [worldId, limit] })) as RollHistory[]
 }

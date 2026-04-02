@@ -9,7 +9,7 @@ export class EntityNoteRepository {
   async getByOwner(ownerType: 'poi' | 'region', ownerId: string): Promise<EntityNote[]> {
     return this.store.query({
       query: "SELECT * FROM entityNotes WHERE ownerType = $ownerType AND ownerId = $ownerId ORDER BY sortOrder ASC",
-      bindValues: { $ownerType: ownerType, $ownerId: ownerId },
+      bindValues: { ownerType, ownerId },
     }) as EntityNote[]
   }
 

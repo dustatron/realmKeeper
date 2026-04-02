@@ -8,20 +8,20 @@ export class NoticeRepository implements INoticeRepository {
   constructor(private store: Store<typeof schema>) {}
 
   async getById(id: string): Promise<Notice | undefined> {
-    const rows = this.store.query({ query: 'SELECT * FROM notices WHERE id = $id', bindValues: { $id: id } }) as Notice[]
+    const rows = this.store.query({ query: 'SELECT * FROM notices WHERE id = $id', bindValues: { id } }) as Notice[]
     return rows[0] ?? undefined
   }
 
   async getByPoiId(poiId: string): Promise<Notice[]> {
-    return this.store.query({ query: 'SELECT * FROM notices WHERE poiId = $poiId', bindValues: { $poiId: poiId } }) as Notice[]
+    return this.store.query({ query: 'SELECT * FROM notices WHERE poiId = $poiId', bindValues: { poiId } }) as Notice[]
   }
 
   async getByRegionId(regionId: string): Promise<Notice[]> {
-    return this.store.query({ query: 'SELECT * FROM notices WHERE regionId = $regionId', bindValues: { $regionId: regionId } }) as Notice[]
+    return this.store.query({ query: 'SELECT * FROM notices WHERE regionId = $regionId', bindValues: { regionId } }) as Notice[]
   }
 
   async getByRealmId(worldId: string): Promise<Notice[]> {
-    return this.store.query({ query: 'SELECT * FROM notices WHERE worldId = $worldId', bindValues: { $worldId: worldId } }) as Notice[]
+    return this.store.query({ query: 'SELECT * FROM notices WHERE worldId = $worldId', bindValues: { worldId } }) as Notice[]
   }
 
   async create(notice: Notice): Promise<void> {

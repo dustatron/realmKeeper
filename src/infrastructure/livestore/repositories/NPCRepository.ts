@@ -13,14 +13,14 @@ export class NPCRepository implements INPCRepository {
 
   async getById(id: string): Promise<NPC | undefined> {
     const results = this.store.query(
-      { query: 'SELECT * FROM npcs WHERE id = $id', bindValues: { $id: id } },
+      { query: 'SELECT * FROM npcs WHERE id = $id', bindValues: { id } },
     ) as NPC[]
     return results[0] ?? undefined
   }
 
   async getByRealmId(worldId: string): Promise<NPC[]> {
     return this.store.query(
-      { query: 'SELECT * FROM npcs WHERE worldId = $worldId', bindValues: { $worldId: worldId } },
+      { query: 'SELECT * FROM npcs WHERE worldId = $worldId', bindValues: { worldId } },
     ) as NPC[]
   }
 
@@ -28,20 +28,20 @@ export class NPCRepository implements INPCRepository {
     return this.store.query(
       {
         query: 'SELECT * FROM npcs WHERE EXISTS (SELECT 1 FROM json_each(factionIds) WHERE value = $factionId)',
-        bindValues: { $factionId: factionId },
+        bindValues: { factionId },
       },
     ) as NPC[]
   }
 
   async getByRegionId(regionId: string): Promise<NPC[]> {
     return this.store.query(
-      { query: 'SELECT * FROM npcs WHERE regionId = $regionId', bindValues: { $regionId: regionId } },
+      { query: 'SELECT * FROM npcs WHERE regionId = $regionId', bindValues: { regionId } },
     ) as NPC[]
   }
 
   async getByPoiId(poiId: string): Promise<NPC[]> {
     return this.store.query(
-      { query: 'SELECT * FROM npcs WHERE poiId = $poiId', bindValues: { $poiId: poiId } },
+      { query: 'SELECT * FROM npcs WHERE poiId = $poiId', bindValues: { poiId } },
     ) as NPC[]
   }
 
@@ -49,7 +49,7 @@ export class NPCRepository implements INPCRepository {
     return this.store.query(
       {
         query: 'SELECT * FROM npcs WHERE worldId = $worldId AND EXISTS (SELECT 1 FROM json_each(tags) WHERE value = $tag)',
-        bindValues: { $worldId: worldId, $tag: tag },
+        bindValues: { worldId, tag },
       },
     ) as NPC[]
   }

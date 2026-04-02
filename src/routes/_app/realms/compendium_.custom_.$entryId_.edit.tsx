@@ -27,7 +27,7 @@ function CustomCompendiumEditPage() {
   const entryResults = useQuery(queryDb({
     query: 'SELECT * FROM customCompendiumEntries WHERE id = $id LIMIT 1',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: { $id: entryId },
+    bindValues: { id: entryId },
   }, { deps: [entryId] })) as import('@domain/entities/CustomCompendiumEntry').CustomCompendiumEntry[]
   const entry = entryResults[0] ?? null
 

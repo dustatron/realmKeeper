@@ -39,7 +39,7 @@ export function useGlobalSearch(worldId: string | null, query: string) {
       ? 'SELECT * FROM customCompendiumEntries WHERE worldId = $worldId'
       : 'SELECT * FROM customCompendiumEntries WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: worldId ? { $worldId: worldId } : {},
+    bindValues: worldId ? { worldId } : {},
   }, { deps: [worldId] })) as CustomCompendiumEntry[]
 
   const items = useMemo<SearchableItem[]>(() => {

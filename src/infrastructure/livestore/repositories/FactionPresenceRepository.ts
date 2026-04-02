@@ -7,26 +7,27 @@ import {
   factionPresenceDeleted,
 } from '../events'
 import type { schema } from '../schema'
+import { factionPresencesTable } from '../tables'
 
 export class FactionPresenceRepository implements IFactionPresenceRepository {
   constructor(private store: Store<typeof schema>) {}
 
   async getById(id: string): Promise<FactionPresence | undefined> {
     const results = this.store.query(
-      { query: 'SELECT * FROM factionPresences WHERE id = $id', bindValues: { $id: id } }
+      factionPresencesTable.select().where({ id })
     ) as FactionPresence[]
     return results[0] ?? undefined
   }
 
   async getByFactionId(factionId: string): Promise<FactionPresence[]> {
     return this.store.query(
-      { query: 'SELECT * FROM factionPresences WHERE factionId = $factionId', bindValues: { $factionId: factionId } }
+      factionPresencesTable.select().where({ factionId })
     ) as FactionPresence[]
   }
 
   async getByPoiId(poiId: string): Promise<FactionPresence[]> {
     return this.store.query(
-      { query: 'SELECT * FROM factionPresences WHERE poiId = $poiId', bindValues: { $poiId: poiId } }
+      factionPresencesTable.select().where({ poiId })
     ) as FactionPresence[]
   }
 

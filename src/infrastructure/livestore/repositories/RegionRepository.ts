@@ -7,20 +7,21 @@ import {
   regionUpdated,
   regionDeleted,
 } from '@infrastructure/livestore/events'
+import { regionsTable } from '../tables'
 
 export class RegionRepository implements IRegionRepository {
   constructor(private store: Store<typeof schema>) {}
 
   async getById(id: string): Promise<Region | undefined> {
     const results = this.store.query(
-      { query: 'SELECT * FROM regions WHERE id = $id', bindValues: { $id: id } },
+      regionsTable.select().where({ id }),
     ) as Region[]
     return results[0] ?? undefined
   }
 
   async getByRealmId(worldId: string): Promise<Region[]> {
     return this.store.query(
-      { query: 'SELECT * FROM regions WHERE worldId = $worldId', bindValues: { $worldId: worldId } },
+      regionsTable.select().where({ worldId }),
     ) as Region[]
   }
 

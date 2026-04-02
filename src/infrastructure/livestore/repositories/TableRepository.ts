@@ -26,7 +26,7 @@ export class TableRepository {
     const systemTable = getSystemTableById(id)
     if (systemTable) return systemTable
     const rows = this.store.query(
-      { query: 'SELECT * FROM tableDefs WHERE id = $id', bindValues: { $id: id } }
+      { query: 'SELECT * FROM tableDefs WHERE id = $id', bindValues: { id } }
     ) as TableDef[]
     return rows[0] ?? undefined
   }
@@ -34,14 +34,14 @@ export class TableRepository {
   async getTablesBySetId(setId: string): Promise<TableDef[]> {
     if (isSystemSetId(setId)) return getSystemTablesBySetId(setId)
     return this.store.query(
-      { query: 'SELECT * FROM tableDefs WHERE setId = $setId', bindValues: { $setId: setId } }
+      { query: 'SELECT * FROM tableDefs WHERE setId = $setId', bindValues: { setId } }
     ) as TableDef[]
   }
 
   async getTablesByTag(tag: string): Promise<TableDef[]> {
     const systemTables = getSystemTablesByTag(tag)
     const dbTables = this.store.query(
-      { query: 'SELECT * FROM tableDefs WHERE tags LIKE $pattern', bindValues: { $pattern: '%' + tag + '%' } }
+      { query: 'SELECT * FROM tableDefs WHERE tags LIKE $pattern', bindValues: { pattern: '%' + tag + '%' } }
     ) as TableDef[]
     return [...systemTables, ...dbTables]
   }
@@ -55,7 +55,7 @@ export class TableRepository {
     }
     const systemTables = getSystemTablesBySystemId(systemId)
     const dbTables = this.store.query(
-      { query: 'SELECT * FROM tableDefs WHERE systemId = $systemId', bindValues: { $systemId: systemId } }
+      { query: 'SELECT * FROM tableDefs WHERE systemId = $systemId', bindValues: { systemId } }
     ) as TableDef[]
     return [...systemTables, ...dbTables]
   }
@@ -64,7 +64,7 @@ export class TableRepository {
     const systemSet = getSystemSetById(id)
     if (systemSet) return systemSet
     const rows = this.store.query(
-      { query: 'SELECT * FROM tableSets WHERE id = $id', bindValues: { $id: id } }
+      { query: 'SELECT * FROM tableSets WHERE id = $id', bindValues: { id } }
     ) as TableSet[]
     return rows[0] ?? undefined
   }

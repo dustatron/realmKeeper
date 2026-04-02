@@ -9,7 +9,7 @@ export class WeatherRepository {
 
   async getById(id: string): Promise<WeatherHistory | undefined> {
     const rows = this.store.query(
-      { query: 'SELECT * FROM weatherHistory WHERE id = $id', bindValues: { $id: id } }
+      { query: 'SELECT * FROM weatherHistory WHERE id = $id', bindValues: { id } }
     ) as WeatherHistory[]
     return rows[0] ?? undefined
   }
@@ -21,13 +21,13 @@ export class WeatherRepository {
     day: number
   ): Promise<WeatherHistory[]> {
     return this.store.query(
-      { query: 'SELECT * FROM weatherHistory WHERE worldId = $worldId AND year = $year AND season = $season AND day = $day', bindValues: { $worldId: worldId, $year: year, $season: season, $day: day } }
+      { query: 'SELECT * FROM weatherHistory WHERE worldId = $worldId AND year = $year AND season = $season AND day = $day', bindValues: { worldId, year, season, day } }
     ) as WeatherHistory[]
   }
 
   async getRecent(worldId: string, limit: number): Promise<WeatherHistory[]> {
     return this.store.query(
-      { query: `SELECT * FROM weatherHistory WHERE worldId = $worldId ORDER BY createdAt DESC LIMIT ${limit}`, bindValues: { $worldId: worldId } }
+      { query: `SELECT * FROM weatherHistory WHERE worldId = $worldId ORDER BY createdAt DESC LIMIT ${limit}`, bindValues: { worldId } }
     ) as WeatherHistory[]
   }
 
