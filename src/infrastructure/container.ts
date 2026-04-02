@@ -1,49 +1,51 @@
-import { RealmRepository } from '@infrastructure/dexie/repositories/RealmRepository'
-import { RegionRepository } from '@infrastructure/dexie/repositories/RegionRepository'
-import { FactionRepository } from '@infrastructure/dexie/repositories/FactionRepository'
-import { NPCRepository } from '@infrastructure/dexie/repositories/NPCRepository'
-import { FactionRelationshipRepository } from '@infrastructure/dexie/repositories/FactionRelationshipRepository'
-import { WorldEventRepository } from '@infrastructure/dexie/repositories/WorldEventRepository'
-import { WeatherRepository } from '@infrastructure/dexie/repositories/WeatherRepository'
-import { RealmNoteRepository } from '@infrastructure/dexie/repositories/RealmNoteRepository'
-import { POIRepository } from '@infrastructure/dexie/repositories/POIRepository'
-import { PathRepository } from '@infrastructure/dexie/repositories/PathRepository'
-import { TableRepository } from '@infrastructure/dexie/repositories/TableRepository'
-import { RollHistoryRepository } from '@infrastructure/dexie/repositories/RollHistoryRepository'
-import { SystemConfigRepository } from '@infrastructure/dexie/repositories/SystemConfigRepository'
-import { FactionPresenceRepository } from '@infrastructure/dexie/repositories/FactionPresenceRepository'
-import { POIEventRepository } from '@infrastructure/dexie/repositories/POIEventRepository'
-import { GameMapRepository } from '@infrastructure/dexie/repositories/GameMapRepository'
-import { RumorRepository } from '@infrastructure/dexie/repositories/RumorRepository'
-import { NoticeRepository } from '@infrastructure/dexie/repositories/NoticeRepository'
-import { EncounterTableRepository } from '@infrastructure/dexie/repositories/EncounterTableRepository'
-import { EntityNoteRepository } from '@infrastructure/dexie/repositories/EntityNoteRepository'
-import { CustomCompendiumRepository } from '@infrastructure/dexie/repositories/CustomCompendiumRepository'
+import type { Store } from '@livestore/livestore'
+import type { schema } from '@infrastructure/livestore/schema'
+import { RealmRepository } from '@infrastructure/livestore/repositories/RealmRepository'
+import { RegionRepository } from '@infrastructure/livestore/repositories/RegionRepository'
+import { FactionRepository } from '@infrastructure/livestore/repositories/FactionRepository'
+import { NPCRepository } from '@infrastructure/livestore/repositories/NPCRepository'
+import { FactionRelationshipRepository } from '@infrastructure/livestore/repositories/FactionRelationshipRepository'
+import { WorldEventRepository } from '@infrastructure/livestore/repositories/WorldEventRepository'
+import { WeatherRepository } from '@infrastructure/livestore/repositories/WeatherRepository'
+import { RealmNoteRepository } from '@infrastructure/livestore/repositories/RealmNoteRepository'
+import { POIRepository } from '@infrastructure/livestore/repositories/POIRepository'
+import { PathRepository } from '@infrastructure/livestore/repositories/PathRepository'
+import { TableRepository } from '@infrastructure/livestore/repositories/TableRepository'
+import { RollHistoryRepository } from '@infrastructure/livestore/repositories/RollHistoryRepository'
+import { SystemConfigRepository } from '@infrastructure/livestore/repositories/SystemConfigRepository'
+import { FactionPresenceRepository } from '@infrastructure/livestore/repositories/FactionPresenceRepository'
+import { POIEventRepository } from '@infrastructure/livestore/repositories/POIEventRepository'
+import { GameMapRepository } from '@infrastructure/livestore/repositories/GameMapRepository'
+import { RumorRepository } from '@infrastructure/livestore/repositories/RumorRepository'
+import { NoticeRepository } from '@infrastructure/livestore/repositories/NoticeRepository'
+import { EncounterTableRepository } from '@infrastructure/livestore/repositories/EncounterTableRepository'
+import { EntityNoteRepository } from '@infrastructure/livestore/repositories/EntityNoteRepository'
+import { CustomCompendiumRepository } from '@infrastructure/livestore/repositories/CustomCompendiumRepository'
 import { EventBus } from '@infrastructure/event-bus/EventBus'
 
-export function createContainer() {
+export function createContainer(store: Store<typeof schema>) {
   return {
-    realmRepo: new RealmRepository(),
-    regionRepo: new RegionRepository(),
-    factionRepo: new FactionRepository(),
-    npcRepo: new NPCRepository(),
-    factionRelationshipRepo: new FactionRelationshipRepository(),
-    worldEventRepo: new WorldEventRepository(),
-    weatherRepo: new WeatherRepository(),
-    realmNoteRepo: new RealmNoteRepository(),
-    poiRepo: new POIRepository(),
-    pathRepo: new PathRepository(),
-    tableRepo: new TableRepository(),
-    rollHistoryRepo: new RollHistoryRepository(),
-    systemConfigRepo: new SystemConfigRepository(),
-    factionPresenceRepo: new FactionPresenceRepository(),
-    poiEventRepo: new POIEventRepository(),
-    gameMapRepo: new GameMapRepository(),
-    rumorRepo: new RumorRepository(),
-    noticeRepo: new NoticeRepository(),
-    encounterTableRepo: new EncounterTableRepository(),
-    entityNoteRepo: new EntityNoteRepository(),
-    customCompendiumRepo: new CustomCompendiumRepository(),
+    realmRepo: new RealmRepository(store),
+    regionRepo: new RegionRepository(store),
+    factionRepo: new FactionRepository(store),
+    npcRepo: new NPCRepository(store),
+    factionRelationshipRepo: new FactionRelationshipRepository(store),
+    worldEventRepo: new WorldEventRepository(store),
+    weatherRepo: new WeatherRepository(store),
+    realmNoteRepo: new RealmNoteRepository(store),
+    poiRepo: new POIRepository(store),
+    pathRepo: new PathRepository(store),
+    tableRepo: new TableRepository(store),
+    rollHistoryRepo: new RollHistoryRepository(store),
+    systemConfigRepo: new SystemConfigRepository(store),
+    factionPresenceRepo: new FactionPresenceRepository(store),
+    poiEventRepo: new POIEventRepository(store),
+    gameMapRepo: new GameMapRepository(store),
+    rumorRepo: new RumorRepository(store),
+    noticeRepo: new NoticeRepository(store),
+    encounterTableRepo: new EncounterTableRepository(store),
+    entityNoteRepo: new EntityNoteRepository(store),
+    customCompendiumRepo: new CustomCompendiumRepository(store),
     eventBus: new EventBus(),
   } as const
 }

@@ -6,8 +6,13 @@ import {
   Scripts,
   createRootRoute,
 } from '@tanstack/react-router'
+import { LiveStoreProvider } from '@livestore/react'
 import { TooltipProvider } from '~/components/ui/tooltip'
 import { ContainerProvider } from '~/ui/hooks/useContainer'
+import { schema } from '@infrastructure/livestore/schema'
+import { adapter } from '@infrastructure/livestore/store'
+import { bootStore } from '@infrastructure/livestore/seed'
+import { unstable_batchedUpdates as batchUpdates } from 'react-dom'
 import * as React from 'react'
 import appCss from '~/styles/app.css?url'
 
@@ -63,11 +68,13 @@ function RootComponent() {
   }, [])
 
   return (
-    <ContainerProvider>
-      <TooltipProvider>
-        <Outlet />
-      </TooltipProvider>
-    </ContainerProvider>
+    <LiveStoreProvider schema={schema} adapter={adapter} boot={bootStore as any} batchUpdates={batchUpdates}>
+      <ContainerProvider>
+        <TooltipProvider>
+          <Outlet />
+        </TooltipProvider>
+      </ContainerProvider>
+    </LiveStoreProvider>
   )
 }
 

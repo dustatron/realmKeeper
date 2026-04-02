@@ -1,12 +1,12 @@
-import { createContext, useContext } from 'react'
+import { createContext, useContext, useMemo } from 'react'
+import { useStore } from '@livestore/react'
 import { type Container, createContainer } from '@infrastructure/container'
 
 const ContainerContext = createContext<Container | null>(null)
 
-// Singleton — created once
-const container = createContainer()
-
 export function ContainerProvider({ children }: { children: React.ReactNode }) {
+  const { store } = useStore()
+  const container = useMemo(() => createContainer(store as any), [store])
   return (
     <ContainerContext.Provider value={container}>
       {children}
