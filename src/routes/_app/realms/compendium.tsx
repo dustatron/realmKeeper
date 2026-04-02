@@ -46,9 +46,27 @@ import {
   PopoverContent,
 } from "~/components/ui/popover";
 import { EquipmentTable } from "~/components/compendium/EquipmentTable";
-import { MagicItemCard } from "~/components/compendium/MagicItemCard";
-import { MonsterCard } from "~/components/compendium/MonsterCards";
-import { SpellCard } from "~/components/compendium/SpellCard";
+import { MagicItemTable } from "~/components/compendium/MagicItemTable";
+import { MonsterTable } from "~/components/compendium/MonsterTable";
+import { SpellTable } from "~/components/compendium/SpellTable";
+import {
+  MonsterAdvancedFilters,
+  DEFAULT_MONSTER_FILTERS,
+  applyMonsterAdvancedFilters,
+  type MonsterFilters,
+} from "~/components/compendium/MonsterAdvancedFilters";
+import {
+  SpellAdvancedFilters,
+  DEFAULT_SPELL_FILTERS,
+  applySpellAdvancedFilters,
+  type SpellFilters,
+} from "~/components/compendium/SpellAdvancedFilters";
+import {
+  EquipmentAdvancedFilters,
+  DEFAULT_EQUIPMENT_FILTERS,
+  applyEquipmentAdvancedFilters,
+  type EquipmentFilters,
+} from "~/components/compendium/EquipmentAdvancedFilters";
 
 const RACE_PALETTE = [
   "#ef4444",
@@ -256,6 +274,13 @@ function CompendiumPage() {
 
   const [filterSource, setFilterSource] = useState<SourceFilter>("all");
   const [showStarredOnly, setShowStarredOnly] = useState(false);
+  const [monsterFilters, setMonsterFilters] = useState<MonsterFilters>(DEFAULT_MONSTER_FILTERS);
+  const [monsterFiltersOpen, setMonsterFiltersOpen] = useState(false);
+  const [spellFilters, setSpellFilters] = useState<SpellFilters>(DEFAULT_SPELL_FILTERS);
+  const [spellFiltersOpen, setSpellFiltersOpen] = useState(false);
+  const [equipmentFilters, setEquipmentFilters] = useState<EquipmentFilters>(DEFAULT_EQUIPMENT_FILTERS);
+  const [equipmentFiltersOpen, setEquipmentFiltersOpen] = useState(false);
+  const isShadowdark = systemId === "system-shadowdark";
 
   const filteredMonsters = useMemo(() => {
     let result = applySourceFilter(monsters, filterSource);
@@ -268,8 +293,9 @@ function CompendiumPage() {
           m.description.toLowerCase().includes(q),
       );
     }
+    if (isShadowdark) result = applyMonsterAdvancedFilters(result, monsterFilters);
     return result;
-  }, [monsters, searchQuery, filterSource, showStarredOnly, starredMonsterIds]);
+  }, [monsters, searchQuery, filterSource, showStarredOnly, starredMonsterIds, monsterFilters, isShadowdark]);
 
   const filteredSpells = useMemo(() => {
     let result = applySourceFilter(spells, filterSource);
@@ -282,8 +308,9 @@ function CompendiumPage() {
           s.description.toLowerCase().includes(q),
       );
     }
+    if (isShadowdark) result = applySpellAdvancedFilters(result, spellFilters);
     return result;
-  }, [spells, searchQuery, filterSource, showStarredOnly, starredSpellIds]);
+  }, [spells, searchQuery, filterSource, showStarredOnly, starredSpellIds, spellFilters, isShadowdark]);
 
   const filteredMagicItems = useMemo(() => {
     let result = applySourceFilter(magicItems, filterSource);
@@ -309,8 +336,9 @@ function CompendiumPage() {
           e.description.toLowerCase().includes(q),
       );
     }
+    result = applyEquipmentAdvancedFilters(result, equipmentFilters);
     return result;
-  }, [equipment, searchQuery, filterSource]);
+  }, [equipment, searchQuery, filterSource, equipmentFilters]);
 
   // Custom races state
   const [newRace, setNewRace] = useState("");
@@ -453,23 +481,27 @@ function CompendiumPage() {
       /> */}
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList>
-          {tabs.map((t) => (
-            <TabsTrigger key={t.value} value={t.value} className="gap-1.5">
-              <t.icon className="size-4" />
-              {t.label}
-              <Badge variant="secondary" className="ml-1 text-xs">
-                {t.count}
-              </Badge>
-            </TabsTrigger>
-          ))}
-          <Link to="/realms/compendium/custom/new">
+        <div className="flex items-center gap-2">
+          <div className="overflow-x-auto min-w-0 flex-1">
+            <TabsList className="w-max">
+              {tabs.map((t) => (
+                <TabsTrigger key={t.value} value={t.value} className="gap-1.5">
+                  <t.icon className="size-4 shrink-0" />
+                  <span className="hidden sm:inline">{t.label}</span>
+                  <Badge variant="secondary" className="hidden sm:inline-flex ml-1 text-xs">
+                    {t.count}
+                  </Badge>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+          <Link to="/realms/compendium/custom/new" className="shrink-0">
             <Button size="sm">
-              <Plus className="mr-1.5 size-4" />
-              New Custom Entry
+              <Plus className="size-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">New Custom Entry</span>
             </Button>
           </Link>
-        </TabsList>
+        </div>
 
         {/* Races */}
         <TabsContent value="races">
@@ -591,6 +623,14 @@ function CompendiumPage() {
                 Starred
               </Button>
             </FilterBar>
+            {isShadowdark && (
+              <MonsterAdvancedFilters
+                filters={monsterFilters}
+                onChange={setMonsterFilters}
+                open={monsterFiltersOpen}
+                onToggleOpen={() => setMonsterFiltersOpen((v) => !v)}
+              />
+            )}
             {filteredMonsters.length === 0 ? (
               <EmptyState
                 icon={Sword}
@@ -599,16 +639,11 @@ function CompendiumPage() {
               />
             ) : (
               <ScrollArea className="h-[calc(100vh-16rem)]">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {filteredMonsters.map((m) => (
-                    <MonsterCard
-                      key={m.id}
-                      monster={m}
-                      starred={starredMonsterIds.includes(m.id)}
-                      onToggleStar={handleToggleMonsterStar}
-                    />
-                  ))}
-                </div>
+                <MonsterTable
+                  monsters={filteredMonsters}
+                  starredIds={starredMonsterIds}
+                  onToggleStar={handleToggleMonsterStar}
+                />
               </ScrollArea>
             )}
           </div>
@@ -634,6 +669,14 @@ function CompendiumPage() {
                 Starred
               </Button>
             </FilterBar>
+            {isShadowdark && (
+              <SpellAdvancedFilters
+                filters={spellFilters}
+                onChange={setSpellFilters}
+                open={spellFiltersOpen}
+                onToggleOpen={() => setSpellFiltersOpen((v) => !v)}
+              />
+            )}
             {filteredSpells.length === 0 ? (
               <EmptyState
                 icon={Wand2}
@@ -642,16 +685,11 @@ function CompendiumPage() {
               />
             ) : (
               <ScrollArea className="h-[calc(100vh-16rem)]">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {filteredSpells.map((s) => (
-                    <SpellCard
-                      key={s.id}
-                      spell={s}
-                      starred={starredSpellIds.includes(s.id)}
-                      onToggleStar={handleToggleSpellStar}
-                    />
-                  ))}
-                </div>
+                <SpellTable
+                  spells={filteredSpells}
+                  starredIds={starredSpellIds}
+                  onToggleStar={handleToggleSpellStar}
+                />
               </ScrollArea>
             )}
           </div>
@@ -685,16 +723,11 @@ function CompendiumPage() {
               />
             ) : (
               <ScrollArea className="h-[calc(100vh-16rem)]">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {filteredMagicItems.map((i) => (
-                    <MagicItemCard
-                      key={i.id}
-                      item={i}
-                      starred={starredMagicItemIds.includes(i.id)}
-                      onToggleStar={handleToggleMagicItemStar}
-                    />
-                  ))}
-                </div>
+                <MagicItemTable
+                  items={filteredMagicItems}
+                  starredIds={starredMagicItemIds}
+                  onToggleStar={handleToggleMagicItemStar}
+                />
               </ScrollArea>
             )}
           </div>
@@ -712,6 +745,13 @@ function CompendiumPage() {
                   options={sourceFilterOptions}
                 />
               </FilterBar>
+              <EquipmentAdvancedFilters
+                filters={equipmentFilters}
+                onChange={setEquipmentFilters}
+                open={equipmentFiltersOpen}
+                onToggleOpen={() => setEquipmentFiltersOpen((v) => !v)}
+                systemId={systemId}
+              />
               {filteredEquipment.length === 0 ? (
                 <EmptyState
                   icon={Shield}
