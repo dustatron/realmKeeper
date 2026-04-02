@@ -5,12 +5,15 @@ import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 import { VitePWA } from 'vite-plugin-pwa'
-import { livestoreDevtoolsPlugin } from '@livestore/devtools-vite'
 
 export default defineConfig({
   worker: {
     format: 'es',
   },
+  optimizeDeps: {
+    exclude: ['@livestore/adapter-web', '@livestore/wa-sqlite'],
+  },
+  assetsInclude: ['**/*.wasm'],
   server: {
     port: 3000,
     headers: {
@@ -28,7 +31,6 @@ export default defineConfig({
     }),
     nitro(),
     viteReact(),
-    livestoreDevtoolsPlugin({ schemaPath: './src/infrastructure/livestore/schema.ts' }),
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],

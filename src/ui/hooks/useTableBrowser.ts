@@ -46,9 +46,9 @@ export function useTablesInSet(setId: string | null) {
 export function useRollHistory(worldId: string | null, limit = 20) {
   return useQuery(queryDb({
     query: worldId
-      ? 'SELECT * FROM rollHistory WHERE worldId = $worldId ORDER BY timestamp DESC LIMIT $limit'
+      ? `SELECT * FROM rollHistory WHERE worldId = $worldId ORDER BY timestamp DESC LIMIT ${limit}`
       : 'SELECT * FROM rollHistory WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: worldId ? { $worldId: worldId, $limit: limit } : {},
+    bindValues: worldId ? { $worldId: worldId } : {},
   }, { deps: [worldId, limit] })) as RollHistory[]
 }

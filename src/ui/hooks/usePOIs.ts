@@ -59,9 +59,9 @@ export function useRecentVisitedPOIs(worldId: string | null, limit = 5) {
                     INNER JOIN regions r ON p.regionId = r.id
                     WHERE r.worldId = $worldId AND p.visited = 1
                     ORDER BY p.updatedAt DESC
-                    LIMIT $limit`,
+                    LIMIT ${limit}`,
             schema: Schema.Array(Schema.Unknown),
-            bindValues: { $worldId: worldId, $limit: limit },
+            bindValues: { $worldId: worldId },
           }
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
       { deps: [worldId, limit] }

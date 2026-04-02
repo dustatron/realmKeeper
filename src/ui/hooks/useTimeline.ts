@@ -5,10 +5,10 @@ import type { WorldEvent } from '@domain/entities/WorldEvent'
 export function useTimeline(worldId: string | null, limit = 50) {
   return useQuery(queryDb({
     query: worldId
-      ? 'SELECT * FROM worldEvents WHERE worldId = $worldId ORDER BY createdAt DESC LIMIT $limit'
+      ? `SELECT * FROM worldEvents WHERE worldId = $worldId ORDER BY createdAt DESC LIMIT ${limit}`
       : 'SELECT * FROM worldEvents WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: worldId ? { $worldId: worldId, $limit: limit } : {},
+    bindValues: worldId ? { $worldId: worldId } : {},
   }, { deps: [worldId, limit] })) as WorldEvent[]
 }
 

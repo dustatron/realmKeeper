@@ -5,10 +5,10 @@ import type { WeatherHistory } from '@domain/entities/WeatherHistory'
 export function useRecentWeather(worldId: string | null, limit = 7) {
   return useQuery(queryDb({
     query: worldId
-      ? 'SELECT * FROM weatherHistory WHERE worldId = $worldId ORDER BY createdAt DESC LIMIT $limit'
+      ? `SELECT * FROM weatherHistory WHERE worldId = $worldId ORDER BY createdAt DESC LIMIT ${limit}`
       : 'SELECT * FROM weatherHistory WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
-    bindValues: worldId ? { $worldId: worldId, $limit: limit } : {},
+    bindValues: worldId ? { $worldId: worldId } : {},
   }, { deps: [worldId, limit] })) as WeatherHistory[]
 }
 
