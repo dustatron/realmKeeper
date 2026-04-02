@@ -252,7 +252,7 @@ function RoomDetailPanel({
   const unmappedTags = getUnmappedTags(room.tags);
   const connections = parseRoomConnections(room.description, siblings);
   return (
-    <div className="rounded-md border bg-card p-3 space-y-3">
+    <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
         <span className="text-sm font-mono text-muted-foreground">{index + 1}.</span>
@@ -609,30 +609,30 @@ export function DungeonTemplate({
         const { builderCulture, currentInhabitants, history, historyLayers } = poi.spatialDungeon.ecology
         if (!builderCulture && !currentInhabitants && !history) return null
         return (
-          <div className="rounded-lg border border-stone-600/50 bg-stone-900/40 p-3 space-y-2">
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-xs">🏚</span>
-              <span className="text-xs font-semibold text-stone-300 uppercase tracking-wide">Dungeon Lore</span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dungeon Lore</span>
             </div>
             {history && (
-              <p className="text-sm italic text-stone-300">{history}</p>
+              <p className="text-sm italic text-foreground">{history}</p>
             )}
-            <div className="flex gap-4 text-xs text-stone-400">
+            <div className="flex gap-4 text-xs text-muted-foreground">
               {builderCulture && (
-                <span>Built by: <span className="text-stone-200 font-medium capitalize">{builderCulture}</span></span>
+                <span>Built by: <span className="text-foreground font-medium capitalize">{builderCulture}</span></span>
               )}
               {currentInhabitants && (
-                <span>Inhabitants: <span className="text-stone-200 font-medium capitalize">{currentInhabitants}</span></span>
+                <span>Inhabitants: <span className="text-foreground font-medium capitalize">{currentInhabitants}</span></span>
               )}
             </div>
             {historyLayers && historyLayers.length > 0 && (
-              <div className="space-y-1 pt-1 border-t border-stone-700">
-                <span className="text-xs text-stone-500 uppercase tracking-wide">History Layers</span>
+              <div className="space-y-1 pt-1 border-t border-border">
+                <span className="text-xs text-muted-foreground uppercase tracking-wide">History Layers</span>
                 {historyLayers.map((layer, i) => (
                   <div key={i} className="text-xs">
-                    <span className="font-medium text-stone-300 capitalize">{layer.builders}</span>
-                    <span className="text-stone-500 ml-1">({layer.era})</span>
-                    {layer.fate && <p className="text-stone-400 italic ml-2">{layer.fate}</p>}
+                    <span className="font-medium text-foreground capitalize">{layer.builders}</span>
+                    <span className="text-muted-foreground ml-1">({layer.era})</span>
+                    {layer.fate && <p className="text-muted-foreground italic ml-2">{layer.fate}</p>}
                   </div>
                 ))}
               </div>
@@ -931,7 +931,7 @@ export function DungeonTemplate({
                 )}
                 {gear.length > 0 && (
                   <div className="space-y-1">
-                    <p className="text-xs font-medium text-stone-400">🎒 Gear</p>
+                    <p className="text-xs font-medium text-muted-foreground">🎒 Gear</p>
                     {gear.map((t) => (
                       <div key={t.id} className={`flex items-center gap-2 text-xs ${t.collected ? 'line-through text-muted-foreground' : ''}`}>
                         <span className="font-medium flex-1">{t.name}</span>

@@ -307,11 +307,11 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
   const themeColors = THEME_COLORS[dungeon.theme] ?? THEME_COLORS.cave
 
   return (
-    <div className={`relative dark ${className ?? ''}`}>
+    <div className={`relative ${className ?? ''}`}>
       <svg
         ref={svgRef}
         viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
-        className="w-full h-full rounded-lg touch-none bg-stone-900"
+        className="w-full h-full rounded-lg touch-none bg-stone-100 dark:bg-stone-900"
         style={{ minHeight: 300 }}
         onWheel={handleWheel}
         onPointerDown={handlePointerDown}
@@ -323,7 +323,7 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
         {/* Subtle grid */}
         <defs>
           <pattern id="dg" width={CELL_SIZE} height={CELL_SIZE} patternUnits="userSpaceOnUse">
-            <path d={`M ${CELL_SIZE} 0 L 0 0 0 ${CELL_SIZE}`} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={0.5} />
+            <path d={`M ${CELL_SIZE} 0 L 0 0 0 ${CELL_SIZE}`} fill="none" stroke="rgba(128,128,128,0.15)" strokeWidth={0.5} />
           </pattern>
         </defs>
         <rect x={bounds.minX} y={bounds.minY} width={bounds.maxX - bounds.minX} height={bounds.maxY - bounds.minY} fill="url(#dg)" />
@@ -364,7 +364,7 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
       </svg>
 
       {/* Legend */}
-      <div className="absolute bottom-2 left-2 flex gap-3 text-xs bg-stone-900/80 border border-stone-700 rounded px-2 py-1 text-stone-300">
+      <div className="absolute bottom-2 left-2 flex gap-3 text-xs bg-background/90 border border-border rounded px-2 py-1 text-muted-foreground">
         <span className="flex items-center gap-1"><span className="text-orange-400 font-bold">⚠</span> Trap</span>
         <span className="flex items-center gap-1"><span className="text-yellow-400 font-bold">◈</span> Treasure</span>
         <span className="flex items-center gap-1"><span className="text-blue-300 font-bold">☻</span> NPC</span>
@@ -375,7 +375,7 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
       {viewBox && (
         <button
           onClick={() => setViewBox(null)}
-          className="absolute top-2 right-2 px-2 py-1 text-xs bg-stone-800/90 border border-stone-600 text-stone-300 rounded hover:bg-stone-700"
+          className="absolute top-2 right-2 px-2 py-1 text-xs bg-background/90 border border-border text-foreground rounded hover:bg-muted"
         >
           Reset
         </button>
