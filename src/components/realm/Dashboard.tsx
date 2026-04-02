@@ -56,6 +56,7 @@ import {
   Wand2,
   Gem,
   Cat,
+  Star,
 } from "lucide-react";
 import type { Season } from "@shared/constants";
 import { QuickLinksBar } from "./QuickLinksBar";
@@ -192,7 +193,9 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
   };
 
   const activeTab =
-    tab === "world-stats" || tab === "settings" ? tab : "overview";
+    tab === "world-stats" || tab === "settings" || tab === "favorites"
+      ? tab
+      : "overview";
 
   return (
     <div className="space-y-4 p-6">
@@ -217,6 +220,10 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
             <Crown className="size-4" />
             Overview
           </TabsTrigger>
+          <TabsTrigger value="favorites">
+            <Star className="size-4" />
+            Favorites
+          </TabsTrigger>
           <TabsTrigger value="world-stats">
             <BarChart3 className="size-4" />
             World Stats
@@ -230,197 +237,6 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
         {/* Overview Tab */}
         <TabsContent value="overview">
           <div className="space-y-6">
-            {/* Favorites */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Link
-                      to="/realms/npcs"
-                      className="flex items-center gap-2 hover:underline"
-                    >
-                      <Map className="size-5 text-amber-500" />
-                      NPCs
-                    </Link>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {starredNPCs.map((npc) => (
-                    <Link
-                      key={npc.id}
-                      to="/realms/npcs/$npcId"
-                      params={{ npcId: npc.id }}
-                      className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
-                    >
-                      <Users className="size-4 shrink-0 text-blue-500" />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{npc.name}</div>
-                      </div>
-                      <Badge variant="outline" className="text-xs shrink-0">
-                        NPC
-                      </Badge>
-                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                    </Link>
-                  ))}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Link
-                      to="/realms/compendium"
-                      search={{ tab: "monsters" }}
-                      className="flex items-center gap-2 hover:underline"
-                    >
-                      <Map className="size-5 text-amber-500" />
-                      Monsters
-                    </Link>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {starredMonsters.map((m) => (
-                    <Link
-                      key={m.id}
-                      to="/realms/compendium"
-                      search={{ tab: "monsters", q: m.name }}
-                      className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
-                    >
-                      <Sword className="size-4 shrink-0 text-orange-500" />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{m.name}</div>
-                      </div>
-                      <Badge variant="outline" className="text-xs shrink-0">
-                        Beast
-                      </Badge>
-                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                    </Link>
-                  ))}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Link
-                      to="/realms/compendium"
-                      search={{ tab: "magic-items" }}
-                      className="flex items-center gap-2 hover:underline"
-                    >
-                      <Gem className="size-5 text-amber-500" />
-                      Magic Items
-                    </Link>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {starredMagicItems.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">
-                      No starred magic items
-                    </div>
-                  ) : (
-                    starredMagicItems.map((item) => (
-                      <Link
-                        key={item.id}
-                        to="/realms/compendium"
-                        search={{ tab: "magic-items", q: item.name }}
-                        className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
-                      >
-                        <Gem className="size-4 shrink-0 text-purple-500" />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">
-                            {item.name}
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-xs shrink-0">
-                          Magic Item
-                        </Badge>
-                        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                      </Link>
-                    ))
-                  )}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Link
-                      to="/realms/compendium"
-                      search={{ tab: "spells" }}
-                      className="flex items-center gap-2 hover:underline"
-                    >
-                      <Wand2 className="size-5 text-amber-500" />
-                      Spells
-                    </Link>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {starredSpells.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">
-                      No starred spells
-                    </div>
-                  ) : (
-                    starredSpells.map((spell) => (
-                      <Link
-                        key={spell.id}
-                        to="/realms/compendium"
-                        search={{ tab: "spells", q: spell.name }}
-                        className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
-                      >
-                        <Wand2 className="size-4 shrink-0 text-indigo-500" />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">
-                            {spell.name}
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-xs shrink-0">
-                          Spell
-                        </Badge>
-                        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                      </Link>
-                    ))
-                  )}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Link
-                      to="/realms/locations/starred"
-                      className="flex items-center gap-2 hover:underline"
-                    >
-                      <Map className="size-5 text-amber-500" />
-                      Locations
-                    </Link>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {starredPOIs.map((poi) => (
-                    <Link
-                      key={poi.id}
-                      to="/realms/pois/$poiId"
-                      params={{ poiId: poi.id }}
-                      className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
-                    >
-                      <MapPin className="size-4 shrink-0 text-amber-500" />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{poi.name}</div>
-                        {poi.description && (
-                          <div className="text-xs text-muted-foreground truncate">
-                            {poi.description}
-                          </div>
-                        )}
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className="text-xs shrink-0 capitalize"
-                      >
-                        {poi.type}
-                      </Badge>
-                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                    </Link>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
-
             {/* Recently Visited POIs */}
             {recentPOIs.length > 0 && (
               <Card>
@@ -464,6 +280,144 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                 </CardContent>
               </Card>
             )}
+          </div>
+        </TabsContent>
+
+        {/* Favorites Tab */}
+        <TabsContent value="favorites">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {/* Compendium Favorites */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="size-5 text-amber-500" />
+                  Compendium
+                </CardTitle>
+                <CardDescription>
+                  <Link to="/realms/compendium" className="hover:underline">
+                    Browse compendium →
+                  </Link>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {starredMonsters.length === 0 && starredSpells.length === 0 && starredMagicItems.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No compendium favorites yet. Star monsters, spells, or magic items in the compendium to see them here.
+                  </p>
+                ) : (
+                  <>
+                    {starredMonsters.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                          <Sword className="size-3" /> Monsters
+                        </p>
+                        <div className="space-y-1">
+                          {starredMonsters.map((m) => (
+                            <Link
+                              key={m.id}
+                              to="/realms/compendium"
+                              search={{ tab: "monsters", q: m.name }}
+                              className="flex items-center gap-3 rounded-lg border p-2.5 transition-colors hover:bg-muted/50"
+                            >
+                              <Sword className="size-4 shrink-0 text-orange-500" />
+                              <span className="flex-1 min-w-0 font-medium truncate text-sm">{m.name}</span>
+                              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {starredSpells.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                          <Wand2 className="size-3" /> Spells
+                        </p>
+                        <div className="space-y-1">
+                          {starredSpells.map((s) => (
+                            <Link
+                              key={s.id}
+                              to="/realms/compendium"
+                              search={{ tab: "spells", q: s.name }}
+                              className="flex items-center gap-3 rounded-lg border p-2.5 transition-colors hover:bg-muted/50"
+                            >
+                              <Wand2 className="size-4 shrink-0 text-indigo-500" />
+                              <span className="flex-1 min-w-0 font-medium truncate text-sm">{s.name}</span>
+                              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {starredMagicItems.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                          <Gem className="size-3" /> Magic Items
+                        </p>
+                        <div className="space-y-1">
+                          {starredMagicItems.map((item) => (
+                            <Link
+                              key={item.id}
+                              to="/realms/compendium"
+                              search={{ tab: "magic-items", q: item.name }}
+                              className="flex items-center gap-3 rounded-lg border p-2.5 transition-colors hover:bg-muted/50"
+                            >
+                              <Gem className="size-4 shrink-0 text-purple-500" />
+                              <span className="flex-1 min-w-0 font-medium truncate text-sm">{item.name}</span>
+                              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Favorite Locations */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="size-5 text-amber-500" />
+                  Locations
+                </CardTitle>
+                <CardDescription>
+                  <Link to="/realms/locations/starred" className="hover:underline">
+                    View all starred →
+                  </Link>
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {starredPOIs.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No favorite locations yet. Star a POI to see it here.
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    {starredPOIs.map((poi) => (
+                      <Link
+                        key={poi.id}
+                        to="/realms/pois/$poiId"
+                        params={{ poiId: poi.id }}
+                        className="flex items-center gap-3 rounded-lg border p-2.5 transition-colors hover:bg-muted/50"
+                      >
+                        <MapPin className="size-4 shrink-0 text-amber-500" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate text-sm">{poi.name}</div>
+                          {poi.description && (
+                            <div className="text-xs text-muted-foreground truncate">{poi.description}</div>
+                          )}
+                        </div>
+                        <Badge variant="outline" className="text-xs shrink-0 capitalize">{poi.type}</Badge>
+                        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
           </div>
         </TabsContent>
 
