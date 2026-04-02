@@ -14,6 +14,31 @@ The goal is a smooth harness where Claude always knows the current state of the 
 
 ---
 
+## What a Session Actually Looks Like
+
+### Module Import Session
+1. GM opens Claude Code in the terminal with the app running in Chrome
+2. Runs `/realm-session` → Claude loads world state, detects system (e.g. Shadowdark), invokes the Shadowdark specialist agent for content rules
+3. GM pastes or attaches a plain-text adventure module (e.g. a converted PDF)
+4. Runs `/realm-import` → Claude reads the module, presents a manifest:
+   > "I found 2 regions (Thornwood, The Sunken Fens), 14 locations, 9 NPCs, 1 dungeon (The Hollow Spire, 22 rooms), 3 factions, 6 magic items, 12 rumors. Proceed?"
+5. GM confirms → Claude builds it all, logging a worldEvent for the import
+6. GM sees everything appear live in the app (Dexie live queries, no reload)
+
+### Collaborative Build Session
+1. `/realm-session` → Claude is oriented
+2. GM: *"Let's build a small frontier town on the edge of an ancient forest. Settlers vs. something in the woods."*
+3. Claude proposes: 2 regions, 5 POIs, 3 factions, central tension hook
+4. GM: *"Yeah, and let's put a dungeon under the tavern — old cellar that goes deeper than it should."*
+5. Claude calls `dungeons.generate(tavernPoiId, { theme: 'ancient buried ruin', size: 'small', rooms: 8 })` → 8 rooms created as child POIs, already visible in app
+6. GM: *"The innkeeper knows something. Make him nervous, tied to the Thornwood faction."*
+7. Claude creates the NPC with Shadowdark-appropriate stats, links to faction, places at the tavern POI
+8. Continue as long as needed — Claude tracks what it's created and can reference it throughout the session
+
+The key property: **Claude never needs re-explaining**. The world state, system rules, and prior work are all loaded at session start.
+
+---
+
 ## Current State
 
 `window.__realmKeeper` is installed on the browser window via `src/infrastructure/dev/devApi.ts`. It covers raw CRUD for:
@@ -218,7 +243,9 @@ Out of scope for now but worth capturing:
 
 ## Open Questions
 
-- Claude Code skills: confirm `.claude/commands/` directory structure and format
-- The dev API is currently installed in all environments (dev + prod). This is correct — the import workflow needs to work on iPad too. Leave as-is.
-- For `dungeons.generate()` — Claude passes a theme/size/flavor as natural language and the call translates to `DungeonGenOptions`, or Claude constructs the options object directly? Probably natural language → options translation is better UX.
-- System docs: how opinionated should they be? Enough to guide Claude without being so long they eat too much context on every session start.
+- **Skills directory:** Commands live in `.claude/commands/`. Confirm whether skills (like `/realm-session`) go there or in `.claude/skills/` — the existing `realm-data.md` and `realm-update.md` are already in `commands/`, so probably there.
+- **Dev API in prod:** Currently installed unconditionally (dev + prod). This is intentional — the workflow needs to run against the live app, including on iPad. Leave as-is.
+- **Dungeon generator options:** When GM says "add a small dungeon under this tavern," does Claude construct `DungeonGenOptions` directly, or does `/realm-build` translate natural language → options? Natural language → options is better UX but requires mapping logic in the skill.
+- **Snapshot size:** How much data is too much to load at session start? For large realms (100+ POIs, 50+ NPCs) the snapshot could be expensive. May need a trimmed version that only loads names/IDs for orientation, with full detail fetched on demand.
+- **Cairn doc format:** Should it mirror the Shadowdark agent (deep, with code examples) or be a shorter GM-facing creative guide? Probably shorter — Cairn has no stat blocks, so there's less mechanical detail to cover. Focus on tone, philosophy, and examples.
+- **5E module conversion:** When a GM hands Claude a 5E module to import into a Shadowdark realm, the Shadowdark specialist agent already knows how to do the conversion (stat simplification, OSR philosophy, level scaling). The `/realm-import` skill should detect this case and invoke the agent before creating NPCs/monsters.
