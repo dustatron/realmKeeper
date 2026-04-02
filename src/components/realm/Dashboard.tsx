@@ -231,7 +231,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
         <TabsContent value="overview">
           <div className="space-y-6">
             {/* Favorites */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

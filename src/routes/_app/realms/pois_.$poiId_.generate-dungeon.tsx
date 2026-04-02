@@ -388,7 +388,7 @@ function GenerateDungeonPage() {
       {/* Size */}
       <div className="space-y-2">
         <Label>Size</Label>
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
           {SIZES.map((s) => (
             <button
               key={s.value}
@@ -400,7 +400,7 @@ function GenerateDungeonPage() {
               }`}
             >
               <span className="text-sm font-medium">{s.label}</span>
-              <span className="text-xs text-muted-foreground">{s.desc}</span>
+              <span className="text-xs text-muted-foreground leading-tight">{s.desc}</span>
             </button>
           ))}
         </div>
@@ -452,7 +452,7 @@ function GenerateDungeonPage() {
       {/* Magic Items count */}
       <div className="space-y-1.5">
         <Label>Magic Items</Label>
-        <div className="flex gap-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center">
           <Input
             type="number"
             min={0}
@@ -473,7 +473,7 @@ function GenerateDungeonPage() {
       {/* Spell Scrolls count */}
       <div className="space-y-1.5">
         <Label>Spell Scrolls</Label>
-        <div className="flex gap-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center">
           <Input
             type="number"
             min={0}

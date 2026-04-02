@@ -128,98 +128,100 @@ function NPCsPage() {
             </Select>
           </FilterBar>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Faction</TableHead>
-                <TableHead>Region</TableHead>
-                <TableHead>POI</TableHead>
-                <TableHead>Traits</TableHead>
-                <TableHead className="text-center">HP</TableHead>
-                <TableHead className="text-center">Armor</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredNPCs.map((npc) => {
-                const npcFactions = factions.filter((f) => npc.factionIds?.includes(f.id))
-                const region = regions.find((r) => r.id === npc.regionId)
-                const poi = pois.find((p) => p.id === npc.poiId)
-                return (
-                  <TableRow key={npc.id} className="hover:bg-muted/50">
-                    <TableCell className="font-medium">
-                      <Link
-                        to="/realms/npcs/$npcId"
-                        params={{ npcId: npc.id }}
-                        className="text-primary hover:underline"
-                      >
-                        {npc.name || 'Unnamed NPC'}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      {npcFactions.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {npcFactions.map((f) => (
-                            <Badge key={f.id} variant="outline">{f.name}</Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {region ? (
-                        <Badge variant="secondary">{region.name}</Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {poi ? (
-                        <Badge variant="outline">{poi.name}</Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {npc.traits.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {npc.traits.slice(0, 3).map((trait) => (
-                            <Badge key={trait} variant="secondary" className="text-xs">{trait}</Badge>
-                          ))}
-                          {npc.traits.length > 3 && (
-                            <Badge variant="outline" className="text-xs">+{npc.traits.length - 3}</Badge>
-                          )}
-                        </div>
-                      ) : '—'}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span className={npc.systemBlock.hp <= 0 ? 'text-red-500 font-semibold' : ''}>
-                        {npc.systemBlock.hp}/{npc.systemBlock.maxHp}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center">{npc.systemBlock.armor}</TableCell>
-                    <TableCell>
-                      {npc.lifeStatus === 'alive' ? (
-                        <Badge variant="secondary" className="text-xs">Alive</Badge>
-                      ) : (
-                        <Badge variant="destructive" className="text-xs gap-1">
-                          <Skull className="size-3" />{npc.lifeStatus.charAt(0).toUpperCase() + npc.lifeStatus.slice(1)}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Button size="icon" variant="ghost" className="size-7" onClick={(e) => { e.stopPropagation(); setDeleteTarget(npc.id) }}>
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead className="hidden md:table-cell">Faction</TableHead>
+                  <TableHead className="hidden md:table-cell">Region</TableHead>
+                  <TableHead className="hidden lg:table-cell">POI</TableHead>
+                  <TableHead className="hidden lg:table-cell">Traits</TableHead>
+                  <TableHead className="text-center hidden sm:table-cell">HP</TableHead>
+                  <TableHead className="text-center hidden sm:table-cell">Armor</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredNPCs.map((npc) => {
+                  const npcFactions = factions.filter((f) => npc.factionIds?.includes(f.id))
+                  const region = regions.find((r) => r.id === npc.regionId)
+                  const poi = pois.find((p) => p.id === npc.poiId)
+                  return (
+                    <TableRow key={npc.id} className="hover:bg-muted/50">
+                      <TableCell className="font-medium">
+                        <Link
+                          to="/realms/npcs/$npcId"
+                          params={{ npcId: npc.id }}
+                          className="text-primary hover:underline"
+                        >
+                          {npc.name || 'Unnamed NPC'}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {npcFactions.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {npcFactions.map((f) => (
+                              <Badge key={f.id} variant="outline">{f.name}</Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {region ? (
+                          <Badge variant="secondary">{region.name}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {poi ? (
+                          <Badge variant="outline">{poi.name}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {npc.traits.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {npc.traits.slice(0, 3).map((trait) => (
+                              <Badge key={trait} variant="secondary" className="text-xs">{trait}</Badge>
+                            ))}
+                            {npc.traits.length > 3 && (
+                              <Badge variant="outline" className="text-xs">+{npc.traits.length - 3}</Badge>
+                            )}
+                          </div>
+                        ) : '—'}
+                      </TableCell>
+                      <TableCell className="text-center hidden sm:table-cell">
+                        <span className={npc.systemBlock.hp <= 0 ? 'text-red-500 font-semibold' : ''}>
+                          {npc.systemBlock.hp}/{npc.systemBlock.maxHp}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center hidden sm:table-cell">{npc.systemBlock.armor}</TableCell>
+                      <TableCell>
+                        {npc.lifeStatus === 'alive' ? (
+                          <Badge variant="secondary" className="text-xs">Alive</Badge>
+                        ) : (
+                          <Badge variant="destructive" className="text-xs gap-1">
+                            <Skull className="size-3" />{npc.lifeStatus.charAt(0).toUpperCase() + npc.lifeStatus.slice(1)}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button size="icon" variant="ghost" className="size-7" onClick={(e) => { e.stopPropagation(); setDeleteTarget(npc.id) }}>
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </>
       )}
 
