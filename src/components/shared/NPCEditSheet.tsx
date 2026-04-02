@@ -1,5 +1,6 @@
 import type { NPC } from '@domain/entities/NPC'
 import type { SystemBlock, Attack, InventoryItem } from '@domain/value-objects/SystemBlock'
+import type { SystemConfig } from '@domain/entities/SystemConfig'
 import type { Faction } from '@domain/entities/Faction'
 import type { Region } from '@domain/entities/Region'
 import type { POI } from '@domain/entities/POI'
@@ -31,7 +32,7 @@ import { ImagePicker } from '~/components/shared/ImagePicker'
 
 export interface NPCEditSheetProps {
   npc: NPC
-  systemConfig: any
+  systemConfig: SystemConfig | null
   factions: Faction[]
   regions: Region[]
   pois: POI[]
@@ -347,7 +348,7 @@ export function NPCEditSheet({
               <h3 className="font-semibold">System Stats</h3>
 
               {/* Level & Class */}
-              {systemConfig.hasLevel && (
+              {systemConfig?.hasLevel && (
                 <div className="space-y-2">
                   <Label htmlFor="level">Level</Label>
                   <Input
@@ -359,7 +360,7 @@ export function NPCEditSheet({
                   />
                 </div>
               )}
-              {systemConfig.hasClass && (
+              {systemConfig?.hasClass && (
                 <div className="space-y-2">
                   <Label htmlFor="className">Class</Label>
                   <Input
@@ -374,7 +375,7 @@ export function NPCEditSheet({
               {/* Stats */}
               <div className="grid grid-cols-2 gap-4">
                 {npc.systemBlock.stats.map((stat) => {
-                  const statDef = systemConfig.statFields.find((f: any) => f.key === stat.key)
+                  const statDef = systemConfig?.statFields.find((f) => f.key === stat.key)
                   return (
                     <div key={stat.key} className="space-y-2">
                       <Label htmlFor={`stat-${stat.key}`}>
@@ -395,7 +396,7 @@ export function NPCEditSheet({
               {/* HP */}
               <div className="space-y-2">
                 <Label>
-                  {systemConfig.hpLabel ?? 'HP'}: {npc.systemBlock.hp}/{npc.systemBlock.maxHp}
+                  {systemConfig?.hpLabel ?? 'HP'}: {npc.systemBlock.hp}/{npc.systemBlock.maxHp}
                 </Label>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
                   <div
@@ -433,7 +434,7 @@ export function NPCEditSheet({
 
               {/* Armor */}
               <div className="space-y-2">
-                <Label htmlFor="armor">{systemConfig.armorLabel ?? 'Armor'}</Label>
+                <Label htmlFor="armor">{systemConfig?.armorLabel ?? 'Armor'}</Label>
                 <Input
                   id="armor"
                   type="number"

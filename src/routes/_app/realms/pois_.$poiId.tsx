@@ -580,7 +580,7 @@ function POIDetailPage() {
       {editingNPC && (
         <NPCEditSheet
           npc={editingNPC}
-          systemConfig={systemConfig}
+          systemConfig={systemConfig ?? null}
           factions={factions}
           regions={regions}
           pois={allPois}

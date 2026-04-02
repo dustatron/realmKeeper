@@ -96,33 +96,37 @@ Do this incrementally within one PR — extract one panel at a time, run the app
 
 ## PR 4 — Use-Case Layer: Add Real Value or Remove
 
-**Size:** Medium-large  
-**Risk:** Low (mechanical — TypeScript guides the changes)  
+> **⏭ Deferred — tackle during Dexie migration.**
+>
+> On inspection, the layer is not uniformly trivial. ~32 files are genuine passthroughs (≤15 lines),
+> but ~30 files contain real orchestration logic (AdvanceClock, GenerateDungeon, ExportRealm, etc.)
+> that would need to move somewhere else. Deleting only the passthroughs requires updating 25+ call
+> sites across routes and hooks. Since the storage layer (Dexie) is being replaced soon, all of
+> those call sites will be rewritten anyway — doing the cleanup twice is waste. Revisit this as
+> part of the Dexie migration.
+
+**Size:** Medium-large
+**Risk:** Low (mechanical — TypeScript guides the changes)
 **Blocks:** Nothing
 
 ### Problem
 
 80+ use-case files are single-line passthroughs (`npcRepo.create(npc)`). The abstraction costs maintenance overhead but provides no validation, error handling, or side-effect coordination.
 
-### Decision needed (pick one before starting)
+### Decision
 
-**Option A — Commit to the layer:** Add a `Result<T, E>` return type, input validation, and structured error types to each use-case. Use-cases become the place for cross-cutting logic (e.g., creating an NPC also logs a WorldEvent).
+**Option B — Remove the layer:** Delete passthrough use-cases, move repo calls into hooks or route components. Keep `src/application/ports/` (interfaces), `src/domain/`, and use-cases with real orchestration logic (`AdvanceClock`, `GenerateDungeon`, etc.) untouched.
 
-**Option B — Remove the layer:** Delete `src/application/use-cases/`, move repo calls into hooks or route components. Keep `src/application/ports/` (interfaces) and `src/domain/` untouched.
+### Files
 
-Option B is lower effort. Option A is higher value if the app grows significantly.
-
-### Files (Option B)
-
-- Delete `src/application/use-cases/` (~80 files)
+- Delete `src/application/use-cases/` files ≤15 lines (~32 files)
 - Update all route/component imports to call repos directly via `useContainer()`
-- Keep `src/application/ports/` intact
+- Keep `src/application/ports/` and orchestration use-cases intact
 
 ### Acceptance criteria
 
 - All existing features work
-- No remaining imports from `@application/use-cases`
-- (If Option A) All use-cases return `Result<T, AppError>` and callers handle errors
+- No remaining imports from passthrough use-cases
 
 ---
 
