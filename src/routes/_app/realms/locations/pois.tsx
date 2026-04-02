@@ -412,8 +412,8 @@ function POIsPage() {
                         params={{ poiId: poi.id }}
                         className="flex items-center gap-2 font-medium hover:underline"
                       >
-                        <Icon className="size-3.5 text-muted-foreground shrink-0" />
-                        {poi.name}
+                        <Icon className={`size-3.5 shrink-0 ${poi.parentPoiId ? 'text-muted-foreground/60' : 'text-muted-foreground'}`} />
+                        <span className={poi.parentPoiId ? 'text-muted-foreground' : ''}>{poi.name}</span>
                         {poi.starred && <Star className="size-3 fill-yellow-400 text-yellow-400 shrink-0" />}
                       </Link>
                       <div className="flex items-center gap-2 ml-5 mt-0.5">
@@ -428,12 +428,17 @@ function POIsPage() {
                       {region?.name ?? '—'}
                     </td>
                     <td className="px-3 py-2 hidden md:table-cell">
-                      <Badge
-                        variant={poi.type === 'settlement' ? 'default' : poi.type === 'dungeon' ? 'destructive' : 'secondary'}
-                        className="text-xs"
-                      >
-                        {poi.type}
-                      </Badge>
+                      {(() => {
+                        const isDungeonRoom = poi.type === 'dungeon' && !!poi.parentPoiId
+                        const label = isDungeonRoom
+                          ? (poi.subtypeLabel ?? 'Room')
+                          : poi.type
+                        const variant = poi.type === 'settlement' ? 'default'
+                          : isDungeonRoom ? 'secondary'
+                          : poi.type === 'dungeon' ? 'destructive'
+                          : 'secondary'
+                        return <Badge variant={variant} className="text-xs">{label}</Badge>
+                      })()}
                     </td>
                     <td className="px-3 py-2 text-muted-foreground text-xs hidden lg:table-cell">
                       {parent ? (
