@@ -26,13 +26,6 @@ import {
   SheetTitle,
   SheetFooter,
 } from '~/components/ui/sheet'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
@@ -49,7 +42,6 @@ import {
   Compass,
   Plus,
   Search,
-  Pencil,
   Trash2,
   Building2,
   Home,
@@ -66,8 +58,11 @@ import {
   MapPin,
   Star,
   Wand2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ExternalLink,
 } from 'lucide-react'
-import { db } from '@infrastructure/dexie/db'
 
 export const Route = createFileRoute('/_app/realms/locations/pois')({
   component: POIsPage,
@@ -94,12 +89,20 @@ function POIsPage() {
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const regions = useRegions(activeRealmId)
   const [selectedRegionId, setSelectedRegionId] = useState<string>('all')
-  const poisByRegion = usePOIs(selectedRegionId === 'all' ? null : selectedRegionId)
+  const isFlat = selectedRegionId === 'flat'
+  const poisByRegion = usePOIs(!isFlat && selectedRegionId !== 'all' ? selectedRegionId : null)
   const allPois = useRealmPOIs(activeRealmId)
-  const pois = selectedRegionId === 'all' ? allPois : poisByRegion
+  const pois = (selectedRegionId === 'all' || isFlat) ? allPois : poisByRegion
   const container = useContainer()
 
   const [searchQuery, setSearchQuery] = useState('')
+  const [sortCol, setSortCol] = useState<'name' | 'type' | 'region'>('name')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+
+  const toggleSort = (col: 'name' | 'type' | 'region') => {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortCol(col); setSortDir('asc') }
+  }
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editingPOI, setEditingPOI] = useState<POI | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -129,29 +132,37 @@ function POIsPage() {
     tags: [] as string[],
   })
 
-  // Filter top-level POIs, with search
+  // Filter + sort POIs
   const topLevelPois = useMemo(() => {
     const q = searchQuery.toLowerCase().trim()
-    if (!q) return pois.filter((poi) => poi.parentPoiId === null)
-    // When searching, include all POIs (not just top-level) so child matches surface
-    return pois.filter((poi) =>
-      poi.name.toLowerCase().includes(q) ||
-      poi.subtypeLabel?.toLowerCase().includes(q) ||
-      poi.tags.some((t) => t.toLowerCase().includes(q))
-    )
-  }, [pois, searchQuery])
+    const base = isFlat
+      ? [...pois]
+      : q
+        ? pois.filter((poi) =>
+            poi.name.toLowerCase().includes(q) ||
+            poi.subtypeLabel?.toLowerCase().includes(q) ||
+            poi.tags.some((t) => t.toLowerCase().includes(q))
+          )
+        : pois.filter((poi) => poi.parentPoiId === null)
 
-  // Group by region
-  const poisByRegionMap = useMemo(() => {
-    const mapObj: Record<string, POI[]> = {}
-    topLevelPois.forEach((poi) => {
-      if (!mapObj[poi.regionId]) {
-        mapObj[poi.regionId] = []
-      }
-      mapObj[poi.regionId].push(poi)
+    const filtered = q && !isFlat ? base : isFlat && q
+      ? base.filter((poi) =>
+          poi.name.toLowerCase().includes(q) ||
+          poi.subtypeLabel?.toLowerCase().includes(q) ||
+          poi.tags.some((t) => t.toLowerCase().includes(q))
+        )
+      : base
+
+    const regionMap: Record<string, string> = {}
+    regions.forEach((r) => { regionMap[r.id] = r.name })
+    return [...filtered].sort((a, b) => {
+      let va = '', vb = ''
+      if (sortCol === 'name') { va = a.name; vb = b.name }
+      else if (sortCol === 'type') { va = a.type; vb = b.type }
+      else if (sortCol === 'region') { va = regionMap[a.regionId] || ''; vb = regionMap[b.regionId] || '' }
+      return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va)
     })
-    return mapObj
-  }, [topLevelPois])
+  }, [pois, searchQuery, isFlat, sortCol, sortDir, regions])
 
   // Get child count for a POI
   const getChildCount = (poiId: string) => {
@@ -270,19 +281,6 @@ function POIsPage() {
     setDeleteConfirmOpen(true)
   }
 
-  const getPoiTypeColor = (type: PoiType): 'default' | 'secondary' | 'destructive' | 'outline' => {
-    switch (type) {
-      case 'settlement':
-        return 'default'
-      case 'dungeon':
-        return 'destructive'
-      case 'landmark':
-        return 'secondary'
-      default:
-        return 'outline'
-    }
-  }
-
   if (!activeRealmId) {
     return <EmptyState icon={Compass} title="Select a realm first" />
   }
@@ -315,6 +313,7 @@ function POIsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Regions</SelectItem>
+              <SelectItem value="flat">Flat List</SelectItem>
               {regions.map((region) => (
                 <SelectItem key={region.id} value={region.id}>
                   {region.name}
@@ -344,7 +343,7 @@ function POIsPage() {
         </div>
       </div>
 
-      {/* POI Cards Grid - Grouped by Region */}
+      {/* Unified sortable table */}
       {topLevelPois.length === 0 ? (
         <EmptyState
           icon={Compass}
@@ -358,90 +357,105 @@ function POIsPage() {
           }
         />
       ) : (
-        <div className="space-y-6">
-          {Object.entries(poisByRegionMap).map(([regionId, regionPois]: [string, POI[]]) => {
-            const region = regions.find((r) => r.id === regionId)
-            if (!region) return null
-
-            return (
-              <div key={regionId} className="space-y-3">
-                {selectedRegionId === 'all' && (
-                  <h3 className="text-lg font-semibold">{region.name}</h3>
-                )}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {regionPois.map((poi: POI) => {
-                    const Icon = POI_TYPE_ICONS[poi.type]
-                    const childCount = getChildCount(poi.id)
-
-                    return (
+        <div className="rounded-md border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40 border-b">
+              <tr>
+                <th className="text-left px-3 py-2">
+                  <button
+                    className="flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => toggleSort('name')}
+                  >
+                    Name
+                    {sortCol === 'name' ? (
+                      sortDir === 'asc' ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />
+                    ) : <ArrowUpDown className="size-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="text-left px-3 py-2 hidden sm:table-cell">
+                  <button
+                    className="flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => toggleSort('region')}
+                  >
+                    Region
+                    {sortCol === 'region' ? (
+                      sortDir === 'asc' ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />
+                    ) : <ArrowUpDown className="size-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="text-left px-3 py-2 hidden md:table-cell">
+                  <button
+                    className="flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => toggleSort('type')}
+                  >
+                    Type
+                    {sortCol === 'type' ? (
+                      sortDir === 'asc' ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />
+                    ) : <ArrowUpDown className="size-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="text-left px-3 py-2 hidden lg:table-cell font-medium text-muted-foreground">Parent</th>
+                <th className="w-8 px-3 py-2" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/50">
+              {topLevelPois.map((poi, i) => {
+                const Icon = POI_TYPE_ICONS[poi.type]
+                const region = regions.find((r) => r.id === poi.regionId)
+                const parent = poi.parentPoiId ? allPois.find((p) => p.id === poi.parentPoiId) : null
+                const childCount = getChildCount(poi.id)
+                return (
+                  <tr key={poi.id} className={`hover:bg-muted/30 transition-colors group ${i % 2 === 0 ? '' : 'bg-muted/10'}`}>
+                    <td className="px-3 py-2">
                       <Link
-                        key={poi.id}
                         to="/realms/pois/$poiId"
                         params={{ poiId: poi.id }}
-                        className="block"
+                        className="flex items-center gap-2 font-medium hover:underline"
                       >
-                        <Card className="cursor-pointer transition-shadow hover:shadow-md h-full">
-                          <CardHeader>
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-start gap-2 flex-1">
-                                <Icon className="size-5 text-muted-foreground shrink-0 mt-0.5" />
-                                <div className="flex-1 min-w-0">
-                                  <CardTitle className="text-base">{poi.name}</CardTitle>
-                                  {poi.subtypeLabel && (
-                                    <CardDescription className="mt-0.5 text-xs">
-                                      {poi.subtypeLabel}
-                                    </CardDescription>
-                                  )}
-                                </div>
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                  db.pois.update(poi.id, { starred: !poi.starred, updatedAt: Date.now() })
-                                }}
-                                className="shrink-0 p-1 rounded-md hover:bg-muted transition-colors"
-                                title={poi.starred ? 'Unstar' : 'Star'}
-                              >
-                                <Star className={`size-4 ${poi.starred ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
-                              </button>
-                              <Badge variant={getPoiTypeColor(poi.type)}>{poi.type}</Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="space-y-2">
-                            {poi.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {poi.description}
-                              </p>
-                            )}
-                            {childCount > 0 && (
-                              <Badge variant="outline" className="text-xs">
-                                {childCount} {childCount === 1 ? 'location' : 'locations'}
-                              </Badge>
-                            )}
-                            {poi.floor !== null && (
-                              <Badge variant="outline" className="text-xs">
-                                Floor {poi.floor}
-                              </Badge>
-                            )}
-                            {poi.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {poi.tags.map((tag: string) => (
-                                  <Badge key={tag} variant="outline" className="text-xs">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
+                        <Icon className="size-3.5 text-muted-foreground shrink-0" />
+                        {poi.name}
+                        {poi.starred && <Star className="size-3 fill-yellow-400 text-yellow-400 shrink-0" />}
                       </Link>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
+                      <div className="flex items-center gap-2 ml-5 mt-0.5">
+                        {poi.subtypeLabel && <span className="text-xs text-muted-foreground">{poi.subtypeLabel}</span>}
+                        {childCount > 0 && <span className="text-xs text-muted-foreground">{childCount} sub-loc.</span>}
+                        {poi.tags.slice(0, 2).map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-[10px] px-1 py-0">{tag}</Badge>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground text-xs hidden sm:table-cell">
+                      {region?.name ?? '—'}
+                    </td>
+                    <td className="px-3 py-2 hidden md:table-cell">
+                      <Badge
+                        variant={poi.type === 'settlement' ? 'default' : poi.type === 'dungeon' ? 'destructive' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {poi.type}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground text-xs hidden lg:table-cell">
+                      {parent ? (
+                        <Link to="/realms/pois/$poiId" params={{ poiId: parent.id }} className="hover:underline">
+                          {parent.name}
+                        </Link>
+                      ) : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Link
+                        to="/realms/pois/$poiId"
+                        params={{ poiId: poi.id }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center justify-center size-6 rounded hover:bg-muted"
+                      >
+                        <ExternalLink className="size-3.5 text-muted-foreground" />
+                      </Link>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
