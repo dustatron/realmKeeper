@@ -423,8 +423,8 @@ function POIsPage() {
                         params={{ poiId: poi.id }}
                         className="flex items-center gap-2 font-medium hover:underline"
                       >
-                        <Icon className={`size-3.5 shrink-0 ${poi.parentPoiId ? 'text-muted-foreground/60' : 'text-muted-foreground'}`} />
-                        <span className={poi.parentPoiId ? 'text-muted-foreground' : ''}>{poi.name}</span>
+                        <Icon className={`size-3.5 shrink-0 ${parent?.type === 'dungeon' ? 'text-muted-foreground/60' : 'text-muted-foreground'}`} />
+                        <span className={parent?.type === 'dungeon' ? 'text-muted-foreground' : ''}>{poi.name}</span>
                         {poi.starred && <Star className="size-3 fill-yellow-400 text-yellow-400 shrink-0" />}
                       </Link>
                       <div className="flex items-center gap-2 ml-5 mt-0.5">
@@ -440,7 +440,7 @@ function POIsPage() {
                     </td>
                     <td className="px-3 py-2 hidden md:table-cell">
                       {(() => {
-                        const isDungeonRoom = poi.type === 'dungeon' && !!poi.parentPoiId
+                        const isDungeonRoom = poi.type === 'dungeon' && parent?.type === 'dungeon'
                         const label = isDungeonRoom
                           ? (poi.subtypeLabel ?? 'Room')
                           : poi.type
