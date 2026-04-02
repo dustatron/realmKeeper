@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
+import { useUIStore } from "~/ui/stores/uiStore";
 import { useActiveRealm } from "~/ui/hooks/useActiveRealm";
 import { useTimeline } from "~/ui/hooks/useTimeline";
 import { useRecentWeather } from "~/ui/hooks/useWeather";
@@ -57,6 +58,7 @@ import {
   Gem,
   Cat,
   Star,
+  Search,
 } from "lucide-react";
 import type { Season } from "@shared/constants";
 import { QuickLinksBar } from "./QuickLinksBar";
@@ -95,6 +97,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const container = useContainer();
   const realm = useActiveRealm();
+  const setSearchOpen = useUIStore((s) => s.setSearchOpen);
 
   // Settings state
   const [settingsDaysPerSeason, setSettingsDaysPerSeason] = useState(30);
@@ -211,6 +214,15 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
           )}
         </div>
       </div>
+
+      <button
+        onClick={() => setSearchOpen(true)}
+        className="w-full flex items-center gap-3 rounded-lg border bg-muted/30 px-4 py-2.5 text-sm text-muted-foreground hover:bg-muted/60 transition-colors text-left"
+      >
+        <Search className="size-4 shrink-0" />
+        <span className="flex-1">Search NPCs, locations, monsters…</span>
+        <kbd className="text-xs bg-background border px-1.5 py-0.5 rounded leading-none hidden sm:inline">⌘K</kbd>
+      </button>
 
       <QuickLinksBar />
 
