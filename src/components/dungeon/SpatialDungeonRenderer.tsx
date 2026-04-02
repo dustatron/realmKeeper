@@ -307,7 +307,7 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
   const themeColors = THEME_COLORS[dungeon.theme] ?? THEME_COLORS.cave
 
   return (
-    <div className={`relative ${className ?? ''}`}>
+    <div className={`relative dark ${className ?? ''}`}>
       <svg
         ref={svgRef}
         viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
