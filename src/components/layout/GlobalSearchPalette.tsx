@@ -54,7 +54,7 @@ export function GlobalSearchPalette() {
   const handleSelect = (item: SearchableItem) => {
     setOpen(false)
     setQuery('')
-    navigate({ to: item.url as never, params: item.params, search: item.search ?? {} })
+    navigate({ to: item.url as never, params: item.params as never, search: (item.search ?? {}) as never })
   }
 
   const handleOpenChange = (v: boolean) => {
