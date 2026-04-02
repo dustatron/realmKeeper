@@ -1,6 +1,8 @@
 import { useRouterState } from '@tanstack/react-router'
 import { Separator } from '~/components/ui/separator'
 import { SidebarTrigger } from '~/components/ui/sidebar'
+import { Button } from '~/components/ui/button'
+import { Search } from 'lucide-react'
 import { ThemeSwitch } from './theme-switch'
 import { CloudAuth } from './cloud-auth'
 import { getSidebarData } from './sidebar-data'
@@ -37,6 +39,7 @@ function usePageTitle(): string | null {
 export function Header() {
   const pageTitle = usePageTitle()
   const headerTitle = useUIStore((s) => s.headerTitle)
+  const setSearchOpen = useUIStore((s) => s.setSearchOpen)
 
   return (
     <header className="sticky top-0 z-40 bg-background flex h-16 shrink-0 items-center gap-2 border-b px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
@@ -50,6 +53,25 @@ export function Header() {
         ) : null}
       </div>
       <div className="ml-auto flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 text-muted-foreground hidden sm:flex"
+          onClick={() => setSearchOpen(true)}
+        >
+          <Search className="size-4" />
+          <span className="text-sm">Search</span>
+          <kbd className="text-xs bg-muted border px-1.5 py-0.5 rounded leading-none">⌘K</kbd>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="sm:hidden"
+          onClick={() => setSearchOpen(true)}
+          title="Search"
+        >
+          <Search className="size-4" />
+        </Button>
         <CloudAuth />
         <ThemeSwitch />
       </div>

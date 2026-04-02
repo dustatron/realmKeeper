@@ -11,6 +11,10 @@ interface UIState {
   headerTitle: ReactNode | null
   setHeaderTitle: (title: ReactNode | null) => void
 
+  // Global search palette
+  searchOpen: boolean
+  setSearchOpen: (open: boolean) => void
+
   // Sidebar
   sidebarOpen: boolean
   setSidebarOpen: (open: boolean) => void
@@ -45,6 +49,9 @@ export const useUIStore = create<UIState>()(
 
       headerTitle: null,
       setHeaderTitle: (title) => set({ headerTitle: title }),
+
+      searchOpen: false,
+      setSearchOpen: (open) => set({ searchOpen: open }),
 
       sidebarOpen: true,
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
