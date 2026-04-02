@@ -108,61 +108,78 @@ window.__realmKeeper.npcs.placeAt(npcId, poiId)
 
 Claude needs to understand the active game system when creating content. A Cairn NPC has no class, uses weird items, death is common. A Shadowdark NPC has a class, spell slots, armor class. A Cairn magic item is a strange mundane object with a weird property. A Shadowdark magic item has charges and triggers.
 
-### Approach: System Context Docs
+### What's Already Built
 
-Create a markdown doc per game system that Claude reads at the start of a realm session. These live in `docs/systems/`:
+> ⚠️ **Reminder:** A comprehensive Shadowdark specialist agent already exists at `.claude/agents/shadowdark-specialist-agent.md`. Before writing any Shadowdark system doc from scratch, leverage this. It covers:
+> - Full monster stat block structure and encounter balance guidelines
+> - Monster level vs party level difficulty table (`estimateEncounterDifficulty`)
+> - Default NPC/monster stats (AC, HP by HD, attack bonus by level)
+> - 5E → Shadowdark conversion context (OSR philosophy, stat simplification, deadly-but-fair)
+> - Spell tiers, penance costs, all core mechanics
+> - Equipment tables (mounts, boats, armor)
+> - Verified vs unverified mechanics clearly flagged
+>
+> The Shadowdark agent is the authoritative source for creating Shadowdark-appropriate content. Wire the `/realm-session` skill to invoke it automatically when the active realm's system is Shadowdark.
 
-**`docs/systems/cairn-2e.md`**
-- NPC creation guidelines (omens, traits, drive, bond)
+Two existing commands also cover much of the current workflow:
+- `.claude/commands/realm-data.md` — full `window.__realmKeeper` API reference + import workflow
+- `.claude/commands/realm-update.md` — read/update agent instructions
+
+### What Still Needs to Be Built
+
+**`docs/systems/cairn-2e.md`** — Nothing exists for Cairn yet. Needs:
+- NPC creation guidelines (omens, traits, drive, bond — no stat blocks)
 - What makes a good Cairn magic item (weird, evocative, useful but limited)
-- Monster design philosophy (avoid stat blocks, describe behavior)
+- Monster design philosophy (describe behavior, not stats)
 - Faction design (small, human-scale, local interests)
-- Example NPC, example magic item, example location seed
+- Example NPC, magic item, location seed
 
-**`docs/systems/shadowdark.md`**
-- NPC stat block fields (HP, AC, attacks, special abilities)
-- Spell design guidelines
-- Magic item creation (charges, attunement, curse possibilities)
-- Monster CR-equivalent guidance
-- Class-appropriate NPC archetypes
-- Example stat block, example magic item
+**Shadowdark gap:** The specialist agent is deep on rules but thin on *content creation guidance* for a GM building a world. A short addendum doc covering "how to design a Shadowdark dungeon faction" or "what makes a Shadowdark magic item feel right" would complement the rules agent.
 
 ### How Claude Uses These
 
-At the start of a session or import, Claude reads the system doc for the active realm's game system, then uses it to shape all generated content. "Create a magic sword for a Cairn realm" vs "Create a magic sword for a Shadowdark realm" produces meaningfully different results.
+At the start of a session, Claude reads the system doc (or invokes the specialist agent) for the active realm's game system, then uses it to shape all generated content. "Create a magic sword for a Cairn realm" vs "Create a magic sword for a Shadowdark realm" should produce meaningfully different results.
 
 ---
 
 ## Claude Code Skills
 
+> **What already exists:**
+> - `.claude/commands/realm-data.md` — covers the import workflow and full API reference
+> - `.claude/commands/realm-update.md` — covers reading and updating existing data
+> - `.claude/agents/shadowdark-specialist-agent.md` — Shadowdark rules and content creation authority
+>
+> The skills below extend and formalize these into a cohesive session workflow.
+
 ### `/realm-session` (start of any building session)
 
-Invoke at the start of a work session. This skill:
-1. Connects to the browser and calls `snapshot()` / `context()`
-2. Detects the active realm's game system
-3. Reads the appropriate system doc (`docs/systems/<system>.md`)
-4. Outputs a summary: "You're working on [Realm Name], a [system] realm with X regions, Y factions, Z NPCs. Here's the current state..."
-5. Claude is now ready to build without needing re-explanation
+Does not exist yet. This is the missing piece that ties everything together:
+1. Connects to the browser via Chrome MCP and calls `snapshot()` / `context()`
+2. Detects the active realm's game system from the world record
+3. Invokes the Shadowdark specialist agent if system = Shadowdark; reads Cairn doc if system = Cairn
+4. Outputs a session brief: "You're working on [Realm Name] ([system]). X regions, Y factions, Z NPCs. Here's the current state..."
+5. Claude is fully oriented — no re-explaining needed each session
 
 ### `/realm-import` (adventure module import)
 
+Extend the existing `realm-data.md` command into a proper skill:
 1. User pastes or attaches plain-text module
-2. Claude runs `/realm-session` first (gets context)
+2. Claude runs the session context load first
 3. Parses module: regions, POIs, NPCs, factions, dungeons, rumors, magic items, equipment, notes
-4. Presents a manifest to the user ("I found 3 regions, 12 locations, 8 NPCs, 1 dungeon, 4 magic items — proceed?")
+4. Presents a manifest ("I found 3 regions, 12 locations, 8 NPCs, 1 dungeon, 4 magic items — proceed?")
 5. Executes in order: regions → factions → POIs → dungeons → NPCs → compendium items → rumors/notices → realmNotes
 6. Logs a worldEvent summarizing the import
 7. Reports what was created with IDs
 
 ### `/realm-build` (collaborative world building)
 
-Ongoing session skill. After `/realm-session` loads context:
+Ongoing session skill for brainstorming + building:
 - GM describes ideas in plain language
 - Claude proposes structure, asks clarifying questions, builds incrementally
 - Uses `dungeons.generate()` when dungeons are mentioned
-- Creates NPCs shaped by the system doc
+- Creates NPCs shaped by the active system's rules (Shadowdark agent for stat blocks, Cairn doc for stat-less NPCs)
 - Wires factions and relationships
-- Adds rumors and hooks pointing toward the adventure
+- Adds rumors and hooks pointing toward adventure
 
 ---
 
@@ -178,18 +195,24 @@ Out of scope for now but worth capturing:
 
 ## Implementation Order
 
-1. **Add missing namespaces** to `devApi.ts`: `realmNotes`, `worldEvents`, `rumors`, `notices`, `poiEvents`, `paths`, `clock`, explicit compendium item methods
-2. **Add `snapshot()` and `context()`** — world state dump
-3. **Expose dungeon generator** via `dungeons.generate()`
-4. **Add bulk helpers**
-5. **Add NPC linking helpers**
-6. **Write `docs/systems/cairn-2e.md`** — Cairn-specific creation guidelines for Claude
-7. **Write `docs/systems/shadowdark.md`** — Shadowdark-specific creation guidelines
-8. **Write `docs/realm-builder-api.md`** — full API reference (shapes, examples, import order)
-9. **Build `/realm-session` skill** — context loader
-10. **Build `/realm-import` skill** — module import workflow
-11. **Build `/realm-build` skill** — collaborative session wrapper
-12. **Test end-to-end** with a real plain-text module and a from-scratch world build
+**Already done — do not rebuild:**
+- `window.__realmKeeper` basic CRUD (`devApi.ts`)
+- `.claude/commands/realm-data.md` — import command + full API reference
+- `.claude/commands/realm-update.md` — update/read command
+- `.claude/agents/shadowdark-specialist-agent.md` — Shadowdark rules + monster/item creation
+
+**Remaining work:**
+1. **Add missing namespaces** to `devApi.ts`: `realmNotes`, `worldEvents`, `rumors`, `notices`, `poiEvents`, `paths`, `clock`
+2. **Add explicit compendium item methods**: `addMagicItem`, `addEquipment`, `addMonster`, `addSpell`
+3. **Add `snapshot()` and `context()`** — lightweight world state dump for session start
+4. **Expose dungeon generator** via `dungeons.generate(parentPoiId, options)`
+5. **Add bulk helpers** — `bulk.addNPCs`, `bulk.addPOIs`, `bulk.addFactions`, `bulk.addRumors`
+6. **Add NPC linking helpers** — `npcs.addToFaction`, `npcs.placeAt`
+7. **Write `docs/systems/cairn-2e.md`** — Cairn creation guidelines (no stat blocks, weird items, behavior-first monsters)
+8. **Build `/realm-session` skill** — context loader that auto-selects system agent
+9. **Refine `/realm-import`** from the existing `realm-data.md` command into a proper skill with the manifest/confirm step
+10. **Build `/realm-build` skill** — collaborative session wrapper
+11. **Test end-to-end** with a real plain-text module and a from-scratch world build
 
 ---
 
