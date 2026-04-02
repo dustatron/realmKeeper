@@ -2,11 +2,15 @@
 
 ## Vision
 
-Use Claude Code (with Chrome MCP) as an active collaborator for building and populating realms. Two main modes:
+Claude Code is the primary tool for building and populating realms. All interaction happens from the terminal — no in-app AI chat. The workflow is collaborative: the GM describes ideas, hands Claude source material, and Claude builds it out incrementally using the `window.__realmKeeper` API via Chrome MCP.
 
-1. **Module Import** — Hand Claude a plain-text adventure module and it parses it and creates all the entities (regions, POIs, NPCs, dungeons, factions, notes, rumors) directly into the live app via `window.__realmKeeper`.
+Two main modes:
 
-2. **Collaborative World Building** — Brainstorm a realm idea with Claude in conversation, and Claude builds it out incrementally, using the dungeon generator, NPC generator, and other tools as needed. ("Let's add a dungeon under that tavern" → Claude calls the generator and populates the rooms.)
+1. **Module Import** — Hand Claude a plain-text adventure module. Claude parses it and creates all entities (regions, POIs, NPCs, dungeons, factions, notes, rumors, magic items, equipment) directly into the live app.
+
+2. **Collaborative World Building** — Brainstorm a realm concept in conversation. Claude builds it out layer by layer, using the dungeon generator, NPC generator, and compendium tools. ("Let's add a dungeon under that tavern" → Claude generates it and populates the rooms.)
+
+The goal is a smooth harness where Claude always knows the current state of the world, understands the active game system's rules, and has all the tools it needs without the GM having to explain context every session.
 
 ---
 
@@ -20,7 +24,7 @@ Use Claude Code (with Chrome MCP) as an active collaborator for building and pop
 - `pois` — list, get, add, update, listChildren, delete (cascading), deleteChildren
 - `regions` — list, get, add, update
 - `relationships` — list, get, set
-- `compendium` — list, listByKind, get, add, update
+- `compendium` — list, listByKind, get, add, update (custom compendium entries)
 
 ---
 
@@ -30,104 +34,135 @@ Use Claude Code (with Chrome MCP) as an active collaborator for building and pop
 
 These tables exist in the DB but have no surface in `window.__realmKeeper`:
 
-| Namespace | Why needed for import |
+| Namespace | Why needed |
 |---|---|
 | `realmNotes` | Lore pages, faction histories, world background from modules |
-| `worldEvents` | Log what Claude created; set the adventure's starting date context |
-| `rumors` | Adventure modules are full of these — hooks, gossip, leads |
+| `worldEvents` | Log what Claude created; set adventure starting date |
+| `rumors` | Adventure modules are full of leads and gossip |
 | `notices` | Posted notices, wanted posters, quest boards |
-| `poiEvents` | Active events/encounters at a location (e.g. "bandits camped here") |
-| `paths` | Travel connections between POIs — modules often imply these |
-| `encounterTables` | Region/dungeon-level random encounter tables from modules |
+| `poiEvents` | Active events/encounters at a location |
+| `paths` | Travel connections between POIs — modules always imply these |
+| `encounterTables` | Region/dungeon random encounter tables |
+| `clock` | Read and set the world date (year/season/day) |
 
-### 2. Snapshot / Context Call
+### 2. Custom Magic Items and Equipment
 
-Claude needs to read the world state before making changes — to check existing region IDs, avoid duplicate factions, understand what's already there.
+The existing `compendium` namespace handles custom entries but Claude needs clear affordances for creating game-system-appropriate magic items and equipment:
+
+```ts
+window.__realmKeeper.compendium.addMagicItem(worldId, data)
+window.__realmKeeper.compendium.addEquipment(worldId, data)
+window.__realmKeeper.compendium.addMonster(worldId, data)
+window.__realmKeeper.compendium.addSpell(worldId, data)
+```
+
+These should validate against the active system's schema (Cairn vs Shadowdark items have different fields) and attach to the world's custom compendium.
+
+### 3. Snapshot / Context Call
+
+Claude needs to read world state before making changes — to get existing IDs, avoid duplicates, understand what's already there.
 
 ```ts
 window.__realmKeeper.snapshot()
-// Returns: { worlds, regions, factions, npcs, pois (top-level only), realmNotes }
-// Lightweight — no dungeon rooms, no history, just the skeleton
+// Returns: { realm, regions, factions, npcs, pois (top-level only), realmNotes (titles only) }
+// Lightweight skeleton — no dungeon rooms, no event history
+
+window.__realmKeeper.context()
+// Same data formatted as a human-readable summary Claude can reason about directly
 ```
 
-Also useful: `window.__realmKeeper.context()` — same as snapshot but formatted as a human-readable summary Claude can reason about.
+### 4. Dungeon Generation Hook
 
-### 3. Dungeon Generation Hook
-
-The app has a full dungeon generator (`src/lib/dungeon/DungeonGenerator.ts`) but it's not exposed on the dev API. Claude should be able to:
+The app has a full dungeon generator (`src/lib/dungeon/DungeonGenerator.ts`) but it's not exposed. Claude should be able to trigger it:
 
 ```ts
 window.__realmKeeper.dungeons.generate(parentPoiId, options)
-// Runs DungeonGenerator with the given options, saves all rooms as child POIs
-// Returns the generated dungeon summary
+// Runs DungeonGenerator with given options
+// Saves all rooms as child POIs under parentPoiId
+// Returns summary of what was generated
 ```
 
-This is the key piece for collaborative world building — "add a dungeon under this tavern" becomes a single call.
+Options would mirror the existing `DungeonGenOptions` shape from the app. This is the key call for collaborative building — "add a dungeon under this tavern" is one line.
 
-### 4. Bulk Helpers
+### 5. Bulk Helpers
 
-Creating 30 dungeon rooms or 15 NPCs as serial individual calls is slow and fragile. Need:
+Creating 30 rooms or 15 NPCs one call at a time is slow and fragile:
 
 ```ts
 window.__realmKeeper.bulk.addNPCs(worldId, npcsArray)
-window.__realmKeeper.bulk.addPOIs(regionId, poisArray)  // flat list, handles parentPoiId chaining
+window.__realmKeeper.bulk.addPOIs(regionId, poisArray)      // handles parentPoiId linking
 window.__realmKeeper.bulk.addFactions(worldId, factionsArray)
+window.__realmKeeper.bulk.addRumors(worldId, rumorsArray)
 ```
 
-### 5. NPC ↔ Faction / POI Linking
-
-Currently you create an NPC and a faction separately, then have to manually call `npcs.update()` to set `factionIds`. Convenience methods:
+### 6. NPC Linking Convenience Methods
 
 ```ts
 window.__realmKeeper.npcs.addToFaction(npcId, factionId)
 window.__realmKeeper.npcs.placeAt(npcId, poiId)
 ```
 
-### 6. Clock / World Date
+---
 
-Modules often establish a starting date or season. Need:
+## System-Aware Context (Game System Agents)
 
-```ts
-window.__realmKeeper.clock.get(worldId)       // { year, season, day }
-window.__realmKeeper.clock.set(worldId, date) // set starting point
-```
+Claude needs to understand the active game system when creating content. A Cairn NPC has no class, uses weird items, death is common. A Shadowdark NPC has a class, spell slots, armor class. A Cairn magic item is a strange mundane object with a weird property. A Shadowdark magic item has charges and triggers.
+
+### Approach: System Context Docs
+
+Create a markdown doc per game system that Claude reads at the start of a realm session. These live in `docs/systems/`:
+
+**`docs/systems/cairn-2e.md`**
+- NPC creation guidelines (omens, traits, drive, bond)
+- What makes a good Cairn magic item (weird, evocative, useful but limited)
+- Monster design philosophy (avoid stat blocks, describe behavior)
+- Faction design (small, human-scale, local interests)
+- Example NPC, example magic item, example location seed
+
+**`docs/systems/shadowdark.md`**
+- NPC stat block fields (HP, AC, attacks, special abilities)
+- Spell design guidelines
+- Magic item creation (charges, attunement, curse possibilities)
+- Monster CR-equivalent guidance
+- Class-appropriate NPC archetypes
+- Example stat block, example magic item
+
+### How Claude Uses These
+
+At the start of a session or import, Claude reads the system doc for the active realm's game system, then uses it to shape all generated content. "Create a magic sword for a Cairn realm" vs "Create a magic sword for a Shadowdark realm" produces meaningfully different results.
 
 ---
 
-## Claude Code Skill
+## Claude Code Skills
 
-Build a `/realm-import` skill that Claude Code can invoke. The skill would:
+### `/realm-session` (start of any building session)
 
-1. Ask the user to paste or attach the plain-text module
-2. Read `window.__realmKeeper.snapshot()` to get current world state
-3. Parse the module and identify: regions, POIs, NPCs, factions, dungeons, rumors, notes
-4. Present a summary to the user for confirmation ("I found 3 regions, 12 locations, 8 NPCs, 1 dungeon — proceed?")
-5. Execute the imports in order: regions → factions → POIs → dungeons → NPCs → rumors/notices → realmNotes
-6. Report what was created
+Invoke at the start of a work session. This skill:
+1. Connects to the browser and calls `snapshot()` / `context()`
+2. Detects the active realm's game system
+3. Reads the appropriate system doc (`docs/systems/<system>.md`)
+4. Outputs a summary: "You're working on [Realm Name], a [system] realm with X regions, Y factions, Z NPCs. Here's the current state..."
+5. Claude is now ready to build without needing re-explanation
 
-The skill file would live at `.claude/skills/realm-import.md` (or wherever Claude Code skill files go).
+### `/realm-import` (adventure module import)
 
-**Skill also useful for:** collaborative building sessions — invoke it at the start of a session to give Claude full context about the active realm before brainstorming.
+1. User pastes or attaches plain-text module
+2. Claude runs `/realm-session` first (gets context)
+3. Parses module: regions, POIs, NPCs, factions, dungeons, rumors, magic items, equipment, notes
+4. Presents a manifest to the user ("I found 3 regions, 12 locations, 8 NPCs, 1 dungeon, 4 magic items — proceed?")
+5. Executes in order: regions → factions → POIs → dungeons → NPCs → compendium items → rumors/notices → realmNotes
+6. Logs a worldEvent summarizing the import
+7. Reports what was created with IDs
 
----
+### `/realm-build` (collaborative world building)
 
-## Collaborative World Building Mode
-
-The idea: describe a realm concept in plain language, and Claude builds it with you incrementally.
-
-Example session:
-> "Let's build a small frontier town on the edge of an ancient forest. There's tension between the settlers and something in the woods."
-
-Claude would:
-1. Propose a region structure (town region + forest region)
-2. Suggest key POIs (inn, blacksmith, town hall, forest edge, ruins)
-3. Ask GM input on what to flesh out
-4. Generate dungeons where appropriate (`dungeons.generate()`)
-5. Create key NPCs with motivations tied to the central tension
-6. Wire up factions and relationships
-7. Add rumors and notices that point toward adventure hooks
-
-This requires the snapshot/context call to work well so Claude can reference what it just created when adding the next layer.
+Ongoing session skill. After `/realm-session` loads context:
+- GM describes ideas in plain language
+- Claude proposes structure, asks clarifying questions, builds incrementally
+- Uses `dungeons.generate()` when dungeons are mentioned
+- Creates NPCs shaped by the system doc
+- Wires factions and relationships
+- Adds rumors and hooks pointing toward the adventure
 
 ---
 
@@ -135,29 +170,32 @@ This requires the snapshot/context call to work well so Claude can reference wha
 
 Out of scope for now but worth capturing:
 
-- **Town/settlement maps** — Watabou MFCG integration already exists in the app (partial). Would be good to drive it from the dev API.
-- **Building interiors** — Watabou One Page Dungeon for individual buildings.
-- **Regional maps** — Some way to set region boundaries or generate a sketch map.
-
-These would ideally be callable from the dev API so Claude can say "generate a Watabou town for this settlement POI" and have it attached automatically.
+- **Town/settlement maps** — Watabou MFCG integration already partially exists in the app. Drive it from the dev API: `window.__realmKeeper.maps.generateTown(poiId, options)`
+- **Building interiors** — Watabou One Page Dungeon for individual buildings
+- **Regional overview** — Some way to attach or generate a sketch map for a region
 
 ---
 
 ## Implementation Order
 
-1. **Add missing namespaces** to `devApi.ts`: `realmNotes`, `worldEvents`, `rumors`, `notices`, `poiEvents`, `paths`, `clock`
-2. **Add `snapshot()`** — lightweight world state dump
+1. **Add missing namespaces** to `devApi.ts`: `realmNotes`, `worldEvents`, `rumors`, `notices`, `poiEvents`, `paths`, `clock`, explicit compendium item methods
+2. **Add `snapshot()` and `context()`** — world state dump
 3. **Expose dungeon generator** via `dungeons.generate()`
 4. **Add bulk helpers**
-5. **Add NPC linking convenience methods**
-6. **Write `docs/realm-builder-api.md`** — reference doc for Claude explaining all available calls, data shapes, and how to structure a module import (this is what the importing Claude reads)
-7. **Build the `/realm-import` skill**
-8. **Test end-to-end** with a real plain-text module
+5. **Add NPC linking helpers**
+6. **Write `docs/systems/cairn-2e.md`** — Cairn-specific creation guidelines for Claude
+7. **Write `docs/systems/shadowdark.md`** — Shadowdark-specific creation guidelines
+8. **Write `docs/realm-builder-api.md`** — full API reference (shapes, examples, import order)
+9. **Build `/realm-session` skill** — context loader
+10. **Build `/realm-import` skill** — module import workflow
+11. **Build `/realm-build` skill** — collaborative session wrapper
+12. **Test end-to-end** with a real plain-text module and a from-scratch world build
 
 ---
 
 ## Open Questions
 
-- Where do Claude Code skills live in this repo? Need to confirm the `.claude/` directory structure.
-- Should the dev API be dev-only or available in production builds? Currently it's installed unconditionally. For the import workflow to work on iPad it needs to be in prod.
-- For the dungeon generator call — does Claude specify room count/theme/size, or does it always use the existing `DungeonGenOptions` shape from the app?
+- Claude Code skills: confirm `.claude/commands/` directory structure and format
+- The dev API is currently installed in all environments (dev + prod). This is correct — the import workflow needs to work on iPad too. Leave as-is.
+- For `dungeons.generate()` — Claude passes a theme/size/flavor as natural language and the call translates to `DungeonGenOptions`, or Claude constructs the options object directly? Probably natural language → options translation is better UX.
+- System docs: how opinionated should they be? Enough to guide Claude without being so long they eat too much context on every session start.
