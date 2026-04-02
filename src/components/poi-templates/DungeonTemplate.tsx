@@ -37,7 +37,7 @@ import { EncounterTableUI } from "~/components/shared/EncounterTableUI";
 import { ReadAloudBlock } from "~/components/shared/ReadAloudBlock";
 import { AtAGlancePanel } from "~/components/shared/AtAGlancePanel";
 import { WanderingMonsterTable } from "~/components/shared/WanderingMonsterTable";
-import { db } from "@infrastructure/dexie/db";
+import { useContainer } from "~/ui/hooks/useContainer";
 import { getTagEmojis, getUnmappedTags } from "~/shared/room-card-utils";
 import type { POI } from "@domain/entities/POI";
 import type { NPC } from "@domain/entities/NPC";
@@ -249,6 +249,7 @@ function RoomDetailPanel({
   siblings: POI[];
   onSelectChild?: (id: string) => void;
 }) {
+  const container = useContainer()
   const unmappedTags = getUnmappedTags(room.tags);
   const connections = parseRoomConnections(room.description, siblings);
   return (
@@ -369,7 +370,7 @@ function RoomDetailPanel({
                     const updated = room.treasure.map((t) =>
                       t.id === item.id ? { ...t, collected: !t.collected } : t
                     )
-                    db.pois.update(room.id, { treasure: updated, updatedAt: Date.now() })
+                    container.poiRepo.update({ ...room, treasure: updated, updatedAt: Date.now() })
                   }}
                 >
                   <span className="text-base leading-none shrink-0">{icon}</span>
@@ -572,8 +573,10 @@ export function DungeonTemplate({
     try { localStorage.setItem("dungeon-layout", next); } catch {}
   };
 
+  const container = useContainer();
+
   const handleSaveWanderingMonsters = (entries: WanderingMonsterEntry[]) => {
-    db.pois.update(poi.id, { wanderingMonsters: entries, updatedAt: Date.now() });
+    container.poiRepo.update({ ...poi, wanderingMonsters: entries, updatedAt: Date.now() });
   };
 
   return (
@@ -782,7 +785,7 @@ export function DungeonTemplate({
                             title={child.visited ? "Mark unvisited" : "Mark visited"}
                             onClick={(e) => {
                               e.stopPropagation();
-                              db.pois.update(child.id, { visited: !child.visited, updatedAt: Date.now() });
+                              container.poiRepo.update({ ...child, visited: !child.visited, updatedAt: Date.now() });
                             }}
                           >
                             {child.visited ? (

@@ -1,6 +1,8 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
+import { useMemo } from 'react'
 import type { Path } from '@domain/entities/Path'
+import type { POI } from '@domain/entities/POI'
 
 export interface ResolvedPath extends Path {
   fromName: string
@@ -8,35 +10,53 @@ export interface ResolvedPath extends Path {
 }
 
 export function useResolvedPaths(poiId: string | null): ResolvedPath[] {
-  return useLiveQuery(
-    async () => {
-      if (!poiId) return []
-      const [from, to] = await Promise.all([
-        db.paths.where('fromPoiId').equals(poiId).toArray(),
-        db.paths.where('toPoiId').equals(poiId).toArray(),
-      ])
-      const seen = new Set<string>()
-      const paths = [...from, ...to].filter((p) => {
-        if (seen.has(p.id)) return false
-        seen.add(p.id)
-        return true
-      })
+  const paths = useQuery(
+    queryDb(
+      poiId
+        ? {
+            query: `SELECT DISTINCT * FROM paths
+                    WHERE fromPoiId = $poiId OR toPoiId = $poiId`,
+            schema: Schema.Array(Schema.Unknown),
+            bindValues: { $poiId: poiId },
+          }
+        : { query: 'SELECT * FROM paths WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+      { deps: [poiId] }
+    )
+  ) as Path[]
 
-      const poiIds = new Set<string>()
-      for (const p of paths) {
-        poiIds.add(p.fromPoiId)
-        poiIds.add(p.toPoiId)
-      }
+  // Collect all referenced POI ids from current path results so we can name them.
+  // We pass them as a comma-separated literal since LiveStore raw queries don't
+  // support array bind params.
+  const poiIdList = useMemo(() => {
+    const ids = new Set<string>()
+    for (const p of paths) {
+      ids.add(p.fromPoiId)
+      ids.add(p.toPoiId)
+    }
+    return [...ids]
+  }, [paths])
 
-      const pois = await db.pois.where('id').anyOf([...poiIds]).toArray()
-      const nameMap = new Map(pois.map((p) => [p.id, p.name]))
+  const poiIdLiteral = poiIdList.map((id) => `'${id.replace(/'/g, "''")}'`).join(',')
 
-      return paths.map((p) => ({
-        ...p,
-        fromName: nameMap.get(p.fromPoiId) ?? p.fromPoiId.slice(0, 8),
-        toName: nameMap.get(p.toPoiId) ?? p.toPoiId.slice(0, 8),
-      }))
-    },
-    [poiId]
-  ) ?? []
+  const pois = useQuery(
+    queryDb(
+      poiIdList.length > 0
+        ? {
+            query: `SELECT id, name FROM pois WHERE id IN (${poiIdLiteral})`,
+            schema: Schema.Array(Schema.Unknown),
+            bindValues: {},
+          }
+        : { query: 'SELECT id, name FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+      { deps: [poiIdLiteral] }
+    )
+  ) as Pick<POI, 'id' | 'name'>[]
+
+  return useMemo(() => {
+    const nameMap = new Map(pois.map((p) => [p.id, p.name]))
+    return paths.map((p) => ({
+      ...p,
+      fromName: nameMap.get(p.fromPoiId) ?? p.fromPoiId.slice(0, 8),
+      toName: nameMap.get(p.toPoiId) ?? p.toPoiId.slice(0, 8),
+    }))
+  }, [paths, pois])
 }

@@ -1,24 +1,23 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
+import type { WeatherHistory } from '@domain/entities/WeatherHistory'
 
 export function useRecentWeather(worldId: string | null, limit = 7) {
-  return useLiveQuery(
-    () => worldId
-      ? db.weatherHistory
-          .where('worldId')
-          .equals(worldId)
-          .toArray()
-          .then((w) => w.sort((a, b) => b.createdAt - a.createdAt).slice(0, limit))
-      : [],
-    [worldId, limit]
-  ) ?? []
+  return useQuery(queryDb({
+    query: worldId
+      ? 'SELECT * FROM weatherHistory WHERE worldId = $worldId ORDER BY createdAt DESC LIMIT $limit'
+      : 'SELECT * FROM weatherHistory WHERE 1 = 0',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: worldId ? { $worldId: worldId, $limit: limit } : {},
+  }, { deps: [worldId, limit] })) as WeatherHistory[]
 }
 
 export function useAllWeather(worldId: string | null) {
-  return useLiveQuery(
-    () => worldId
-      ? db.weatherHistory.where('worldId').equals(worldId).toArray()
-      : [],
-    [worldId]
-  ) ?? []
+  return useQuery(queryDb({
+    query: worldId
+      ? 'SELECT * FROM weatherHistory WHERE worldId = $worldId'
+      : 'SELECT * FROM weatherHistory WHERE 1 = 0',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: worldId ? { $worldId: worldId } : {},
+  }, { deps: [worldId] })) as WeatherHistory[]
 }

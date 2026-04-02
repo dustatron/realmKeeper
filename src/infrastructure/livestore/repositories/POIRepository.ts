@@ -27,6 +27,10 @@ export class POIRepository implements IPOIRepository {
     return this.store.query({ query: 'SELECT * FROM pois WHERE parentPoiId = $poiId', bindValues: { $poiId: poiId } }) as POI[]
   }
 
+  async getByMapRef(mapRef: string): Promise<POI[]> {
+    return this.store.query({ query: 'SELECT * FROM pois WHERE mapRef = $mapRef', bindValues: { $mapRef: mapRef } }) as POI[]
+  }
+
   async create(poi: POI): Promise<void> {
     this.store.commit(poiCreated(poi as any))
   }

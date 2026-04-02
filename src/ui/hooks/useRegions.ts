@@ -1,16 +1,21 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
+import type { Region } from '@domain/entities/Region'
 
 export function useRegions(worldId: string | null) {
-  return useLiveQuery(
-    () => (worldId ? db.regions.where('worldId').equals(worldId).toArray() : []),
-    [worldId]
-  ) ?? []
+  const results = useQuery(queryDb({
+    query: 'SELECT * FROM regions WHERE worldId = $worldId',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: { $worldId: worldId ?? '' },
+  }, { deps: [worldId] })) as Region[]
+  return worldId ? results : []
 }
 
 export function useRegion(id: string | null) {
-  return useLiveQuery(
-    () => (id ? db.regions.get(id) : undefined),
-    [id]
-  )
+  const results = useQuery(queryDb({
+    query: 'SELECT * FROM regions WHERE id = $id LIMIT 1',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: { $id: id ?? '' },
+  }, { deps: [id] })) as Region[]
+  return results[0] as Region | undefined
 }

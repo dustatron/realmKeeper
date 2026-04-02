@@ -1,16 +1,23 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
+import type { Rumor } from '@domain/entities/Rumor'
 
 export function useRumorsByPoi(poiId: string | null) {
-  return useLiveQuery(
-    () => (poiId ? db.rumors.where('poiId').equals(poiId).toArray() : []),
-    [poiId]
-  ) ?? []
+  return useQuery(queryDb({
+    query: poiId
+      ? 'SELECT * FROM rumors WHERE poiId = $poiId'
+      : 'SELECT * FROM rumors WHERE 1 = 0',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: poiId ? { $poiId: poiId } : {},
+  }, { deps: [poiId] })) as Rumor[]
 }
 
 export function useRumorsByRegion(regionId: string | null) {
-  return useLiveQuery(
-    () => (regionId ? db.rumors.where('regionId').equals(regionId).toArray() : []),
-    [regionId]
-  ) ?? []
+  return useQuery(queryDb({
+    query: regionId
+      ? 'SELECT * FROM rumors WHERE regionId = $regionId'
+      : 'SELECT * FROM rumors WHERE 1 = 0',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: regionId ? { $regionId: regionId } : {},
+  }, { deps: [regionId] })) as Rumor[]
 }

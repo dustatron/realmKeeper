@@ -4,7 +4,6 @@ import { SidebarTrigger } from '~/components/ui/sidebar'
 import { Button } from '~/components/ui/button'
 import { Search } from 'lucide-react'
 import { ThemeSwitch } from './theme-switch'
-import { CloudAuth } from './cloud-auth'
 import { getSidebarData } from './sidebar-data'
 import { isNavCollapsible } from './types'
 import { useUIStore } from '~/ui/stores/uiStore'
@@ -72,7 +71,6 @@ export function Header() {
         >
           <Search className="size-4" />
         </Button>
-        <CloudAuth />
         <ThemeSwitch />
       </div>
     </header>

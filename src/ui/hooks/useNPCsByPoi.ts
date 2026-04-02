@@ -1,9 +1,12 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
+import type { NPC } from '@domain/entities/NPC'
 
 export function useNPCsByPoi(poiId: string | null) {
-  return useLiveQuery(
-    () => (poiId ? db.npcs.where('poiId').equals(poiId).toArray() : []),
-    [poiId]
-  ) ?? []
+  const results = useQuery(queryDb({
+    query: 'SELECT * FROM npcs WHERE poiId = $poiId',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: { $poiId: poiId ?? '' },
+  }, { deps: [poiId] })) as NPC[]
+  return poiId ? results : []
 }

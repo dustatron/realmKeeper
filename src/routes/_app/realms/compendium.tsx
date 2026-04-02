@@ -1,8 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@infrastructure/dexie/db";
+import { queryDb, Schema } from "@livestore/livestore";
+import { useQuery } from "@livestore/react";
 import { useActiveRealm } from "~/ui/hooks/useActiveRealm";
+import { useContainer } from "~/ui/hooks/useContainer";
 import { useUIStore } from "~/ui/stores/uiStore";
 import {
   getMonstersBySystemId,
@@ -169,6 +170,7 @@ function CompendiumPage() {
   const realm = useActiveRealm();
   const activeRealmId = useUIStore((s) => s.activeRealmId);
   const navigate = useNavigate({ from: "/realms/compendium" });
+  const container = useContainer();
   const { tab: tabParam, q: searchQuery = "" } = Route.useSearch();
   const systemId = realm?.systemId ?? "";
   const starredMonsterIds = realm?.starredMonsterIds ?? [];
@@ -180,10 +182,7 @@ function CompendiumPage() {
     const updated = starredMonsterIds.includes(monsterId)
       ? starredMonsterIds.filter((id) => id !== monsterId)
       : [...starredMonsterIds, monsterId];
-    await db.worlds.update(realm.id, {
-      starredMonsterIds: updated,
-      updatedAt: Date.now(),
-    });
+    await container.realmRepo.update({ ...realm, starredMonsterIds: updated, updatedAt: Date.now() });
   };
 
   const handleToggleSpellStar = async (spellId: string) => {
@@ -191,10 +190,7 @@ function CompendiumPage() {
     const updated = starredSpellIds.includes(spellId)
       ? starredSpellIds.filter((id) => id !== spellId)
       : [...starredSpellIds, spellId];
-    await db.worlds.update(realm.id, {
-      starredSpellIds: updated,
-      updatedAt: Date.now(),
-    });
+    await container.realmRepo.update({ ...realm, starredSpellIds: updated, updatedAt: Date.now() });
   };
 
   const handleToggleMagicItemStar = async (itemId: string) => {
@@ -202,24 +198,17 @@ function CompendiumPage() {
     const updated = starredMagicItemIds.includes(itemId)
       ? starredMagicItemIds.filter((id) => id !== itemId)
       : [...starredMagicItemIds, itemId];
-    await db.worlds.update(realm.id, {
-      starredMagicItemIds: updated,
-      updatedAt: Date.now(),
-    });
+    await container.realmRepo.update({ ...realm, starredMagicItemIds: updated, updatedAt: Date.now() });
   };
 
-  // Custom entries from Dexie
-  const customEntries =
-    useLiveQuery(
-      () =>
-        activeRealmId
-          ? db.customCompendiumEntries
-              .where("worldId")
-              .equals(activeRealmId)
-              .toArray()
-          : [],
-      [activeRealmId],
-    ) ?? [];
+  // Custom entries from LiveStore
+  const customEntries = useQuery(queryDb({
+    query: activeRealmId
+      ? 'SELECT * FROM customCompendiumEntries WHERE worldId = $worldId'
+      : 'SELECT * FROM customCompendiumEntries WHERE 1 = 0',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: activeRealmId ? { $worldId: activeRealmId } : {},
+  }, { deps: [activeRealmId] })) as import('@domain/entities/CustomCompendiumEntry').CustomCompendiumEntry[];
 
   const customMonsters = useMemo(
     () =>
@@ -354,10 +343,7 @@ function CompendiumPage() {
     } else {
       delete updated[key];
     }
-    await db.worlds.update(realm.id, {
-      raceColors: updated,
-      updatedAt: Date.now(),
-    });
+    await container.realmRepo.update({ ...realm, raceColors: updated, updatedAt: Date.now() });
   };
 
   const handleAddRace = async () => {
@@ -370,19 +356,13 @@ function CompendiumPage() {
       customRaces.some((r) => r.toLowerCase() === lower)
     )
       return;
-    await db.worlds.update(realm.id, {
-      customRaces: [...customRaces, trimmed],
-      updatedAt: Date.now(),
-    });
+    await container.realmRepo.update({ ...realm, customRaces: [...customRaces, trimmed], updatedAt: Date.now() });
     setNewRace("");
   };
 
   const handleRemoveRace = async (race: string) => {
     if (!realm) return;
-    await db.worlds.update(realm.id, {
-      customRaces: customRaces.filter((r) => r !== race),
-      updatedAt: Date.now(),
-    });
+    await container.realmRepo.update({ ...realm, customRaces: customRaces.filter((r) => r !== race), updatedAt: Date.now() });
   };
 
   type TabDef = {

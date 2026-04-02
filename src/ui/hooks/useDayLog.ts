@@ -1,10 +1,10 @@
+import { queryDb, Schema } from '@livestore/livestore'
 import { useMemo } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
+import { useQuery } from '@livestore/react'
 import { useAllWeather } from './useWeather'
 import { useAllEvents } from './useTimeline'
 import { useActiveRealm } from './useActiveRealm'
 import { toDayKey, fromDayKey, dayKeyRange } from '@domain/value-objects/DayKey'
-import { db } from '@infrastructure/dexie/db'
 import type { WeatherHistory } from '@domain/entities/WeatherHistory'
 import type { WorldEvent } from '@domain/entities/WorldEvent'
 import type { POIEvent } from '@domain/entities/POIEvent'
@@ -35,14 +35,18 @@ export function useDayLog(
   const allWeather = useAllWeather(worldId)
   const allEvents = useAllEvents(worldId)
 
-  // Load POI events for this realm
-  const poiEvents = useLiveQuery(
-    async () => {
-      if (!worldId) return []
-      return await db.poiEvents.where('worldId').equals(worldId).toArray()
-    },
-    [worldId]
-  ) ?? []
+  const poiEvents = useQuery(
+    queryDb(
+      worldId
+        ? {
+            query: 'SELECT * FROM poiEvents WHERE worldId = $worldId',
+            schema: Schema.Array(Schema.Unknown),
+            bindValues: { $worldId: worldId },
+          }
+        : { query: 'SELECT * FROM poiEvents WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+      { deps: [worldId] }
+    )
+  ) as POIEvent[]
 
   return useMemo(() => {
     if (!realm) return []
@@ -82,16 +86,11 @@ export function useDayLog(
     // Build POI event lookup: key by trigger day+season (recurring match any year)
     const poiEventMap = new Map<number, POIEvent[]>()
     for (const pe of poiEvents) {
-      // For recurring events with no year, add to every matching season+day
-      // For specific-year events, add to that exact day
-      const k = toDayKey(pe.trigger.year ?? 0, pe.trigger.season, pe.trigger.day, dps)
       if (pe.trigger.year !== null) {
+        const k = toDayKey(pe.trigger.year ?? 0, pe.trigger.season, pe.trigger.day, dps)
         const arr = poiEventMap.get(k) ?? []
         arr.push(pe)
         poiEventMap.set(k, arr)
-      } else {
-        // Recurring: store with season+day key, match by ignoring year
-        // We'll use a special approach below
       }
     }
     // Separate recurring events for matching
@@ -105,9 +104,7 @@ export function useDayLog(
     return keys.map((dk): DayLogEntry => {
       const { year, season, day } = fromDayKey(dk, dps)
 
-      // Match POI events for this day
       const scheduled = poiEventMap.get(dk) ?? []
-      // Also match recurring events by season+day
       const recurringMatches = recurringEvents.filter(
         (pe) => pe.trigger.season === season && pe.trigger.day === day
       )

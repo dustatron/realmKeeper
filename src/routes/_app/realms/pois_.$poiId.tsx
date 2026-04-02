@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect, useMemo } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
 import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
 import { useRegion, useRegions } from '~/ui/hooks/useRegions'
 import { usePOIBreadcrumb } from '~/ui/hooks/usePOIBreadcrumb'
@@ -86,10 +86,16 @@ function POIDetailPage() {
   const childNPCs = useNPCsByPoiIds(children.map((c) => c.id))
   const factionPresences = useFactionPresencesByPoi(poiId)
   const paths = useResolvedPaths(poiId)
-  const poiEvents = useLiveQuery(
-    () => (poiId ? db.poiEvents.where('poiId').equals(poiId).toArray() : []),
-    [poiId]
-  ) ?? []
+  const poiEvents = useQuery(queryDb(
+    poiId
+      ? {
+          query: 'SELECT * FROM poiEvents WHERE poiId = $poiId',
+          schema: Schema.Array(Schema.Unknown),
+          bindValues: { $poiId: poiId },
+        }
+      : { query: 'SELECT * FROM poiEvents WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+    { deps: poiId }
+  )) as import('@domain/entities/POIEvent').POIEvent[]
   const poiMaps = usePOIMaps(poiId)
   const rumors = useRumorsByPoi(poiId)
   const notices = useNoticesByPoi(poiId)
@@ -479,7 +485,7 @@ function POIDetailPage() {
           <Swords className="mr-1.5 size-4" />
           {runMode ? 'Browse' : 'Run'}
         </Button>
-        <Button size="sm" variant="outline" onClick={() => db.pois.update(poi.id, { visited: !poi.visited, updatedAt: Date.now() })} title={poi.visited ? 'Mark as unvisited' : 'Mark as visited'}>
+        <Button size="sm" variant="outline" onClick={() => container.poiRepo.update({ ...poi, visited: !poi.visited, updatedAt: Date.now() })} title={poi.visited ? 'Mark as unvisited' : 'Mark as visited'}>
           {poi.visited ? <CheckCircle2 className="size-4 text-green-500" /> : <CircleDashed className="size-4" />}
         </Button>
         <Button size="sm" variant="outline" onClick={actions.cycleLightLevel} title={`Light: ${poi.lightLevel ?? 'not set'}`}>
@@ -488,7 +494,7 @@ function POIDetailPage() {
            poi.lightLevel === 'dark' ? <Moon className="size-4 text-slate-500" /> :
            <Sun className="size-4 text-muted-foreground/40" />}
         </Button>
-        <Button size="sm" variant="outline" onClick={() => db.pois.update(poi.id, { starred: !poi.starred, updatedAt: Date.now() })} title={poi.starred ? 'Unstar' : 'Star'}>
+        <Button size="sm" variant="outline" onClick={() => container.poiRepo.update({ ...poi, starred: !poi.starred, updatedAt: Date.now() })} title={poi.starred ? 'Unstar' : 'Star'}>
           <Star className={`size-4 ${poi.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
         </Button>
         {poi.type === 'dungeon' && (

@@ -1,4 +1,3 @@
-import { db } from '@infrastructure/dexie/db'
 import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
 import { executeCreateGameMap } from '@application/use-cases/CreateGameMap'
 import { executeCreateRumor } from '@application/use-cases/CreateRumor'
@@ -135,7 +134,7 @@ export function usePOIActions(poi: POI | null | undefined, region: Region | null
     const cycle: Array<'bright' | 'dim' | 'dark' | null> = [null, 'bright', 'dim', 'dark']
     const idx = cycle.indexOf(poi.lightLevel ?? null)
     const next = cycle[(idx + 1) % cycle.length]
-    await db.pois.update(poi.id, { lightLevel: next, updatedAt: Date.now() })
+    await executeUpdatePOI({ ...poi, lightLevel: next, updatedAt: Date.now() }, { poiRepo: container.poiRepo })
   }
 
   const handleUpdateCompendiumRefs = async (refs: { monsterRefs: CompendiumRef[]; magicItemRefs: CompendiumRef[]; spellRefs: CompendiumRef[]; equipmentRefs: CompendiumRef[] }) => {

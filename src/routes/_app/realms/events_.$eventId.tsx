@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { useRealmPOIs } from '~/ui/hooks/usePOIs'
 import { useUIStore } from '~/ui/stores/uiStore'
@@ -42,7 +43,7 @@ import {
   Zap,
   ZapOff,
 } from 'lucide-react'
-import { db } from '@infrastructure/dexie/db'
+import type { POIEvent } from '@domain/entities/POIEvent'
 
 export const Route = createFileRoute('/_app/realms/events_/$eventId')({
   component: EventDetailPage,
@@ -55,10 +56,12 @@ function EventDetailPage() {
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const pois = useRealmPOIs(activeRealmId)
 
-  const event = useLiveQuery(
-    () => db.poiEvents.get(eventId),
-    [eventId]
-  )
+  const eventResults = useQuery(queryDb({
+    query: 'SELECT * FROM poiEvents WHERE id = $id LIMIT 1',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: { $id: eventId ?? '' },
+  }, { deps: eventId })) as POIEvent[]
+  const event = eventResults[0]
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)

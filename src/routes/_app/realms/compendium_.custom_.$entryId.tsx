@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { executeDeleteCustomCompendiumEntry } from '@application/use-cases/DeleteCustomCompendiumEntry'
 import type { CustomCompendiumEntry } from '@domain/entities/CustomCompendiumEntry'
@@ -21,11 +21,12 @@ function CustomCompendiumDetailPage() {
   const navigate = useNavigate()
   const container = useContainer()
 
-  const entry = useLiveQuery(() => db.customCompendiumEntries.get(entryId), [entryId])
-
-  if (entry === undefined) {
-    return <div className="py-8 text-center text-muted-foreground">Loading...</div>
-  }
+  const entryResults = useQuery(queryDb({
+    query: 'SELECT * FROM customCompendiumEntries WHERE id = $id LIMIT 1',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: { $id: entryId },
+  }, { deps: [entryId] })) as CustomCompendiumEntry[]
+  const entry = entryResults[0] ?? null
 
   if (!entry) {
     return (

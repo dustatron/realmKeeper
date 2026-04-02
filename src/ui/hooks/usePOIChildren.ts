@@ -1,9 +1,18 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
+import type { POI } from '@domain/entities/POI'
 
 export function usePOIChildren(parentPoiId: string | null) {
-  return useLiveQuery(
-    () => parentPoiId ? db.pois.where('parentPoiId').equals(parentPoiId).toArray() : [],
-    [parentPoiId]
-  ) ?? []
+  return useQuery(
+    queryDb(
+      parentPoiId
+        ? {
+            query: 'SELECT * FROM pois WHERE parentPoiId = $parentPoiId',
+            schema: Schema.Array(Schema.Unknown),
+            bindValues: { $parentPoiId: parentPoiId },
+          }
+        : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+      { deps: [parentPoiId] }
+    )
+  ) as POI[]
 }

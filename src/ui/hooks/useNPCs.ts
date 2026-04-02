@@ -1,34 +1,39 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
+import type { NPC } from '@domain/entities/NPC'
 
 export function useNPCs(worldId: string | null) {
-  return useLiveQuery(
-    () => (worldId ? db.npcs.where('worldId').equals(worldId).toArray() : []),
-    [worldId]
-  ) ?? []
+  const results = useQuery(queryDb({
+    query: 'SELECT * FROM npcs WHERE worldId = $worldId',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: { $worldId: worldId ?? '' },
+  }, { deps: [worldId] })) as NPC[]
+  return worldId ? results : []
 }
 
 export function useNPC(id: string | null) {
-  return useLiveQuery(
-    () => (id ? db.npcs.get(id) : undefined),
-    [id]
-  )
+  const results = useQuery(queryDb({
+    query: 'SELECT * FROM npcs WHERE id = $id LIMIT 1',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: { $id: id ?? '' },
+  }, { deps: [id] })) as NPC[]
+  return results[0] as NPC | undefined
 }
 
 export function useStarredNPCs(worldId: string | null) {
-  return useLiveQuery(
-    async () => {
-      if (!worldId) return []
-      const npcs = await db.npcs.where('worldId').equals(worldId).toArray()
-      return npcs.filter((n) => n.starred)
-    },
-    [worldId]
-  ) ?? []
+  const results = useQuery(queryDb({
+    query: 'SELECT * FROM npcs WHERE worldId = $worldId AND starred = 1',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: { $worldId: worldId ?? '' },
+  }, { deps: [worldId] })) as NPC[]
+  return worldId ? results : []
 }
 
 export function useNPCsByFaction(factionId: string | null) {
-  return useLiveQuery(
-    () => (factionId ? db.npcs.where('factionIds').equals(factionId).toArray() : []),
-    [factionId]
-  ) ?? []
+  const results = useQuery(queryDb({
+    query: 'SELECT * FROM npcs WHERE EXISTS (SELECT 1 FROM json_each(factionIds) WHERE value = $factionId)',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: { $factionId: factionId ?? '' },
+  }, { deps: [factionId] })) as NPC[]
+  return factionId ? results : []
 }

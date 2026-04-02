@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@infrastructure/dexie/db";
+import { queryDb, Schema } from "@livestore/livestore";
+import { useQuery } from "@livestore/react";
 import { PageHeader } from "~/components/shared/PageHeader";
 import { EmptyState } from "~/components/shared/EmptyState";
 import { ConfirmDialog } from "~/components/shared/ConfirmDialog";
@@ -52,7 +52,6 @@ import {
   DEFAULT_DAYS_PER_SEASON,
   DEFAULT_WATCHES_PER_DAY,
 } from "@shared/constants";
-// useRealms replaced by direct useLiveQuery to detect loading vs empty
 import { useSystemConfigs } from "~/ui/hooks/useSystemConfigs";
 import { useContainer } from "~/ui/hooks/useContainer";
 import { useUIStore } from "~/ui/stores/uiStore";
@@ -73,9 +72,12 @@ export const Route = createFileRoute("/_app/realms/")({
 function RealmsPage() {
   const navigate = useNavigate();
   const container = useContainer();
-  const rawRealms = useLiveQuery(() => db.worlds.toArray());
-  const realmsLoaded = rawRealms !== undefined;
-  const realms = rawRealms ?? [];
+  const rawRealms = useQuery(queryDb({
+    query: 'SELECT * FROM worlds',
+    schema: Schema.Array(Schema.Unknown),
+  })) as import('@domain/entities/Realm').Realm[];
+  const realmsLoaded = true;
+  const realms = rawRealms;
   const systemConfigs = useSystemConfigs();
   const setActiveRealmId = useUIStore((state) => state.setActiveRealmId);
   const activeRealmId = useUIStore((state) => state.activeRealmId);

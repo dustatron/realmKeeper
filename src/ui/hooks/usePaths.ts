@@ -1,28 +1,24 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
+import { pathsTable } from '@infrastructure/livestore/tables'
+import type { Path } from '@domain/entities/Path'
 
 export function usePaths() {
-  return useLiveQuery(
-    () => db.paths.toArray(),
-    []
-  ) ?? []
+  return useQuery(queryDb(pathsTable.select())) as Path[]
 }
 
 export function usePathsByPoi(poiId: string | null) {
-  return useLiveQuery(
-    async () => {
-      if (!poiId) return []
-      const [from, to] = await Promise.all([
-        db.paths.where('fromPoiId').equals(poiId).toArray(),
-        db.paths.where('toPoiId').equals(poiId).toArray(),
-      ])
-      const seen = new Set<string>()
-      return [...from, ...to].filter((p) => {
-        if (seen.has(p.id)) return false
-        seen.add(p.id)
-        return true
-      })
-    },
-    [poiId]
-  ) ?? []
+  return useQuery(
+    queryDb(
+      poiId
+        ? {
+            query: `SELECT DISTINCT * FROM paths
+                    WHERE fromPoiId = $poiId OR toPoiId = $poiId`,
+            schema: Schema.Array(Schema.Unknown),
+            bindValues: { $poiId: poiId },
+          }
+        : { query: 'SELECT * FROM paths WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+      { deps: [poiId] }
+    )
+  ) as Path[]
 }

@@ -1,16 +1,20 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
 import type { EntityNote } from '@domain/entities/EntityNote'
 
 export function useEntityNotes(ownerType: 'poi' | 'region', ownerId: string | null): EntityNote[] {
-  return useLiveQuery(
-    () => {
-      if (!ownerId) return []
-      return db.entityNotes
-        .where('[ownerType+ownerId]')
-        .equals([ownerType, ownerId])
-        .sortBy('sortOrder')
-    },
-    [ownerType, ownerId]
-  ) ?? []
+  return useQuery(
+    queryDb(
+      ownerId
+        ? {
+            query: `SELECT * FROM entityNotes
+                    WHERE ownerType = $ownerType AND ownerId = $ownerId
+                    ORDER BY sortOrder ASC`,
+            schema: Schema.Array(Schema.Unknown),
+            bindValues: { $ownerType: ownerType, $ownerId: ownerId },
+          }
+        : { query: 'SELECT * FROM entityNotes WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+      { deps: [ownerType, ownerId] }
+    )
+  ) as EntityNote[]
 }

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useFaction, useFactions } from '~/ui/hooks/useFactions'
 import { useNPCs, useNPCsByFaction } from '~/ui/hooks/useNPCs'
@@ -31,7 +32,7 @@ import { ArrowLeft, Trash2, Pencil, Crown, CheckCircle2, Circle, Dices, Users, H
 import { ProgressClock } from '~/components/shared/ProgressClock'
 import { FACTION_STATUSES, FACTION_PRESENCE_TYPES, type FactionPresenceType } from '@shared/constants'
 import { deriveStatus } from '@domain/value-objects/RelationshipScore'
-import { db } from '@infrastructure/dexie/db'
+import type { FactionPresence } from '@domain/entities/FactionPresence'
 
 export const Route = createFileRoute('/_app/realms/factions_/$factionId')({
   component: FactionDetailPage,
@@ -70,13 +71,16 @@ function FactionDetailPage() {
     notes: '',
   })
 
-  const factionPresences = useLiveQuery(
-    async () => {
-      if (!factionId) return []
-      return await db.factionPresences.where('factionId').equals(factionId).toArray()
-    },
-    [factionId]
-  ) ?? []
+  const factionPresences = useQuery(queryDb(
+    factionId
+      ? {
+          query: 'SELECT * FROM factionPresences WHERE factionId = $factionId',
+          schema: Schema.Array(Schema.Unknown),
+          bindValues: { $factionId: factionId },
+        }
+      : { query: 'SELECT * FROM factionPresences WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+    { deps: factionId }
+  )) as FactionPresence[]
 
   const handleDelete = async () => {
     await executeDeleteFaction(factionId, { factionRepo: container.factionRepo })

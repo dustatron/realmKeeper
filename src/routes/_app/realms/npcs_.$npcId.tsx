@@ -22,7 +22,6 @@ import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { ArrowLeft, Heart, Shield, Skull, Swords, Package, Sparkles, Handshake, Pencil, MapPin, ChevronUp, ChevronDown, Trash2, Plus, ChevronsUpDown, Check, Star, Dices } from 'lucide-react'
-import { db } from '@infrastructure/dexie/db'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '~/components/ui/command'
 import { cn } from '~/lib/utils'
@@ -701,7 +700,7 @@ function NPCDetailPage() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => db.npcs.update(npc.id, { starred: !npc.starred, updatedAt: Date.now() })}
+              onClick={() => container.npcRepo.update({ ...npc, starred: !npc.starred, updatedAt: Date.now() })}
               title={npc.starred ? 'Unstar' : 'Star'}
             >
               <Star className={`size-4 ${npc.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />

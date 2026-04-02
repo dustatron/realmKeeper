@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, useCallback } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
 import { useRealmPOIs } from '~/ui/hooks/usePOIs'
@@ -58,8 +59,6 @@ import {
 import { Badge } from '~/components/ui/badge'
 import { Switch } from '~/components/ui/switch'
 import { Scroll, CalendarClock, Plus, Trash2, Zap, ZapOff } from 'lucide-react'
-import { db } from '@infrastructure/dexie/db'
-
 export const Route = createFileRoute('/_app/realms/calendar')({
   component: CalendarPage,
 })
@@ -115,13 +114,13 @@ function CalendarPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null)
 
-  const events = useLiveQuery(
-    async () => {
-      if (!activeRealmId) return []
-      return await db.poiEvents.where('worldId').equals(activeRealmId).toArray()
-    },
-    [activeRealmId]
-  ) ?? []
+  const events = useQuery(queryDb({
+    query: activeRealmId
+      ? 'SELECT * FROM poiEvents WHERE worldId = $worldId'
+      : 'SELECT * FROM poiEvents WHERE 1 = 0',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: activeRealmId ? { $worldId: activeRealmId } : {},
+  }, { deps: [activeRealmId] })) as POIEvent[]
 
   const [createForm, setCreateForm] = useState({
     name: '',

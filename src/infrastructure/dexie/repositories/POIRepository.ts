@@ -33,4 +33,8 @@ export class POIRepository implements IPOIRepository {
   async delete(id: string): Promise<void> {
     await db.pois.delete(id)
   }
+
+  async getByMapRef(mapRef: string): Promise<POI[]> {
+    return db.pois.where('mapRef').equals(mapRef).toArray()
+  }
 }

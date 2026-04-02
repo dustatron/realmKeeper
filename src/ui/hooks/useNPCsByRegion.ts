@@ -1,9 +1,12 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
+import type { NPC } from '@domain/entities/NPC'
 
 export function useNPCsByRegion(regionId: string | null) {
-  return useLiveQuery(
-    () => (regionId ? db.npcs.where('regionId').equals(regionId).toArray() : []),
-    [regionId]
-  ) ?? []
+  const results = useQuery(queryDb({
+    query: 'SELECT * FROM npcs WHERE regionId = $regionId',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: { $regionId: regionId ?? '' },
+  }, { deps: [regionId] })) as NPC[]
+  return regionId ? results : []
 }

@@ -1,13 +1,17 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
+import { systemConfigsTable } from '@infrastructure/livestore/tables'
+import type { SystemConfig } from '@domain/entities/SystemConfig'
 
 export function useSystemConfigs() {
-  return useLiveQuery(() => db.systemConfigs.toArray()) ?? []
+  return useQuery(queryDb(systemConfigsTable.select())) as SystemConfig[]
 }
 
 export function useSystemConfig(id: string | null) {
-  return useLiveQuery(
-    () => (id ? db.systemConfigs.get(id) : undefined),
-    [id]
-  )
+  const results = useQuery(queryDb({
+    query: 'SELECT * FROM systemConfigs WHERE id = $id LIMIT 1',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: { $id: id ?? '' },
+  }, { deps: [id] })) as SystemConfig[]
+  return results[0] as SystemConfig | undefined
 }

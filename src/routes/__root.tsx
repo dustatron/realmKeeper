@@ -6,7 +6,7 @@ import {
   Scripts,
   createRootRoute,
 } from '@tanstack/react-router'
-import { LiveStoreProvider } from '@livestore/react'
+import { LiveStoreProvider, useStore } from '@livestore/react'
 import { TooltipProvider } from '~/components/ui/tooltip'
 import { ContainerProvider } from '~/ui/hooks/useContainer'
 import { schema } from '@infrastructure/livestore/schema'
@@ -60,17 +60,22 @@ function RootShell({ children }: { children: React.ReactNode }) {
   )
 }
 
-function RootComponent() {
+function DevApiInstaller() {
+  const { store } = useStore()
   React.useEffect(() => {
     import('@infrastructure/dev/devApi').then(({ installDevApi }) => {
-      installDevApi()
+      installDevApi(store as any)
     })
-  }, [])
+  }, [store])
+  return null
+}
 
+function RootComponent() {
   return (
     <LiveStoreProvider schema={schema} adapter={adapter} boot={bootStore as any} batchUpdates={batchUpdates}>
       <ContainerProvider>
         <TooltipProvider>
+          <DevApiInstaller />
           <Outlet />
         </TooltipProvider>
       </ContainerProvider>

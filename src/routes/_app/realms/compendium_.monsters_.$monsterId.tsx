@@ -2,7 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { getCompendiumById } from '@domain/data/compendium'
 import type { CompendiumMonster } from '@domain/entities/Compendium'
 import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
-import { db } from '@infrastructure/dexie/db'
+import { useContainer } from '~/ui/hooks/useContainer'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
@@ -29,6 +29,7 @@ function MonsterDetailPage() {
   const monster = entry as CompendiumMonster
   const sd = monster.systemData
   const realm = useActiveRealm()
+  const container = useContainer()
   const starredIds = realm?.starredMonsterIds ?? []
   const isStarred = starredIds.includes(monster.id)
 
@@ -37,10 +38,7 @@ function MonsterDetailPage() {
     const updated = isStarred
       ? starredIds.filter((id) => id !== monster.id)
       : [...starredIds, monster.id]
-    await db.worlds.update(realm.id, {
-      starredMonsterIds: updated,
-      updatedAt: Date.now(),
-    })
+    await container.realmRepo.update({ ...realm, starredMonsterIds: updated, updatedAt: Date.now() })
   }
 
   return (

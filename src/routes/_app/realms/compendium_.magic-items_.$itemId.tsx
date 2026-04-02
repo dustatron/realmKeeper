@@ -2,7 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { getCompendiumById } from '@domain/data/compendium'
 import type { CompendiumMagicItem } from '@domain/entities/Compendium'
 import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
-import { db } from '@infrastructure/dexie/db'
+import { useContainer } from '~/ui/hooks/useContainer'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
@@ -29,6 +29,7 @@ function MagicItemDetailPage() {
   const item = entry as CompendiumMagicItem
   const sd = item.systemData
   const realm = useActiveRealm()
+  const container = useContainer()
   const starredIds = realm?.starredMagicItemIds ?? []
   const isStarred = starredIds.includes(item.id)
 
@@ -37,10 +38,7 @@ function MagicItemDetailPage() {
     const updated = isStarred
       ? starredIds.filter((id) => id !== item.id)
       : [...starredIds, item.id]
-    await db.worlds.update(realm.id, {
-      starredMagicItemIds: updated,
-      updatedAt: Date.now(),
-    })
+    await container.realmRepo.update({ ...realm, starredMagicItemIds: updated, updatedAt: Date.now() })
   }
 
   return (

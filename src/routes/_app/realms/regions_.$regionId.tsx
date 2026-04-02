@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect, useMemo } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
 import { useRegion } from '~/ui/hooks/useRegions'
 import { usePOIs } from '~/ui/hooks/usePOIs'
 import { useNPCsByRegion } from '~/ui/hooks/useNPCsByRegion'
@@ -133,43 +133,66 @@ function RegionDetailPage() {
 
   // POI event data
   const poiIds = pois.map(p => p.id)
-  const poiEvents = useLiveQuery(
-    async () => {
-      if (poiIds.length === 0) return []
-      return db.poiEvents.where('poiId').anyOf(poiIds).toArray()
-    },
-    [poiIds.join(',')]
-  ) ?? []
+  const poiIdKey = poiIds.join(',')
+  const poiEventPlaceholders = poiIds.map((_, i) => `$pid${i}`).join(', ')
+  const poiEventBindValues: Record<string, string> = Object.fromEntries(poiIds.map((id, i) => [`$pid${i}`, id]))
+  const poiEvents = useQuery(queryDb({
+    query: poiIds.length > 0
+      ? `SELECT * FROM poiEvents WHERE poiId IN (${poiEventPlaceholders})`
+      : 'SELECT * FROM poiEvents WHERE 1 = 0',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: poiIds.length > 0 ? poiEventBindValues : {},
+  }, { deps: poiIdKey })) as import('@domain/entities/POIEvent').POIEvent[]
 
-  // Factions in this region (based here or with presence at POIs)
-  const factions = useLiveQuery(
-    async () => {
-      if (!regionId) return []
-      const basedHere = await db.factions.where('worldId').equals(region?.worldId ?? '').toArray()
-      const regionFactions = basedHere.filter(f => f.regionId === regionId)
+  // Factions based in this region
+  const regionFactionsList = useQuery(queryDb(
+    region?.worldId
+      ? {
+          query: 'SELECT * FROM factions WHERE worldId = $worldId AND regionId = $regionId',
+          schema: Schema.Array(Schema.Unknown),
+          bindValues: { $worldId: region.worldId, $regionId: regionId },
+        }
+      : { query: 'SELECT * FROM factions WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+    { deps: `${region?.worldId ?? ''}:${regionId}` }
+  )) as import('@domain/entities/Faction').Faction[]
 
-      if (poiIds.length === 0) return regionFactions
-      const presences = await db.factionPresences.where('poiId').anyOf(poiIds).toArray()
-      const presenceFactionIds = new Set(presences.map(p => p.factionId))
-      const regionFactionIds = new Set(regionFactions.map(f => f.id))
-      const presenceOnlyIds = [...presenceFactionIds].filter(id => !regionFactionIds.has(id))
-      if (presenceOnlyIds.length === 0) return regionFactions
-      const presenceFactions = await db.factions.where('id').anyOf(presenceOnlyIds).toArray()
-      return [...regionFactions, ...presenceFactions]
-    },
-    [regionId, region?.worldId, poiIds.join(',')]
-  ) ?? []
+  // Faction presences at POIs in this region
+  const presencePlaceholders = poiIds.map((_, i) => `$ppid${i}`).join(', ')
+  const presenceBindValues: Record<string, string> = Object.fromEntries(poiIds.map((id, i) => [`$ppid${i}`, id]))
+  const regionPresences = useQuery(queryDb({
+    query: poiIds.length > 0
+      ? `SELECT * FROM factionPresences WHERE poiId IN (${presencePlaceholders})`
+      : 'SELECT * FROM factionPresences WHERE 1 = 0',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: poiIds.length > 0 ? presenceBindValues : {},
+  }, { deps: poiIdKey })) as import('@domain/entities/FactionPresence').FactionPresence[]
+
+  // All realm factions (for presence lookup + unassigned list)
+  const allRealmFactions = useQuery(queryDb(
+    realm?.id
+      ? {
+          query: 'SELECT * FROM factions WHERE worldId = $worldId',
+          schema: Schema.Array(Schema.Unknown),
+          bindValues: { $worldId: realm.id },
+        }
+      : { query: 'SELECT * FROM factions WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+    { deps: realm?.id ?? '' }
+  )) as import('@domain/entities/Faction').Faction[]
+
+  // Merge: factions based here + factions with presence at region POIs
+  const factions = useMemo(() => {
+    const regionFactionIds = new Set(regionFactionsList.map(f => f.id))
+    const presenceFactionIds = new Set(regionPresences.map(p => p.factionId))
+    const presenceOnlyIds = [...presenceFactionIds].filter(id => !regionFactionIds.has(id))
+    const presenceFactions = allRealmFactions.filter(f => presenceOnlyIds.includes(f.id))
+    return [...regionFactionsList, ...presenceFactions]
+  }, [regionFactionsList, regionPresences, allRealmFactions])
 
   // Realm factions not already in this region (for "assign existing" dialog)
   const factionIds = new Set(factions.map(f => f.id))
-  const unassignedFactions = useLiveQuery(
-    async () => {
-      if (!realm) return []
-      const all = await db.factions.where('worldId').equals(realm.id).toArray()
-      return all.filter(f => f.regionId !== regionId && !factionIds.has(f.id))
-    },
-    [realm?.id, regionId, [...factionIds].join(',')]
-  ) ?? []
+  const unassignedFactions = allRealmFactions.filter(
+    f => f.regionId !== regionId && !factionIds.has(f.id)
+  )
 
   const topLevelPOIs = useMemo(() => pois.filter(p => p.parentPoiId === null), [pois])
 
@@ -270,7 +293,7 @@ function RegionDetailPage() {
 
   const handleAssignFaction = async () => {
     if (!assignFactionId) return
-    const faction = await db.factions.get(assignFactionId)
+    const faction = allRealmFactions.find(f => f.id === assignFactionId)
     if (!faction) return
     await container.factionRepo.update({ ...faction, regionId })
     setAssignFactionOpen(false)

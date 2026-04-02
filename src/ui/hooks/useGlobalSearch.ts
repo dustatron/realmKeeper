@@ -1,13 +1,14 @@
 import { useMemo } from 'react'
 import Fuse from 'fuse.js'
-import { useLiveQuery } from 'dexie-react-hooks'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
 import { useNPCs } from './useNPCs'
 import { useFactions } from './useFactions'
 import { useRegions } from './useRegions'
 import { useRealmPOIs } from './usePOIs'
 import { useRealmNotes } from './useRealmNotes'
 import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
-import { db } from '@infrastructure/dexie/db'
+import type { CustomCompendiumEntry } from '@domain/entities/CustomCompendiumEntry'
 import {
   getMonstersBySystemId,
   getSpellsBySystemId,
@@ -33,11 +34,13 @@ export function useGlobalSearch(worldId: string | null, query: string) {
   const pois = useRealmPOIs(worldId)
   const notes = useRealmNotes(worldId)
   const realm = useActiveRealm()
-  const customEntries = useLiveQuery(
-    () => worldId ? db.customCompendiumEntries.where('worldId').equals(worldId).toArray() : [],
-    [worldId],
-    []
-  )
+  const customEntries = useQuery(queryDb({
+    query: worldId
+      ? 'SELECT * FROM customCompendiumEntries WHERE worldId = $worldId'
+      : 'SELECT * FROM customCompendiumEntries WHERE 1 = 0',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: worldId ? { $worldId: worldId } : {},
+  }, { deps: [worldId] })) as CustomCompendiumEntry[]
 
   const items = useMemo<SearchableItem[]>(() => {
     const result: SearchableItem[] = []

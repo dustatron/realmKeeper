@@ -4,8 +4,9 @@ import { Badge } from '~/components/ui/badge'
 import { Input } from '~/components/ui/input'
 import { Dices, Plus, Search } from 'lucide-react'
 import { getMonstersBySystemId, searchCompendium, searchCustomEntries } from '@domain/data/compendium'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
+import type { CustomCompendiumEntry } from '@domain/entities/CustomCompendiumEntry'
 import type { WanderingMonsterEntry } from '@domain/value-objects/WanderingMonster'
 import type { CompendiumMonster } from '@domain/entities/Compendium'
 import { bestiaryEntryToWandering, formatAC, formatHP } from './wanderingMonsterUtils'
@@ -24,10 +25,13 @@ export function MonsterSearchTab({
   const [query, setQuery] = useState('')
   const [randomEntry, setRandomEntry] = useState<CompendiumMonster | null>(null)
 
-  const customEntries = useLiveQuery(
-    () => worldId ? db.customCompendiumEntries.where('worldId').equals(worldId).toArray() : [],
-    [worldId],
-  ) ?? []
+  const customEntries = useQuery(queryDb({
+    query: worldId
+      ? 'SELECT * FROM customCompendiumEntries WHERE worldId = $worldId'
+      : 'SELECT * FROM customCompendiumEntries WHERE 1 = 0',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: worldId ? { $worldId: worldId } : {},
+  }, { deps: [worldId] })) as CustomCompendiumEntry[]
 
   const results = useMemo(() => {
     if (!query.trim()) return []

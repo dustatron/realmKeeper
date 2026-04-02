@@ -1,77 +1,108 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
+import { useMemo } from 'react'
+import type { GameMap } from '@domain/entities/GameMap'
+import type { POI } from '@domain/entities/POI'
+import type { Path } from '@domain/entities/Path'
 
 export function useRealmMaps(worldId: string | null) {
-  return useLiveQuery(
-    () => (worldId ? db.gameMaps.where('ownerRealmId').equals(worldId).sortBy('sortOrder') : []),
-    [worldId]
-  ) ?? []
+  return useQuery(
+    queryDb(
+      worldId
+        ? {
+            query: 'SELECT * FROM gameMaps WHERE ownerRealmId = $worldId ORDER BY sortOrder ASC',
+            schema: Schema.Array(Schema.Unknown),
+            bindValues: { $worldId: worldId },
+          }
+        : { query: 'SELECT * FROM gameMaps WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+      { deps: [worldId] }
+    )
+  ) as GameMap[]
 }
 
 /** All maps in a realm: realm-owned + owned by POIs in that realm */
 export function useAllRealmMaps(worldId: string | null) {
-  return useLiveQuery(
-    async () => {
-      if (!worldId) return []
-      const realmMaps = await db.gameMaps.where('ownerRealmId').equals(worldId).sortBy('sortOrder')
-      const regions = await db.regions.where('worldId').equals(worldId).toArray()
-      const regionIds = regions.map((r) => r.id)
-      if (regionIds.length === 0) return realmMaps
-      const pois = await db.pois.where('regionId').anyOf(regionIds).toArray()
-      const poiIds = pois.map((p) => p.id)
-      if (poiIds.length === 0) return realmMaps
-      const poiMaps = await db.gameMaps.where('ownerPoiId').anyOf(poiIds).sortBy('sortOrder')
-      return [...realmMaps, ...poiMaps]
-    },
-    [worldId]
-  ) ?? []
+  return useQuery(
+    queryDb(
+      worldId
+        ? {
+            query: `SELECT gm.* FROM gameMaps gm
+                    WHERE gm.ownerRealmId = $worldId
+                    UNION ALL
+                    SELECT gm.* FROM gameMaps gm
+                    INNER JOIN pois p ON gm.ownerPoiId = p.id
+                    INNER JOIN regions r ON p.regionId = r.id
+                    WHERE r.worldId = $worldId
+                    ORDER BY sortOrder ASC`,
+            schema: Schema.Array(Schema.Unknown),
+            bindValues: { $worldId: worldId },
+          }
+        : { query: 'SELECT * FROM gameMaps WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+      { deps: [worldId] }
+    )
+  ) as GameMap[]
 }
 
 export function usePOIMaps(poiId: string | null) {
-  return useLiveQuery(
-    () => (poiId ? db.gameMaps.where('ownerPoiId').equals(poiId).sortBy('sortOrder') : []),
-    [poiId]
-  ) ?? []
+  return useQuery(
+    queryDb(
+      poiId
+        ? {
+            query: 'SELECT * FROM gameMaps WHERE ownerPoiId = $poiId ORDER BY sortOrder ASC',
+            schema: Schema.Array(Schema.Unknown),
+            bindValues: { $poiId: poiId },
+          }
+        : { query: 'SELECT * FROM gameMaps WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+      { deps: [poiId] }
+    )
+  ) as GameMap[]
 }
 
 export function useGameMap(mapId: string | null) {
-  return useLiveQuery(
-    () => (mapId ? db.gameMaps.get(mapId) : undefined),
-    [mapId]
-  )
+  const rows = useQuery(
+    queryDb(
+      mapId
+        ? {
+            query: 'SELECT * FROM gameMaps WHERE id = $mapId LIMIT 1',
+            schema: Schema.Array(Schema.Unknown),
+            bindValues: { $mapId: mapId },
+          }
+        : { query: 'SELECT * FROM gameMaps WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+      { deps: [mapId] }
+    )
+  ) as GameMap[]
+  return rows[0] as GameMap | undefined
 }
 
 export function usePOIsOnMap(mapId: string | null) {
-  return useLiveQuery(
-    () => (mapId ? db.pois.where('mapRef').equals(mapId).toArray() : []),
-    [mapId]
-  ) ?? []
+  return useQuery(
+    queryDb(
+      mapId
+        ? {
+            query: 'SELECT * FROM pois WHERE mapRef = $mapId',
+            schema: Schema.Array(Schema.Unknown),
+            bindValues: { $mapId: mapId },
+          }
+        : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+      { deps: [mapId] }
+    )
+  ) as POI[]
 }
 
 export function usePathsOnMap(mapId: string | null) {
-  return useLiveQuery(
-    async () => {
-      if (!mapId) return []
-      const pois = await db.pois.where('mapRef').equals(mapId).toArray()
-      const poiIds = new Set(pois.map((p) => p.id))
-      if (poiIds.size === 0) return []
-      const allPaths = await Promise.all(
-        [...poiIds].map(async (id) => {
-          const [from, to] = await Promise.all([
-            db.paths.where('fromPoiId').equals(id).toArray(),
-            db.paths.where('toPoiId').equals(id).toArray(),
-          ])
-          return [...from, ...to]
-        })
-      )
-      // Only include paths where BOTH endpoints are on this map
-      const seen = new Set<string>()
-      return allPaths.flat().filter((p) => {
-        if (seen.has(p.id)) return false
-        seen.add(p.id)
-        return poiIds.has(p.fromPoiId) && poiIds.has(p.toPoiId)
-      })
-    },
-    [mapId]
-  ) ?? []
+  // Only include paths where BOTH endpoints are POIs on this map.
+  return useQuery(
+    queryDb(
+      mapId
+        ? {
+            query: `SELECT paths.* FROM paths
+                    INNER JOIN pois fp ON paths.fromPoiId = fp.id AND fp.mapRef = $mapId
+                    INNER JOIN pois tp ON paths.toPoiId = tp.id AND tp.mapRef = $mapId`,
+            schema: Schema.Array(Schema.Unknown),
+            bindValues: { $mapId: mapId },
+          }
+        : { query: 'SELECT * FROM paths WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+      { deps: [mapId] }
+    )
+  ) as Path[]
 }

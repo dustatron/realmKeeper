@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useRegions } from '~/ui/hooks/useRegions'
 import { useStarredPOIs } from '~/ui/hooks/usePOIs'
-import { db } from '@infrastructure/dexie/db'
+import { useContainer } from '~/ui/hooks/useContainer'
 import type { POI } from '@domain/entities/POI'
 import type { PoiType } from '@shared/constants'
 import { EmptyState } from '~/components/shared/EmptyState'
@@ -59,6 +59,7 @@ function StarredPOIsPage() {
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const regions = useRegions(activeRealmId)
   const starredPois = useStarredPOIs(activeRealmId)
+  const container = useContainer()
   const [searchQuery, setSearchQuery] = useState('')
 
   const filtered = useMemo(() => {
@@ -150,7 +151,7 @@ function StarredPOIsPage() {
                                 onClick={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
-                                  db.pois.update(poi.id, { starred: false, updatedAt: Date.now() })
+                                  container.poiRepo.update({ ...poi, starred: false, updatedAt: Date.now() })
                                 }}
                                 className="shrink-0 p-1 rounded-md hover:bg-muted transition-colors"
                                 title="Unstar"

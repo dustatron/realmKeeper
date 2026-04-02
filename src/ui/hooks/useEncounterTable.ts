@@ -1,5 +1,6 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
+import { useMemo } from 'react'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
 
 export function useEncounterTable(
@@ -7,19 +8,36 @@ export function useEncounterTable(
   regionId: string | null,
   _worldId: string | null
 ): EncounterTable | undefined | null {
-  return useLiveQuery(
-    async () => {
-      // Cascade: POI → Region
-      if (poiId) {
-        const poiTable = await db.encounterTables.where('ownerPoiId').equals(poiId).first()
-        if (poiTable) return poiTable
-      }
-      if (regionId) {
-        const regionTable = await db.encounterTables.where('ownerRegionId').equals(regionId).first()
-        if (regionTable) return regionTable
-      }
-      return null
-    },
-    [poiId, regionId]
-  )
+  // Cascade: POI → Region. Fetch both, resolve priority in useMemo.
+  const poiRows = useQuery(
+    queryDb(
+      poiId
+        ? {
+            query: 'SELECT * FROM encounterTables WHERE ownerPoiId = $poiId LIMIT 1',
+            schema: Schema.Array(Schema.Unknown),
+            bindValues: { $poiId: poiId },
+          }
+        : { query: 'SELECT * FROM encounterTables WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+      { deps: [poiId] }
+    )
+  ) as EncounterTable[]
+
+  const regionRows = useQuery(
+    queryDb(
+      regionId
+        ? {
+            query: 'SELECT * FROM encounterTables WHERE ownerRegionId = $regionId LIMIT 1',
+            schema: Schema.Array(Schema.Unknown),
+            bindValues: { $regionId: regionId },
+          }
+        : { query: 'SELECT * FROM encounterTables WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
+      { deps: [regionId] }
+    )
+  ) as EncounterTable[]
+
+  return useMemo(() => {
+    if (poiRows.length > 0) return poiRows[0]
+    if (regionRows.length > 0) return regionRows[0]
+    return null
+  }, [poiRows, regionRows])
 }

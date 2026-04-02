@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
+import { queryDb, Schema } from '@livestore/livestore'
+import { useQuery } from '@livestore/react'
 import { getCompendiumById, searchCompendium, searchCustomEntries, customEntryToCompendiumEntry } from '@domain/data/compendium'
+import type { CustomCompendiumEntry } from '@domain/entities/CustomCompendiumEntry'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -32,10 +33,13 @@ export function CompendiumRefsSection({
   const [searchKind, setSearchKind] = useState<'all' | 'monster' | 'spell' | 'magicItem' | 'equipment'>('all')
   const [showSearch, setShowSearch] = useState(false)
 
-  const customEntries = useLiveQuery(
-    () => worldId ? db.customCompendiumEntries.where('worldId').equals(worldId).toArray() : [],
-    [worldId]
-  ) ?? []
+  const customEntries = useQuery(queryDb({
+    query: worldId
+      ? 'SELECT * FROM customCompendiumEntries WHERE worldId = $worldId'
+      : 'SELECT * FROM customCompendiumEntries WHERE 1 = 0',
+    schema: Schema.Array(Schema.Unknown),
+    bindValues: worldId ? { $worldId: worldId } : {},
+  }, { deps: [worldId] })) as CustomCompendiumEntry[]
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return []
