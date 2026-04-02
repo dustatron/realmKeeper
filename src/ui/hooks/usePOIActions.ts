@@ -1,0 +1,189 @@
+import { db } from '@infrastructure/dexie/db'
+import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
+import { executeCreateGameMap } from '@application/use-cases/CreateGameMap'
+import { executeCreateRumor } from '@application/use-cases/CreateRumor'
+import { executeUpdateRumor } from '@application/use-cases/UpdateRumor'
+import { executeDeleteRumor } from '@application/use-cases/DeleteRumor'
+import { executeCreateNotice } from '@application/use-cases/CreateNotice'
+import { executeUpdateNotice } from '@application/use-cases/UpdateNotice'
+import { executeDeleteNotice } from '@application/use-cases/DeleteNotice'
+import { executeRollEncounter } from '@application/use-cases/RollEncounter'
+import { executeCreateEncounterTable } from '@application/use-cases/CreateEncounterTable'
+import { executeUpdateEncounterTable } from '@application/use-cases/UpdateEncounterTable'
+import { executeUpdateNPC } from '@application/use-cases/UpdateNPC'
+import { newId } from '@shared/ulid'
+import type { POI } from '@domain/entities/POI'
+import type { Region } from '@domain/entities/Region'
+import type { NPC } from '@domain/entities/NPC'
+import type { Trap } from '@domain/value-objects/Trap'
+import type { TreasureItem } from '@domain/value-objects/TreasureItem'
+import type { SessionLogEntry } from '@domain/value-objects/SessionLogEntry'
+import type { EncounterTable } from '@domain/entities/EncounterTable'
+import type { CompendiumRef } from '@domain/entities/Compendium'
+import type { Rumor } from '@domain/entities/Rumor'
+import type { Notice } from '@domain/entities/Notice'
+import type { WatabouCityData } from '@domain/value-objects/WatabouCityData'
+import type { WatabouDungeonData } from '@domain/value-objects/WatabouDungeonData'
+import type { LocationSeed } from '@domain/value-objects/LocationSeed'
+import type { NoticeType } from '@shared/constants'
+
+type Container = {
+  poiRepo: Parameters<typeof executeUpdatePOI>[1]['poiRepo']
+  gameMapRepo: Parameters<typeof executeCreateGameMap>[1]['gameMapRepo']
+  rumorRepo: Parameters<typeof executeCreateRumor>[1]['rumorRepo']
+  noticeRepo: Parameters<typeof executeCreateNotice>[1]['noticeRepo']
+  encounterTableRepo: Parameters<typeof executeCreateEncounterTable>[1]['encounterTableRepo']
+  npcRepo: Parameters<typeof executeUpdateNPC>[1]['npcRepo']
+}
+
+export function usePOIActions(poi: POI | null | undefined, region: Region | null | undefined, encounterTable: EncounterTable | null | undefined, container: Container) {
+  const handleUpdateTraps = async (traps: Trap[]) => {
+    if (!poi) return
+    await executeUpdatePOI({ ...poi, traps }, { poiRepo: container.poiRepo })
+  }
+
+  const handleToggleTrapDisarmed = async (trapId: string) => {
+    if (!poi) return
+    const updatedTraps = poi.traps.map((t) =>
+      t.id === trapId ? { ...t, disarmed: !t.disarmed } : t
+    )
+    await executeUpdatePOI({ ...poi, traps: updatedTraps }, { poiRepo: container.poiRepo })
+  }
+
+  const handleUploadMap = async (data: { name: string; imageUrl: string; width: number; height: number }) => {
+    if (!poi) return
+    await executeCreateGameMap({ ...data, ownerPoiId: poi.id }, { gameMapRepo: container.gameMapRepo })
+  }
+
+  const handleCreateRumor = async (input: { text: string; source: string; isQuestHook: boolean }) => {
+    if (!poi || !region) return
+    await executeCreateRumor(
+      { poiId: poi.id, regionId: poi.regionId, worldId: region.worldId, ...input },
+      { rumorRepo: container.rumorRepo }
+    )
+  }
+
+  const handleToggleRumorUsed = async (rumor: Rumor) => {
+    await executeUpdateRumor({ ...rumor, isUsed: !rumor.isUsed }, { rumorRepo: container.rumorRepo })
+  }
+
+  const handleDeleteRumor = async (id: string) => {
+    await executeDeleteRumor(id, { rumorRepo: container.rumorRepo })
+  }
+
+  const handleCreateNotice = async (input: { title: string; description: string; type: NoticeType; reward: string }) => {
+    if (!poi || !region) return
+    await executeCreateNotice(
+      { poiId: poi.id, regionId: poi.regionId, worldId: region.worldId, ...input },
+      { noticeRepo: container.noticeRepo }
+    )
+  }
+
+  const handleToggleNoticeUsed = async (notice: Notice) => {
+    await executeUpdateNotice({ ...notice, isUsed: !notice.isUsed }, { noticeRepo: container.noticeRepo })
+  }
+
+  const handleDeleteNotice = async (id: string) => {
+    await executeDeleteNotice(id, { noticeRepo: container.noticeRepo })
+  }
+
+  const handleRollEncounter = async () => {
+    if (!poi || !region) throw new Error('No POI/region')
+    return executeRollEncounter(
+      { poiId: poi.id, regionId: poi.regionId, worldId: region.worldId },
+      { encounterTableRepo: container.encounterTableRepo }
+    )
+  }
+
+  const handleSaveEncounterTable = async (entries: Pick<EncounterTable, 'creature' | 'signOmen' | 'loss' | 'npc' | 'discovery' | 'treasure' | 'customSections' | 'disabledCategories'>) => {
+    if (!poi || !region) return
+    if (encounterTable) {
+      await executeUpdateEncounterTable(
+        { ...encounterTable, ...entries },
+        { encounterTableRepo: container.encounterTableRepo }
+      )
+    } else {
+      await executeCreateEncounterTable(
+        { ownerPoiId: poi.id, worldId: region.worldId, ...entries },
+        { encounterTableRepo: container.encounterTableRepo }
+      )
+    }
+  }
+
+  const handleUpdateNPC = async (npc: NPC) => {
+    await executeUpdateNPC(npc, { npcRepo: container.npcRepo })
+  }
+
+  const handleUpdateTreasure = async (treasure: TreasureItem[]) => {
+    if (!poi) return
+    await executeUpdatePOI({ ...poi, treasure }, { poiRepo: container.poiRepo })
+  }
+
+  const handleUpdateSessionLog = async (sessionLog: SessionLogEntry[]) => {
+    if (!poi) return
+    await executeUpdatePOI({ ...poi, sessionLog }, { poiRepo: container.poiRepo })
+  }
+
+  const handleLogDungeonEvent = (text: string) => {
+    if (!poi) return
+    const entry: SessionLogEntry = { id: newId(), text, timestamp: Date.now() }
+    handleUpdateSessionLog([entry, ...(poi.sessionLog ?? [])])
+  }
+
+  const cycleLightLevel = async () => {
+    if (!poi) return
+    const cycle: Array<'bright' | 'dim' | 'dark' | null> = [null, 'bright', 'dim', 'dark']
+    const idx = cycle.indexOf(poi.lightLevel ?? null)
+    const next = cycle[(idx + 1) % cycle.length]
+    await db.pois.update(poi.id, { lightLevel: next, updatedAt: Date.now() })
+  }
+
+  const handleUpdateCompendiumRefs = async (refs: { monsterRefs: CompendiumRef[]; magicItemRefs: CompendiumRef[]; spellRefs: CompendiumRef[]; equipmentRefs: CompendiumRef[] }) => {
+    if (!poi) return
+    await executeUpdatePOI({ ...poi, ...refs }, { poiRepo: container.poiRepo })
+  }
+
+  const handleImportWatabou = async (data: WatabouCityData | WatabouDungeonData, seed: string | null) => {
+    if (!poi) return
+    await executeUpdatePOI(
+      { ...poi, watabouData: data, watabouSeed: seed, watabouGenerator: data.type === 'mfcg' ? 'mfcg' : 'opd' },
+      { poiRepo: container.poiRepo }
+    )
+  }
+
+  const handleClearWatabou = async () => {
+    if (!poi) return
+    await executeUpdatePOI(
+      { ...poi, watabouData: null, watabouSeed: null, watabouGenerator: null },
+      { poiRepo: container.poiRepo }
+    )
+  }
+
+  const handleUpdateLocationSeed = async (seed: LocationSeed) => {
+    if (!poi) return
+    await executeUpdatePOI({ ...poi, locationSeed: seed }, { poiRepo: container.poiRepo })
+  }
+
+  return {
+    handleUpdateTraps,
+    handleToggleTrapDisarmed,
+    handleUploadMap,
+    handleCreateRumor,
+    handleToggleRumorUsed,
+    handleDeleteRumor,
+    handleCreateNotice,
+    handleToggleNoticeUsed,
+    handleDeleteNotice,
+    handleRollEncounter,
+    handleSaveEncounterTable,
+    handleUpdateNPC,
+    handleUpdateTreasure,
+    handleUpdateSessionLog,
+    handleLogDungeonEvent,
+    cycleLightLevel,
+    handleUpdateCompendiumRefs,
+    handleImportWatabou,
+    handleClearWatabou,
+    handleUpdateLocationSeed,
+  }
+}
