@@ -702,17 +702,19 @@ export function DungeonTemplate({
                 {mapSection}
               </div>
 
-              {/* ⚔️ Wandering Monsters d6 Table */}
-              <div className="mt-3">
-                <WanderingMonsterTable
-                  entries={poi.wanderingMonsters ?? []}
-                  onSave={handleSaveWanderingMonsters}
-                  npcs={allNPCs}
-                  poiChildren={childPois}
-                  systemId={systemId}
-                  worldId={worldId}
-                />
-              </div>
+              {/* Wandering Monsters — shown below map in columns mode only */}
+              {layout === "columns" && (
+                <div className="mt-3">
+                  <WanderingMonsterTable
+                    entries={poi.wanderingMonsters ?? []}
+                    onSave={handleSaveWanderingMonsters}
+                    npcs={allNPCs}
+                    poiChildren={childPois}
+                    systemId={systemId}
+                    worldId={worldId}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Detail panel + Room list */}
@@ -847,6 +849,20 @@ export function DungeonTemplate({
                 </p>
               )}
             </div>
+
+            {/* Wandering Monsters — below room list in stacked mode */}
+            {layout === "stacked" && (
+              <div className="mt-3">
+                <WanderingMonsterTable
+                  entries={poi.wanderingMonsters ?? []}
+                  onSave={handleSaveWanderingMonsters}
+                  npcs={allNPCs}
+                  poiChildren={childPois}
+                  systemId={systemId}
+                  worldId={worldId}
+                />
+              </div>
+            )}
           </div>
         </TabsContent>
 
