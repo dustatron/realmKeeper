@@ -66,6 +66,11 @@ import {
 
 export const Route = createFileRoute('/_app/realms/locations/pois')({
   component: POIsPage,
+  validateSearch: (search: Record<string, unknown>): { region?: string; sort?: string; dir?: string } => ({
+    region: (search.region as string) || undefined,
+    sort: (search.sort as string) || undefined,
+    dir: (search.dir as string) || undefined,
+  }),
 })
 
 const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }>> = {
@@ -88,7 +93,20 @@ function POIsPage() {
   const navigate = useNavigate()
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const regions = useRegions(activeRealmId)
-  const [selectedRegionId, setSelectedRegionId] = useState<string>('all')
+  const { region: regionParam, sort: sortParam, dir: dirParam } = Route.useSearch()
+  const selectedRegionId = regionParam ?? 'all'
+  const sortCol = (sortParam ?? 'name') as 'name' | 'type' | 'region'
+  const sortDir = (dirParam ?? 'asc') as 'asc' | 'desc'
+
+  const setSelectedRegionId = (v: string) =>
+    navigate({ to: '/realms/locations/pois', search: { region: v === 'all' ? undefined : v, sort: sortParam, dir: dirParam } })
+  const toggleSort = (col: 'name' | 'type' | 'region') => {
+    if (sortCol === col)
+      navigate({ to: '/realms/locations/pois', search: { region: regionParam, sort: sortParam, dir: sortDir === 'asc' ? 'desc' : 'asc' } })
+    else
+      navigate({ to: '/realms/locations/pois', search: { region: regionParam, sort: col, dir: 'asc' } })
+  }
+
   const isFlat = selectedRegionId === 'flat'
   const poisByRegion = usePOIs(!isFlat && selectedRegionId !== 'all' ? selectedRegionId : null)
   const allPois = useRealmPOIs(activeRealmId)
@@ -96,13 +114,6 @@ function POIsPage() {
   const container = useContainer()
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [sortCol, setSortCol] = useState<'name' | 'type' | 'region'>('name')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
-
-  const toggleSort = (col: 'name' | 'type' | 'region') => {
-    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    else { setSortCol(col); setSortDir('asc') }
-  }
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editingPOI, setEditingPOI] = useState<POI | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
