@@ -1,5 +1,6 @@
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import type { NPC } from '@domain/entities/NPC'
 
 export function useNPCsByPoiIds(poiIds: string[]) {
@@ -12,6 +13,6 @@ export function useNPCsByPoiIds(poiIds: string[]) {
     query,
     schema: Schema.Array(Schema.Unknown),
     bindValues: poiIds.length > 0 ? bindValues : {},
-  }, { deps: poiIds.join(',') })) as NPC[]
+  }, { deps: poiIds.join(','), map: parseJsonRows })) as NPC[]
   return results
 }

@@ -1,18 +1,16 @@
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { poisTable } from '@infrastructure/livestore/tables'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import type { POI } from '@domain/entities/POI'
 
 export function usePOIs(regionId: string | null) {
   return useQuery(
     queryDb(
       regionId
-        ? {
-            query: 'SELECT * FROM pois WHERE regionId = $regionId',
-            schema: Schema.Array(Schema.Unknown),
-            bindValues: { regionId },
-          }
+        ? poisTable.select().where({ regionId })
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [regionId] }
+      { deps: regionId ?? '' }
     )
   ) as POI[]
 }
@@ -21,13 +19,9 @@ export function usePOI(id: string | null) {
   const rows = useQuery(
     queryDb(
       id
-        ? {
-            query: 'SELECT * FROM pois WHERE id = $id LIMIT 1',
-            schema: Schema.Array(Schema.Unknown),
-            bindValues: { id },
-          }
+        ? poisTable.select().where({ id })
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [id] }
+      { deps: id ?? '' }
     )
   ) as POI[]
   return rows[0] as POI | undefined
@@ -45,7 +39,7 @@ export function useRealmPOIs(worldId: string | null) {
             bindValues: { worldId },
           }
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [worldId] }
+      { deps: [worldId], map: parseJsonRows }
     )
   ) as POI[]
 }
@@ -64,7 +58,7 @@ export function useRecentVisitedPOIs(worldId: string | null, limit = 5) {
             bindValues: { worldId },
           }
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [worldId, limit] }
+      { deps: [worldId, limit], map: parseJsonRows }
     )
   ) as POI[]
 }
@@ -81,7 +75,7 @@ export function useStarredPOIs(worldId: string | null) {
             bindValues: { worldId },
           }
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [worldId] }
+      { deps: [worldId], map: parseJsonRows }
     )
   ) as POI[]
 }

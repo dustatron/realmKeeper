@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { executeDeleteCustomCompendiumEntry } from '@application/use-cases/DeleteCustomCompendiumEntry'
 import type { CustomCompendiumEntry } from '@domain/entities/CustomCompendiumEntry'
@@ -25,7 +26,7 @@ function CustomCompendiumDetailPage() {
     query: 'SELECT * FROM customCompendiumEntries WHERE id = $id LIMIT 1',
     schema: Schema.Array(Schema.Unknown),
     bindValues: { id: entryId },
-  }, { deps: [entryId] })) as CustomCompendiumEntry[]
+  }, { deps: [entryId], map: parseJsonRows })) as CustomCompendiumEntry[]
   const entry = entryResults[0] ?? null
 
   if (!entry) {

@@ -1,6 +1,7 @@
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
 import { pathsTable } from '@infrastructure/livestore/tables'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import type { Path } from '@domain/entities/Path'
 
 export function usePaths() {
@@ -18,7 +19,7 @@ export function usePathsByPoi(poiId: string | null) {
             bindValues: { poiId },
           }
         : { query: 'SELECT * FROM paths WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [poiId] }
+      { deps: [poiId], map: parseJsonRows }
     )
   ) as Path[]
 }

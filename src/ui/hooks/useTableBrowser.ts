@@ -1,5 +1,6 @@
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import {
   getAllSystemSets,
   getSystemTablesBySetId,
@@ -12,7 +13,8 @@ export function useTableSets() {
   const dbSets = useQuery(queryDb({
     query: 'SELECT * FROM tableSets',
     schema: Schema.Array(Schema.Unknown),
-  })) as TableSet[]
+    bindValues: {},
+  }, { map: parseJsonRows })) as TableSet[]
   return [...getAllSystemSets(), ...dbSets]
 }
 
@@ -23,7 +25,7 @@ export function useTableSet(id: string | null) {
       : 'SELECT * FROM tableSets WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: id ? { id } : {},
-  }, { deps: [id] })) as TableSet[]
+  }, { deps: [id], map: parseJsonRows })) as TableSet[]
   return results[0] ?? undefined
 }
 
@@ -35,7 +37,7 @@ export function useTablesInSet(setId: string | null) {
       : 'SELECT * FROM tableDefs WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: setId && !isSystem ? { setId } : {},
-  }, { deps: [setId] })) as TableDef[]
+  }, { deps: [setId], map: parseJsonRows })) as TableDef[]
 
   if (setId && isSystem) {
     return getSystemTablesBySetId(setId)
@@ -50,5 +52,5 @@ export function useRollHistory(worldId: string | null, limit = 20) {
       : 'SELECT * FROM rollHistory WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: worldId ? { worldId } : {},
-  }, { deps: [worldId, limit] })) as RollHistory[]
+  }, { deps: [worldId, limit], map: parseJsonRows })) as RollHistory[]
 }

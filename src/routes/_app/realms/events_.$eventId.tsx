@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { useRealmPOIs } from '~/ui/hooks/usePOIs'
 import { useUIStore } from '~/ui/stores/uiStore'
@@ -60,7 +61,7 @@ function EventDetailPage() {
     query: 'SELECT * FROM poiEvents WHERE id = $id LIMIT 1',
     schema: Schema.Array(Schema.Unknown),
     bindValues: { id: eventId ?? '' },
-  }, { deps: eventId })) as POIEvent[]
+  }, { deps: eventId, map: parseJsonRows })) as POIEvent[]
   const event = eventResults[0]
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)

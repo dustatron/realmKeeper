@@ -1,5 +1,6 @@
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import type { EntityNote } from '@domain/entities/EntityNote'
 
 export function useEntityNotes(ownerType: 'poi' | 'region', ownerId: string | null): EntityNote[] {
@@ -14,7 +15,7 @@ export function useEntityNotes(ownerType: 'poi' | 'region', ownerId: string | nu
             bindValues: { ownerType, ownerId },
           }
         : { query: 'SELECT * FROM entityNotes WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [ownerType, ownerId] }
+      { deps: [ownerType, ownerId], map: parseJsonRows }
     )
   ) as EntityNote[]
 }

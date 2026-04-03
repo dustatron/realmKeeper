@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import Fuse from 'fuse.js'
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import { useNPCs } from './useNPCs'
 import { useFactions } from './useFactions'
 import { useRegions } from './useRegions'
@@ -40,7 +41,7 @@ export function useGlobalSearch(worldId: string | null, query: string) {
       : 'SELECT * FROM customCompendiumEntries WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: worldId ? { worldId } : {},
-  }, { deps: [worldId] })) as CustomCompendiumEntry[]
+  }, { deps: [worldId], map: parseJsonRows })) as CustomCompendiumEntry[]
 
   const items = useMemo<SearchableItem[]>(() => {
     const result: SearchableItem[] = []

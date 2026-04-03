@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { executeUpdateCustomCompendiumEntry } from '@application/use-cases/UpdateCustomCompendiumEntry'
 import type { CustomMonsterData, CustomSpellData, CustomMagicItemData, CustomEquipmentData } from '@domain/entities/CustomCompendiumEntry'
@@ -28,7 +29,7 @@ function CustomCompendiumEditPage() {
     query: 'SELECT * FROM customCompendiumEntries WHERE id = $id LIMIT 1',
     schema: Schema.Array(Schema.Unknown),
     bindValues: { id: entryId },
-  }, { deps: [entryId] })) as import('@domain/entities/CustomCompendiumEntry').CustomCompendiumEntry[]
+  }, { deps: [entryId], map: parseJsonRows })) as import('@domain/entities/CustomCompendiumEntry').CustomCompendiumEntry[]
   const entry = entryResults[0] ?? null
 
   const [name, setName] = useState('')

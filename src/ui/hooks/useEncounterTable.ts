@@ -1,6 +1,7 @@
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
 import { useMemo } from 'react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
 
 export function useEncounterTable(
@@ -18,7 +19,7 @@ export function useEncounterTable(
             bindValues: { poiId },
           }
         : { query: 'SELECT * FROM encounterTables WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [poiId] }
+      { deps: [poiId], map: parseJsonRows }
     )
   ) as EncounterTable[]
 
@@ -31,7 +32,7 @@ export function useEncounterTable(
             bindValues: { regionId },
           }
         : { query: 'SELECT * FROM encounterTables WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [regionId] }
+      { deps: [regionId], map: parseJsonRows }
     )
   ) as EncounterTable[]
 

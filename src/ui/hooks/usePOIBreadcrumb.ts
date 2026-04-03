@@ -1,6 +1,7 @@
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
 import { useMemo } from 'react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import type { POI } from '@domain/entities/POI'
 
 /**
@@ -30,7 +31,7 @@ export function usePOIBreadcrumb(poiId: string | null): POI[] {
             bindValues: { poiId },
           }
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [poiId] }
+      { deps: [poiId], map: parseJsonRows }
     )
   ) as (POI & { depth: number })[]
 

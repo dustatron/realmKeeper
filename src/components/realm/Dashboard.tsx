@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { queryDb, Schema } from "@livestore/livestore";
 import { useQuery } from "@livestore/react";
+import { parseJsonRows } from "@shared/parseJsonRow";
 import { useUIStore } from "~/ui/stores/uiStore";
 import { useActiveRealm } from "~/ui/hooks/useActiveRealm";
 import { useTimeline } from "~/ui/hooks/useTimeline";
@@ -100,13 +101,13 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
     query: worldId ? 'SELECT * FROM factions WHERE worldId = $worldId' : 'SELECT * FROM factions WHERE 1=0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: { worldId: worldId ?? '' },
-  }, { deps: worldId })) as Faction[]
+  }, { deps: worldId, map: parseJsonRows })) as Faction[]
 
   const allNPCs = useQuery(queryDb({
     query: worldId ? 'SELECT id FROM npcs WHERE worldId = $worldId' : 'SELECT id FROM npcs WHERE 1=0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: { worldId: worldId ?? '' },
-  }, { deps: worldId })) as { id: string }[]
+  }, { deps: worldId, map: parseJsonRows })) as { id: string }[]
 
   const activeFactions = factions.filter(f => f.status === 'active' && !f.isParty)
   const factionCount = factions.length

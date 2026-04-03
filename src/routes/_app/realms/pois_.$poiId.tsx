@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect, useMemo } from 'react'
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
 import { useRegion, useRegions } from '~/ui/hooks/useRegions'
 import { usePOIBreadcrumb } from '~/ui/hooks/usePOIBreadcrumb'
@@ -94,7 +95,7 @@ function POIDetailPage() {
           bindValues: { poiId },
         }
       : { query: 'SELECT * FROM poiEvents WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-    { deps: poiId }
+    { deps: poiId, map: parseJsonRows }
   )) as import('@domain/entities/POIEvent').POIEvent[]
   const poiMaps = usePOIMaps(poiId)
   const rumors = useRumorsByPoi(poiId)

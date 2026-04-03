@@ -1,6 +1,7 @@
 import { queryDb, Schema } from '@livestore/livestore'
 import { useMemo } from 'react'
 import { useQuery } from '@livestore/react'
+import { poiEventsTable } from '@infrastructure/livestore/tables'
 import { useAllWeather } from './useWeather'
 import { useAllEvents } from './useTimeline'
 import { useActiveRealm } from './useActiveRealm'
@@ -38,13 +39,9 @@ export function useDayLog(
   const poiEvents = useQuery(
     queryDb(
       worldId
-        ? {
-            query: 'SELECT * FROM poiEvents WHERE worldId = $worldId',
-            schema: Schema.Array(Schema.Unknown),
-            bindValues: { worldId },
-          }
+        ? poiEventsTable.select().where({ worldId })
         : { query: 'SELECT * FROM poiEvents WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [worldId] }
+      { deps: worldId ?? '' }
     )
   ) as POIEvent[]
 

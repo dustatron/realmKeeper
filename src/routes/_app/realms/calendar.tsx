@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, useCallback } from 'react'
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
 import { useRealmPOIs } from '~/ui/hooks/usePOIs'
@@ -120,7 +121,7 @@ function CalendarPage() {
       : 'SELECT * FROM poiEvents WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: activeRealmId ? { worldId: activeRealmId } : {},
-  }, { deps: [activeRealmId] })) as POIEvent[]
+  }, { deps: [activeRealmId], map: parseJsonRows })) as POIEvent[]
 
   const [createForm, setCreateForm] = useState({
     name: '',

@@ -6,6 +6,7 @@ import { Dices, Plus, Search } from 'lucide-react'
 import { getMonstersBySystemId, searchCompendium, searchCustomEntries } from '@domain/data/compendium'
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import type { CustomCompendiumEntry } from '@domain/entities/CustomCompendiumEntry'
 import type { WanderingMonsterEntry } from '@domain/value-objects/WanderingMonster'
 import type { CompendiumMonster } from '@domain/entities/Compendium'
@@ -31,7 +32,7 @@ export function MonsterSearchTab({
       : 'SELECT * FROM customCompendiumEntries WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: worldId ? { worldId } : {},
-  }, { deps: [worldId] })) as CustomCompendiumEntry[]
+  }, { deps: [worldId], map: parseJsonRows })) as CustomCompendiumEntry[]
 
   const results = useMemo(() => {
     if (!query.trim()) return []

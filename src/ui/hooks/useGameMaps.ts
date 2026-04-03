@@ -1,6 +1,7 @@
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
 import { useMemo } from 'react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import type { GameMap } from '@domain/entities/GameMap'
 import type { POI } from '@domain/entities/POI'
 import type { Path } from '@domain/entities/Path'
@@ -15,7 +16,7 @@ export function useRealmMaps(worldId: string | null) {
             bindValues: { worldId },
           }
         : { query: 'SELECT * FROM gameMaps WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [worldId] }
+      { deps: [worldId], map: parseJsonRows }
     )
   ) as GameMap[]
 }
@@ -38,7 +39,7 @@ export function useAllRealmMaps(worldId: string | null) {
             bindValues: { worldId },
           }
         : { query: 'SELECT * FROM gameMaps WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [worldId] }
+      { deps: [worldId], map: parseJsonRows }
     )
   ) as GameMap[]
 }
@@ -53,7 +54,7 @@ export function usePOIMaps(poiId: string | null) {
             bindValues: { poiId },
           }
         : { query: 'SELECT * FROM gameMaps WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [poiId] }
+      { deps: [poiId], map: parseJsonRows }
     )
   ) as GameMap[]
 }
@@ -68,7 +69,7 @@ export function useGameMap(mapId: string | null) {
             bindValues: { mapId },
           }
         : { query: 'SELECT * FROM gameMaps WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [mapId] }
+      { deps: [mapId], map: parseJsonRows }
     )
   ) as GameMap[]
   return rows[0] as GameMap | undefined
@@ -84,7 +85,7 @@ export function usePOIsOnMap(mapId: string | null) {
             bindValues: { mapId },
           }
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [mapId] }
+      { deps: [mapId], map: parseJsonRows }
     )
   ) as POI[]
 }
@@ -102,7 +103,7 @@ export function usePathsOnMap(mapId: string | null) {
             bindValues: { mapId },
           }
         : { query: 'SELECT * FROM paths WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: [mapId] }
+      { deps: [mapId], map: parseJsonRows }
     )
   ) as Path[]
 }

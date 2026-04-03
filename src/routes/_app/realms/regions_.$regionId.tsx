@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect, useMemo } from 'react'
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import { useRegion } from '~/ui/hooks/useRegions'
 import { usePOIs } from '~/ui/hooks/usePOIs'
 import { useNPCsByRegion } from '~/ui/hooks/useNPCsByRegion'
@@ -142,7 +143,7 @@ function RegionDetailPage() {
       : 'SELECT * FROM poiEvents WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: poiIds.length > 0 ? poiEventBindValues : {},
-  }, { deps: poiIdKey })) as import('@domain/entities/POIEvent').POIEvent[]
+  }, { deps: poiIdKey, map: parseJsonRows })) as import('@domain/entities/POIEvent').POIEvent[]
 
   // Factions based in this region
   const regionFactionsList = useQuery(queryDb(
@@ -153,7 +154,7 @@ function RegionDetailPage() {
           bindValues: { worldId: region.worldId, regionId },
         }
       : { query: 'SELECT * FROM factions WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-    { deps: `${region?.worldId ?? ''}:${regionId}` }
+    { deps: `${region?.worldId ?? ''}:${regionId}`, map: parseJsonRows }
   )) as import('@domain/entities/Faction').Faction[]
 
   // Faction presences at POIs in this region
@@ -165,7 +166,7 @@ function RegionDetailPage() {
       : 'SELECT * FROM factionPresences WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: poiIds.length > 0 ? presenceBindValues : {},
-  }, { deps: poiIdKey })) as import('@domain/entities/FactionPresence').FactionPresence[]
+  }, { deps: poiIdKey, map: parseJsonRows })) as import('@domain/entities/FactionPresence').FactionPresence[]
 
   // All realm factions (for presence lookup + unassigned list)
   const allRealmFactions = useQuery(queryDb(
@@ -176,7 +177,7 @@ function RegionDetailPage() {
           bindValues: { worldId: realm.id },
         }
       : { query: 'SELECT * FROM factions WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-    { deps: realm?.id ?? '' }
+    { deps: realm?.id ?? '', map: parseJsonRows }
   )) as import('@domain/entities/Faction').Faction[]
 
   // Merge: factions based here + factions with presence at region POIs

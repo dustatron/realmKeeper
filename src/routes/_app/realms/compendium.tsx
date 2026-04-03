@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { queryDb, Schema } from "@livestore/livestore";
 import { useQuery } from "@livestore/react";
+import { parseJsonRows } from "@shared/parseJsonRow";
 import { useActiveRealm } from "~/ui/hooks/useActiveRealm";
 import { useContainer } from "~/ui/hooks/useContainer";
 import { useUIStore } from "~/ui/stores/uiStore";
@@ -208,7 +209,7 @@ function CompendiumPage() {
       : 'SELECT * FROM customCompendiumEntries WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: activeRealmId ? { worldId: activeRealmId } : {},
-  }, { deps: [activeRealmId] })) as import('@domain/entities/CustomCompendiumEntry').CustomCompendiumEntry[];
+  }, { deps: [activeRealmId], map: parseJsonRows })) as import('@domain/entities/CustomCompendiumEntry').CustomCompendiumEntry[];
 
   const customMonsters = useMemo(
     () =>

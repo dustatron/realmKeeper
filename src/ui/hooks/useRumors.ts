@@ -1,5 +1,6 @@
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import type { Rumor } from '@domain/entities/Rumor'
 
 export function useRumorsByPoi(poiId: string | null) {
@@ -9,7 +10,7 @@ export function useRumorsByPoi(poiId: string | null) {
       : 'SELECT * FROM rumors WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: poiId ? { poiId } : {},
-  }, { deps: [poiId] })) as Rumor[]
+  }, { deps: [poiId], map: parseJsonRows })) as Rumor[]
 }
 
 export function useRumorsByRegion(regionId: string | null) {
@@ -19,5 +20,5 @@ export function useRumorsByRegion(regionId: string | null) {
       : 'SELECT * FROM rumors WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: regionId ? { regionId } : {},
-  }, { deps: [regionId] })) as Rumor[]
+  }, { deps: [regionId], map: parseJsonRows })) as Rumor[]
 }

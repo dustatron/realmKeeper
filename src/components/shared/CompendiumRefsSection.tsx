@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import { getCompendiumById, searchCompendium, searchCustomEntries, customEntryToCompendiumEntry } from '@domain/data/compendium'
 import type { CustomCompendiumEntry } from '@domain/entities/CustomCompendiumEntry'
 import { Badge } from '~/components/ui/badge'
@@ -39,7 +40,7 @@ export function CompendiumRefsSection({
       : 'SELECT * FROM customCompendiumEntries WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: worldId ? { worldId } : {},
-  }, { deps: [worldId] })) as CustomCompendiumEntry[]
+  }, { deps: [worldId], map: parseJsonRows })) as CustomCompendiumEntry[]
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return []

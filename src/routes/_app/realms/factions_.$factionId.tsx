@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useFaction, useFactions } from '~/ui/hooks/useFactions'
 import { useNPCs, useNPCsByFaction } from '~/ui/hooks/useNPCs'
@@ -79,7 +80,7 @@ function FactionDetailPage() {
           bindValues: { factionId },
         }
       : { query: 'SELECT * FROM factionPresences WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-    { deps: factionId }
+    { deps: factionId, map: parseJsonRows }
   )) as FactionPresence[]
 
   const handleDelete = async () => {

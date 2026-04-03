@@ -1,5 +1,6 @@
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import type { Notice } from '@domain/entities/Notice'
 
 export function useNoticesByPoi(poiId: string | null) {
@@ -9,7 +10,7 @@ export function useNoticesByPoi(poiId: string | null) {
       : 'SELECT * FROM notices WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: poiId ? { poiId } : {},
-  }, { deps: [poiId] })) as Notice[]
+  }, { deps: [poiId], map: parseJsonRows })) as Notice[]
 }
 
 export function useNoticesByRegion(regionId: string | null) {
@@ -19,5 +20,5 @@ export function useNoticesByRegion(regionId: string | null) {
       : 'SELECT * FROM notices WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: regionId ? { regionId } : {},
-  }, { deps: [regionId] })) as Notice[]
+  }, { deps: [regionId], map: parseJsonRows })) as Notice[]
 }

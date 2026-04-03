@@ -1,5 +1,6 @@
 import { queryDb, Schema } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import type { RealmNote } from '@domain/entities/RealmNote'
 
 export function useRealmNotes(worldId: string | null) {
@@ -9,7 +10,7 @@ export function useRealmNotes(worldId: string | null) {
       : 'SELECT * FROM realmNotes WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: worldId ? { worldId } : {},
-  }, { deps: [worldId] })) as RealmNote[]
+  }, { deps: [worldId], map: parseJsonRows })) as RealmNote[]
 }
 
 export function useMainNote(worldId: string | null) {
@@ -19,6 +20,6 @@ export function useMainNote(worldId: string | null) {
       : 'SELECT * FROM realmNotes WHERE 1 = 0',
     schema: Schema.Array(Schema.Unknown),
     bindValues: worldId ? { worldId } : {},
-  }, { deps: [worldId] })) as RealmNote[]
+  }, { deps: [worldId], map: parseJsonRows })) as RealmNote[]
   return results[0] ?? undefined
 }
