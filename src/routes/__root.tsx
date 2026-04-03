@@ -72,7 +72,21 @@ function DevApiInstaller() {
 
 function RootComponent() {
   return (
-    <LiveStoreProvider schema={schema} adapter={adapter} boot={bootStore as any} batchUpdates={batchUpdates} disableDevtools>
+    <LiveStoreProvider
+      schema={schema}
+      adapter={adapter}
+      boot={bootStore as any}
+      batchUpdates={batchUpdates}
+      disableDevtools
+      renderLoading={() => (
+        <div className="flex min-h-svh items-center justify-center bg-background">
+          <div className="flex flex-col items-center gap-3 text-muted-foreground">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <span className="text-sm">Loading Realm Keeper…</span>
+          </div>
+        </div>
+      )}
+    >
       <ContainerProvider>
         <TooltipProvider>
           <DevApiInstaller />
