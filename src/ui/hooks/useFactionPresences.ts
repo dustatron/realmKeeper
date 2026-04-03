@@ -1,6 +1,7 @@
 import { queryDb } from '@livestore/livestore'
 import { useQuery } from '@livestore/react'
 import { factionPresencesTable } from '@infrastructure/livestore/tables'
+import { parseJsonRows } from '@shared/parseJsonRow'
 import type { FactionPresence } from '@domain/entities/FactionPresence'
 
 export function useFactionPresencesByPoi(poiId: string | null) {
@@ -9,7 +10,7 @@ export function useFactionPresencesByPoi(poiId: string | null) {
       poiId
         ? factionPresencesTable.select().where({ poiId })
         : factionPresencesTable.select().where({ poiId: '' }),
-      { deps: poiId ?? '' }
+      { deps: poiId ?? '', map: parseJsonRows }
     )
   ) as FactionPresence[]
 }
@@ -20,7 +21,7 @@ export function useFactionPresencesByFaction(factionId: string | null) {
       factionId
         ? factionPresencesTable.select().where({ factionId })
         : factionPresencesTable.select().where({ factionId: '' }),
-      { deps: factionId ?? '' }
+      { deps: factionId ?? '', map: parseJsonRows }
     )
   ) as FactionPresence[]
 }

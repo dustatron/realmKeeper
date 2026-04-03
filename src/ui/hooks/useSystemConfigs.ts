@@ -5,7 +5,7 @@ import { parseJsonRows } from '@shared/parseJsonRow'
 import type { SystemConfig } from '@domain/entities/SystemConfig'
 
 export function useSystemConfigs() {
-  return useQuery(queryDb(systemConfigsTable.select())) as SystemConfig[]
+  return useQuery(queryDb(systemConfigsTable.select(), { map: parseJsonRows })) as SystemConfig[]
 }
 
 export function useSystemConfig(id: string | null) {

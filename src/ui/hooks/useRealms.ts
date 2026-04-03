@@ -5,7 +5,7 @@ import { parseJsonRows } from '@shared/parseJsonRow'
 import type { Realm } from '@domain/entities/Realm'
 
 export function useRealms() {
-  return useQuery(queryDb(worldsTable.select())) as Realm[]
+  return useQuery(queryDb(worldsTable.select(), { map: parseJsonRows })) as Realm[]
 }
 
 export function useRealm(id: string | null) {

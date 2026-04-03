@@ -5,7 +5,7 @@ import { parseJsonRows } from '@shared/parseJsonRow'
 import type { Path } from '@domain/entities/Path'
 
 export function usePaths() {
-  return useQuery(queryDb(pathsTable.select())) as Path[]
+  return useQuery(queryDb(pathsTable.select(), { map: parseJsonRows })) as Path[]
 }
 
 export function usePathsByPoi(poiId: string | null) {

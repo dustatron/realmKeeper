@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { queryDb, Schema } from "@livestore/livestore";
 import { useQuery } from "@livestore/react";
+import { parseJsonRows } from "@shared/parseJsonRow";
 import { PageHeader } from "~/components/shared/PageHeader";
 import { EmptyState } from "~/components/shared/EmptyState";
 import { ConfirmDialog } from "~/components/shared/ConfirmDialog";
@@ -75,7 +76,8 @@ function RealmsPage() {
   const rawRealms = useQuery(queryDb({
     query: 'SELECT * FROM worlds',
     schema: Schema.Array(Schema.Unknown),
-  })) as import('@domain/entities/Realm').Realm[];
+    bindValues: {},
+  }, { map: parseJsonRows })) as import('@domain/entities/Realm').Realm[];
   const realmsLoaded = true;
   const realms = rawRealms;
   const systemConfigs = useSystemConfigs();

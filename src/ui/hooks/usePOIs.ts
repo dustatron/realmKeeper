@@ -10,7 +10,7 @@ export function usePOIs(regionId: string | null) {
       regionId
         ? poisTable.select().where({ regionId })
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: regionId ?? '' }
+      { deps: regionId ?? '', map: parseJsonRows }
     )
   ) as POI[]
 }
@@ -21,7 +21,7 @@ export function usePOI(id: string | null) {
       id
         ? poisTable.select().where({ id })
         : { query: 'SELECT * FROM pois WHERE 1 = 0', schema: Schema.Array(Schema.Unknown), bindValues: {} },
-      { deps: id ?? '' }
+      { deps: id ?? '', map: parseJsonRows }
     )
   ) as POI[]
   return rows[0] as POI | undefined
