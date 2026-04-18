@@ -33,6 +33,12 @@ interface DungeonRoomTemplateProps {
   notesSection?: React.ReactNode;
 }
 
+function extractRoomActivity(description: string | undefined): string | null {
+  if (!description) return null;
+  const match = description.match(/Creatures here are (\w+)\./);
+  return match ? match[1] : null;
+}
+
 export function DungeonRoomTemplate({
   poi,
   npcs,
@@ -51,6 +57,7 @@ export function DungeonRoomTemplate({
   notesSection,
 }: DungeonRoomTemplateProps) {
   const activeEvents = poiEvents.filter((e) => e.isActive).length;
+  const activity = extractRoomActivity(poi.description);
 
   return (
     <div className="space-y-4">
@@ -60,6 +67,14 @@ export function DungeonRoomTemplate({
       <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="p-4">
           <SensoryBlock text={poi.sensory} />
+
+          {activity && (
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-xs capitalize">
+                ⚡ {activity}
+              </Badge>
+            </div>
+          )}
 
           <ReadAloudBlock text={poi.readAloud} />
           {poi.description && (

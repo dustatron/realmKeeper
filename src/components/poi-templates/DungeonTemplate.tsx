@@ -234,6 +234,12 @@ function parseRoomConnections(description: string, siblings: POI[]) {
   });
 }
 
+function extractRoomActivity(description: string | undefined): string | null {
+  if (!description) return null;
+  const match = description.match(/Creatures here are (\w+)\./);
+  return match ? match[1] : null;
+}
+
 function RoomDetailPanel({
   room,
   index,
@@ -251,6 +257,7 @@ function RoomDetailPanel({
 }) {
   const unmappedTags = getUnmappedTags(room.tags);
   const connections = parseRoomConnections(room.description, siblings);
+  const activity = extractRoomActivity(room.description);
   return (
     <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-3">
       {/* Header */}
@@ -306,9 +313,14 @@ function RoomDetailPanel({
         </p>
       )}
 
-      {/* Mood + Dimensions row */}
-      {(room.mood || room.roomWidth || room.roomLength) && (
+      {/* Activity + Mood + Dimensions row */}
+      {(activity || room.mood || room.roomWidth || room.roomLength) && (
         <div className="flex items-center gap-2 flex-wrap">
+          {activity && (
+            <Badge variant="secondary" className="text-xs capitalize">
+              ⚡ {activity}
+            </Badge>
+          )}
           {room.mood && (
             <Badge variant="secondary" className="text-xs">
               🎭 {room.mood}
