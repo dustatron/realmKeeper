@@ -85,10 +85,16 @@ export async function executeGenerateDungeon(
     const traps: Trap[] = room.hazards.map((h) => ({
       id: newId(),
       name: h.name,
-      description: [h.description, h.trigger, h.passiveHint].filter(Boolean).join(' | '),
+      description: h.description,
       dc: parseDC(h.save),
       damage: h.damage ?? '',
       disarmed: false,
+      trigger: h.trigger,
+      passiveHint: h.passiveHint,
+      activeHint: h.activeHint,
+      disarmMethods: h.disarmMethods,
+      consequence: h.consequence,
+      targetAttribute: h.targetAttribute,
     }))
 
     const treasure = generateRoomTreasure(room, options.treasureLevel, rng.child(`room-${room.id}`))
