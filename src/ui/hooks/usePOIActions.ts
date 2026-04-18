@@ -26,6 +26,7 @@ import type { WatabouCityData } from '@domain/value-objects/WatabouCityData'
 import type { WatabouDungeonData } from '@domain/value-objects/WatabouDungeonData'
 import type { LocationSeed } from '@domain/value-objects/LocationSeed'
 import type { NoticeType } from '@shared/constants'
+import type { GeneratedDungeon } from '~/lib/dungeon/types'
 
 type Container = {
   poiRepo: Parameters<typeof executeUpdatePOI>[1]['poiRepo']
@@ -164,6 +165,11 @@ export function usePOIActions(poi: POI | null | undefined, region: Region | null
     await executeUpdatePOI({ ...poi, locationSeed: seed }, { poiRepo: container.poiRepo })
   }
 
+  const handleUpdateSpatialDungeon = async (dungeon: GeneratedDungeon) => {
+    if (!poi) return
+    await executeUpdatePOI({ ...poi, spatialDungeon: dungeon }, { poiRepo: container.poiRepo })
+  }
+
   return {
     handleUpdateTraps,
     handleToggleTrapDisarmed,
@@ -185,5 +191,6 @@ export function usePOIActions(poi: POI | null | undefined, region: Region | null
     handleImportWatabou,
     handleClearWatabou,
     handleUpdateLocationSeed,
+    handleUpdateSpatialDungeon,
   }
 }
