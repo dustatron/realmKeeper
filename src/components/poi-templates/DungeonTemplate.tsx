@@ -29,6 +29,8 @@ import {
   Shield,
   Swords,
   Minus,
+  Lock,
+  KeyRound,
 } from "lucide-react";
 import { DispositionBadge } from "~/components/shared/DispositionBadge";
 import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
@@ -46,6 +48,7 @@ import type { EncounterTable } from "@domain/entities/EncounterTable";
 import type { FactionPresence } from "@domain/entities/FactionPresence";
 import type { ResolvedPath } from "~/ui/hooks/useResolvedPaths";
 import type { POIEvent } from "@domain/entities/POIEvent";
+import type { KeyLockPair } from "~/lib/dungeon/types";
 import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
 
 function RoomNPCCard({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) => void }) {
@@ -240,6 +243,13 @@ function extractRoomActivity(description: string | undefined): string | null {
   return match ? match[1] : null;
 }
 
+interface RoomKeyLockInfo {
+  /** Keys found in this room */
+  keysHere: { keyName: string; unlocksPassageDesc: string }[];
+  /** Locked passages in this room */
+  locksHere: { keyName: string; keyRoomName: string }[];
+}
+
 function RoomDetailPanel({
   room,
   index,
@@ -247,6 +257,7 @@ function RoomDetailPanel({
   onUpdateNPC,
   siblings,
   onSelectChild,
+  keyLockInfo,
 }: {
   room: POI;
   index: number;
@@ -254,6 +265,7 @@ function RoomDetailPanel({
   onUpdateNPC?: (npc: NPC) => void;
   siblings: POI[];
   onSelectChild?: (id: string) => void;
+  keyLockInfo?: RoomKeyLockInfo;
 }) {
   const unmappedTags = getUnmappedTags(room.tags);
   const connections = parseRoomConnections(room.description, siblings);
@@ -292,6 +304,26 @@ function RoomDetailPanel({
                 <span>{conn.label}</span>
               </span>
             )
+          ))}
+        </div>
+      )}
+
+      {/* Keys & Locks */}
+      {keyLockInfo && (keyLockInfo.keysHere.length > 0 || keyLockInfo.locksHere.length > 0) && (
+        <div className="space-y-1">
+          {keyLockInfo.keysHere.map((k, i) => (
+            <div key={`key-${i}`} className="flex items-center gap-1.5 text-xs rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1.5">
+              <KeyRound className="size-3.5 text-amber-400 shrink-0" />
+              <span className="text-amber-400 font-medium">Key:</span>
+              <span className="text-foreground/80">{k.keyName} — unlocks {k.unlocksPassageDesc}</span>
+            </div>
+          ))}
+          {keyLockInfo.locksHere.map((l, i) => (
+            <div key={`lock-${i}`} className="flex items-center gap-1.5 text-xs rounded-md border border-red-500/30 bg-red-500/5 px-2 py-1.5">
+              <Lock className="size-3.5 text-red-400 shrink-0" />
+              <span className="text-red-400 font-medium">Locked:</span>
+              <span className="text-foreground/80">key ({l.keyName}) in {l.keyRoomName}</span>
+            </div>
           ))}
         </div>
       )}
@@ -557,6 +589,49 @@ export function DungeonTemplate({
   const activeRoomTraps = totalRoomTraps.filter((t) => !t.disarmed).length;
   const uncollectedRoomTreasure = totalRoomTreasure.filter((t) => !t.collected).length;
 
+  // Key-lock lookup: map POI IDs to their key/lock info
+  const keyLockByPoiId = (() => {
+    const sd = poi.spatialDungeon;
+    if (!sd?.keyLockPairs?.length) return new Map<string, RoomKeyLockInfo>();
+    const roomPoiMap = sd.roomPoiMap ?? {};
+    const rooms = sd.rooms ?? [];
+    const passages = sd.passages ?? [];
+    const roomNameById = new Map(rooms.map((r) => [r.id, r.name]));
+    const result = new Map<string, RoomKeyLockInfo>();
+
+    const getOrCreate = (poiId: string): RoomKeyLockInfo => {
+      let info = result.get(poiId);
+      if (!info) { info = { keysHere: [], locksHere: [] }; result.set(poiId, info); }
+      return info;
+    };
+
+    for (const kl of sd.keyLockPairs) {
+      const keyPoiId = roomPoiMap[kl.keyRoomId];
+      const passage = passages.find((p) => p.id === kl.lockedPassageId);
+      if (!passage) continue;
+
+      // Figure out passage description (from→to room names)
+      const fromName = roomNameById.get(passage.fromRoomId) ?? "?";
+      const toName = roomNameById.get(passage.toRoomId) ?? "?";
+      const passageDesc = `${passage.connectionType} between ${fromName} and ${toName}`;
+
+      // Key room
+      if (keyPoiId) {
+        getOrCreate(keyPoiId).keysHere.push({ keyName: kl.keyName, unlocksPassageDesc: passageDesc });
+      }
+
+      // Locked room(s) — both sides of the passage
+      const lockedPoiIds = [roomPoiMap[passage.fromRoomId], roomPoiMap[passage.toRoomId]].filter(Boolean);
+      const keyRoomName = roomNameById.get(kl.keyRoomId) ?? "unknown room";
+      for (const lockedPoiId of lockedPoiIds) {
+        if (lockedPoiId !== keyPoiId) {
+          getOrCreate(lockedPoiId).locksHere.push({ keyName: kl.keyName, keyRoomName });
+        }
+      }
+    }
+    return result;
+  })();
+
   const selectedRoom = selectedChildId
     ? childPois.find((c) => c.id === selectedChildId) ?? null
     : null;
@@ -741,6 +816,7 @@ export function DungeonTemplate({
                   onUpdateNPC={onUpdateNPC}
                   siblings={childPois}
                   onSelectChild={onSelectChild}
+                  keyLockInfo={keyLockByPoiId.get(selectedRoom.id)}
                 />
               ) : childPois.length > 0 ? (
                 <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
@@ -773,6 +849,7 @@ export function DungeonTemplate({
                     const hasActiveTraps = child.traps?.some((t) => !t.disarmed);
                     const hasUncollectedTreasure = child.treasure?.some((t) => !t.collected);
                     const tagEmojis = getTagEmojis(child.tags);
+                    const roomKL = keyLockByPoiId.get(child.id);
                     return (
                       <div
                         key={child.id}
@@ -820,6 +897,12 @@ export function DungeonTemplate({
                             {childNpcList.length > 0 && (
                               <span title={`${childNpcList.length} NPC${childNpcList.length > 1 ? "s" : ""}`}><Users className="size-3.5 text-blue-400" /></span>
                             )}
+                            {roomKL?.keysHere.length ? (
+                              <span title={`Key: ${roomKL.keysHere.map(k => k.keyName).join(', ')}`}><KeyRound className="size-3.5 text-amber-400" /></span>
+                            ) : null}
+                            {roomKL?.locksHere.length ? (
+                              <span title={`Locked passage`}><Lock className="size-3.5 text-red-400" /></span>
+                            ) : null}
                             {tagEmojis.map((emoji, i) => (
                               <span key={i} className="text-sm" title={child.tags[i]}>{emoji}</span>
                             ))}
@@ -954,6 +1037,55 @@ export function DungeonTemplate({
                 )}
               </div>
             )
+          })()}
+
+          {/* ── Keys & Locks ── */}
+          {poi.spatialDungeon?.keyLockPairs && poi.spatialDungeon.keyLockPairs.length > 0 && (() => {
+            const sd = poi.spatialDungeon;
+            const rooms = sd.rooms ?? [];
+            const passages = sd.passages ?? [];
+            const roomPoiMap = sd.roomPoiMap ?? {};
+            const roomNameById = new Map(rooms.map((r) => [r.id, r.name]));
+            return (
+              <div className="space-y-2 rounded-md border p-3 bg-muted/20">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <KeyRound className="size-3.5" /> Keys & Locks ({sd.keyLockPairs!.length})
+                </p>
+                <div className="space-y-1.5">
+                  {sd.keyLockPairs!.map((kl) => {
+                    const passage = passages.find((p) => p.id === kl.lockedPassageId);
+                    const fromName = passage ? roomNameById.get(passage.fromRoomId) ?? "?" : "?";
+                    const toName = passage ? roomNameById.get(passage.toRoomId) ?? "?" : "?";
+                    const keyRoomName = roomNameById.get(kl.keyRoomId) ?? "unknown";
+                    const keyPoiId = roomPoiMap[kl.keyRoomId];
+                    return (
+                      <div key={kl.keyId} className="flex items-start gap-2 text-xs rounded border border-border/50 px-2 py-1.5">
+                        <KeyRound className="size-3.5 text-amber-400 shrink-0 mt-0.5" />
+                        <div className="flex-1 space-y-0.5">
+                          <p className="font-medium">{kl.keyName}</p>
+                          <p className="text-muted-foreground">
+                            Found in{' '}
+                            {keyPoiId ? (
+                              <button
+                                className="text-blue-400 hover:underline"
+                                onClick={() => { onSelectChild(keyPoiId); onTabChange?.('rooms'); }}
+                              >
+                                {keyRoomName}
+                              </button>
+                            ) : (
+                              <span>{keyRoomName}</span>
+                            )}
+                            {' · unlocks '}
+                            {passage?.connectionType ?? 'passage'} between {fromName} and {toName}
+                          </p>
+                        </div>
+                        <Lock className="size-3.5 text-red-400 shrink-0 mt-0.5" />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
           })()}
 
           {/* ── Creature Roster — compact battle reference ── */}
