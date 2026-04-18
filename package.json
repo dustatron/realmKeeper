@@ -40,6 +40,7 @@
     "dexie-cloud-addon": "^4.3.9",
     "dexie-react-hooks": "^1.1.7",
     "fuse.js": "^7.1.0",
+    "geist": "^1.7.0",
     "lucide-react": "^0.563.0",
     "maplibre-gl": "^5.18.0",
     "radix-ui": "^1.4.3",

@@ -24,11 +24,17 @@ import {
   Droplets,
   Flame,
   AlertTriangle,
+  BookOpen,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { useFaction } from "~/ui/hooks/useFactions";
 import { ProgressClock } from "~/components/shared/ProgressClock";
 import { InlineGMNote } from "./InlineGMNote";
+import { db } from "@infrastructure/dexie/db";
+import type { WeatherHistory } from "@domain/entities/WeatherHistory";
 
 const SEASON_COLORS: Record<string, string> = {
   spring: "text-green-600",
@@ -48,7 +54,6 @@ interface DayLogRowProps {
 function getWeatherIcon(condition: string, severity: string) {
   const lower = condition.toLowerCase();
 
-  // Catastrophic
   if (lower.includes("tornado"))
     return { icon: AlertTriangle, color: "text-red-500" };
   if (lower.includes("wildfire") || lower.includes("fire"))
@@ -57,8 +62,6 @@ function getWeatherIcon(condition: string, severity: string) {
     return { icon: AlertTriangle, color: "text-red-500" };
   if (lower.includes("ice storm"))
     return { icon: AlertTriangle, color: "text-red-500" };
-
-  // Winter
   if (lower.includes("blizzard"))
     return { icon: CloudSnow, color: "text-blue-400" };
   if (lower.includes("heavy snow"))
@@ -69,42 +72,28 @@ function getWeatherIcon(condition: string, severity: string) {
     return { icon: Droplets, color: "text-cyan-400" };
   if (lower.includes("frigid") || lower.includes("bitter cold"))
     return { icon: Thermometer, color: "text-blue-400" };
-
-  // Rain/storms
   if (lower.includes("thunderstorm") || lower.includes("lightning"))
     return { icon: CloudLightning, color: "text-yellow-500" };
   if (lower.includes("storm"))
     return { icon: CloudLightning, color: "text-yellow-500" };
   if (lower.includes("rain"))
     return { icon: CloudRain, color: "text-blue-400" };
-
-  // Fog/mist
   if (lower.includes("fog") || lower.includes("mist"))
     return { icon: CloudFog, color: "text-gray-400" };
-
-  // Wind
   if (lower.includes("wind") || lower.includes("breez"))
     return { icon: Wind, color: "text-teal-400" };
-
-  // Frost
   if (lower.includes("frost"))
     return { icon: Snowflake, color: "text-cyan-300" };
-
-  // Hot/drought
   if (lower.includes("drought"))
     return { icon: Flame, color: "text-orange-500" };
   if (lower.includes("scorching") || lower.includes("hot"))
     return { icon: Thermometer, color: "text-orange-500" };
-
-  // Overcast/humid
   if (
     lower.includes("overcast") ||
     lower.includes("humid") ||
     lower.includes("cloud")
   )
     return { icon: Cloud, color: "text-gray-400" };
-
-  // Clear/sunny/mild/warm/crisp
   if (
     lower.includes("clear") ||
     lower.includes("sunny") ||
@@ -114,11 +103,9 @@ function getWeatherIcon(condition: string, severity: string) {
   )
     return { icon: Sun, color: "text-yellow-400" };
 
-  // Fallback
   return { icon: Cloud, color: "text-muted-foreground" };
 }
 
-/** Sub-component so we can call useFaction per faction turn */
 function FactionTurnDetail({
   factionId,
   title,
@@ -193,6 +180,115 @@ const SEVERITY_COLORS: Record<string, string> = {
   catastrophic: "ring-2 ring-red-500 rounded-full animate-pulse",
 };
 
+function WeatherCell({ weather }: { weather: WeatherHistory | undefined }) {
+  const [editing, setEditing] = useState(false);
+  const [condition, setCondition] = useState(weather?.condition ?? "");
+  const [severity, setSeverity] = useState<WeatherHistory["severity"]>(
+    weather?.severity ?? "normal",
+  );
+
+  const startEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!weather) return;
+    setCondition(weather.condition);
+    setSeverity(weather.severity);
+    setEditing(true);
+  };
+
+  const save = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!weather || !condition.trim()) { setEditing(false); return; }
+    await db.weatherHistory.put({
+      ...weather,
+      condition: condition.trim(),
+      severity,
+    });
+    setEditing(false);
+  };
+
+  const cancel = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditing(false);
+  };
+
+  if (!weather) {
+    return <span className="text-xs text-muted-foreground/40">--</span>;
+  }
+
+  if (editing) {
+    return (
+      <div
+        className="flex flex-col gap-1 min-w-[10rem]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <input
+          autoFocus
+          value={condition}
+          onChange={(e) => setCondition(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false) }}
+          className="h-6 w-full rounded border bg-background px-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+          placeholder="Weather condition"
+        />
+        <div className="flex items-center gap-1">
+          <select
+            value={severity}
+            onChange={(e) => setSeverity(e.target.value as WeatherHistory["severity"])}
+            className="h-6 flex-1 rounded border bg-background px-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="normal">Normal</option>
+            <option value="extreme">Extreme</option>
+            <option value="catastrophic">Catastrophic</option>
+          </select>
+          <button onClick={save} className="p-0.5 rounded hover:bg-green-500/10 text-green-600">
+            <Check className="size-3.5" />
+          </button>
+          <button onClick={cancel} className="p-0.5 rounded hover:bg-destructive/10 text-destructive">
+            <X className="size-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const { icon: Icon, color } = getWeatherIcon(weather.condition, weather.severity);
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipContent side="top">
+          <div className="text-center">
+            <div className="font-medium">{weather.condition}</div>
+            {weather.severity !== "normal" && (
+              <div
+                className={cn(
+                  "text-[10px] uppercase tracking-wide",
+                  weather.severity === "catastrophic"
+                    ? "text-red-400"
+                    : "text-orange-400",
+                )}
+              >
+                {weather.severity}
+              </div>
+            )}
+            <div className="text-[10px] text-muted-foreground mt-0.5">Click to edit</div>
+          </div>
+        </TooltipContent>
+        <TooltipTrigger asChild>
+          <button
+            className={cn(
+              "inline-flex p-1 group hover:bg-muted/60 rounded transition-colors",
+              SEVERITY_COLORS[weather.severity],
+            )}
+            onClick={startEdit}
+          >
+            <Icon className={cn("size-4", color)} />
+            <Pencil className="size-2.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-0.5 self-end" />
+          </button>
+        </TooltipTrigger>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 export function DayLogRow({
   entry,
   worldId,
@@ -203,10 +299,11 @@ export function DayLogRow({
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   const primaryWeather = entry.weather[0];
   const hasFactionTurns = entry.factionTurns.length > 0;
+  const hasWorldEvents = entry.events.length > 0;
+  const hasActivity = hasFactionTurns || hasWorldEvents;
 
   return (
     <>
-      {/* Season divider row */}
       {showSeasonDivider && (
         <tr>
           <td
@@ -223,10 +320,10 @@ export function DayLogRow({
       )}
 
       <tr
-        onClick={hasFactionTurns ? () => setIsOpen((o) => !o) : undefined}
+        onClick={hasActivity ? () => setIsOpen((o) => !o) : undefined}
         className={cn(
           "border-b transition-colors",
-          hasFactionTurns && "cursor-pointer hover:bg-muted/50",
+          hasActivity && "cursor-pointer hover:bg-muted/50",
           entry.isCompleted && "opacity-40",
           entry.isCurrentDay && "border-l-4 border-l-primary bg-primary/5",
           entry.isFuture && !entry.isCurrentDay && "text-muted-foreground",
@@ -262,65 +359,31 @@ export function DayLogRow({
 
         {/* Weather */}
         <td className="px-2 py-2 align-middle">
-          {primaryWeather ? (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipContent side="top">
-                  <div className="text-center">
-                    <div className="font-medium">
-                      {primaryWeather.condition}
-                    </div>
-                    {primaryWeather.severity !== "normal" && (
-                      <div
-                        className={cn(
-                          "text-[10px] uppercase tracking-wide",
-                          primaryWeather.severity === "catastrophic"
-                            ? "text-red-400"
-                            : "text-orange-400",
-                        )}
-                      >
-                        {primaryWeather.severity}
-                      </div>
-                    )}
-                  </div>
-                </TooltipContent>
-                <TooltipTrigger asChild>
-                  <span
-                    className={cn(
-                      "inline-flex p-1",
-                      SEVERITY_COLORS[primaryWeather.severity],
-                    )}
-                  >
-                    {(() => {
-                      const { icon: Icon, color } = getWeatherIcon(
-                        primaryWeather.condition,
-                        primaryWeather.severity,
-                      );
-                      return <Icon className={cn("size-4", color)} />;
-                    })()}
-                  </span>
-                </TooltipTrigger>
-              </Tooltip>
-            </TooltipProvider>
-          ) : (
-            <span className="text-xs text-muted-foreground/40">--</span>
-          )}
+          <WeatherCell weather={primaryWeather} />
         </td>
 
-        {/* Faction Turns */}
+        {/* Activity (faction turns + world events) */}
         <td className="px-2 py-2 align-middle">
-          {hasFactionTurns ? (
-            <div className="flex items-center gap-1">
+          {hasActivity ? (
+            <div className="flex items-center gap-1 flex-wrap">
               <ChevronRight
                 className={cn(
                   "size-3 text-muted-foreground transition-transform",
                   isOpen && "rotate-90",
                 )}
               />
-              <Badge variant="secondary" className="text-xs">
-                <Swords className="size-3 mr-1" />
-                {entry.factionTurns.length}
-              </Badge>
+              {hasFactionTurns && (
+                <Badge variant="secondary" className="text-xs">
+                  <Swords className="size-3 mr-1" />
+                  {entry.factionTurns.length}
+                </Badge>
+              )}
+              {hasWorldEvents && (
+                <Badge variant="outline" className="text-xs">
+                  <BookOpen className="size-3 mr-1" />
+                  {entry.events.length}
+                </Badge>
+              )}
             </div>
           ) : (
             <span className="text-xs text-muted-foreground/40">--</span>
@@ -384,7 +447,8 @@ export function DayLogRow({
             day={entry.day}
           />
         </td>
-        {/* Season + Day within season */}
+
+        {/* Season */}
         <td
           className={cn(
             "px-2 py-2 align-middle text-sm",
@@ -395,20 +459,37 @@ export function DayLogRow({
         </td>
       </tr>
 
-      {/* Expanded faction turn details */}
-      {isOpen && hasFactionTurns && (
+      {/* Expanded activity panel */}
+      {isOpen && hasActivity && (
         <tr className="border-b bg-muted/20">
-          <td colSpan={7} className="px-4 py-2">
-            <ul className="space-y-2">
-              {entry.factionTurns.map((ft) => (
-                <FactionTurnDetail
-                  key={ft.id}
-                  factionId={ft.relatedEntityIds[0]}
-                  title={ft.title}
-                  description={ft.description}
-                />
-              ))}
-            </ul>
+          <td colSpan={7} className="px-4 py-2 space-y-2">
+            {hasFactionTurns && (
+              <ul className="space-y-2">
+                {entry.factionTurns.map((ft) => (
+                  <FactionTurnDetail
+                    key={ft.id}
+                    factionId={ft.relatedEntityIds[0]}
+                    title={ft.title}
+                    description={ft.description}
+                  />
+                ))}
+              </ul>
+            )}
+            {hasWorldEvents && (
+              <ul className="space-y-1">
+                {entry.events.map((ev) => (
+                  <li key={ev.id} className="flex items-start gap-2 text-sm">
+                    <BookOpen className="size-3.5 mt-0.5 shrink-0 text-muted-foreground" />
+                    <div>
+                      <span className="font-medium">{ev.title}</span>
+                      {ev.description && (
+                        <p className="text-xs text-muted-foreground">{ev.description}</p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </td>
         </tr>
       )}

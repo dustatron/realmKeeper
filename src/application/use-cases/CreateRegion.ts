@@ -25,6 +25,7 @@ export async function executeCreateRegion(
     dangers: [],
     settlements: [],
     resources: [],
+    people: [],
     boundary: null,
     color: input.color ?? null,
     imageUrl: null,

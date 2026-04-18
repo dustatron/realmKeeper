@@ -10,7 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { Star, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Star, ChevronUp, ChevronDown, ChevronsUpDown, EyeOff, Eye } from "lucide-react";
+import { cn } from "~/lib/utils";
 import { usePagination } from "./usePagination";
 import { PaginationControls } from "./PaginationControls";
 
@@ -52,11 +53,15 @@ export function MonsterTable({
   starredIds,
   onToggleStar,
   systemId = "",
+  hiddenIds,
+  onToggleHide,
 }: {
   monsters: CompendiumMonster[];
   starredIds: string[];
   onToggleStar?: (id: string) => void;
   systemId?: string;
+  hiddenIds?: Set<string>;
+  onToggleHide?: (id: string) => void;
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -111,11 +116,13 @@ export function MonsterTable({
           {!isCairn && th("Attacks", "attacks", "hidden sm:table-cell")}
           {!isCairn && th("Align", "alignment", "hidden sm:table-cell")}
           {onToggleStar && <TableHead className="w-8" />}
+          {onToggleHide && <TableHead className="w-8" />}
         </TableRow>
       </TableHeader>
       <TableBody>
         {pagination.paged.map((monster) => {
           const isCustom = monster.systemData.system === "custom";
+          const isHidden = hiddenIds?.has(monster.id) ?? false;
           const sd = monster.systemData;
           let level = "—";
           let ac = "—";
@@ -133,7 +140,7 @@ export function MonsterTable({
           }
 
           return (
-            <TableRow key={monster.id}>
+            <TableRow key={monster.id} className={cn(isHidden && "opacity-50")}>
               <TableCell className="font-medium">
                 <Link
                   to={
@@ -146,7 +153,7 @@ export function MonsterTable({
                       ? { entryId: monster.id }
                       : { monsterId: monster.id }
                   }
-                  className="hover:underline"
+                  className={cn("hover:underline", isHidden && "line-through")}
                 >
                   {monster.name}
                 </Link>
@@ -191,6 +198,21 @@ export function MonsterTable({
                   </button>
                 </TableCell>
               )}
+              {onToggleHide && !isCustom && (
+                <TableCell className="text-center">
+                  <button
+                    onClick={() => onToggleHide(monster.id)}
+                    className="p-1 rounded hover:bg-muted"
+                    title={isHidden ? "Restore" : "Hide"}
+                  >
+                    {isHidden
+                      ? <Eye className="size-3.5 text-muted-foreground" />
+                      : <EyeOff className="size-3.5 text-muted-foreground opacity-40 hover:opacity-100 transition-opacity" />
+                    }
+                  </button>
+                </TableCell>
+              )}
+              {onToggleHide && isCustom && <TableCell />}
             </TableRow>
           );
         })}

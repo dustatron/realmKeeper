@@ -262,6 +262,7 @@ function POIDetailPage() {
         selectedRoomPoiId={selectedChildId ?? undefined}
         roomIdToPoiId={roomIdToPoiId}
         onRoomClick={(childPoiId) => setSelectedChildId(childPoiId)}
+        onDungeonChange={actions.handleUpdateSpatialDungeon}
         className="h-[300px] md:h-[400px]"
       />
     )

@@ -1,5 +1,10 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
-import type { GeneratedDungeon, SpatialRoom, Passage, DungeonTheme } from '~/lib/dungeon/types'
+import { useState, useCallback, useRef, useEffect, useMemo, useId } from 'react'
+import { newId } from '@shared/ulid'
+import { Button } from '~/components/ui/button'
+import { Input } from '~/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
+import { Pencil, X, Trash2, Plus, Link2 } from 'lucide-react'
+import type { GeneratedDungeon, SpatialRoom, Passage, DungeonTheme, RoomType } from '~/lib/dungeon/types'
 
 interface Props {
   dungeon: GeneratedDungeon
@@ -7,16 +12,19 @@ interface Props {
   selectedRoomPoiId?: string
   /** Map from generated room.id → child POI id */
   roomIdToPoiId?: Map<string, string>
-  /** Called when user clicks a room */
+  /** Called when user clicks a room in view mode */
   onRoomClick?: (childPoiId: string) => void
+  /** Called when dungeon structure changes (enables edit mode toggle).
+   *  deletedRoomIds: room IDs removed in this change, so caller can clean up child POIs. */
+  onDungeonChange?: (dungeon: GeneratedDungeon, deletedRoomIds?: string[]) => void
   className?: string
 }
 
 // 1 cell = CELL_SIZE pixels
 const CELL_SIZE = 10
 const PASSAGE_WIDTH = 8
+const DRAG_THRESHOLD = 5
 
-// Theme-based colors matching hexbinder
 const THEME_COLORS: Record<DungeonTheme, { fill: string; stroke: string; passage: string }> = {
   tomb:           { fill: '#44403c', stroke: '#78716c', passage: '#57534e' },
   cave:           { fill: '#292524', stroke: '#57534e', passage: '#44403c' },
@@ -37,8 +45,8 @@ const THEME_COLORS: Record<DungeonTheme, { fill: string; stroke: string; passage
 
 const ENTRANCE_COLORS = { fill: '#166534', stroke: '#22c55e' }
 const SELECTED_STROKE = '#f59e0b'
+const EDIT_SELECTED_STROKE = '#3b82f6'
 
-// Unicode symbols for room types (no external icon lib needed)
 const ROOM_SYMBOLS: Record<string, string> = {
   entrance: '⛩',
   exit: '🚪',
@@ -50,6 +58,20 @@ const ROOM_SYMBOLS: Record<string, string> = {
   lair: '☠',
   trap_room: '⚠',
 }
+
+const ROOM_TYPE_LABELS: Record<RoomType, string> = {
+  entrance: 'Entrance',
+  exit: 'Exit',
+  corridor: 'Corridor',
+  chamber: 'Chamber',
+  shrine: 'Shrine',
+  treasury: 'Treasury',
+  prison: 'Prison',
+  lair: 'Lair',
+  trap_room: 'Trap Room',
+}
+
+const ADDABLE_ROOM_TYPES: RoomType[] = ['chamber', 'shrine', 'treasury', 'prison', 'lair', 'trap_room', 'corridor', 'exit']
 
 function px(cellCoord: number) { return cellCoord * CELL_SIZE }
 function cx(cellCoord: number) { return cellCoord * CELL_SIZE + CELL_SIZE / 2 }
@@ -86,59 +108,76 @@ function waypointsToPath(waypoints: Passage['waypoints']): string {
   return `M ${pts[0]} L ${pts.slice(1).join(' L ')}`
 }
 
-function RoomShape({ room, theme, isSelected, roomNumber, hasNPCs, hasTreasure, onClick }: {
+function makePassage(fromRoom: SpatialRoom, toRoom: SpatialRoom): Passage {
+  return {
+    id: newId(),
+    fromRoomId: fromRoom.id,
+    toRoomId: toRoom.id,
+    waypoints: [
+      { x: Math.round(fromRoom.bounds.x + fromRoom.bounds.width / 2), y: Math.round(fromRoom.bounds.y + fromRoom.bounds.height / 2) },
+      { x: Math.round(toRoom.bounds.x + toRoom.bounds.width / 2), y: Math.round(toRoom.bounds.y + toRoom.bounds.height / 2) },
+    ],
+    connectionType: 'archway',
+    locked: false,
+    hidden: false,
+  }
+}
+
+function RoomShape({ room, theme, isSelected, isEditSelected, roomNumber, hasDenizens, hasCreatures, hasTreasure, onClick }: {
   room: SpatialRoom
   theme: DungeonTheme
   isSelected: boolean
+  isEditSelected: boolean
   roomNumber: number
-  hasNPCs: boolean
+  hasDenizens: boolean
+  hasCreatures: boolean
   hasTreasure: boolean
   onClick?: () => void
 }) {
   const themeColors = THEME_COLORS[theme] ?? THEME_COLORS.cave
   const isEntrance = room.type === 'entrance' || room.type === 'exit'
   const fill = isSelected ? '#7c2d12' : isEntrance ? ENTRANCE_COLORS.fill : themeColors.fill
-  const stroke = isSelected ? SELECTED_STROKE : isEntrance ? ENTRANCE_COLORS.stroke : themeColors.stroke
-  const strokeWidth = isSelected ? 2 : 1.5
+  const stroke = isEditSelected ? EDIT_SELECTED_STROKE : isSelected ? SELECTED_STROKE : isEntrance ? ENTRANCE_COLORS.stroke : themeColors.stroke
+  const strokeWidth = isSelected || isEditSelected ? 2 : 1.5
 
   const x = px(room.bounds.x)
   const y = px(room.bounds.y)
   const w = px(room.bounds.width)
   const h = px(room.bounds.height)
 
-  // Content icons to display — collect what this room has
   const icons: { icon: string; color: string }[] = []
   if (room.hazards.some((h) => !h.disarmed))      icons.push({ icon: '⚠', color: '#f97316' })
   if (hasTreasure)                                 icons.push({ icon: '◈', color: '#eab308' })
-  if (hasNPCs)                                     icons.push({ icon: '☻', color: '#93c5fd' })
+  if (hasCreatures)                                icons.push({ icon: '☠', color: '#f87171' })
+  if (hasDenizens)                                 icons.push({ icon: '☻', color: '#86efac' })
   if (room.secrets?.some((s) => !s.discovered))   icons.push({ icon: '?', color: '#a78bfa' })
   if (room.discoveries?.some((d) => !d.found))    icons.push({ icon: '!', color: '#6ee7b7' })
 
-  // Icon size and layout
   const iconSize = Math.max(5, Math.min(w, h) * 0.38)
-  const iconPad = 2
-  const contentCenterX = x + w / 2
-  const contentCenterY = y + h / 2
-
-  // If icons fit in one row, spread them; otherwise stack
   const iconSpacing = iconSize + 1.5
   const totalIconWidth = icons.length * iconSpacing - 1.5
-  const iconStartX = contentCenterX - totalIconWidth / 2
-
-  // Room number — top-right corner
+  const iconStartX = (x + w / 2) - totalIconWidth / 2
   const numSize = Math.max(5, Math.min(w, h) * 0.35)
 
   return (
-    <g onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
+    <g
+      data-room-id={room.id}
+      onClick={onClick}
+      style={{ cursor: onClick ? 'pointer' : 'default' }}
+    >
       <rect x={x} y={y} width={w} height={h} fill={fill} stroke={stroke} strokeWidth={strokeWidth} rx={2} />
 
-      {/* Content icons centered in room */}
+      {/* Edit-selected glow ring */}
+      {isEditSelected && (
+        <rect x={x - 1.5} y={y - 1.5} width={w + 3} height={h + 3} fill="none" stroke={EDIT_SELECTED_STROKE} strokeWidth={1} rx={3} opacity={0.5} />
+      )}
+
       {icons.length > 0 ? (
         icons.map((ic, i) => (
           <text
             key={i}
             x={iconStartX + i * iconSpacing + iconSpacing / 2}
-            y={contentCenterY}
+            y={y + h / 2}
             textAnchor="middle"
             dominantBaseline="central"
             fontSize={iconSize}
@@ -149,9 +188,8 @@ function RoomShape({ room, theme, isSelected, roomNumber, hasNPCs, hasTreasure, 
           </text>
         ))
       ) : (
-        /* Empty room — show faint type symbol so it's not a blank square */
         <text
-          x={contentCenterX} y={contentCenterY}
+          x={x + w / 2} y={y + h / 2}
           textAnchor="middle" dominantBaseline="central"
           fontSize={Math.max(6, Math.min(w, h) * 0.45)}
           fill="rgba(255,255,255,0.2)"
@@ -161,9 +199,8 @@ function RoomShape({ room, theme, isSelected, roomNumber, hasNPCs, hasTreasure, 
         </text>
       )}
 
-      {/* Room number — top-right */}
       <text
-        x={x + w - iconPad} y={y + iconPad + numSize * 0.7}
+        x={x + w - 2} y={y + 2 + numSize * 0.7}
         textAnchor="end"
         fontSize={numSize}
         fontWeight="bold"
@@ -186,7 +223,6 @@ function PassageShape({ passage, theme }: { passage: Passage; theme: DungeonThem
 
   return (
     <g>
-      {/* Main passage */}
       <path
         d={pathData}
         stroke={colors.passage}
@@ -195,11 +231,9 @@ function PassageShape({ passage, theme }: { passage: Passage; theme: DungeonThem
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* Secret passage overlay */}
       {passage.hidden && (
         <path d={pathData} stroke="#a3a3a3" strokeWidth={2} fill="none" strokeDasharray="4 4" strokeLinecap="round" />
       )}
-      {/* Door marker */}
       {passage.connectionType === 'door' && passage.waypoints.length >= 2 && (
         <rect
           x={cx(passage.waypoints[0].x) - 4}
@@ -209,17 +243,9 @@ function PassageShape({ passage, theme }: { passage: Passage; theme: DungeonThem
           stroke="#1f2937" strokeWidth={1}
         />
       )}
-      {/* Stairs marker */}
       {passage.connectionType === 'stairs' && midWp && (
-        <text
-          x={cx(midWp.x)} y={cx(midWp.y)}
-          textAnchor="middle" dominantBaseline="central"
-          fontSize={7} fill="rgba(255,255,255,0.8)"
-        >
-          ↕
-        </text>
+        <text x={cx(midWp.x)} y={cx(midWp.y)} textAnchor="middle" dominantBaseline="central" fontSize={7} fill="rgba(255,255,255,0.8)">↕</text>
       )}
-      {/* Trap marker */}
       {hasTrap && midWp && (
         <circle cx={cx(midWp.x)} cy={cx(midWp.y)} r={4} fill="#f97316" opacity={0.9} />
       )}
@@ -227,16 +253,35 @@ function PassageShape({ passage, theme }: { passage: Passage; theme: DungeonThem
   )
 }
 
-export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoiId, onRoomClick, className }: Props) {
+export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoiId, onRoomClick, onDungeonChange, className }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
+  const patternId = useId().replace(/:/g, '') // useId includes colons which are invalid in SVG id
   const [viewBox, setViewBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
-  const [isPanning, setIsPanning] = useState(false)
+  const isPanningRef = useRef(false)      // ref-based to avoid stale closure in pointermove
   const panStart = useRef<{ x: number; y: number; vx: number; vy: number } | null>(null)
   const lastTouchDist = useRef<number | null>(null)
+  const dragMoved = useRef(false)
 
-  const bounds = computeBounds(dungeon)
-  const defaultVB = { x: bounds.minX, y: bounds.minY, w: bounds.maxX - bounds.minX, h: bounds.maxY - bounds.minY }
+  // Edit mode state
+  const [editMode, setEditMode] = useState(false)
+  const [selectedEditRoomId, setSelectedEditRoomId] = useState<string | null>(null)
+  const [addRoomGridPos, setAddRoomGridPos] = useState<{ x: number; y: number } | null>(null)
+  const [addRoomType, setAddRoomType] = useState<RoomType>('chamber')
+  const [addRoomName, setAddRoomName] = useState('')
+  const [connectToRoomId, setConnectToRoomId] = useState<string>('none')
+  const [connectFrom, setConnectFrom] = useState<string>('none')
+  const [pendingDeleteRoomId, setPendingDeleteRoomId] = useState<string | null>(null)
+
+  // --- Memoized layout data ---
+
+  const bounds = useMemo(() => computeBounds(dungeon), [dungeon])
+  const defaultVB = useMemo(
+    () => ({ x: bounds.minX, y: bounds.minY, w: bounds.maxX - bounds.minX, h: bounds.maxY - bounds.minY }),
+    [bounds]
+  )
   const vb = viewBox ?? defaultVB
+
+  // --- Zoom / pan handlers ---
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault()
@@ -246,30 +291,41 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
     const mx = (e.clientX - rect.left) / rect.width
     const my = (e.clientY - rect.top) / rect.height
     const factor = e.deltaY > 0 ? 1.15 : 0.87
-    const current = viewBox ?? defaultVB
-    const nw = current.w * factor
-    const nh = current.h * factor
-    setViewBox({ x: current.x + (current.w - nw) * mx, y: current.y + (current.h - nh) * my, w: nw, h: nh })
-  }, [viewBox, defaultVB])
+    setViewBox(current => {
+      const vb = current ?? defaultVB
+      const nw = vb.w * factor
+      const nh = vb.h * factor
+      return { x: vb.x + (vb.w - nw) * mx, y: vb.y + (vb.h - nh) * my, w: nw, h: nh }
+    })
+  }, [defaultVB])
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return
-    setIsPanning(true)
-    const current = viewBox ?? defaultVB
-    panStart.current = { x: e.clientX, y: e.clientY, vx: current.x, vy: current.y }
+    dragMoved.current = false
+    isPanningRef.current = true
+    setViewBox(current => {
+      const vb = current ?? defaultVB
+      panStart.current = { x: e.clientX, y: e.clientY, vx: vb.x, vy: vb.y }
+      return current
+    })
     ;(e.target as Element).setPointerCapture(e.pointerId)
-  }, [viewBox, defaultVB])
+  }, [defaultVB])
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isPanning || !panStart.current || !svgRef.current) return
+    if (!isPanningRef.current || !panStart.current || !svgRef.current) return
+    const dx = e.clientX - panStart.current.x
+    const dy = e.clientY - panStart.current.y
+    if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+      dragMoved.current = true
+    }
     const rect = svgRef.current.getBoundingClientRect()
-    const current = viewBox ?? defaultVB
-    const dx = (e.clientX - panStart.current.x) / rect.width * current.w
-    const dy = (e.clientY - panStart.current.y) / rect.height * current.h
-    setViewBox({ ...current, x: panStart.current.vx - dx, y: panStart.current.vy - dy })
-  }, [isPanning, viewBox, defaultVB])
+    setViewBox(current => {
+      const vb = current ?? defaultVB
+      return { ...vb, x: panStart.current!.vx - dx / rect.width * vb.w, y: panStart.current!.vy - dy / rect.height * vb.h }
+    })
+  }, [defaultVB])
 
-  const handlePointerUp = useCallback(() => { setIsPanning(false); panStart.current = null }, [])
+  const handlePointerUp = useCallback(() => { isPanningRef.current = false; panStart.current = null }, [])
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (e.touches.length !== 2) { lastTouchDist.current = null; return }
@@ -277,12 +333,14 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
     const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
     if (lastTouchDist.current !== null) {
       const factor = lastTouchDist.current / dist
-      const current = viewBox ?? defaultVB
-      const nw = current.w * factor, nh = current.h * factor
-      setViewBox({ x: current.x + (current.w - nw) * 0.5, y: current.y + (current.h - nh) * 0.5, w: nw, h: nh })
+      setViewBox(current => {
+        const vb = current ?? defaultVB
+        const nw = vb.w * factor, nh = vb.h * factor
+        return { x: vb.x + (vb.w - nw) * 0.5, y: vb.y + (vb.h - nh) * 0.5, w: nw, h: nh }
+      })
     }
     lastTouchDist.current = dist
-  }, [viewBox, defaultVB])
+  }, [defaultVB])
 
   useEffect(() => {
     const el = svgRef.current
@@ -292,48 +350,185 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
     return () => el.removeEventListener('wheel', prevent)
   }, [])
 
-  // Build reverse lookup: generated room.id → 1-based display number
-  const roomNumberMap = new Map(dungeon.rooms.map((r, i) => [r.id, i + 1]))
+  // --- Edit mode click handler ---
 
-  // Which rooms have generated NPCs / treasure
-  const roomsWithNPCs = new Set((dungeon.dungeonNPCs ?? []).map((n) => n.roomId))
-  const roomsWithTreasure = new Set(dungeon.roomHasTreasure ?? [])
+  const handleSvgClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (!editMode || dragMoved.current) return
 
-  // Reverse lookup: child POI id → generated room id (for highlighting)
+    let el = e.target as Element | null
+    let clickedRoomId: string | null = null
+    while (el && el !== svgRef.current) {
+      const rid = el.getAttribute('data-room-id')
+      if (rid) { clickedRoomId = rid; break }
+      el = el.parentElement
+    }
+
+    if (clickedRoomId) {
+      setSelectedEditRoomId(prev => {
+        if (prev !== clickedRoomId) setConnectFrom('none') // reset stale dropdown
+        return clickedRoomId
+      })
+      setAddRoomGridPos(null)
+      setPendingDeleteRoomId(null)
+    } else {
+      const svg = svgRef.current!
+      const rect = svg.getBoundingClientRect()
+      const svgX = vb.x + (e.clientX - rect.left) / rect.width * vb.w
+      const svgY = vb.y + (e.clientY - rect.top) / rect.height * vb.h
+      setAddRoomGridPos({ x: Math.floor(svgX / CELL_SIZE), y: Math.floor(svgY / CELL_SIZE) })
+      setSelectedEditRoomId(null)
+      setPendingDeleteRoomId(null)
+    }
+  }, [editMode, vb])
+
+  // --- Dungeon mutation helpers ---
+
+  const handleDeleteRoom = useCallback((roomId: string) => {
+    if (!onDungeonChange) return
+    const updatedRoomPoiMap = { ...(dungeon.roomPoiMap ?? {}) }
+    delete updatedRoomPoiMap[roomId]
+    onDungeonChange(
+      {
+        ...dungeon,
+        rooms: dungeon.rooms.filter(r => r.id !== roomId),
+        passages: dungeon.passages.filter(p => p.fromRoomId !== roomId && p.toRoomId !== roomId),
+        roomPoiMap: updatedRoomPoiMap,
+      },
+      [roomId]
+    )
+    setSelectedEditRoomId(null)
+    setPendingDeleteRoomId(null)
+  }, [dungeon, onDungeonChange])
+
+  const handleAddRoom = useCallback(() => {
+    if (!onDungeonChange || !addRoomGridPos) return
+    const SIZE = addRoomType === 'corridor' ? 2 : 5
+    const H = addRoomType === 'corridor' ? 5 : 4
+    const newRoom: SpatialRoom = {
+      id: newId(),
+      name: addRoomName.trim() || ROOM_TYPE_LABELS[addRoomType],
+      description: '',
+      type: addRoomType,
+      size: 'medium',
+      depth: 1,
+      bounds: {
+        x: addRoomGridPos.x - Math.floor(SIZE / 2),
+        y: addRoomGridPos.y - Math.floor(H / 2),
+        width: SIZE,
+        height: H,
+      },
+      encounters: [],
+      treasure: [],
+      features: [],
+      hazards: [],
+      secrets: [],
+      discoveries: [],
+      explored: false,
+    }
+    const newPassages: Passage[] = []
+    if (connectToRoomId && connectToRoomId !== 'none') {
+      const target = dungeon.rooms.find(r => r.id === connectToRoomId)
+      if (target) newPassages.push(makePassage(target, newRoom))
+    }
+    onDungeonChange({
+      ...dungeon,
+      rooms: [...dungeon.rooms, newRoom],
+      passages: [...dungeon.passages, ...newPassages],
+    })
+    setAddRoomGridPos(null)
+    setAddRoomName('')
+    setConnectToRoomId('none')
+  }, [dungeon, onDungeonChange, addRoomGridPos, addRoomType, addRoomName, connectToRoomId])
+
+  const handleAddPassage = useCallback((fromId: string, toId: string) => {
+    if (!onDungeonChange) return
+    const from = dungeon.rooms.find(r => r.id === fromId)
+    const to = dungeon.rooms.find(r => r.id === toId)
+    if (!from || !to) return
+    const exists = dungeon.passages.some(
+      p => (p.fromRoomId === fromId && p.toRoomId === toId) || (p.fromRoomId === toId && p.toRoomId === fromId)
+    )
+    if (exists) return
+    onDungeonChange({ ...dungeon, passages: [...dungeon.passages, makePassage(from, to)] })
+    setConnectFrom('none')
+  }, [dungeon, onDungeonChange])
+
+  const handleDeletePassage = useCallback((fromId: string, toId: string) => {
+    if (!onDungeonChange) return
+    onDungeonChange({
+      ...dungeon,
+      passages: dungeon.passages.filter(
+        p => !((p.fromRoomId === fromId && p.toRoomId === toId) || (p.fromRoomId === toId && p.toRoomId === fromId))
+      ),
+    })
+  }, [dungeon, onDungeonChange])
+
+  // --- Derived data ---
+
+  const roomNumberMap = useMemo(() => new Map(dungeon.rooms.map((r, i) => [r.id, i + 1])), [dungeon.rooms])
+  // Denizens: named NPCs placed by the dungeon NPC generator (rival parties, prisoners, hermits, etc.)
+  const roomsWithDenizens = useMemo(() => new Set((dungeon.dungeonNPCs ?? []).map((n) => n.roomId)), [dungeon.dungeonNPCs])
+  // Creatures: hostile encounters still active in a room
+  const roomsWithCreatures = useMemo(
+    () => new Set(dungeon.rooms.filter(r => r.encounters.some(e => !e.defeated)).map(r => r.id)),
+    [dungeon.rooms]
+  )
+  const roomsWithTreasure = useMemo(() => new Set(dungeon.roomHasTreasure ?? []), [dungeon.roomHasTreasure])
   const selectedRoomId = selectedRoomPoiId && roomIdToPoiId
     ? [...roomIdToPoiId.entries()].find(([, poiId]) => poiId === selectedRoomPoiId)?.[0]
     : undefined
-
   const themeColors = THEME_COLORS[dungeon.theme] ?? THEME_COLORS.cave
 
+  const selectedEditRoom = editMode && selectedEditRoomId
+    ? dungeon.rooms.find(r => r.id === selectedEditRoomId) ?? null
+    : null
+
+  const selectedRoomPassages = selectedEditRoom
+    ? dungeon.passages.filter(p => p.fromRoomId === selectedEditRoom.id || p.toRoomId === selectedEditRoom.id)
+    : []
+
+  const unconnectedRooms = selectedEditRoom
+    ? dungeon.rooms.filter(r => {
+        if (r.id === selectedEditRoom.id) return false
+        return !dungeon.passages.some(
+          p => (p.fromRoomId === selectedEditRoom.id && p.toRoomId === r.id) ||
+               (p.fromRoomId === r.id && p.toRoomId === selectedEditRoom.id)
+        )
+      })
+    : []
+
+  // Ghost rect dimensions based on current type selection
+  const ghostSize = useMemo(() => ({
+    w: addRoomType === 'corridor' ? 2 : 5,
+    h: addRoomType === 'corridor' ? 5 : 4,
+  }), [addRoomType])
+
   return (
-    <div className={`relative ${className ?? ''}`}>
+    <div className={`relative flex flex-col ${className ?? ''}`}>
       <svg
         ref={svgRef}
         viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
-        className="w-full h-full rounded-lg touch-none bg-stone-100 dark:bg-stone-900"
-        style={{ minHeight: 300 }}
+        className="w-full flex-1 rounded-lg touch-none bg-stone-100 dark:bg-stone-900"
+        style={{ minHeight: 280 }}
         onWheel={handleWheel}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onTouchMove={handleTouchMove}
         onTouchEnd={() => { lastTouchDist.current = null }}
+        onClick={editMode ? handleSvgClick : undefined}
       >
-        {/* Subtle grid */}
         <defs>
-          <pattern id="dg" width={CELL_SIZE} height={CELL_SIZE} patternUnits="userSpaceOnUse">
+          <pattern id={patternId} width={CELL_SIZE} height={CELL_SIZE} patternUnits="userSpaceOnUse">
             <path d={`M ${CELL_SIZE} 0 L 0 0 0 ${CELL_SIZE}`} fill="none" stroke="rgba(128,128,128,0.15)" strokeWidth={0.5} />
           </pattern>
         </defs>
-        <rect x={bounds.minX} y={bounds.minY} width={bounds.maxX - bounds.minX} height={bounds.maxY - bounds.minY} fill="url(#dg)" />
+        <rect x={bounds.minX} y={bounds.minY} width={bounds.maxX - bounds.minX} height={bounds.maxY - bounds.minY} fill={`url(#${patternId})`} />
 
-        {/* Passages (behind rooms) */}
         {dungeon.passages.map((p) => (
           <PassageShape key={p.id} passage={p} theme={dungeon.theme} />
         ))}
 
-        {/* Rooms */}
         {dungeon.rooms.map((room) => {
           const poiId = roomIdToPoiId?.get(room.id)
           return (
@@ -341,16 +536,29 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
               key={room.id}
               room={room}
               theme={dungeon.theme}
-              isSelected={room.id === selectedRoomId}
+              isSelected={!editMode && room.id === selectedRoomId}
+              isEditSelected={editMode && room.id === selectedEditRoomId}
               roomNumber={roomNumberMap.get(room.id) ?? 0}
-              hasNPCs={roomsWithNPCs.has(room.id)}
+              hasDenizens={roomsWithDenizens.has(room.id)}
+              hasCreatures={roomsWithCreatures.has(room.id)}
               hasTreasure={roomsWithTreasure.has(room.id)}
-              onClick={onRoomClick && poiId ? () => onRoomClick(poiId) : undefined}
+              onClick={!editMode && onRoomClick && poiId ? () => onRoomClick(poiId) : undefined}
             />
           )
         })}
 
-        {/* Key lock indicators */}
+        {/* New room placement ghost — dimensions track selected type */}
+        {editMode && addRoomGridPos && (
+          <rect
+            x={px(addRoomGridPos.x - Math.floor(ghostSize.w / 2))}
+            y={px(addRoomGridPos.y - Math.floor(ghostSize.h / 2))}
+            width={px(ghostSize.w)} height={px(ghostSize.h)}
+            fill="rgba(59,130,246,0.2)" stroke="#3b82f6" strokeWidth={1.5}
+            strokeDasharray="3 2" rx={2}
+            style={{ pointerEvents: 'none' }}
+          />
+        )}
+
         {dungeon.keyLockPairs?.map((kl) => {
           const passage = dungeon.passages.find((p) => p.id === kl.lockedPassageId)
           if (!passage || passage.waypoints.length < 1) return null
@@ -363,22 +571,212 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
         })}
       </svg>
 
-      {/* Legend */}
-      <div className="absolute bottom-2 left-2 flex gap-3 text-xs bg-background/90 border border-border rounded px-2 py-1 text-muted-foreground">
-        <span className="flex items-center gap-1"><span className="text-orange-400 font-bold">⚠</span> Trap</span>
-        <span className="flex items-center gap-1"><span className="text-yellow-400 font-bold">◈</span> Treasure</span>
-        <span className="flex items-center gap-1"><span className="text-blue-300 font-bold">☻</span> NPC</span>
-        <span className="flex items-center gap-1"><span className="text-purple-400 font-bold">?</span> Secret</span>
-        <span className="flex items-center gap-1"><span className="text-emerald-300 font-bold">!</span> Discovery</span>
+      {/* Toolbar row */}
+      <div className="absolute top-2 right-2 flex items-center gap-1.5">
+        {onDungeonChange && (
+          <button
+            onClick={() => {
+              setEditMode(!editMode)
+              setSelectedEditRoomId(null)
+              setAddRoomGridPos(null)
+              setPendingDeleteRoomId(null)
+            }}
+            className={`px-2 py-1 text-xs rounded flex items-center gap-1 transition-colors ${
+              editMode
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-background/90 border border-border text-foreground hover:bg-muted'
+            }`}
+          >
+            <Pencil className="size-3" />
+            {editMode ? 'Done' : 'Edit'}
+          </button>
+        )}
+        {viewBox && (
+          <button
+            onClick={() => setViewBox(null)}
+            className="px-2 py-1 text-xs bg-background/90 border border-border text-foreground rounded hover:bg-muted"
+          >
+            Reset
+          </button>
+        )}
       </div>
 
-      {viewBox && (
-        <button
-          onClick={() => setViewBox(null)}
-          className="absolute top-2 right-2 px-2 py-1 text-xs bg-background/90 border border-border text-foreground rounded hover:bg-muted"
-        >
-          Reset
-        </button>
+      {/* Legend (hidden in edit mode to save space) */}
+      {!editMode && (
+        <div className="absolute bottom-2 left-2 flex gap-3 text-xs bg-background/90 border border-border rounded px-2 py-1 text-muted-foreground">
+          <span className="flex items-center gap-1"><span className="text-orange-400 font-bold">⚠</span> Trap</span>
+          <span className="flex items-center gap-1"><span className="text-yellow-400 font-bold">◈</span> Treasure</span>
+          <span className="flex items-center gap-1"><span className="text-red-400 font-bold">☠</span> Creature</span>
+          <span className="flex items-center gap-1"><span className="text-green-300 font-bold">☻</span> Denizen</span>
+          <span className="flex items-center gap-1"><span className="text-purple-400 font-bold">?</span> Secret</span>
+          <span className="flex items-center gap-1"><span className="text-emerald-300 font-bold">!</span> Discovery</span>
+        </div>
+      )}
+
+      {/* Edit panel — selected room */}
+      {editMode && selectedEditRoom && (
+        <div className="border border-border border-t-0 rounded-b-lg bg-background/98 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-base">{ROOM_SYMBOLS[selectedEditRoom.type] ?? '□'}</span>
+              <div className="min-w-0">
+                <p className="text-sm font-medium leading-none truncate">{selectedEditRoom.name}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{ROOM_TYPE_LABELS[selectedEditRoom.type]} · Room {roomNumberMap.get(selectedEditRoom.id)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => { setSelectedEditRoomId(null); setPendingDeleteRoomId(null) }}
+              >
+                <X className="size-3.5" />
+              </Button>
+              {pendingDeleteRoomId === selectedEditRoom.id ? (
+                <>
+                  <span className="text-xs text-muted-foreground">Sure?</span>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="h-7 px-2 text-xs gap-1"
+                    onClick={() => handleDeleteRoom(selectedEditRoom.id)}
+                  >
+                    <Trash2 className="size-3.5" />
+                    Confirm
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setPendingDeleteRoomId(null)}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1 text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30"
+                  onClick={() => setPendingDeleteRoomId(selectedEditRoom.id)}
+                >
+                  <Trash2 className="size-3.5" />
+                  Delete
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Passages */}
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground font-medium">Connections ({selectedRoomPassages.length})</p>
+            {selectedRoomPassages.map(p => {
+              const otherId = p.fromRoomId === selectedEditRoom.id ? p.toRoomId : p.fromRoomId
+              const other = dungeon.rooms.find(r => r.id === otherId)
+              if (!other) return null
+              return (
+                <div key={p.id} className="flex items-center justify-between text-xs bg-muted/50 rounded px-2 py-1">
+                  <span className="flex items-center gap-1.5">
+                    <Link2 className="size-3 text-muted-foreground" />
+                    <span>{other.name}</span>
+                    <span className="text-muted-foreground">({p.connectionType})</span>
+                  </span>
+                  <button
+                    onClick={() => handleDeletePassage(selectedEditRoom.id, otherId)}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                    title="Remove connection"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+              )
+            })}
+
+            {unconnectedRooms.length > 0 && (
+              <div className="flex items-center gap-1.5 pt-1">
+                <Select value={connectFrom} onValueChange={setConnectFrom}>
+                  <SelectTrigger className="h-7 text-xs flex-1">
+                    <SelectValue placeholder="Connect to…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Connect to…</SelectItem>
+                    {unconnectedRooms.map(r => (
+                      <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-xs gap-1 shrink-0"
+                  disabled={!connectFrom || connectFrom === 'none'}
+                  onClick={() => handleAddPassage(selectedEditRoom.id, connectFrom)}
+                >
+                  <Plus className="size-3" />
+                  Add
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit panel — add room */}
+      {editMode && addRoomGridPos && !selectedEditRoom && (
+        <div className="border border-border border-t-0 rounded-b-lg bg-background/98 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Add Room</p>
+            <button
+              onClick={() => setAddRoomGridPos(null)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Select value={addRoomType} onValueChange={(v) => setAddRoomType(v as RoomType)}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ADDABLE_ROOM_TYPES.map(t => (
+                  <SelectItem key={t} value={t}>{ROOM_SYMBOLS[t]} {ROOM_TYPE_LABELS[t]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder="Name (optional)"
+              value={addRoomName}
+              onChange={e => setAddRoomName(e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Select value={connectToRoomId} onValueChange={setConnectToRoomId}>
+              <SelectTrigger className="h-8 text-xs flex-1">
+                <SelectValue placeholder="Connect to…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No connection</SelectItem>
+                {dungeon.rooms.map(r => (
+                  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button size="sm" className="h-8 px-3 text-xs gap-1 shrink-0" onClick={handleAddRoom}>
+              <Plus className="size-3.5" />
+              Add Room
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit hint when mode is active but nothing selected */}
+      {editMode && !selectedEditRoom && !addRoomGridPos && (
+        <div className="border border-border border-t-0 rounded-b-lg bg-muted/30 px-3 py-2 text-xs text-muted-foreground text-center">
+          Click a room to select it · Click empty space to add a room
+        </div>
       )}
     </div>
   )

@@ -19,6 +19,7 @@ export interface Realm {
   starredMonsterIds: string[]
   starredSpellIds: string[]
   starredMagicItemIds: string[]
+  hiddenCompendiumIds: string[]
   createdAt: number
   updatedAt: number
 }

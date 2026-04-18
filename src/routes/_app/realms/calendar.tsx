@@ -57,7 +57,7 @@ import {
 } from '~/components/ui/select'
 import { Badge } from '~/components/ui/badge'
 import { Switch } from '~/components/ui/switch'
-import { Scroll, CalendarClock, Plus, Trash2, Zap, ZapOff } from 'lucide-react'
+import { Scroll, CalendarClock, Plus, Trash2, Zap, ZapOff, Settings } from 'lucide-react'
 import { db } from '@infrastructure/dexie/db'
 
 export const Route = createFileRoute('/_app/realms/calendar')({
@@ -107,6 +107,10 @@ function CalendarPage() {
   useEffect(() => {
     generateForecast()
   }, [generateForecast])
+
+  // ── Calendar settings state ─────────────────────────────
+  const [showSettings, setShowSettings] = useState(false)
+  const [settingsForm, setSettingsForm] = useState({ daysPerSeason: 0, daysPerWeek: 0, watchesPerDay: 0 })
 
   // ── Events state ────────────────────────────────────────
   const [eventFilter, setEventFilter] = useState<StatusFilter>('all')
@@ -250,6 +254,29 @@ function CalendarPage() {
     } finally {
       setIsAdvancing(false)
     }
+  }
+
+  // ── Calendar settings helpers ───────────────────────────
+  const openSettings = () => {
+    setSettingsForm({
+      daysPerSeason: realm.daysPerSeason,
+      daysPerWeek: realm.daysPerWeek,
+      watchesPerDay: realm.watchesPerDay,
+    })
+    setShowSettings(true)
+  }
+
+  const handleSaveSettings = async () => {
+    const { daysPerSeason, daysPerWeek, watchesPerDay } = settingsForm
+    if (daysPerSeason < 1 || daysPerWeek < 1 || watchesPerDay < 1) return
+    await container.realmRepo.update({
+      ...realm,
+      daysPerSeason,
+      daysPerWeek,
+      watchesPerDay,
+      updatedAt: Date.now(),
+    })
+    setShowSettings(false)
   }
 
   // ── Events helpers ──────────────────────────────────────
@@ -447,6 +474,7 @@ function CalendarPage() {
         onRewindDay={handleRewindDay}
         onAdvanceDay={handleAdvanceDay}
         onAdvanceWeek={handleAdvanceWeek}
+        onOpenSettings={openSettings}
       />
 
       {/* Tab Bar */}
@@ -992,6 +1020,60 @@ function CalendarPage() {
         variant="destructive"
         onConfirm={handleDeleteEvent}
       />
+
+      {/* Calendar Settings Sheet */}
+      <Sheet open={showSettings} onOpenChange={setShowSettings}>
+        <SheetContent className="w-80">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Settings className="size-4" />
+              Calendar Settings
+            </SheetTitle>
+          </SheetHeader>
+          <div className="space-y-5 py-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="set-dps">Days per Season</Label>
+              <Input
+                id="set-dps"
+                type="number"
+                min={1}
+                max={365}
+                value={settingsForm.daysPerSeason}
+                onChange={(e) => setSettingsForm((f) => ({ ...f, daysPerSeason: parseInt(e.target.value) || 1 }))}
+              />
+              <p className="text-xs text-muted-foreground">Currently {realm.daysPerSeason}</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="set-dpw">Days per Week</Label>
+              <Input
+                id="set-dpw"
+                type="number"
+                min={1}
+                max={30}
+                value={settingsForm.daysPerWeek}
+                onChange={(e) => setSettingsForm((f) => ({ ...f, daysPerWeek: parseInt(e.target.value) || 1 }))}
+              />
+              <p className="text-xs text-muted-foreground">Used by Advance Week and faction turn timing</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="set-wpd">Watches per Day</Label>
+              <Input
+                id="set-wpd"
+                type="number"
+                min={1}
+                max={24}
+                value={settingsForm.watchesPerDay}
+                onChange={(e) => setSettingsForm((f) => ({ ...f, watchesPerDay: parseInt(e.target.value) || 1 }))}
+              />
+              <p className="text-xs text-muted-foreground">Currently {realm.watchesPerDay}</p>
+            </div>
+          </div>
+          <SheetFooter>
+            <Button variant="outline" onClick={() => setShowSettings(false)}>Cancel</Button>
+            <Button onClick={handleSaveSettings}>Save</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

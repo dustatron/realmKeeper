@@ -1,7 +1,7 @@
 import type { Realm } from '@domain/entities/Realm'
 import { toDayKey } from '@domain/value-objects/DayKey'
 import { Button } from '~/components/ui/button'
-import { ChevronLeft, ChevronRight, FastForward } from 'lucide-react'
+import { ChevronLeft, ChevronRight, FastForward, Settings } from 'lucide-react'
 
 const SEASON_COLORS: Record<string, string> = {
   spring: 'text-green-500',
@@ -16,9 +16,10 @@ interface StickyTimeBarProps {
   onRewindDay: () => void
   onAdvanceDay: () => void
   onAdvanceWeek: () => void
+  onOpenSettings?: () => void
 }
 
-export function StickyTimeBar({ realm, isAdvancing, onRewindDay, onAdvanceDay, onAdvanceWeek }: StickyTimeBarProps) {
+export function StickyTimeBar({ realm, isAdvancing, onRewindDay, onAdvanceDay, onAdvanceWeek, onOpenSettings }: StickyTimeBarProps) {
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
   const day1Key = toDayKey(1, 'spring', 1, realm.daysPerSeason)
   const currentKey = toDayKey(realm.currentYear, realm.currentSeason, realm.currentDay, realm.daysPerSeason)
@@ -49,7 +50,7 @@ export function StickyTimeBar({ realm, isAdvancing, onRewindDay, onAdvanceDay, o
           <span className="text-sm">Watch {realm.currentWatch}</span>
         </div>
 
-        {/* Advance */}
+        {/* Advance + Settings */}
         <div className="flex items-center gap-1.5">
           <Button size="sm" variant="outline" className="h-8 text-xs" onClick={onAdvanceDay} disabled={isAdvancing}>
             Day<ChevronRight className="size-4 ml-1" />
@@ -57,6 +58,11 @@ export function StickyTimeBar({ realm, isAdvancing, onRewindDay, onAdvanceDay, o
           <Button size="sm" variant="outline" className="h-8 text-xs" onClick={onAdvanceWeek} disabled={isAdvancing}>
             Week<FastForward className="size-4 ml-1" />
           </Button>
+          {onOpenSettings && (
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onOpenSettings} title="Calendar settings">
+              <Settings className="size-4" />
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -23,6 +23,7 @@ import { useEncounterTable } from '~/ui/hooks/useEncounterTable'
 import { EncounterTableUI } from '~/components/shared/EncounterTableUI'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
+import { TagInput } from '~/components/shared/TagInput'
 import { NotesPanel } from '~/components/shared/NotesPanel'
 import { WysiwygEditor } from '~/components/shared/WysiwygEditor'
 import { ImagePicker } from '~/components/shared/ImagePicker'
@@ -118,6 +119,7 @@ function RegionDetailPage() {
     description: '',
     terrain: 'plains' as string,
     imageUrl: null as string | null,
+    people: [] as string[],
   })
 
   const [poiForm, setPoiForm] = useState({ name: '', type: 'settlement' as PoiType })
@@ -184,6 +186,7 @@ function RegionDetailPage() {
         description: region.description,
         terrain: region.terrain || 'plains',
         imageUrl: region.imageUrl,
+        people: region.people ?? [],
       })
       setEditSheetOpen(true)
     }
@@ -209,6 +212,7 @@ function RegionDetailPage() {
       description: region.description,
       terrain: region.terrain || 'plains',
       imageUrl: region.imageUrl,
+      people: region.people ?? [],
     })
     setEditSheetOpen(true)
   }
@@ -216,7 +220,7 @@ function RegionDetailPage() {
   const handleEdit = async () => {
     if (!region || !editForm.name.trim()) return
     await executeUpdateRegion(
-      { ...region, name: editForm.name, description: editForm.description, terrain: editForm.terrain, imageUrl: editForm.imageUrl },
+      { ...region, name: editForm.name, description: editForm.description, terrain: editForm.terrain, imageUrl: editForm.imageUrl, people: editForm.people },
       { regionRepo: container.regionRepo }
     )
     setEditSheetOpen(false)
@@ -399,6 +403,15 @@ function RegionDetailPage() {
           />
         </div>
 
+        <div className="space-y-1.5">
+          <Label>People</Label>
+          <TagInput
+            tags={editForm.people}
+            onChange={(people) => setEditForm((f) => ({ ...f, people }))}
+            placeholder="Add archetype..."
+          />
+        </div>
+
         <ConfirmDialog
           open={deleteConfirmOpen}
           onOpenChange={setDeleteConfirmOpen}
@@ -479,6 +492,17 @@ function RegionDetailPage() {
             />
           ) : (
             <p className="text-sm text-muted-foreground">No description.</p>
+          )}
+
+          {(region.people ?? []).length > 0 && (
+            <div className="mt-4">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">People</span>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {region.people.map((p, i) => (
+                  <Badge key={i} variant="secondary">{p}</Badge>
+                ))}
+              </div>
+            </div>
           )}
         </TabsContent>
 

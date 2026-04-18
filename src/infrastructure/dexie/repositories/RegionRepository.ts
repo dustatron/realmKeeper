@@ -2,13 +2,19 @@ import { db } from '@infrastructure/dexie/db'
 import type { IRegionRepository } from '@application/ports/IRegionRepository'
 import type { Region } from '@domain/entities/Region'
 
+function normalize(r: Region): Region {
+  return { ...r, people: r.people ?? [] }
+}
+
 export class RegionRepository implements IRegionRepository {
   async getById(id: string): Promise<Region | undefined> {
-    return db.regions.get(id)
+    const r = await db.regions.get(id)
+    return r ? normalize(r) : undefined
   }
 
   async getByRealmId(worldId: string): Promise<Region[]> {
-    return db.regions.where('worldId').equals(worldId).toArray()
+    const rows = await db.regions.where('worldId').equals(worldId).toArray()
+    return rows.map(normalize)
   }
 
   async create(region: Region): Promise<void> {
