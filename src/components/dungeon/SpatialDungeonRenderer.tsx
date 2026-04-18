@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo, useId } from 'react'
 import { newId } from '@shared/ulid'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -14,8 +14,9 @@ interface Props {
   roomIdToPoiId?: Map<string, string>
   /** Called when user clicks a room in view mode */
   onRoomClick?: (childPoiId: string) => void
-  /** Called when dungeon structure changes (enables edit mode toggle) */
-  onDungeonChange?: (dungeon: GeneratedDungeon) => void
+  /** Called when dungeon structure changes (enables edit mode toggle).
+   *  deletedRoomIds: room IDs removed in this change, so caller can clean up child POIs. */
+  onDungeonChange?: (dungeon: GeneratedDungeon, deletedRoomIds?: string[]) => void
   className?: string
 }
 
@@ -252,8 +253,9 @@ function PassageShape({ passage, theme }: { passage: Passage; theme: DungeonThem
 
 export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoiId, onRoomClick, onDungeonChange, className }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
+  const patternId = useId().replace(/:/g, '') // useId includes colons which are invalid in SVG id
   const [viewBox, setViewBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
-  const [isPanning, setIsPanning] = useState(false)
+  const isPanningRef = useRef(false)      // ref-based to avoid stale closure in pointermove
   const panStart = useRef<{ x: number; y: number; vx: number; vy: number } | null>(null)
   const lastTouchDist = useRef<number | null>(null)
   const dragMoved = useRef(false)
@@ -266,9 +268,15 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
   const [addRoomName, setAddRoomName] = useState('')
   const [connectToRoomId, setConnectToRoomId] = useState<string>('none')
   const [connectFrom, setConnectFrom] = useState<string>('none')
+  const [pendingDeleteRoomId, setPendingDeleteRoomId] = useState<string | null>(null)
 
-  const bounds = computeBounds(dungeon)
-  const defaultVB = { x: bounds.minX, y: bounds.minY, w: bounds.maxX - bounds.minX, h: bounds.maxY - bounds.minY }
+  // --- Memoized layout data ---
+
+  const bounds = useMemo(() => computeBounds(dungeon), [dungeon])
+  const defaultVB = useMemo(
+    () => ({ x: bounds.minX, y: bounds.minY, w: bounds.maxX - bounds.minX, h: bounds.maxY - bounds.minY }),
+    [bounds]
+  )
   const vb = viewBox ?? defaultVB
 
   // --- Zoom / pan handlers ---
@@ -281,36 +289,41 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
     const mx = (e.clientX - rect.left) / rect.width
     const my = (e.clientY - rect.top) / rect.height
     const factor = e.deltaY > 0 ? 1.15 : 0.87
-    const current = viewBox ?? defaultVB
-    const nw = current.w * factor
-    const nh = current.h * factor
-    setViewBox({ x: current.x + (current.w - nw) * mx, y: current.y + (current.h - nh) * my, w: nw, h: nh })
-  }, [viewBox, defaultVB])
+    setViewBox(current => {
+      const vb = current ?? defaultVB
+      const nw = vb.w * factor
+      const nh = vb.h * factor
+      return { x: vb.x + (vb.w - nw) * mx, y: vb.y + (vb.h - nh) * my, w: nw, h: nh }
+    })
+  }, [defaultVB])
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return
     dragMoved.current = false
-    setIsPanning(true)
-    const current = viewBox ?? defaultVB
-    panStart.current = { x: e.clientX, y: e.clientY, vx: current.x, vy: current.y }
+    isPanningRef.current = true
+    setViewBox(current => {
+      const vb = current ?? defaultVB
+      panStart.current = { x: e.clientX, y: e.clientY, vx: vb.x, vy: vb.y }
+      return current
+    })
     ;(e.target as Element).setPointerCapture(e.pointerId)
-  }, [viewBox, defaultVB])
+  }, [defaultVB])
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isPanning || !panStart.current || !svgRef.current) return
+    if (!isPanningRef.current || !panStart.current || !svgRef.current) return
     const dx = e.clientX - panStart.current.x
     const dy = e.clientY - panStart.current.y
     if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
       dragMoved.current = true
     }
     const rect = svgRef.current.getBoundingClientRect()
-    const current = viewBox ?? defaultVB
-    const pdx = dx / rect.width * current.w
-    const pdy = dy / rect.height * current.h
-    setViewBox({ ...current, x: panStart.current.vx - pdx, y: panStart.current.vy - pdy })
-  }, [isPanning, viewBox, defaultVB])
+    setViewBox(current => {
+      const vb = current ?? defaultVB
+      return { ...vb, x: panStart.current!.vx - dx / rect.width * vb.w, y: panStart.current!.vy - dy / rect.height * vb.h }
+    })
+  }, [defaultVB])
 
-  const handlePointerUp = useCallback(() => { setIsPanning(false); panStart.current = null }, [])
+  const handlePointerUp = useCallback(() => { isPanningRef.current = false; panStart.current = null }, [])
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (e.touches.length !== 2) { lastTouchDist.current = null; return }
@@ -318,12 +331,14 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
     const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
     if (lastTouchDist.current !== null) {
       const factor = lastTouchDist.current / dist
-      const current = viewBox ?? defaultVB
-      const nw = current.w * factor, nh = current.h * factor
-      setViewBox({ x: current.x + (current.w - nw) * 0.5, y: current.y + (current.h - nh) * 0.5, w: nw, h: nh })
+      setViewBox(current => {
+        const vb = current ?? defaultVB
+        const nw = vb.w * factor, nh = vb.h * factor
+        return { x: vb.x + (vb.w - nw) * 0.5, y: vb.y + (vb.h - nh) * 0.5, w: nw, h: nh }
+      })
     }
     lastTouchDist.current = dist
-  }, [viewBox, defaultVB])
+  }, [defaultVB])
 
   useEffect(() => {
     const el = svgRef.current
@@ -338,7 +353,6 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
   const handleSvgClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (!editMode || dragMoved.current) return
 
-    // Walk up from target to find a room group
     let el = e.target as Element | null
     let clickedRoomId: string | null = null
     while (el && el !== svgRef.current) {
@@ -348,16 +362,20 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
     }
 
     if (clickedRoomId) {
-      setSelectedEditRoomId(clickedRoomId)
+      setSelectedEditRoomId(prev => {
+        if (prev !== clickedRoomId) setConnectFrom('none') // reset stale dropdown
+        return clickedRoomId
+      })
       setAddRoomGridPos(null)
+      setPendingDeleteRoomId(null)
     } else {
-      // Empty space — compute grid position for new room
       const svg = svgRef.current!
       const rect = svg.getBoundingClientRect()
       const svgX = vb.x + (e.clientX - rect.left) / rect.width * vb.w
       const svgY = vb.y + (e.clientY - rect.top) / rect.height * vb.h
       setAddRoomGridPos({ x: Math.floor(svgX / CELL_SIZE), y: Math.floor(svgY / CELL_SIZE) })
       setSelectedEditRoomId(null)
+      setPendingDeleteRoomId(null)
     }
   }, [editMode, vb])
 
@@ -365,12 +383,19 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
 
   const handleDeleteRoom = useCallback((roomId: string) => {
     if (!onDungeonChange) return
-    onDungeonChange({
-      ...dungeon,
-      rooms: dungeon.rooms.filter(r => r.id !== roomId),
-      passages: dungeon.passages.filter(p => p.fromRoomId !== roomId && p.toRoomId !== roomId),
-    })
+    const updatedRoomPoiMap = { ...(dungeon.roomPoiMap ?? {}) }
+    delete updatedRoomPoiMap[roomId]
+    onDungeonChange(
+      {
+        ...dungeon,
+        rooms: dungeon.rooms.filter(r => r.id !== roomId),
+        passages: dungeon.passages.filter(p => p.fromRoomId !== roomId && p.toRoomId !== roomId),
+        roomPoiMap: updatedRoomPoiMap,
+      },
+      [roomId]
+    )
     setSelectedEditRoomId(null)
+    setPendingDeleteRoomId(null)
   }, [dungeon, onDungeonChange])
 
   const handleAddRoom = useCallback(() => {
@@ -418,7 +443,6 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
     const from = dungeon.rooms.find(r => r.id === fromId)
     const to = dungeon.rooms.find(r => r.id === toId)
     if (!from || !to) return
-    // Don't duplicate
     const exists = dungeon.passages.some(
       p => (p.fromRoomId === fromId && p.toRoomId === toId) || (p.fromRoomId === toId && p.toRoomId === fromId)
     )
@@ -439,9 +463,9 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
 
   // --- Derived data ---
 
-  const roomNumberMap = new Map(dungeon.rooms.map((r, i) => [r.id, i + 1]))
-  const roomsWithNPCs = new Set((dungeon.dungeonNPCs ?? []).map((n) => n.roomId))
-  const roomsWithTreasure = new Set(dungeon.roomHasTreasure ?? [])
+  const roomNumberMap = useMemo(() => new Map(dungeon.rooms.map((r, i) => [r.id, i + 1])), [dungeon.rooms])
+  const roomsWithNPCs = useMemo(() => new Set((dungeon.dungeonNPCs ?? []).map((n) => n.roomId)), [dungeon.dungeonNPCs])
+  const roomsWithTreasure = useMemo(() => new Set(dungeon.roomHasTreasure ?? []), [dungeon.roomHasTreasure])
   const selectedRoomId = selectedRoomPoiId && roomIdToPoiId
     ? [...roomIdToPoiId.entries()].find(([, poiId]) => poiId === selectedRoomPoiId)?.[0]
     : undefined
@@ -451,12 +475,10 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
     ? dungeon.rooms.find(r => r.id === selectedEditRoomId) ?? null
     : null
 
-  // Passages connected to the currently selected room
   const selectedRoomPassages = selectedEditRoom
     ? dungeon.passages.filter(p => p.fromRoomId === selectedEditRoom.id || p.toRoomId === selectedEditRoom.id)
     : []
 
-  // Rooms that the selected room is NOT yet connected to (for "add passage" dropdown)
   const unconnectedRooms = selectedEditRoom
     ? dungeon.rooms.filter(r => {
         if (r.id === selectedEditRoom.id) return false
@@ -466,6 +488,12 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
         )
       })
     : []
+
+  // Ghost rect dimensions based on current type selection
+  const ghostSize = useMemo(() => ({
+    w: addRoomType === 'corridor' ? 2 : 5,
+    h: addRoomType === 'corridor' ? 5 : 4,
+  }), [addRoomType])
 
   return (
     <div className={`relative flex flex-col ${className ?? ''}`}>
@@ -483,11 +511,11 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
         onClick={editMode ? handleSvgClick : undefined}
       >
         <defs>
-          <pattern id="dg" width={CELL_SIZE} height={CELL_SIZE} patternUnits="userSpaceOnUse">
+          <pattern id={patternId} width={CELL_SIZE} height={CELL_SIZE} patternUnits="userSpaceOnUse">
             <path d={`M ${CELL_SIZE} 0 L 0 0 0 ${CELL_SIZE}`} fill="none" stroke="rgba(128,128,128,0.15)" strokeWidth={0.5} />
           </pattern>
         </defs>
-        <rect x={bounds.minX} y={bounds.minY} width={bounds.maxX - bounds.minX} height={bounds.maxY - bounds.minY} fill="url(#dg)" />
+        <rect x={bounds.minX} y={bounds.minY} width={bounds.maxX - bounds.minX} height={bounds.maxY - bounds.minY} fill={`url(#${patternId})`} />
 
         {dungeon.passages.map((p) => (
           <PassageShape key={p.id} passage={p} theme={dungeon.theme} />
@@ -510,11 +538,12 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
           )
         })}
 
-        {/* New room placement ghost */}
+        {/* New room placement ghost — dimensions track selected type */}
         {editMode && addRoomGridPos && (
           <rect
-            x={px(addRoomGridPos.x - 2)} y={px(addRoomGridPos.y - 2)}
-            width={px(5)} height={px(4)}
+            x={px(addRoomGridPos.x - Math.floor(ghostSize.w / 2))}
+            y={px(addRoomGridPos.y - Math.floor(ghostSize.h / 2))}
+            width={px(ghostSize.w)} height={px(ghostSize.h)}
             fill="rgba(59,130,246,0.2)" stroke="#3b82f6" strokeWidth={1.5}
             strokeDasharray="3 2" rx={2}
             style={{ pointerEvents: 'none' }}
@@ -541,6 +570,7 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
               setEditMode(!editMode)
               setSelectedEditRoomId(null)
               setAddRoomGridPos(null)
+              setPendingDeleteRoomId(null)
             }}
             className={`px-2 py-1 text-xs rounded flex items-center gap-1 transition-colors ${
               editMode
@@ -589,19 +619,42 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
                 variant="ghost"
                 size="sm"
                 className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                onClick={() => setSelectedEditRoomId(null)}
+                onClick={() => { setSelectedEditRoomId(null); setPendingDeleteRoomId(null) }}
               >
                 <X className="size-3.5" />
               </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="h-7 px-2 text-xs gap-1"
-                onClick={() => handleDeleteRoom(selectedEditRoom.id)}
-              >
-                <Trash2 className="size-3.5" />
-                Delete
-              </Button>
+              {pendingDeleteRoomId === selectedEditRoom.id ? (
+                <>
+                  <span className="text-xs text-muted-foreground">Sure?</span>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="h-7 px-2 text-xs gap-1"
+                    onClick={() => handleDeleteRoom(selectedEditRoom.id)}
+                  >
+                    <Trash2 className="size-3.5" />
+                    Confirm
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setPendingDeleteRoomId(null)}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1 text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30"
+                  onClick={() => setPendingDeleteRoomId(selectedEditRoom.id)}
+                >
+                  <Trash2 className="size-3.5" />
+                  Delete
+                </Button>
+              )}
             </div>
           </div>
 
@@ -630,7 +683,6 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
               )
             })}
 
-            {/* Add passage to another room */}
             {unconnectedRooms.length > 0 && (
               <div className="flex items-center gap-1.5 pt-1">
                 <Select value={connectFrom} onValueChange={setConnectFrom}>

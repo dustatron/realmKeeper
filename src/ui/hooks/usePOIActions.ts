@@ -27,6 +27,7 @@ import type { WatabouDungeonData } from '@domain/value-objects/WatabouDungeonDat
 import type { LocationSeed } from '@domain/value-objects/LocationSeed'
 import type { NoticeType } from '@shared/constants'
 import type { GeneratedDungeon } from '~/lib/dungeon/types'
+import { executeDeletePOI } from '@application/use-cases/DeletePOI'
 
 type Container = {
   poiRepo: Parameters<typeof executeUpdatePOI>[1]['poiRepo']
@@ -165,8 +166,15 @@ export function usePOIActions(poi: POI | null | undefined, region: Region | null
     await executeUpdatePOI({ ...poi, locationSeed: seed }, { poiRepo: container.poiRepo })
   }
 
-  const handleUpdateSpatialDungeon = async (dungeon: GeneratedDungeon) => {
+  const handleUpdateSpatialDungeon = async (dungeon: GeneratedDungeon, deletedRoomIds?: string[]) => {
     if (!poi) return
+    // Delete child POIs for any rooms that were removed from the map
+    if (deletedRoomIds && deletedRoomIds.length > 0 && poi.spatialDungeon?.roomPoiMap) {
+      const childPoiIds = deletedRoomIds
+        .map(id => poi.spatialDungeon!.roomPoiMap![id])
+        .filter(Boolean)
+      await Promise.all(childPoiIds.map(id => executeDeletePOI(id, { poiRepo: container.poiRepo })))
+    }
     await executeUpdatePOI({ ...poi, spatialDungeon: dungeon }, { poiRepo: container.poiRepo })
   }
 
