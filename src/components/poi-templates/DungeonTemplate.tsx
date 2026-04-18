@@ -48,8 +48,22 @@ import type { EncounterTable } from "@domain/entities/EncounterTable";
 import type { FactionPresence } from "@domain/entities/FactionPresence";
 import type { ResolvedPath } from "~/ui/hooks/useResolvedPaths";
 import type { POIEvent } from "@domain/entities/POIEvent";
-import type { KeyLockPair } from "~/lib/dungeon/types";
+import type { KeyLockPair, Discovery, DiscoveryType, SpatialRoom } from "~/lib/dungeon/types";
 import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
+
+const DISCOVERY_ICONS: Record<DiscoveryType, string> = {
+  document: '\u{1F4C4}',
+  evidence: '\u{1F50D}',
+  clue: '\u{1F4A1}',
+  secret: '\u{1F52E}',
+};
+
+const DISCOVERY_COLORS: Record<DiscoveryType, { border: string; bg: string; label: string }> = {
+  document: { border: 'border-blue-500/20', bg: 'bg-blue-500/5', label: 'text-blue-400' },
+  evidence: { border: 'border-amber-500/20', bg: 'bg-amber-500/5', label: 'text-amber-400' },
+  clue:     { border: 'border-emerald-500/20', bg: 'bg-emerald-500/5', label: 'text-emerald-400' },
+  secret:   { border: 'border-purple-500/20', bg: 'bg-purple-500/5', label: 'text-purple-400' },
+};
 
 function RoomNPCCard({ npc, onUpdateNPC }: { npc: NPC; onUpdateNPC?: (npc: NPC) => void }) {
   const sb = npc.systemBlock;
@@ -258,6 +272,8 @@ function RoomDetailPanel({
   siblings,
   onSelectChild,
   keyLockInfo,
+  discoveries,
+  onToggleDiscoveryFound,
 }: {
   room: POI;
   index: number;
@@ -266,6 +282,8 @@ function RoomDetailPanel({
   siblings: POI[];
   onSelectChild?: (id: string) => void;
   keyLockInfo?: RoomKeyLockInfo;
+  discoveries?: Discovery[];
+  onToggleDiscoveryFound?: (discoveryId: string) => void;
 }) {
   const unmappedTags = getUnmappedTags(room.tags);
   const connections = parseRoomConnections(room.description, siblings);
@@ -491,6 +509,47 @@ function RoomDetailPanel({
         </div>
       )}
 
+      {/* Discoveries */}
+      {discoveries && discoveries.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="text-xs font-semibold text-emerald-400 uppercase tracking-wide">! Discoveries</div>
+          {discoveries.map((disc) => {
+            const colors = DISCOVERY_COLORS[disc.type];
+            return (
+              <div key={disc.id} className={`rounded border ${colors.border} ${colors.bg} overflow-hidden`}>
+                <button
+                  className="w-full flex items-start gap-2 text-sm px-2 py-1.5 hover:bg-white/5 transition-colors text-left"
+                  onClick={() => onToggleDiscoveryFound?.(disc.id)}
+                >
+                  {/* Found checkbox */}
+                  <span className="shrink-0 mt-0.5">
+                    {disc.found ? (
+                      <CheckCircle2 className="size-4 text-green-500" />
+                    ) : (
+                      <Circle className="size-4 text-muted-foreground/40" />
+                    )}
+                  </span>
+                  {/* Type icon */}
+                  <span className="text-base leading-none shrink-0">{DISCOVERY_ICONS[disc.type]}</span>
+                  {/* Description */}
+                  <div className="flex-1 min-w-0">
+                    <span className={`text-xs font-medium uppercase tracking-wide ${colors.label}`}>
+                      {disc.type}
+                    </span>
+                    <p className={`text-sm leading-snug ${disc.found ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                      {disc.description}
+                    </p>
+                    {disc.content && (
+                      <p className="text-xs text-muted-foreground italic mt-0.5">{disc.content}</p>
+                    )}
+                  </div>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Remaining tags */}
       {unmappedTags.length > 0 && (
         <div className="flex items-center gap-1 flex-wrap">
@@ -663,6 +722,43 @@ export function DungeonTemplate({
     db.pois.update(poi.id, { wanderingMonsters: entries, updatedAt: Date.now() });
   };
 
+  // Build reverse map: child POI id → spatial room (for discoveries)
+  const poiIdToSpatialRoom = (() => {
+    const map = new Map<string, SpatialRoom>();
+    const sd = poi.spatialDungeon;
+    if (!sd?.roomPoiMap) return map;
+    for (const room of sd.rooms) {
+      const childPoiId = sd.roomPoiMap[room.id];
+      if (childPoiId) map.set(childPoiId, room);
+    }
+    return map;
+  })();
+
+  const getDiscoveriesForRoom = (childPoiId: string): Discovery[] => {
+    return poiIdToSpatialRoom.get(childPoiId)?.discoveries ?? [];
+  };
+
+  const handleToggleDiscoveryFound = (childPoiId: string, discoveryId: string) => {
+    const sd = poi.spatialDungeon;
+    if (!sd) return;
+    const spatialRoom = poiIdToSpatialRoom.get(childPoiId);
+    if (!spatialRoom?.discoveries) return;
+    const updatedRooms = sd.rooms.map((r) =>
+      r.id === spatialRoom.id
+        ? {
+            ...r,
+            discoveries: r.discoveries?.map((d) =>
+              d.id === discoveryId ? { ...d, found: !d.found } : d
+            ),
+          }
+        : r
+    );
+    db.pois.update(poi.id, {
+      spatialDungeon: { ...sd, rooms: updatedRooms },
+      updatedAt: Date.now(),
+    });
+  };
+
   return (
     <div className="space-y-4">
       {/* Header — only non-duplicate tags (dungeon type + mood shown in At A Glance) */}
@@ -817,6 +913,8 @@ export function DungeonTemplate({
                   siblings={childPois}
                   onSelectChild={onSelectChild}
                   keyLockInfo={keyLockByPoiId.get(selectedRoom.id)}
+                  discoveries={getDiscoveriesForRoom(selectedRoom.id)}
+                  onToggleDiscoveryFound={(discoveryId) => handleToggleDiscoveryFound(selectedRoom.id, discoveryId)}
                 />
               ) : childPois.length > 0 ? (
                 <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
@@ -848,6 +946,8 @@ export function DungeonTemplate({
                     const childNpcList = npcsByPoiId[child.id] ?? [];
                     const hasActiveTraps = child.traps?.some((t) => !t.disarmed);
                     const hasUncollectedTreasure = child.treasure?.some((t) => !t.collected);
+                    const roomDiscoveries = getDiscoveriesForRoom(child.id);
+                    const hasUnfoundDiscoveries = roomDiscoveries.some((d) => !d.found);
                     const tagEmojis = getTagEmojis(child.tags);
                     const roomKL = keyLockByPoiId.get(child.id);
                     return (
@@ -893,6 +993,9 @@ export function DungeonTemplate({
                             )}
                             {hasUncollectedTreasure && (
                               <span title="Uncollected treasure"><Gem className="size-3.5 text-emerald-500" /></span>
+                            )}
+                            {hasUnfoundDiscoveries && (
+                              <span title="Unfound discoveries" className="text-xs font-bold text-emerald-400">!</span>
                             )}
                             {childNpcList.length > 0 && (
                               <span title={`${childNpcList.length} NPC${childNpcList.length > 1 ? "s" : ""}`}><Users className="size-3.5 text-blue-400" /></span>
