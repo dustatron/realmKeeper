@@ -24,12 +24,19 @@ export interface NpcConnection {
   description: string
 }
 
+// NOTE: systemId is optional for backward-compat with existing DB records that predate this field.
+// A full discriminated union (e.g. CairnSystemBlock | ShadowdarkSystemBlock) was deferred because
+// it requires a Dexie migration to backfill systemId on all existing NPCs. Revisit when the
+// storage layer is replaced. Until then, use systemId for narrowing where it is present.
 export interface SystemBlock {
+  systemId?: string
   stats: StatValue[]
   hp: number
   maxHp: number
   armor: number
+  /** Shadowdark only */
   level?: number
+  /** Shadowdark only */
   className?: string
   attacks: Attack[]
   inventory: InventoryItem[]

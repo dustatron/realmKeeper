@@ -6,6 +6,7 @@ import { Main } from '~/components/layout/main'
 import { GlobalSearchPalette } from '~/components/layout/GlobalSearchPalette'
 import { SidebarInset, SidebarProvider } from '~/components/ui/sidebar'
 import { useUIStore } from '~/ui/stores/uiStore'
+import { RealmErrorBoundary } from '~/components/shared/RealmErrorBoundary'
 
 export const Route = createFileRoute('/_app')({
   component: AppLayout,
@@ -33,7 +34,9 @@ function AppLayout() {
       <SidebarInset className="max-h-svh overflow-y-auto">
         <Header />
         <Main>
-          <Outlet />
+          <RealmErrorBoundary>
+            <Outlet />
+          </RealmErrorBoundary>
         </Main>
       </SidebarInset>
       <GlobalSearchPalette />
