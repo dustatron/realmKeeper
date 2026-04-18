@@ -10,7 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronsUpDown, EyeOff, Eye } from "lucide-react";
+import { cn } from "~/lib/utils";
 import { usePagination } from "./usePagination";
 import { PaginationControls } from "./PaginationControls";
 
@@ -65,7 +66,15 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   );
 }
 
-export function EquipmentTable({ items }: { items: CompendiumEquipment[] }) {
+export function EquipmentTable({
+  items,
+  hiddenIds,
+  onToggleHide,
+}: {
+  items: CompendiumEquipment[];
+  hiddenIds?: Set<string>;
+  onToggleHide?: (id: string) => void;
+}) {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -120,10 +129,13 @@ export function EquipmentTable({ items }: { items: CompendiumEquipment[] }) {
           {showArmor && th("Armor", "armor", "hidden sm:table-cell text-left")}
           {th("Slots", "slots", "hidden sm:table-cell text-left")}
           <TableHead className="hidden md:table-cell">Properties</TableHead>
+          {onToggleHide && <TableHead className="w-8" />}
         </TableRow>
       </TableHeader>
       <TableBody>
         {pagination.paged.map((item) => {
+          const isCustom = item.systemData.system === "custom";
+          const isHidden = hiddenIds?.has(item.id) ?? false;
           const sd = item.systemData;
           let cost: string;
           let category: string;
@@ -146,20 +158,20 @@ export function EquipmentTable({ items }: { items: CompendiumEquipment[] }) {
           const properties = sd.data.properties;
 
           return (
-            <TableRow key={item.id}>
+            <TableRow key={item.id} className={cn(isHidden && "opacity-50")}>
               <TableCell className="font-medium">
                 <Link
                   to={
-                    item.systemData.system === "custom"
+                    isCustom
                       ? "/realms/compendium/custom/$entryId"
                       : "/realms/compendium/equipment/$equipmentId"
                   }
                   params={
-                    item.systemData.system === "custom"
+                    isCustom
                       ? { entryId: item.id }
                       : { equipmentId: item.id }
                   }
-                  className="hover:underline"
+                  className={cn("hover:underline", isHidden && "line-through")}
                 >
                   {item.name}
                 </Link>
@@ -199,6 +211,14 @@ export function EquipmentTable({ items }: { items: CompendiumEquipment[] }) {
                   "—"
                 )}
               </TableCell>
+              {onToggleHide && !isCustom && (
+                <TableCell className="text-center">
+                  <button onClick={() => onToggleHide(item.id)} className="p-1 rounded hover:bg-muted" title={isHidden ? "Restore" : "Hide"}>
+                    {isHidden ? <Eye className="size-3.5 text-muted-foreground" /> : <EyeOff className="size-3.5 text-muted-foreground opacity-40 hover:opacity-100 transition-opacity" />}
+                  </button>
+                </TableCell>
+              )}
+              {onToggleHide && isCustom && <TableCell />}
             </TableRow>
           );
         })}

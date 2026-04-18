@@ -12,7 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { Star, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Star, ChevronUp, ChevronDown, ChevronsUpDown, EyeOff, Eye } from "lucide-react";
+import { cn } from "~/lib/utils";
 
 type SortKey = "name" | "tier" | "classes" | "range" | "duration";
 type SortDir = "asc" | "desc";
@@ -58,11 +59,15 @@ export function SpellTable({
   starredIds,
   onToggleStar,
   systemId = "",
+  hiddenIds,
+  onToggleHide,
 }: {
   spells: CompendiumSpell[];
   starredIds: string[];
   onToggleStar?: (id: string) => void;
   systemId?: string;
+  hiddenIds?: Set<string>;
+  onToggleHide?: (id: string) => void;
 }) {
   const isCairn = systemId === "system-cairn-2e";
   const [sortKey, setSortKey] = useState<SortKey>("name");
@@ -115,11 +120,13 @@ export function SpellTable({
           {!isCairn && th("Range", "range", "hidden sm:table-cell")}
           {!isCairn && th("Duration", "duration", "hidden sm:table-cell")}
           {onToggleStar && <TableHead className="w-8" />}
+          {onToggleHide && <TableHead className="w-8" />}
         </TableRow>
       </TableHeader>
       <TableBody>
         {pagination.paged.map((spell) => {
           const isCustom = spell.systemData.system === "custom";
+          const isHidden = hiddenIds?.has(spell.id) ?? false;
           const sd = spell.systemData;
 
           let tier = "—";
@@ -142,7 +149,7 @@ export function SpellTable({
           }
 
           return (
-            <TableRow key={spell.id}>
+            <TableRow key={spell.id} className={cn(isHidden && "opacity-50")}>
               <TableCell className="font-medium">
                 <Link
                   to={
@@ -153,7 +160,7 @@ export function SpellTable({
                   params={
                     isCustom ? { entryId: spell.id } : { spellId: spell.id }
                   }
-                  className="hover:underline"
+                  className={cn("hover:underline", isHidden && "line-through")}
                 >
                   {spell.name}
                 </Link>
@@ -198,6 +205,14 @@ export function SpellTable({
                   </button>
                 </TableCell>
               )}
+              {onToggleHide && !isCustom && (
+                <TableCell className="text-center">
+                  <button onClick={() => onToggleHide(spell.id)} className="p-1 rounded hover:bg-muted" title={isHidden ? "Restore" : "Hide"}>
+                    {isHidden ? <Eye className="size-3.5 text-muted-foreground" /> : <EyeOff className="size-3.5 text-muted-foreground opacity-40 hover:opacity-100 transition-opacity" />}
+                  </button>
+                </TableCell>
+              )}
+              {onToggleHide && isCustom && <TableCell />}
             </TableRow>
           );
         })}

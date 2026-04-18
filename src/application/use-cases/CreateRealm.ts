@@ -45,6 +45,7 @@ export async function executeCreateRealm(
     starredMonsterIds: [],
     starredSpellIds: [],
     starredMagicItemIds: [],
+    hiddenCompendiumIds: [],
     createdAt: now,
     updatedAt: now,
   }

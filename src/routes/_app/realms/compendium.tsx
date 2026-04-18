@@ -37,6 +37,7 @@ import {
   X,
   Paintbrush,
   Star,
+  EyeOff,
 } from "lucide-react";
 import { NPC_RACES } from "@shared/constants";
 import { Input } from "~/components/ui/input";
@@ -174,6 +175,7 @@ function CompendiumPage() {
   const starredMonsterIds = realm?.starredMonsterIds ?? [];
   const starredSpellIds = realm?.starredSpellIds ?? [];
   const starredMagicItemIds = realm?.starredMagicItemIds ?? [];
+  const hiddenCompendiumIds = realm?.hiddenCompendiumIds ?? [];
 
   const handleToggleMonsterStar = async (monsterId: string) => {
     if (!realm) return;
@@ -195,6 +197,14 @@ function CompendiumPage() {
       starredSpellIds: updated,
       updatedAt: Date.now(),
     });
+  };
+
+  const handleToggleHide = async (entryId: string) => {
+    if (!realm) return;
+    const updated = hiddenCompendiumIds.includes(entryId)
+      ? hiddenCompendiumIds.filter((id) => id !== entryId)
+      : [...hiddenCompendiumIds, entryId];
+    await db.worlds.update(realm.id, { hiddenCompendiumIds: updated, updatedAt: Date.now() });
   };
 
   const handleToggleMagicItemStar = async (itemId: string) => {
@@ -274,6 +284,8 @@ function CompendiumPage() {
 
   const [filterSource, setFilterSource] = useState<SourceFilter>("all");
   const [showStarredOnly, setShowStarredOnly] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
+  const hiddenSet = useMemo(() => new Set(hiddenCompendiumIds), [hiddenCompendiumIds]);
   const [monsterFilters, setMonsterFilters] = useState<MonsterFilters>(DEFAULT_MONSTER_FILTERS);
   const [monsterFiltersOpen, setMonsterFiltersOpen] = useState(false);
   const [spellFilters, setSpellFilters] = useState<SpellFilters>(DEFAULT_SPELL_FILTERS);
@@ -284,6 +296,7 @@ function CompendiumPage() {
 
   const filteredMonsters = useMemo(() => {
     let result = applySourceFilter(monsters, filterSource);
+    if (!showHidden) result = result.filter((m) => !hiddenSet.has(m.id));
     if (showStarredOnly) result = result.filter((m) => starredMonsterIds.includes(m.id));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -295,10 +308,11 @@ function CompendiumPage() {
     }
     if (isShadowdark) result = applyMonsterAdvancedFilters(result, monsterFilters);
     return result;
-  }, [monsters, searchQuery, filterSource, showStarredOnly, starredMonsterIds, monsterFilters, isShadowdark]);
+  }, [monsters, searchQuery, filterSource, showStarredOnly, starredMonsterIds, monsterFilters, isShadowdark, showHidden, hiddenSet]);
 
   const filteredSpells = useMemo(() => {
     let result = applySourceFilter(spells, filterSource);
+    if (!showHidden) result = result.filter((s) => !hiddenSet.has(s.id));
     if (showStarredOnly) result = result.filter((s) => starredSpellIds.includes(s.id));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -310,10 +324,11 @@ function CompendiumPage() {
     }
     if (isShadowdark) result = applySpellAdvancedFilters(result, spellFilters);
     return result;
-  }, [spells, searchQuery, filterSource, showStarredOnly, starredSpellIds, spellFilters, isShadowdark]);
+  }, [spells, searchQuery, filterSource, showStarredOnly, starredSpellIds, spellFilters, isShadowdark, showHidden, hiddenSet]);
 
   const filteredMagicItems = useMemo(() => {
     let result = applySourceFilter(magicItems, filterSource);
+    if (!showHidden) result = result.filter((i) => !hiddenSet.has(i.id));
     if (showStarredOnly) result = result.filter((i) => starredMagicItemIds.includes(i.id));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -324,10 +339,11 @@ function CompendiumPage() {
       );
     }
     return result;
-  }, [magicItems, searchQuery, filterSource, showStarredOnly, starredMagicItemIds]);
+  }, [magicItems, searchQuery, filterSource, showStarredOnly, starredMagicItemIds, showHidden, hiddenSet]);
 
   const filteredEquipment = useMemo(() => {
     let result = applySourceFilter(equipment, filterSource);
+    if (!showHidden) result = result.filter((e) => !hiddenSet.has(e.id));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -338,7 +354,7 @@ function CompendiumPage() {
     }
     result = applyEquipmentAdvancedFilters(result, equipmentFilters);
     return result;
-  }, [equipment, searchQuery, filterSource, equipmentFilters]);
+  }, [equipment, searchQuery, filterSource, equipmentFilters, showHidden, hiddenSet]);
 
   // Custom races state
   const [newRace, setNewRace] = useState("");
@@ -622,6 +638,12 @@ function CompendiumPage() {
                 <Star className="size-3.5" />
                 Starred
               </Button>
+              {hiddenCompendiumIds.length > 0 && (
+                <Button size="sm" variant={showHidden ? "default" : "outline"} onClick={() => setShowHidden((v) => !v)} className="gap-1.5">
+                  <EyeOff className="size-3.5" />
+                  Hidden ({hiddenCompendiumIds.length})
+                </Button>
+              )}
             </FilterBar>
             {isShadowdark && (
               <MonsterAdvancedFilters
@@ -644,6 +666,8 @@ function CompendiumPage() {
                   starredIds={starredMonsterIds}
                   onToggleStar={handleToggleMonsterStar}
                   systemId={systemId}
+                  hiddenIds={hiddenSet}
+                  onToggleHide={handleToggleHide}
                 />
               </ScrollArea>
             )}
@@ -669,6 +693,12 @@ function CompendiumPage() {
                 <Star className="size-3.5" />
                 Starred
               </Button>
+              {hiddenCompendiumIds.length > 0 && (
+                <Button size="sm" variant={showHidden ? "default" : "outline"} onClick={() => setShowHidden((v) => !v)} className="gap-1.5">
+                  <EyeOff className="size-3.5" />
+                  Hidden ({hiddenCompendiumIds.length})
+                </Button>
+              )}
             </FilterBar>
             {isShadowdark && (
               <SpellAdvancedFilters
@@ -691,6 +721,8 @@ function CompendiumPage() {
                   starredIds={starredSpellIds}
                   onToggleStar={handleToggleSpellStar}
                   systemId={systemId}
+                  hiddenIds={hiddenSet}
+                  onToggleHide={handleToggleHide}
                 />
               </ScrollArea>
             )}
@@ -716,6 +748,12 @@ function CompendiumPage() {
                 <Star className="size-3.5" />
                 Starred
               </Button>
+              {hiddenCompendiumIds.length > 0 && (
+                <Button size="sm" variant={showHidden ? "default" : "outline"} onClick={() => setShowHidden((v) => !v)} className="gap-1.5">
+                  <EyeOff className="size-3.5" />
+                  Hidden ({hiddenCompendiumIds.length})
+                </Button>
+              )}
             </FilterBar>
             {filteredMagicItems.length === 0 ? (
               <EmptyState
@@ -729,6 +767,8 @@ function CompendiumPage() {
                   items={filteredMagicItems}
                   starredIds={starredMagicItemIds}
                   onToggleStar={handleToggleMagicItemStar}
+                  hiddenIds={hiddenSet}
+                  onToggleHide={handleToggleHide}
                 />
               </ScrollArea>
             )}
@@ -746,6 +786,12 @@ function CompendiumPage() {
                   onChange={(v) => setFilterSource(v as SourceFilter)}
                   options={sourceFilterOptions}
                 />
+                {hiddenCompendiumIds.length > 0 && (
+                  <Button size="sm" variant={showHidden ? "default" : "outline"} onClick={() => setShowHidden((v) => !v)} className="gap-1.5">
+                    <EyeOff className="size-3.5" />
+                    Hidden ({hiddenCompendiumIds.length})
+                  </Button>
+                )}
               </FilterBar>
               <EquipmentAdvancedFilters
                 filters={equipmentFilters}
@@ -762,7 +808,7 @@ function CompendiumPage() {
                 />
               ) : (
                 <ScrollArea className="h-[calc(100vh-16rem)]">
-                  <EquipmentTable items={filteredEquipment} />
+                  <EquipmentTable items={filteredEquipment} hiddenIds={hiddenSet} onToggleHide={handleToggleHide} />
                 </ScrollArea>
               )}
             </div>

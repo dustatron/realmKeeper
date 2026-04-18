@@ -10,7 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { Star, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Star, ChevronUp, ChevronDown, ChevronsUpDown, EyeOff, Eye } from "lucide-react";
+import { cn } from "~/lib/utils";
 import { usePagination } from "./usePagination";
 import { PaginationControls } from "./PaginationControls";
 
@@ -42,10 +43,14 @@ export function MagicItemTable({
   items,
   starredIds,
   onToggleStar,
+  hiddenIds,
+  onToggleHide,
 }: {
   items: CompendiumMagicItem[];
   starredIds: string[];
   onToggleStar?: (id: string) => void;
+  hiddenIds?: Set<string>;
+  onToggleHide?: (id: string) => void;
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -94,11 +99,13 @@ export function MagicItemTable({
           {th("Source", "source", "hidden sm:table-cell")}
           {th("Details", "details", "hidden sm:table-cell w-full")}
           {onToggleStar && <TableHead className="w-8" />}
+          {onToggleHide && <TableHead className="w-8" />}
         </TableRow>
       </TableHeader>
       <TableBody>
         {pagination.paged.map((item) => {
           const isCustom = item.systemData.system === "custom";
+          const isHidden = hiddenIds?.has(item.id) ?? false;
           const sd = item.systemData;
 
           let details = "—";
@@ -115,7 +122,7 @@ export function MagicItemTable({
           }
 
           return (
-            <TableRow key={item.id}>
+            <TableRow key={item.id} className={cn(isHidden && "opacity-50")}>
               <TableCell className="font-medium">
                 <Link
                   to={
@@ -126,7 +133,7 @@ export function MagicItemTable({
                   params={
                     isCustom ? { entryId: item.id } : { itemId: item.id }
                   }
-                  className="hover:underline"
+                  className={cn("hover:underline", isHidden && "line-through")}
                 >
                   {item.name}
                 </Link>
@@ -155,6 +162,14 @@ export function MagicItemTable({
                   </button>
                 </TableCell>
               )}
+              {onToggleHide && !isCustom && (
+                <TableCell className="text-center">
+                  <button onClick={() => onToggleHide(item.id)} className="p-1 rounded hover:bg-muted" title={isHidden ? "Restore" : "Hide"}>
+                    {isHidden ? <Eye className="size-3.5 text-muted-foreground" /> : <EyeOff className="size-3.5 text-muted-foreground opacity-40 hover:opacity-100 transition-opacity" />}
+                  </button>
+                </TableCell>
+              )}
+              {onToggleHide && isCustom && <TableCell />}
             </TableRow>
           );
         })}
