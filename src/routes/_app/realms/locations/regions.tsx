@@ -225,6 +225,7 @@ function RegionsPage() {
               <TableHead className="hidden sm:table-cell">Settlements</TableHead>
               <TableHead className="hidden md:table-cell">Features</TableHead>
               <TableHead className="hidden lg:table-cell">Dangers</TableHead>
+              <TableHead className="hidden xl:table-cell">People</TableHead>
               <TableHead className="w-20" />
             </TableRow>
           </TableHeader>
@@ -263,6 +264,16 @@ function RegionsPage() {
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
                   <span className="text-sm text-muted-foreground">{(region.dangers ?? []).length}</span>
+                </TableCell>
+                <TableCell className="hidden xl:table-cell">
+                  <div className="flex flex-wrap gap-1">
+                    {(region.people ?? []).slice(0, 2).map((p, i) => (
+                      <Badge key={i} variant="outline" className="text-xs">{p}</Badge>
+                    ))}
+                    {(region.people ?? []).length > 2 && (
+                      <span className="text-xs text-muted-foreground">+{region.people.length - 2}</span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">
@@ -454,6 +465,12 @@ function RegionsPage() {
                         <div>
                           <span className="text-xs font-semibold uppercase text-muted-foreground">Resources</span>
                           <TagInput tags={bundle.region.resources} onChange={(resources) => handleUpdateRegion(idx, { resources })} placeholder="Add resource..." />
+                        </div>
+
+                        {/* People */}
+                        <div>
+                          <span className="text-xs font-semibold uppercase text-muted-foreground">People</span>
+                          <TagInput tags={bundle.region.people ?? []} onChange={(people) => handleUpdateRegion(idx, { people })} placeholder="Add archetype..." />
                         </div>
                       </CardContent>
                     </Card>

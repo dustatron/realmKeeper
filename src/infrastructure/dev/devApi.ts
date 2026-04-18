@@ -344,6 +344,7 @@ const regions = {
       dangers: data.dangers ?? [],
       settlements: data.settlements ?? [],
       resources: data.resources ?? [],
+      people: data.people ?? [],
       boundary: data.boundary ?? null,
       color: data.color ?? null,
       imageUrl: data.imageUrl ?? null,

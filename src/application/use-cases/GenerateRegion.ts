@@ -169,7 +169,11 @@ export async function executeGenerateRegion(
     resources.push(`Abundance: ${abundance}`, `Scarcity: ${scarcity}`)
   }
 
-  // Step 7: Compose region
+  // Step 7: Roll people archetypes (1-2)
+  const peopleTable = findTable(allTables, 'table-cairn-region-people', 'region-people')
+  const people: string[] = peopleTable ? rollUnique(peopleTable, rollDice('1d2').total) : []
+
+  // Step 8: Compose region
   const now = Date.now()
   const name = `The ${terrain}`
 
@@ -207,6 +211,7 @@ export async function executeGenerateRegion(
     dangers,
     settlements,
     resources,
+    people,
     boundary: null,
     color: null,
     imageUrl: null,

@@ -90,6 +90,7 @@ export const cairnTableSets: TableSet[] = [
       'table-cairn-dungeon',
       'table-cairn-dungeon-feature',
       'table-cairn-region-resources',
+      'table-cairn-region-people',
     ],
   },
   {
@@ -716,6 +717,23 @@ export const cairnTableDefs: TableDef[] = [
       'Knowledge', 'Land', 'Livestock', 'Medicine', 'Ore',
       'Skilled Labor', 'Spices', 'Stone', 'Textiles', 'Tools',
       'Trade Goods', 'Vessels', 'Water', 'Weapons', 'Wood',
+    ]),
+  },
+
+  // ---- Region People -----------------------------------------------------
+  {
+    id: 'table-cairn-region-people',
+    setId: 'tableset-cairn-regions',
+    name: 'Region People',
+    diceFormula: '1d20',
+    tags: ['region', 'region-people'],
+    systemId: 'system-cairn-2e',
+    entries: entries([
+      'Devout pilgrims', 'Displaced farmers', 'Exiled criminals', 'Fearful villagers',
+      'Foraging nomads', 'Hardy hunters', 'Hermit scholars', 'Industrious miners',
+      'Isolated monks', 'Merchant caravans', 'Migratory herders', 'Organized bandits',
+      'Peaceful settlers', 'Persecuted refugees', 'Restless soldiers', 'Roaming cultists',
+      'Secretive druids', 'Skilled fisherfolk', 'Wandering traders', 'Warring clans',
     ]),
   },
 
