@@ -123,13 +123,14 @@ function makePassage(fromRoom: SpatialRoom, toRoom: SpatialRoom): Passage {
   }
 }
 
-function RoomShape({ room, theme, isSelected, isEditSelected, roomNumber, hasNPCs, hasTreasure, onClick }: {
+function RoomShape({ room, theme, isSelected, isEditSelected, roomNumber, hasDenizens, hasCreatures, hasTreasure, onClick }: {
   room: SpatialRoom
   theme: DungeonTheme
   isSelected: boolean
   isEditSelected: boolean
   roomNumber: number
-  hasNPCs: boolean
+  hasDenizens: boolean
+  hasCreatures: boolean
   hasTreasure: boolean
   onClick?: () => void
 }) {
@@ -147,7 +148,8 @@ function RoomShape({ room, theme, isSelected, isEditSelected, roomNumber, hasNPC
   const icons: { icon: string; color: string }[] = []
   if (room.hazards.some((h) => !h.disarmed))      icons.push({ icon: '⚠', color: '#f97316' })
   if (hasTreasure)                                 icons.push({ icon: '◈', color: '#eab308' })
-  if (hasNPCs)                                     icons.push({ icon: '☻', color: '#93c5fd' })
+  if (hasCreatures)                                icons.push({ icon: '☠', color: '#f87171' })
+  if (hasDenizens)                                 icons.push({ icon: '☻', color: '#86efac' })
   if (room.secrets?.some((s) => !s.discovered))   icons.push({ icon: '?', color: '#a78bfa' })
   if (room.discoveries?.some((d) => !d.found))    icons.push({ icon: '!', color: '#6ee7b7' })
 
@@ -464,7 +466,13 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
   // --- Derived data ---
 
   const roomNumberMap = useMemo(() => new Map(dungeon.rooms.map((r, i) => [r.id, i + 1])), [dungeon.rooms])
-  const roomsWithNPCs = useMemo(() => new Set((dungeon.dungeonNPCs ?? []).map((n) => n.roomId)), [dungeon.dungeonNPCs])
+  // Denizens: named NPCs placed by the dungeon NPC generator (rival parties, prisoners, hermits, etc.)
+  const roomsWithDenizens = useMemo(() => new Set((dungeon.dungeonNPCs ?? []).map((n) => n.roomId)), [dungeon.dungeonNPCs])
+  // Creatures: hostile encounters still active in a room
+  const roomsWithCreatures = useMemo(
+    () => new Set(dungeon.rooms.filter(r => r.encounters.some(e => !e.defeated)).map(r => r.id)),
+    [dungeon.rooms]
+  )
   const roomsWithTreasure = useMemo(() => new Set(dungeon.roomHasTreasure ?? []), [dungeon.roomHasTreasure])
   const selectedRoomId = selectedRoomPoiId && roomIdToPoiId
     ? [...roomIdToPoiId.entries()].find(([, poiId]) => poiId === selectedRoomPoiId)?.[0]
@@ -531,7 +539,8 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
               isSelected={!editMode && room.id === selectedRoomId}
               isEditSelected={editMode && room.id === selectedEditRoomId}
               roomNumber={roomNumberMap.get(room.id) ?? 0}
-              hasNPCs={roomsWithNPCs.has(room.id)}
+              hasDenizens={roomsWithDenizens.has(room.id)}
+              hasCreatures={roomsWithCreatures.has(room.id)}
               hasTreasure={roomsWithTreasure.has(room.id)}
               onClick={!editMode && onRoomClick && poiId ? () => onRoomClick(poiId) : undefined}
             />
@@ -597,7 +606,8 @@ export function SpatialDungeonRenderer({ dungeon, selectedRoomPoiId, roomIdToPoi
         <div className="absolute bottom-2 left-2 flex gap-3 text-xs bg-background/90 border border-border rounded px-2 py-1 text-muted-foreground">
           <span className="flex items-center gap-1"><span className="text-orange-400 font-bold">⚠</span> Trap</span>
           <span className="flex items-center gap-1"><span className="text-yellow-400 font-bold">◈</span> Treasure</span>
-          <span className="flex items-center gap-1"><span className="text-blue-300 font-bold">☻</span> NPC</span>
+          <span className="flex items-center gap-1"><span className="text-red-400 font-bold">☠</span> Creature</span>
+          <span className="flex items-center gap-1"><span className="text-green-300 font-bold">☻</span> Denizen</span>
           <span className="flex items-center gap-1"><span className="text-purple-400 font-bold">?</span> Secret</span>
           <span className="flex items-center gap-1"><span className="text-emerald-300 font-bold">!</span> Discovery</span>
         </div>

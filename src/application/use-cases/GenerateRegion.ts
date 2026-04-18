@@ -173,9 +173,29 @@ export async function executeGenerateRegion(
   const now = Date.now()
   const name = `The ${terrain}`
 
-  const terrainCategory = difficulty === 'easy' ? 'plains'
-    : difficulty === 'tough' ? 'forest'
-    : 'mountain'
+  const TERRAIN_CATEGORY: Record<string, string> = {
+    // Easy — open land
+    Bluffs: 'plains', Dells: 'plains', Farmlands: 'plains', Fells: 'hills',
+    Foothills: 'hills', Glens: 'plains', Grasslands: 'plains', Gulleys: 'plains',
+    Heaths: 'plains', Lowlands: 'plains', Meadows: 'plains', Moors: 'swamp',
+    Pampas: 'plains', Pastures: 'plains', Plains: 'plains', Plateaus: 'hills',
+    Prairies: 'plains', Savannas: 'plains', Steppes: 'plains', Valleys: 'plains',
+    // Tough — varied terrain
+    Barrens: 'desert', Canyons: 'hills', Chaparral: 'forest', 'Coral Reefs': 'coast',
+    Deserts: 'desert', Dunes: 'desert', Estuaries: 'coast', Fens: 'swamp',
+    Forests: 'forest', Heathlands: 'plains', Hills: 'hills', Mangroves: 'coast',
+    Marshlands: 'swamp', Moorlands: 'plains', Rainforests: 'forest', Scrublands: 'desert',
+    Taiga: 'forest', Thickets: 'forest', Tundra: 'tundra', Woodlands: 'forest',
+    // Perilous — harsh terrain
+    'Alpine Meadows': 'mountain', Bogs: 'swamp', Boulders: 'mountain', Caverns: 'mountain',
+    Cliffs: 'mountain', Craters: 'mountain', Crevasses: 'mountain', Geysers: 'mountain',
+    Glaciers: 'tundra', Gorges: 'mountain', Hollows: 'forest', 'Ice Fields': 'tundra',
+    Jungles: 'forest', 'Lava Fields': 'mountain', Mountains: 'mountain', Peatlands: 'swamp',
+    Quagmires: 'swamp', Ravine: 'mountain', Swamps: 'swamp', Wastelands: 'desert',
+  }
+  const terrainCategory = TERRAIN_CATEGORY[terrain] ?? (
+    difficulty === 'easy' ? 'plains' : difficulty === 'tough' ? 'forest' : 'mountain'
+  )
 
   const region: Region = {
     id: regionId,
