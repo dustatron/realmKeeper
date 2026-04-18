@@ -136,42 +136,64 @@ export function TrapSection({ traps, onUpdate }: TrapSectionProps) {
         <p className="text-sm text-muted-foreground">No traps in this location.</p>
       ) : (
         <div className="space-y-1">
-          {traps.map((trap) => (
-            <div
-              key={trap.id}
-              className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm ${trap.disarmed ? 'opacity-50' : ''}`}
-            >
-              <button
-                onClick={() => toggleDisarmed(trap.id)}
-                className="shrink-0 hover:scale-110 transition-transform"
-                title={trap.disarmed ? 'Re-arm trap' : 'Disarm trap'}
+          {traps.map((trap) => {
+            const hasDetail = trap.trigger || trap.passiveHint || trap.activeHint || trap.disarmMethods?.length || trap.consequence || trap.targetAttribute
+            return (
+              <div
+                key={trap.id}
+                className={`px-3 py-2 rounded-md border text-sm ${trap.disarmed ? 'opacity-50' : ''}`}
               >
-                {trap.disarmed ? '✅' : '💣'}
-              </button>
-              <span className={`font-medium ${trap.disarmed ? 'line-through text-muted-foreground' : ''}`}>
-                {trap.name}
-              </span>
-              {trap.dc !== null && (
-                <Badge variant="outline" className="text-xs shrink-0">
-                  DC {trap.dc}
-                </Badge>
-              )}
-              {trap.damage && (
-                <span className="text-xs text-muted-foreground shrink-0">{trap.damage}</span>
-              )}
-              {trap.description && (
-                <span className="text-xs text-muted-foreground truncate">{trap.description}</span>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="size-6 p-0 ml-auto text-muted-foreground hover:text-destructive shrink-0"
-                onClick={() => removeTrap(trap.id)}
-              >
-                <Trash2 className="size-3" />
-              </Button>
-            </div>
-          ))}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => toggleDisarmed(trap.id)}
+                    className="shrink-0 hover:scale-110 transition-transform"
+                    title={trap.disarmed ? 'Re-arm trap' : 'Disarm trap'}
+                  >
+                    {trap.disarmed ? '✅' : '💣'}
+                  </button>
+                  <span className={`font-medium ${trap.disarmed ? 'line-through text-muted-foreground' : ''}`}>
+                    {trap.name}
+                  </span>
+                  {trap.targetAttribute && (
+                    <Badge variant="outline" className="text-xs shrink-0">
+                      {trap.targetAttribute}
+                    </Badge>
+                  )}
+                  {trap.dc !== null && (
+                    <Badge variant="outline" className="text-xs shrink-0">
+                      DC {trap.dc}
+                    </Badge>
+                  )}
+                  {trap.damage && (
+                    <span className="text-xs text-muted-foreground shrink-0">{trap.damage}</span>
+                  )}
+                  {!hasDetail && trap.description && (
+                    <span className="text-xs text-muted-foreground truncate">{trap.description}</span>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="size-6 p-0 ml-auto text-muted-foreground hover:text-destructive shrink-0"
+                    onClick={() => removeTrap(trap.id)}
+                  >
+                    <Trash2 className="size-3" />
+                  </Button>
+                </div>
+                {hasDetail && (
+                  <div className="mt-1.5 ml-7 space-y-0.5 text-xs text-muted-foreground">
+                    {trap.description && <p>{trap.description}</p>}
+                    {trap.trigger && <p><span className="font-medium text-foreground/70">Trigger:</span> {trap.trigger}</p>}
+                    {trap.passiveHint && <p><span className="font-medium text-foreground/70">Passive hint:</span> {trap.passiveHint}</p>}
+                    {trap.activeHint && <p><span className="font-medium text-foreground/70">Active hint:</span> {trap.activeHint}</p>}
+                    {trap.consequence && <p><span className="font-medium text-foreground/70">Consequence:</span> {trap.consequence}</p>}
+                    {trap.disarmMethods && trap.disarmMethods.length > 0 && (
+                      <p><span className="font-medium text-foreground/70">Disarm:</span> {trap.disarmMethods.join(', ')}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
