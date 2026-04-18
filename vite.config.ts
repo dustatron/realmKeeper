@@ -22,7 +22,7 @@ export default defineConfig({
     viteReact(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'explore.png'],
       manifest: {
         name: 'Realm Keeper',
         short_name: 'RealmKeeper',
@@ -31,6 +31,8 @@ export default defineConfig({
         background_color: '#0f172a',
         display: 'standalone',
         orientation: 'any',
+        scope: '/',
+        start_url: '/',
         icons: [
           {
             src: '/pwa-192x192.png',
