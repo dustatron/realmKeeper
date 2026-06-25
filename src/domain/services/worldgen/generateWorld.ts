@@ -9,11 +9,13 @@ import { BIOMES, type Biome } from '~/domain/data/worldgen/biomes'
 import { pickName } from '~/domain/data/worldgen/names'
 import { POI_KIND_TABLE, poiKindToType, DUNGEON_THEMES } from '~/domain/data/worldgen/poiKinds'
 import { buildPOI } from './buildPoi'
+import { buildPath } from './buildPath'
 import { buildRegionFlavor } from './regionFlavor'
 import { describePoi } from './poiFlavor'
 import type { GameMap, HexCell } from '@domain/entities/GameMap'
 import type { Region } from '@domain/entities/Region'
 import type { POI } from '@domain/entities/POI'
+import type { Path } from '@domain/entities/Path'
 import { newId } from '@shared/ulid'
 
 export type PoiDensity = 'sparse' | 'normal' | 'dense'
@@ -30,7 +32,7 @@ export function generateWorld(
   realmId: string,
   seed: string,
   opts: { cols: number; rows: number; hexSize?: number; poiDensity?: PoiDensity }
-): { gameMap: GameMap; regions: Region[]; pois: POI[] } {
+): { gameMap: GameMap; regions: Region[]; pois: POI[]; paths: Path[] } {
   const { cols, rows, hexSize = 40, poiDensity = 'normal' } = opts
   const rng = new SeededRandom(seed)
 
@@ -239,6 +241,9 @@ export function generateWorld(
   }
 
   const pois: POI[] = []
+  // Settlement POIs paired with their hex coords, so step 7 can wire travel
+  // routes by hex distance.
+  const settlementNodes: { poi: POI; q: number; r: number }[] = []
   for (const region of regions) {
     const regionLand = landByRegion.get(region.id) ?? []
     if (regionLand.length === 0) continue
@@ -248,9 +253,47 @@ export function generateWorld(
       Math.max(MIN_POIS_PER_REGION, densityTarget),
     )
     for (const cell of rng.sample(regionLand, target)) {
-      pois.push(makePoi(cell))
+      const poi = makePoi(cell)
+      pois.push(poi)
+      if (poi.type === 'settlement') {
+        settlementNodes.push({ poi, q: cell.q, r: cell.r })
+      }
     }
   }
 
-  return { gameMap, regions, pois }
+  // Step 7: connect each settlement to its nearest 1-2 settlements by hex
+  // distance. Travel time scales with distance (~2-4 watches per hex). Edges are
+  // undirected, so we dedupe by the sorted POI-id pair and never link a
+  // settlement to itself.
+  const WATCHES_PER_HEX_MIN = 2
+  const WATCHES_PER_HEX_MAX = 4
+  const paths: Path[] = []
+  const seenEdges = new Set<string>()
+  for (const node of settlementNodes) {
+    const neighbors = settlementNodes
+      .filter((other) => other.poi.id !== node.poi.id)
+      .map((other) => ({
+        other,
+        dist: hexDistance({ q: node.q, r: node.r }, { q: other.q, r: other.r }),
+      }))
+      .sort((a, b) => a.dist - b.dist)
+
+    const linkCount = rng.between(1, 2)
+    for (const { other, dist } of neighbors.slice(0, linkCount)) {
+      const key = [node.poi.id, other.poi.id].sort().join('|')
+      if (seenEdges.has(key)) continue
+      seenEdges.add(key)
+      const watchesPerHex = rng.between(WATCHES_PER_HEX_MIN, WATCHES_PER_HEX_MAX)
+      paths.push(
+        buildPath({
+          fromPoiId: node.poi.id,
+          toPoiId: other.poi.id,
+          name: `${node.poi.name} to ${other.poi.name}`,
+          baseTravelWatches: Math.max(1, dist * watchesPerHex),
+        }),
+      )
+    }
+  }
+
+  return { gameMap, regions, pois, paths }
 }

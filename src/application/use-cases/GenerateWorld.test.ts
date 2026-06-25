@@ -7,7 +7,7 @@ const container = createContainer()
 
 beforeEach(async () => {
   await db.open()
-  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.regions.clear(), db.pois.clear()])
+  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear()])
 })
 
 const deps = () => ({
@@ -51,6 +51,22 @@ describe('executeGenerateWorld', () => {
     expect(pois.length).toBeGreaterThan(0)
     const regionIds = new Set(regions.map((r) => r.id))
     for (const p of pois) expect(regionIds.has(p.regionId)).toBe(true)
+  })
+
+  it('persists paths linking generated settlements', async () => {
+    const { mapId } = await executeGenerateWorld(
+      { name: 'Roads', systemId: 'system-cairn-2e', seed: 'seed-paths', size: 'medium', poiDensity: 'normal' },
+      deps()
+    )
+    const pois = await db.pois.where('mapRef').equals(mapId).toArray()
+    const settlementIds = new Set(pois.filter((p) => p.type === 'settlement').map((p) => p.id))
+    const paths = await db.paths.toArray()
+    expect(paths.length).toBeGreaterThan(0)
+    for (const path of paths) {
+      expect(settlementIds.has(path.fromPoiId)).toBe(true)
+      expect(settlementIds.has(path.toPoiId)).toBe(true)
+      expect(path.baseTravelWatches).toBeGreaterThan(0)
+    }
   })
 
   it('is deterministic: same seed + size → same biome layout', async () => {

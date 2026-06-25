@@ -49,7 +49,7 @@ export async function executeGenerateWorld(
   // async context) and the hex map all commit together or roll back together —
   // no orphaned realm if a later write fails. Tables listed = every table the
   // enclosed writes touch.
-  await db.transaction('rw', [db.worlds, db.factions, db.realmNotes, db.gameMaps, db.regions, db.pois], async () => {
+  await db.transaction('rw', [db.worlds, db.factions, db.realmNotes, db.gameMaps, db.regions, db.pois, db.paths], async () => {
     const realm = await executeCreateRealm(
       {
         name: input.name,
@@ -62,7 +62,7 @@ export async function executeGenerateWorld(
       },
       deps
     )
-    const { gameMap, regions, pois } = generateWorld(realm.id, input.seed, {
+    const { gameMap, regions, pois, paths } = generateWorld(realm.id, input.seed, {
       cols: preset.cols,
       rows: preset.rows,
       poiDensity: input.poiDensity ?? 'normal',
@@ -70,6 +70,7 @@ export async function executeGenerateWorld(
     await db.gameMaps.put(gameMap)
     await db.regions.bulkPut(regions)
     await db.pois.bulkPut(pois)
+    await db.paths.bulkPut(paths)
     realmId = realm.id
     mapId = gameMap.id
   })

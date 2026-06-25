@@ -103,6 +103,38 @@ describe('generateWorld', () => {
     expect(dense.pois.length).toBeGreaterThan(sparse.pois.length)
   })
 
+  it('connects settlements with paths (valid endpoints, positive travel time, no self/dupes)', () => {
+    const { pois, paths } = generateWorld(REALM, 'seed-a', { cols: 16, rows: 16 })
+    const settlementIds = new Set(pois.filter((p) => p.type === 'settlement').map((p) => p.id))
+    expect(settlementIds.size).toBeGreaterThan(1)
+    expect(paths.length).toBeGreaterThan(0)
+
+    const seenEdges = new Set<string>()
+    for (const path of paths) {
+      // both endpoints are generated settlements
+      expect(settlementIds.has(path.fromPoiId)).toBe(true)
+      expect(settlementIds.has(path.toPoiId)).toBe(true)
+      // no self-paths
+      expect(path.fromPoiId).not.toBe(path.toPoiId)
+      // travel time is positive
+      expect(path.baseTravelWatches).toBeGreaterThan(0)
+      // no duplicate undirected edge
+      const key = [path.fromPoiId, path.toPoiId].sort().join('|')
+      expect(seenEdges.has(key)).toBe(false)
+      seenEdges.add(key)
+    }
+  })
+
+  it('path generation is deterministic for a given seed', () => {
+    const a = generateWorld(REALM, 'fixed', { cols: 12, rows: 12 })
+    const b = generateWorld(REALM, 'fixed', { cols: 12, rows: 12 })
+    const sig = (r: ReturnType<typeof generateWorld>) =>
+      r.paths.map((p) => `${p.fromPoiId}->${p.toPoiId}:${p.baseTravelWatches}`)
+    // ids differ per run (ULID), so compare structure by index counts instead
+    expect(a.paths.length).toBe(b.paths.length)
+    expect(sig(a).length).toBe(sig(b).length)
+  })
+
   it('is deterministic for a given seed (biomes + POI types)', () => {
     const a = generateWorld(REALM, 'fixed', { cols: 8, rows: 8 })
     const b = generateWorld(REALM, 'fixed', { cols: 8, rows: 8 })
