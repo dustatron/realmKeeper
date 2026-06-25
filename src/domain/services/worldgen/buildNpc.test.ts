@@ -47,6 +47,11 @@ describe('buildNpc', () => {
     expect(npc.factionIds).toEqual([])
   })
 
+  it('always has a want — a personal quest when none is supplied', () => {
+    const npc = buildNpc({ worldId: 'w1', regionId: 'reg-1', role: 'inhabitant' }, cairnSystemConfig, new SeededRandom('s'))
+    expect(npc.want.length).toBeGreaterThan(0)
+  })
+
   it('is deterministic for a given seed', () => {
     const a = buildNpc(BASE, cairnSystemConfig, new SeededRandom('z'))
     const b = buildNpc(BASE, cairnSystemConfig, new SeededRandom('z'))

@@ -305,6 +305,12 @@ export async function executeGenerateDungeon(
   // === 7b. Room creatures — picked from wandering monster table for ecological consistency ===
 
   const dangerChances: Record<string, number> = { low: 0.25, medium: 0.45, deadly: 0.70, very_deadly: 0.90 }
+  // Even a lurking monster wants something — gives every creature NPC a goal.
+  const CREATURE_WANTS = [
+    'guard its lair', 'feed on any intruders', 'protect its hoard',
+    'expand its hunting grounds', 'avenge a slain packmate', 'escape this place',
+    'serve the dungeon’s master', 'drag fresh prey back to its den',
+  ]
   const creatureRng = rng.child('room-creatures')
   const roomsWithNPC = new Set(dungeonNPCs.map((n) => n.roomId))
 
@@ -362,7 +368,7 @@ export async function executeGenerateDungeon(
       motivation: '',
       appearance: '',
       voice: '',
-      want: '',
+      want: creatureRng.pick(CREATURE_WANTS),
       tags: ['creature', options.theme],
       imageUrl: null,
       systemBlock: compendiumId

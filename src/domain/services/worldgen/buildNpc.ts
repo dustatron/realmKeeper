@@ -24,6 +24,26 @@ export interface BuildNpcInput {
 
 // Races weighted toward human, matching the rest of the app's NPC generation.
 const RACE_POOL = ['human', 'human', 'human', 'human', 'elf', 'dwarf', 'halfling', 'half-orc', 'half-elf', 'goblin']
+
+// Personal favors any NPC might ask the party — so every NPC is a potential
+// quest-giver even when they aren't tied to a faction agenda.
+const NPC_WANTS = [
+  'recover a stolen family heirloom',
+  'find a relative who never came home',
+  'deliver a sealed letter to a distant contact',
+  'clear vermin from their cellar',
+  'settle an old debt with a dangerous lender',
+  'retrieve a keepsake left behind in a ruin',
+  'find safe passage to another settlement',
+  'learn who has been spreading lies about them',
+  'recover a lost working animal',
+  'broker peace with a feuding neighbor',
+  'prove their innocence of a crime',
+  'gather a rare herb for an ailing kin',
+  'reclaim a plot of land taken from them',
+  'track down a runaway apprentice',
+  'guard a shipment on a perilous road',
+]
 const SD_CLASSES = ['Fighter', 'Priest', 'Thief', 'Wizard']
 
 // Cairn name tables are id'd by race + gender; humans use the generic name +
@@ -93,7 +113,9 @@ export function buildNpc(
     motivation: virtue,
     appearance,
     voice: speech,
-    want: input.want ?? '',
+    // Faction NPCs carry their agenda goal; everyone else gets a personal favor
+    // so every NPC is a potential quest-giver.
+    want: input.want ?? rng.pick(NPC_WANTS),
     tags: [role],
     imageUrl: null,
     systemBlock: block,
