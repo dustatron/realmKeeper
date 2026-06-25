@@ -604,6 +604,87 @@ function RealmsPage() {
     </div>
   );
 
+  // Single Create-Realm modal, rendered in both the empty-state and the
+  // populated views (only one is mounted at a time). Defined once so the two
+  // entry points never drift (e.g. the generation toggle present in one but not
+  // the other).
+  const createRealmDialog = (
+    <Dialog open={showCreate} onOpenChange={setShowCreate}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create New Realm</DialogTitle>
+          <DialogDescription>
+            Set up a new realm for your campaign.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="realm-name">Name</Label>
+            <Input
+              id="realm-name"
+              placeholder="The Forgotten Realms"
+              value={createName}
+              onChange={(e) => setCreateName(e.target.value)}
+              disabled={isCreating}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="realm-system">System</Label>
+            <Select
+              value={createSystem}
+              onValueChange={setCreateSystem}
+              disabled={isCreating}
+            >
+              <SelectTrigger id="realm-system" className="w-full">
+                <SelectValue placeholder="Select a system" />
+              </SelectTrigger>
+              <SelectContent>
+                {systemConfigs.map((system) => (
+                  <SelectItem key={system.id} value={system.id}>
+                    {system.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="realm-desc">Description (optional)</Label>
+            <Textarea
+              id="realm-desc"
+              placeholder="A high fantasy setting with..."
+              value={createDesc}
+              onChange={(e) => setCreateDesc(e.target.value)}
+              disabled={isCreating}
+            />
+          </div>
+          {calendarSettingsSection}
+          {generationSettingsSection}
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setShowCreate(false)}
+            disabled={isCreating}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreateRealm}
+            disabled={!createName.trim() || !createSystem || isCreating}
+          >
+            {isCreating
+              ? genEnabled
+                ? "Generating…"
+                : "Creating..."
+              : genEnabled
+                ? "Generate World"
+                : "Create Realm"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
   // Wait for the realms query to resolve before deciding what to render —
   // otherwise the "No realms yet" empty state flashes for a frame on every load
   // while useLiveQuery is still pending (rawRealms === undefined).
@@ -665,80 +746,7 @@ function RealmsPage() {
           }
         />
 
-        <Dialog open={showCreate} onOpenChange={setShowCreate}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Realm</DialogTitle>
-              <DialogDescription>
-                Set up a new realm for your campaign.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="realm-name">Name</Label>
-                <Input
-                  id="realm-name"
-                  placeholder="The Forgotten Realms"
-                  value={createName}
-                  onChange={(e) => setCreateName(e.target.value)}
-                  disabled={isCreating}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="realm-system">System</Label>
-                <Select
-                  value={createSystem}
-                  onValueChange={setCreateSystem}
-                  disabled={isCreating}
-                >
-                  <SelectTrigger id="realm-system" className="w-full">
-                    <SelectValue placeholder="Select a system" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {systemConfigs.map((system) => (
-                      <SelectItem key={system.id} value={system.id}>
-                        {system.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="realm-desc">Description (optional)</Label>
-                <Textarea
-                  id="realm-desc"
-                  placeholder="A high fantasy setting with..."
-                  value={createDesc}
-                  onChange={(e) => setCreateDesc(e.target.value)}
-                  disabled={isCreating}
-                />
-              </div>
-              {calendarSettingsSection}
-              {generationSettingsSection}
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowCreate(false)}
-                disabled={isCreating}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreateRealm}
-                disabled={!createName.trim() || !createSystem || isCreating}
-              >
-                {isCreating
-                  ? genEnabled
-                    ? "Generating…"
-                    : "Creating..."
-                  : genEnabled
-                    ? "Generate World"
-                    : "Create Realm"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {createRealmDialog}
       </div>
     );
   }
@@ -844,73 +852,7 @@ function RealmsPage() {
         })}
       </div>
 
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Realm</DialogTitle>
-            <DialogDescription>
-              Set up a new realm for your campaign.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="realm-name">Name</Label>
-              <Input
-                id="realm-name"
-                placeholder="The Forgotten Realms"
-                value={createName}
-                onChange={(e) => setCreateName(e.target.value)}
-                disabled={isCreating}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="realm-system">System</Label>
-              <Select
-                value={createSystem}
-                onValueChange={setCreateSystem}
-                disabled={isCreating}
-              >
-                <SelectTrigger id="realm-system" className="w-full">
-                  <SelectValue placeholder="Select a system" />
-                </SelectTrigger>
-                <SelectContent>
-                  {systemConfigs.map((system) => (
-                    <SelectItem key={system.id} value={system.id}>
-                      {system.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="realm-desc">Description (optional)</Label>
-              <Textarea
-                id="realm-desc"
-                placeholder="A high fantasy setting with..."
-                value={createDesc}
-                onChange={(e) => setCreateDesc(e.target.value)}
-                disabled={isCreating}
-              />
-            </div>
-            {calendarSettingsSection}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowCreate(false)}
-              disabled={isCreating}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateRealm}
-              disabled={!createName.trim() || !createSystem || isCreating}
-            >
-              {isCreating ? "Creating..." : "Create Realm"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {createRealmDialog}
 
       <Dialog
         open={editTarget !== null}
