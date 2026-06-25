@@ -13,6 +13,17 @@ const BUILDING_TYPES = [
   'Trading Post', 'Watchtower', 'Inn', 'Bakery', 'Brewery', 'General Store',
 ]
 
+// The proprietor's trade, by building type.
+const BUILDING_OCCUPATIONS: Record<string, string> = {
+  Tavern: 'tavernkeeper', Inn: 'innkeeper', Smithy: 'blacksmith',
+  Temple: 'priest', Shrine: 'shrinekeeper', Market: 'merchant',
+  'Trading Post': 'trader', 'General Store': 'shopkeeper', Granary: 'granary keeper',
+  Barracks: 'guard captain', Apothecary: 'apothecary', Stables: 'stablemaster',
+  Mill: 'miller', Tannery: 'tanner', Guildhall: 'guildmaster',
+  Warehouse: 'warehouse keeper', Bathhouse: 'bathhouse keeper', Bakery: 'baker',
+  Brewery: 'brewer', Watchtower: 'watch officer',
+}
+
 // Settlement size by Cairn subtype → how many buildings it supports.
 const LARGE = new Set(['City', 'Citadel', 'Fortress', 'Stronghold'])
 const SMALL = new Set(['Hamlet', 'Outpost', 'Farmstead', 'Caravan', 'Commune', 'Villa', 'Prison'])
@@ -53,7 +64,13 @@ export function buildSettlementBuildings(
     buildings.push(building)
     proprietors.push(
       buildNpc(
-        { worldId, regionId: settlement.regionId ?? undefined, poiId: building.id, role: 'inhabitant' },
+        {
+          worldId,
+          regionId: settlement.regionId ?? undefined,
+          poiId: building.id,
+          role: 'inhabitant',
+          occupation: BUILDING_OCCUPATIONS[type] ?? type.toLowerCase() + ' keeper',
+        },
         systemConfig,
         rng,
       ),

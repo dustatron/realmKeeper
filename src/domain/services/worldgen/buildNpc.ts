@@ -9,6 +9,7 @@ import {
 import { newId } from '@shared/ulid'
 import { pickCairn } from './cairnPick'
 import { makeSeededDice } from './seededDice'
+import { pickNpcWant } from '@domain/data/worldgen/npcWants'
 
 export type NpcRole = 'leader' | 'agent' | 'inhabitant'
 
@@ -20,30 +21,12 @@ export interface BuildNpcInput {
   role?: NpcRole
   /** A concrete objective (the "side-quest hook" surfaced on the NPC page). */
   want?: string
+  /** A profession label (e.g. "blacksmith") used in place of the bare role. */
+  occupation?: string
 }
 
 // Races weighted toward human, matching the rest of the app's NPC generation.
 const RACE_POOL = ['human', 'human', 'human', 'human', 'elf', 'dwarf', 'halfling', 'half-orc', 'half-elf', 'goblin']
-
-// Personal favors any NPC might ask the party — so every NPC is a potential
-// quest-giver even when they aren't tied to a faction agenda.
-const NPC_WANTS = [
-  'recover a stolen family heirloom',
-  'find a relative who never came home',
-  'deliver a sealed letter to a distant contact',
-  'clear vermin from their cellar',
-  'settle an old debt with a dangerous lender',
-  'retrieve a keepsake left behind in a ruin',
-  'find safe passage to another settlement',
-  'learn who has been spreading lies about them',
-  'recover a lost working animal',
-  'broker peace with a feuding neighbor',
-  'prove their innocence of a crime',
-  'gather a rare herb for an ailing kin',
-  'reclaim a plot of land taken from them',
-  'track down a runaway apprentice',
-  'guard a shipment on a perilous road',
-]
 const SD_CLASSES = ['Fighter', 'Priest', 'Thief', 'Wizard']
 
 // Cairn name tables are id'd by race + gender; humans use the generic name +
@@ -81,9 +64,12 @@ export function buildNpc(
   const virtue = pickCairn(rng, 'table-cairn-trait-virtue')
   const vice = pickCairn(rng, 'table-cairn-trait-vice')
 
+  // The Cairn trait values are bare adjectives, so weave them into prose that
+  // reads naturally ("Wears frumpy clothes", not "Wears frumpy").
+  const hairDesc = hair === 'Bald' ? 'a bald head' : `${hair.toLowerCase()} hair`
   const appearance =
-    `${physique}, ${skin.toLowerCase()} skin, ${hair.toLowerCase()} hair, ${face.toLowerCase()} features. ` +
-    `Wears ${clothing.toLowerCase()}.`
+    `${physique}, with ${skin.toLowerCase()} skin, ${hairDesc}, and ${face.toLowerCase()} features. ` +
+    `Wears ${clothing.toLowerCase()} clothes.`
 
   // --- SystemBlock (rolled for the realm's actual system) ---
   const block = buildDefaultSystemBlock(systemConfig)
@@ -97,6 +83,7 @@ export function buildNpc(
   block.maxHp = block.hp
 
   const role: NpcRole = input.role ?? 'inhabitant'
+  const roleLabel = input.occupation ?? role
 
   return {
     id: newId(),
@@ -108,14 +95,15 @@ export function buildNpc(
     poiId: input.poiId ?? null,
     lifeStatus: 'alive',
     movementStatus: 'present',
-    description: `A ${race} ${role}.`,
+    description: `A ${race} ${roleLabel} — ${virtue.toLowerCase()} but ${vice.toLowerCase()}.`,
     traits: [virtue, vice],
     motivation: virtue,
     appearance,
     voice: speech,
-    // Faction NPCs carry their agenda goal; everyone else gets a personal favor
-    // so every NPC is a potential quest-giver.
-    want: input.want ?? rng.pick(NPC_WANTS),
+    // Faction NPCs carry their agenda goal; everyone else gets a want from the
+    // NPC wants table (a favor to ask the party, or a personal pursuit), so
+    // every NPC is a potential quest-giver.
+    want: input.want ?? pickNpcWant(rng),
     tags: [role],
     imageUrl: null,
     systemBlock: block,
