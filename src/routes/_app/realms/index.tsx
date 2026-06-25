@@ -68,6 +68,9 @@ import { executeImportRealm } from "@application/use-cases/ImportRealm";
 import { Dashboard } from "~/components/realm/Dashboard";
 import type { RealmExport } from "@application/use-cases/ExportRealm";
 
+// Default rule system for new realms (Cairn 2e ships seeded).
+const DEFAULT_SYSTEM_ID = "system-cairn-2e";
+
 export const Route = createFileRoute("/_app/realms/")({
   component: RealmsPage,
   validateSearch: (search: Record<string, unknown>): { tab?: string } => ({
@@ -99,7 +102,7 @@ function RealmsPage() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [createName, setCreateName] = useState("");
-  const [createSystem, setCreateSystem] = useState("");
+  const [createSystem, setCreateSystem] = useState(DEFAULT_SYSTEM_ID);
   const [createDesc, setCreateDesc] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [createWatchesPerDay, setCreateWatchesPerDay] = useState(
@@ -123,7 +126,7 @@ function RealmsPage() {
   // Procedural generation params (shown in the Create dialog when enabled).
   // `size` and `seed` are live; the rest are scaffolded for future generation
   // stages (factions, dangers, NPCs, POIs) and don't affect output yet.
-  const [genEnabled, setGenEnabled] = useState(false);
+  const [genEnabled, setGenEnabled] = useState(true);
   const [genSize, setGenSize] = useState<"small" | "medium" | "large">(
     "medium",
   );
@@ -144,14 +147,14 @@ function RealmsPage() {
   const resetCreateForm = () => {
     setShowCreate(false);
     setCreateName("");
-    setCreateSystem("");
+    setCreateSystem(DEFAULT_SYSTEM_ID);
     setCreateDesc("");
     setCalendarOpen(false);
     setCreateWatchesPerDay(DEFAULT_WATCHES_PER_DAY);
     setCreateDaysPerSeason(DEFAULT_DAYS_PER_SEASON);
     setCreateDaysPerWeek(7);
     setCreateFactionTurnTrigger("day");
-    setGenEnabled(false);
+    setGenEnabled(true);
     setGenSize("medium");
     setGenSeed("");
     setGenAdvancedOpen(false);
