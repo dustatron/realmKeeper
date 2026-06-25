@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
-import { useNPC } from '~/ui/hooks/useNPCs'
+import { useNPC, useNPCs } from '~/ui/hooks/useNPCs'
+import { useNpcConnections } from '~/ui/hooks/useConnections'
 import { useFactions } from '~/ui/hooks/useFactions'
 import { useRegion, useRegions } from '~/ui/hooks/useRegions'
 import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
@@ -56,6 +57,8 @@ function NPCDetailPage() {
   const factions = useFactions(activeRealmId)
   const regions = useRegions(activeRealmId)
   const pois = useRealmPOIs(activeRealmId)
+  const allNpcs = useNPCs(activeRealmId)
+  const connections = useNpcConnections(npc?.worldId ?? null, npcId)
   const container = useContainer()
 
   // Build POI breadcrumb: walk parentPoiId chain from npc's poi up to root
@@ -927,6 +930,48 @@ function NPCDetailPage() {
 
         {/* Factions */}
         <FactionBlurb factions={factions.filter((f) => npc.factionIds?.includes(f.id))} />
+
+        {/* Connections */}
+        {connections.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Handshake className="size-4" />
+                Connections ({connections.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {connections.map((c) => {
+                const outgoing = c.fromId === npcId
+                const otherId = outgoing ? c.toId : c.fromId
+                const other = allNpcs.find((n) => n.id === otherId)
+                // "serves" is the only directional edge; phrase the inbound side.
+                const verb = outgoing
+                  ? c.label
+                  : c.label === 'serves'
+                    ? 'is served by'
+                    : c.label
+                return (
+                  <div key={c.id} className="flex items-center gap-2 text-sm">
+                    <Badge variant="outline" className="capitalize">{c.kind}</Badge>
+                    <span className="text-muted-foreground">{verb}</span>
+                    {other ? (
+                      <Link
+                        to="/realms/npcs/$npcId"
+                        params={{ npcId: otherId }}
+                        className="font-medium hover:underline"
+                      >
+                        {other.name}
+                      </Link>
+                    ) : (
+                      <span className="font-medium text-muted-foreground">Unknown</span>
+                    )}
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Attacks */}
         {sb.attacks.length > 0 && (
