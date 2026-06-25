@@ -10,6 +10,7 @@ export interface Notice {
   type: NoticeType
   reward: string
   contactNpcId: string | null
+  hookId: string | null
   isUsed: boolean
   tags: string[]
   createdAt: number

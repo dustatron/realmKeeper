@@ -26,6 +26,7 @@ export async function executeCreateRumor(
     source: input.source ?? '',
     isUsed: false,
     isQuestHook: input.isQuestHook ?? false,
+    hookId: null,
     tags: input.tags ?? [],
     createdAt: now,
     updatedAt: now,
