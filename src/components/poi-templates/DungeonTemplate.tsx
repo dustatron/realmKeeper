@@ -833,7 +833,7 @@ export function DungeonTemplate({
           </TabsTrigger>
           <TabsTrigger value="denizens">
             <Users className="size-4" />
-            Details
+            Denizens{allNPCs.length > 0 ? ` (${allNPCs.length})` : ''}
           </TabsTrigger>
           <TabsTrigger value="encounters">
             <Dices className="size-4" />
@@ -1218,7 +1218,13 @@ export function DungeonTemplate({
                         const isDead = npc.lifeStatus !== 'alive'
                         return (
                           <tr key={npc.id} className={`border-t ${i % 2 === 0 ? '' : 'bg-muted/20'} ${isDead ? 'opacity-40' : ''}`}>
-                            <td className="px-2 py-1.5 text-muted-foreground truncate max-w-[100px]">{roomName}</td>
+                            <td className="px-2 py-1.5 truncate max-w-[100px]">
+                              {npc.poiId ? (
+                                <Link to="/realms/pois/$poiId" params={{ poiId: npc.poiId }} className="text-muted-foreground hover:underline">{roomName}</Link>
+                              ) : (
+                                <span className="text-muted-foreground">{roomName}</span>
+                              )}
+                            </td>
                             <td className="px-2 py-1.5">
                               <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="font-medium hover:underline text-foreground">
                                 {npc.name}
@@ -1291,7 +1297,11 @@ export function DungeonTemplate({
                             {roomName && (
                               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                 <MapPin className="size-3 shrink-0" />
-                                {roomName}
+                                {npc.poiId ? (
+                                  <Link to="/realms/pois/$poiId" params={{ poiId: npc.poiId }} className="hover:underline">{roomName}</Link>
+                                ) : (
+                                  roomName
+                                )}
                               </div>
                             )}
                             {wants.length > 0 && (
