@@ -45,6 +45,15 @@ describe('generateWorld', () => {
     }
   })
 
+  it('every POI gets a non-empty description', () => {
+    const { pois } = generateWorld(REALM, 'seed-a', { cols: 12, rows: 12 })
+    expect(pois.length).toBeGreaterThan(0)
+    for (const p of pois) {
+      expect(p.description.length).toBeGreaterThan(0)
+      expect(p.description).toContain(p.name)
+    }
+  })
+
   it('carves at least one lake', () => {
     const { gameMap } = generateWorld(REALM, 'seed-a', { cols: 12, rows: 12 })
     const lakeCells = gameMap.hexCells!.filter((c) => c.biome === 'lake')

@@ -10,6 +10,7 @@ import { pickName } from '~/domain/data/worldgen/names'
 import { POI_KIND_TABLE, poiKindToType, DUNGEON_THEMES } from '~/domain/data/worldgen/poiKinds'
 import { buildPOI } from './buildPoi'
 import { buildRegionFlavor } from './regionFlavor'
+import { describePoi } from './poiFlavor'
 import type { GameMap, HexCell } from '@domain/entities/GameMap'
 import type { Region } from '@domain/entities/Region'
 import type { POI } from '@domain/entities/POI'
@@ -199,6 +200,7 @@ export function generateWorld(
     const type = poiKindToType(kind)
     const nameKind = kind === 'landmark' ? 'landmark' : kind
     const name = pickName(nameKind, rng)
+    const description = describePoi(kind, name, cell.biome, rng)
     const dungeonSeedId = newId()
 
     const dungeonGenOptions =
@@ -220,6 +222,7 @@ export function generateWorld(
     return buildPOI({
       regionId: cell.regionId,
       name,
+      description,
       type,
       position: { x: cell.cx, y: cell.cy },
       mapRef: gameMap.id,
