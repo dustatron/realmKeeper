@@ -34,6 +34,17 @@ describe('generateWorld', () => {
     }
   })
 
+  it('every region gets structured flavor (description, resources, people, dangers)', () => {
+    const { regions } = generateWorld(REALM, 'seed-a', { cols: 12, rows: 12 })
+    for (const r of regions) {
+      expect(r.description.length).toBeGreaterThan(0)
+      expect(r.resources.length).toBeGreaterThanOrEqual(1)
+      expect(r.people.length).toBe(1)
+      expect(r.dangers.length).toBeGreaterThanOrEqual(1)
+      expect(r.features.length).toBeGreaterThanOrEqual(1)
+    }
+  })
+
   it('carves at least one lake', () => {
     const { gameMap } = generateWorld(REALM, 'seed-a', { cols: 12, rows: 12 })
     const lakeCells = gameMap.hexCells!.filter((c) => c.biome === 'lake')

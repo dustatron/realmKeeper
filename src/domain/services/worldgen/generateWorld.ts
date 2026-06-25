@@ -5,10 +5,11 @@ import {
   REGION_PALETTE,
   hexClusterOutline,
 } from '~/lib/hexmap/hexLayout'
-import { BIOMES, type Biome, pickBiomeFeature } from '~/domain/data/worldgen/biomes'
+import { BIOMES, type Biome } from '~/domain/data/worldgen/biomes'
 import { pickName } from '~/domain/data/worldgen/names'
 import { POI_KIND_TABLE, poiKindToType, DUNGEON_THEMES } from '~/domain/data/worldgen/poiKinds'
 import { buildPOI } from './buildPoi'
+import { buildRegionFlavor } from './regionFlavor'
 import type { GameMap, HexCell } from '@domain/entities/GameMap'
 import type { Region } from '@domain/entities/Region'
 import type { POI } from '@domain/entities/POI'
@@ -63,17 +64,19 @@ export function generateWorld(
   }
   const regions: Region[] = centers.map((center, idx) => {
     const id = newId()
+    const name = uniqueRegionName(center.biome)
+    const flavor = buildRegionFlavor(center.biome, rng)
     return {
       id,
       worldId: realmId,
-      name: uniqueRegionName(center.biome),
-      description: '',
+      name,
+      description: flavor.description,
       terrain: center.biome,
-      features: [pickBiomeFeature(center.biome, rng)],
-      dangers: [],
+      features: flavor.features,
+      dangers: flavor.dangers,
       settlements: [],
-      resources: [],
-      people: [],
+      resources: flavor.resources,
+      people: flavor.people,
       boundary: null, // set in step 4c from the region's hex cluster
       // Distinct per-region color (not the biome color) so adjacent regions of
       // the same biome still read as separate areas on the map.
