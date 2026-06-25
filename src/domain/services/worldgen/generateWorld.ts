@@ -11,6 +11,7 @@ import { POI_KIND_TABLE, poiKindToType, DUNGEON_THEMES } from '~/domain/data/wor
 import { buildPOI } from './buildPoi'
 import { buildPath } from './buildPath'
 import { buildFaction } from './buildFaction'
+import { buildFactionRelationships } from './buildFactionRelationships'
 import { buildRegionFlavor } from './regionFlavor'
 import { describePoi } from './poiFlavor'
 import type { GameMap, HexCell } from '@domain/entities/GameMap'
@@ -18,6 +19,7 @@ import type { Region } from '@domain/entities/Region'
 import type { POI } from '@domain/entities/POI'
 import type { Path } from '@domain/entities/Path'
 import type { Faction } from '@domain/entities/Faction'
+import type { FactionRelationship } from '@domain/entities/FactionRelationship'
 import { newId } from '@shared/ulid'
 
 export type PoiDensity = 'sparse' | 'normal' | 'dense'
@@ -40,7 +42,14 @@ export function generateWorld(
     poiDensity?: PoiDensity
     factionCount?: number
   }
-): { gameMap: GameMap; regions: Region[]; pois: POI[]; paths: Path[]; factions: Faction[] } {
+): {
+  gameMap: GameMap
+  regions: Region[]
+  pois: POI[]
+  paths: Path[]
+  factions: Faction[]
+  factionRelationships: FactionRelationship[]
+} {
   const { cols, rows, hexSize = 40, poiDensity = 'normal' } = opts
   const rng = new SeededRandom(seed)
 
@@ -388,5 +397,11 @@ export function generateWorld(
     ),
   )
 
-  return { gameMap, regions, pois, paths, factions }
+  // Step 9: seeded pairwise relationships among the generated factions.
+  const factionRelationships = buildFactionRelationships(
+    factions.map((f) => f.id),
+    rng,
+  )
+
+  return { gameMap, regions, pois, paths, factions, factionRelationships }
 }

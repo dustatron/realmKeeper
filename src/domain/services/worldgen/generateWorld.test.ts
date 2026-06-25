@@ -214,6 +214,19 @@ describe('generateWorld', () => {
     }
   })
 
+  it('generates pairwise relationships among the factions', () => {
+    const { factions, factionRelationships } = generateWorld(REALM, 'seed-a', { cols: 16, rows: 16, factionCount: 4 })
+    const ids = new Set(factions.map((f) => f.id))
+    // one directional row per ordered pair
+    expect(factionRelationships).toHaveLength(factions.length * (factions.length - 1))
+    for (const rel of factionRelationships) {
+      expect(ids.has(rel.factionId)).toBe(true)
+      expect(ids.has(rel.targetId)).toBe(true)
+      expect(rel.score).toBeGreaterThanOrEqual(-6)
+      expect(rel.score).toBeLessThanOrEqual(6)
+    }
+  })
+
   it('respects an explicit faction count (capped by settlements)', () => {
     const { factions } = generateWorld(REALM, 'seed-a', { cols: 16, rows: 16, factionCount: 3 })
     expect(factions.length).toBe(3)

@@ -7,7 +7,7 @@ const container = createContainer()
 
 beforeEach(async () => {
   await db.open()
-  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear()])
+  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.factionRelationships.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear()])
 })
 
 const deps = () => ({
@@ -67,6 +67,23 @@ describe('executeGenerateWorld', () => {
     for (const f of generated) {
       expect(settlementIds.has(f.headquartersPoiId!)).toBe(true)
       expect(f.name.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('persists pairwise relationships among generated factions', async () => {
+    const { realmId } = await executeGenerateWorld(
+      { name: 'Webs', systemId: 'system-cairn-2e', seed: 'seed-rel', size: 'medium', factionCount: 4 },
+      deps()
+    )
+    const factions = await db.factions.where('worldId').equals(realmId).toArray()
+    const generated = factions.filter((f) => !f.isParty)
+    const ids = new Set(generated.map((f) => f.id))
+    const rels = (await db.factionRelationships.toArray()).filter((r) => ids.has(r.factionId))
+    expect(rels.length).toBe(generated.length * (generated.length - 1))
+    for (const r of rels) {
+      expect(ids.has(r.targetId)).toBe(true)
+      expect(r.score).toBeGreaterThanOrEqual(-6)
+      expect(r.score).toBeLessThanOrEqual(6)
     }
   })
 
