@@ -993,7 +993,9 @@ function NPCDetailPage() {
                     <span className="text-sm font-medium">{h.title}</span>
                   </div>
                   {h.secret.detail && (
-                    <p className="text-sm text-muted-foreground">{h.secret.detail}</p>
+                    <p className="text-sm italic text-foreground/80 leading-relaxed border-l-2 border-muted pl-3">
+                      {h.secret.detail}
+                    </p>
                   )}
                   {h.secret.targetType === 'poi' && (() => {
                     const target = pois.find((p) => p.id === h.secret.targetId)

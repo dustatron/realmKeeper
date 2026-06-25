@@ -35,6 +35,13 @@ export function buildHooks(
   const poiName = new Map(pois.map((p) => [p.id, p.name]))
   const dungeons = pois.filter((p) => p.type === 'dungeon')
 
+  // Who was taken / who's owed — a personal stake to make hooks read like a plea
+  // rather than a clinical record.
+  const RELATIONS = [
+    'daughter', 'son', 'brother', 'sister', 'apprentice', 'dearest friend',
+    'young ward', 'old mentor', 'betrothed', 'only kin',
+  ]
+
   const hooks: Hook[] = []
   const notices: Notice[] = []
   const rumors: Rumor[] = []
@@ -73,20 +80,21 @@ export function buildHooks(
     const dungeon = rng.pick(dungeons)
     const dungeonName = poiName.get(dungeon.id) ?? 'a forgotten place'
     const contactName = nameOf.get(faction.leaderNpcId) ?? 'A leader'
+    const relation = rng.pick(RELATIONS)
     const hookId = newId()
     hooks.push({
       id: hookId,
       worldId,
       type: 'missing_person',
-      title: `${faction.name} seeks one taken to ${dungeonName}`,
+      title: `Bring my ${relation} home`,
       status: 'open',
       contactNpcId: faction.leaderNpcId,
-      rewardText: 'A purse of coin and the faction’s favor.',
+      rewardText: 'A purse of coin, and the favor of the faction.',
       secret: {
         kind: 'captive',
         targetType: 'poi',
         targetId: dungeon.id,
-        detail: `The missing are held within ${dungeonName}.`,
+        detail: `“They took my ${relation} into ${dungeonName}. I cannot follow where they’ve gone — but you can. Bring them back to me alive, and the ${faction.name} will stand in your debt.”`,
       },
       createdAt: now,
       updatedAt: now,
@@ -96,10 +104,10 @@ export function buildHooks(
       faction.headquartersPoiId,
       faction.regionId,
       'request',
-      `Wanted: a soul recovered from ${dungeonName}`,
-      `${contactName} of ${faction.name} will pay for the safe return of one taken to ${dungeonName}.`,
+      `A plea from ${contactName}`,
+      `${contactName} of the ${faction.name} begs for the safe return of their ${relation}, last seen dragged toward ${dungeonName}.`,
       faction.leaderNpcId,
-      'A purse of coin and the faction’s favor.',
+      'A purse of coin, and the favor of the faction.',
     )
     rumors.push({
       id: newId(),
@@ -138,15 +146,15 @@ export function buildHooks(
       id: hookId,
       worldId,
       type: 'revenge',
-      title: `${contactName} wants ${targetName} brought down`,
+      title: `Settle my score with ${targetName}`,
       status: 'open',
       contactNpcId: conn.fromId,
-      rewardText: 'Coin, and a powerful debt repaid.',
+      rewardText: 'Coin now, and a powerful debt owed.',
       secret: {
         kind: 'culprit',
         targetType: 'npc',
         targetId: conn.toId,
-        detail: `${targetName} is the mark.`,
+        detail: `“${targetName} has taken from me what cannot be returned. I want them ruined — quietly, and for good. Do this, and you’ll not find me ungrateful.”`,
       },
       createdAt: now,
       updatedAt: now,
@@ -156,10 +164,10 @@ export function buildHooks(
       hq?.poiId ?? null,
       hq?.regionId ?? null,
       'bounty',
-      `Bounty: move against ${targetName}`,
-      `${contactName} quietly seeks those willing to act against ${targetName}.`,
+      `${contactName} seeks a quiet hand`,
+      `Word is that ${contactName} will pay well for someone willing to move against ${targetName}.`,
       conn.fromId,
-      'Coin, and a powerful debt repaid.',
+      'Coin now, and a powerful debt owed.',
     )
   }
 
