@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import { markdownOptions } from "~/shared/markdown";
@@ -45,6 +45,8 @@ interface GenericTemplateProps {
   poi: POI;
   children: POI[];
   npcs: NPC[];
+  /** NPCs that live in this POI's child locations; rolled up into the denizen list. */
+  childNPCs: NPC[];
   factionPresences: FactionPresence[];
   paths: ResolvedPath[];
   poiEvents: POIEvent[];
@@ -82,6 +84,7 @@ export function GenericTemplate({
   poi,
   children: childPois,
   npcs,
+  childNPCs,
   factionPresences,
   paths,
   poiEvents,
@@ -106,6 +109,24 @@ export function GenericTemplate({
 }: GenericTemplateProps) {
   const activeEvents = poiEvents.filter((e) => e.isActive).length;
   const [linkNPCOpen, setLinkNPCOpen] = useState(false);
+
+  // Roll up NPCs from child locations (e.g. NPCs in a fort's buildings), labeled by location.
+  const childPoiNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const c of childPois) map[c.id] = c.name;
+    return map;
+  }, [childPois]);
+
+  const allNPCs = useMemo(
+    () => [
+      ...npcs.map((n) => ({ npc: n, poiName: undefined as string | undefined })),
+      ...childNPCs.map((n) => ({
+        npc: n,
+        poiName: n.poiId ? childPoiNames[n.poiId] : undefined,
+      })),
+    ],
+    [npcs, childNPCs, childPoiNames],
+  );
 
   return (
     <div className="space-y-4">
@@ -138,7 +159,7 @@ export function GenericTemplate({
         mood={poi.mood}
         trouble={poi.trouble}
         factionPresences={factionPresences}
-        npcCount={npcs.length}
+        npcCount={allNPCs.length}
         activeEvents={activeEvents}
         paths={paths}
         currentPoiId={poi.id}
@@ -162,7 +183,7 @@ export function GenericTemplate({
           </TabsTrigger>
           <TabsTrigger value="denizens">
             <Users className="size-4" />
-            Denizens ({npcs.length})
+            Denizens ({allNPCs.length})
           </TabsTrigger>
           <TabsTrigger value="encounters">
             <Dices className="size-4" />
@@ -293,7 +314,7 @@ export function GenericTemplate({
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-sm font-semibold flex items-center gap-2">
               <Users className="size-4" />
-              Denizens ({npcs.length})
+              Denizens ({allNPCs.length})
             </h4>
             <div className="flex items-center gap-1.5">
               <Button
@@ -310,10 +331,15 @@ export function GenericTemplate({
               </Button>
             </div>
           </div>
-          {npcs.length > 0 ? (
+          {allNPCs.length > 0 ? (
             <div className="space-y-2">
-              {npcs.map((npc) => (
-                <NPCMiniCard key={npc.id} npc={npc} onUpdateNPC={onUpdateNPC} />
+              {allNPCs.map(({ npc, poiName }) => (
+                <NPCMiniCard
+                  key={npc.id}
+                  npc={npc}
+                  poiName={poiName}
+                  onUpdateNPC={onUpdateNPC}
+                />
               ))}
             </div>
           ) : (
@@ -481,7 +507,7 @@ export function GenericTemplate({
         open={linkNPCOpen}
         onOpenChange={setLinkNPCOpen}
         allNPCs={allWorldNPCs}
-        excludeNpcIds={npcs.map((n) => n.id)}
+        excludeNpcIds={allNPCs.map(({ npc }) => npc.id)}
         onSelect={(npcId) => {
           onLinkNPC(npcId);
           setLinkNPCOpen(false);

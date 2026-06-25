@@ -7,25 +7,34 @@ interface Props {
 }
 
 // MFCG feature classification by property id or geometry patterns
-function classifyFeature(f: WatabouCityFeature): 'building' | 'wall' | 'road' | 'river' | 'water' | 'plaza' | 'tower' | 'farm' | 'unknown' {
+type FeatureKind =
+  | 'earth' | 'water' | 'farm' | 'plaza' | 'tree' | 'road' | 'river'
+  | 'wall' | 'building' | 'tower' | 'unknown'
+
+function classifyFeature(f: WatabouCityFeature): FeatureKind {
   const id = f.properties?.id ?? ''
   const idStr = typeof id === 'string' ? id : ''
+  if (idStr === 'earth') return 'earth'
   if (idStr.includes('wall') || idStr === 'walls') return 'wall'
   if (idStr.includes('tower')) return 'tower'
-  if (idStr.includes('road') || idStr.includes('street') || idStr === 'roads') return 'road'
+  if (idStr.includes('plank') || idStr.includes('road') || idStr.includes('street') || idStr === 'roads') return 'road'
   if (idStr.includes('river') || idStr === 'rivers') return 'river'
   if (idStr.includes('water') || idStr === 'sea' || idStr === 'ocean') return 'water'
-  if (idStr.includes('plaza') || idStr.includes('square') || idStr === 'greens') return 'plaza'
-  if (idStr.includes('building') || idStr === 'buildings') return 'building'
+  if (idStr.includes('tree') || idStr === 'trees') return 'tree'
+  if (idStr.includes('plaza') || idStr.includes('square') || idStr === 'squares' || idStr === 'greens') return 'plaza'
+  if (idStr.includes('building') || idStr === 'buildings' || idStr === 'prisms') return 'building'
   if (idStr.includes('farm') || idStr === 'fields') return 'farm'
-  // Heuristic: MultiPolygon → likely buildings, LineString → road/wall
+  // Heuristic fallback by geometry type.
   if (f.geometry.type === 'MultiPolygon') return 'building'
   if (f.geometry.type === 'LineString' || f.geometry.type === 'MultiLineString') return 'road'
+  if (f.geometry.type === 'MultiPoint' || f.geometry.type === 'Point') return 'tree'
   if (f.geometry.type === 'Polygon') return 'plaza'
   return 'unknown'
 }
 
 const COLORS: Record<string, { fill: string; stroke: string; strokeWidth: number; opacity?: number }> = {
+  earth: { fill: '#e8dcc0', stroke: '#d8c8a0', strokeWidth: 0.3 },
+  tree: { fill: '#7fa05a', stroke: 'none', strokeWidth: 1.4, opacity: 0.7 },
   building: { fill: '#b8a88a', stroke: '#6b5c3e', strokeWidth: 0.3 },
   wall: { fill: 'none', stroke: '#5a4a30', strokeWidth: 1.5 },
   tower: { fill: '#8a7a5a', stroke: '#5a4a30', strokeWidth: 0.5 },
@@ -79,7 +88,18 @@ function renderGeometry(geom: WatabouCityFeatureGeometry, style: typeof COLORS.b
     }
     case 'Point': {
       const [x, y] = geom.coordinates as number[]
-      return <circle key={key} cx={x} cy={y} r={strokeWidth * 2} fill={fill === 'none' ? stroke : fill} />
+      return <circle key={key} cx={x} cy={y} r={strokeWidth * 2} fill={fill === 'none' ? stroke : fill} opacity={opacity} />
+    }
+    case 'MultiPoint': {
+      const pts = geom.coordinates as number[][]
+      const r = Math.max(strokeWidth, 1)
+      return (
+        <g key={key}>
+          {pts.map(([x, y], i) => (
+            <circle key={`${key}-${i}`} cx={x} cy={y} r={r} fill={fill === 'none' ? stroke : fill} opacity={opacity} />
+          ))}
+        </g>
+      )
     }
     default:
       return null
@@ -199,8 +219,8 @@ export function WatabouCityRenderer({ data, className }: Props) {
     return () => el.removeEventListener('wheel', prevent)
   }, [])
 
-  // Sort features by render order: water, farm, plaza, road, river, wall, building, tower
-  const renderOrder = ['water', 'farm', 'plaza', 'road', 'river', 'wall', 'building', 'tower', 'unknown'] as const
+  // Sort features by render order (bottom → top).
+  const renderOrder = ['earth', 'water', 'farm', 'plaza', 'tree', 'road', 'river', 'wall', 'building', 'tower', 'unknown'] as const
   const classified = data.features
     .filter(f => f.geometry)
     .map(f => ({ feature: f, kind: classifyFeature(f) }))

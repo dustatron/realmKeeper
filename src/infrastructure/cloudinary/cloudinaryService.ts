@@ -1,3 +1,5 @@
+import { prepareImageForUpload } from '~/lib/image/prepareImageForUpload'
+
 const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined
 const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined
 
@@ -12,13 +14,32 @@ export function isCloudinaryConfigured(): boolean {
   return !!(cloudName && uploadPreset)
 }
 
+// Cloudinary's free tier rejects images over 10 MB with a 400. Guard client-side
+// so large Watabou exports (hi-res PNG / heavy SVG) fail with a clear, actionable message.
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+
+function mb(bytes: number): string {
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
 export async function uploadImage(file: File): Promise<CloudinaryResult> {
   if (!cloudName || !uploadPreset) {
     throw new Error('Cloudinary not configured')
   }
 
+  // Auto-downscale oversized exports (e.g. Watabou map PNGs) to fit Cloudinary's cap.
+  // Aim just under the limit so exact-byte accounting on Cloudinary's side still passes.
+  const prepared = await prepareImageForUpload(file, MAX_UPLOAD_BYTES - 512 * 1024)
+
+  if (prepared.size > MAX_UPLOAD_BYTES) {
+    throw new Error(
+      `Image is too large (${mb(prepared.size)}) and couldn't be shrunk below ${mb(MAX_UPLOAD_BYTES)}. ` +
+        `Try exporting it at a lower resolution.`
+    )
+  }
+
   const formData = new FormData()
-  formData.append('file', file)
+  formData.append('file', prepared)
   formData.append('upload_preset', uploadPreset)
 
   const res = await fetch(
@@ -27,7 +48,15 @@ export async function uploadImage(file: File): Promise<CloudinaryResult> {
   )
 
   if (!res.ok) {
-    throw new Error(`Cloudinary upload failed: ${res.status}`)
+    // Surface Cloudinary's actual error message instead of a bare status code.
+    let detail = ''
+    try {
+      const body = await res.json()
+      detail = body?.error?.message ? `: ${body.error.message}` : ''
+    } catch {
+      // non-JSON body — keep the status only
+    }
+    throw new Error(`Cloudinary upload failed (${res.status})${detail}`)
   }
 
   return res.json()

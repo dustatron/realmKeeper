@@ -3,6 +3,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '~/components/ui/tabs'
+import { ToggleGroup, ToggleGroupItem } from '~/components/ui/toggle-group'
 import {
   Dialog,
   DialogContent,
@@ -12,61 +13,8 @@ import {
 } from '~/components/ui/dialog'
 import { ImagePlus, Loader2, ExternalLink, FileJson, AlertCircle } from 'lucide-react'
 import { useImageUpload } from '~/ui/hooks/useImageUpload'
-import type { WatabouCityData } from '@domain/value-objects/WatabouCityData'
-import type { WatabouDungeonData } from '@domain/value-objects/WatabouDungeonData'
-
-type WatabouData = WatabouCityData | WatabouDungeonData
-
-function detectFormat(json: unknown): { data: WatabouData; seed: string | null } | { error: string } {
-  if (!json || typeof json !== 'object') return { error: 'Invalid JSON' }
-
-  const obj = json as Record<string, unknown>
-
-  // OPD format: has rects array
-  if (Array.isArray(obj.rects)) {
-    const data: WatabouDungeonData = {
-      type: 'opd',
-      rects: obj.rects as WatabouDungeonData['rects'],
-      doors: Array.isArray(obj.doors) ? obj.doors as WatabouDungeonData['doors'] : [],
-      columns: Array.isArray(obj.columns) ? obj.columns as WatabouDungeonData['columns'] : [],
-      water: Array.isArray(obj.water) ? obj.water : [],
-      notes: Array.isArray(obj.notes) ? obj.notes as WatabouDungeonData['notes'] : [],
-      version: typeof obj.version === 'number' ? obj.version : undefined,
-      seed: typeof obj.seed === 'string' ? obj.seed : undefined,
-    }
-    return { data, seed: data.seed ?? null }
-  }
-
-  // MFCG GeoJSON format: has features array with type=Feature entries
-  if (Array.isArray(obj.features) && obj.features.length > 0) {
-    const features = obj.features as Array<Record<string, unknown>>
-    const isGeoJSON = features.some(f => f.type === 'Feature' && f.geometry)
-    if (isGeoJSON) {
-      let metadata: WatabouCityData['metadata']
-      const first = features[0]?.properties as Record<string, unknown> | undefined
-      if (first) {
-        metadata = {
-          roadWidth: typeof first.roadWidth === 'number' ? first.roadWidth : undefined,
-          towerRadius: typeof first.towerRadius === 'number' ? first.towerRadius : undefined,
-          wallThickness: typeof first.wallThickness === 'number' ? first.wallThickness : undefined,
-          riverWidth: typeof first.riverWidth === 'number' ? first.riverWidth : undefined,
-          version: typeof first.version === 'number' ? first.version : undefined,
-        }
-      }
-      const seed = typeof (first?.seed) === 'string' ? first.seed as string
-        : typeof obj.seed === 'string' ? obj.seed as string
-        : null
-      const data: WatabouCityData = {
-        type: 'mfcg',
-        features: obj.features as WatabouCityData['features'],
-        metadata,
-      }
-      return { data, seed }
-    }
-  }
-
-  return { error: 'Unrecognized format. Expected MFCG GeoJSON or One Page Dungeon JSON.' }
-}
+import { detectWatabouFormat, type WatabouData } from '~/lib/watabou/parseWatabouExport'
+import type { MapGeneratorLink } from '~/lib/watabou/generators'
 
 function generateSeed() {
   return Math.floor(Math.random() * 1000000000).toString()
@@ -84,10 +32,15 @@ interface MapUploadDialogProps {
   onOpenChange: (open: boolean) => void
   onUpload: (data: { name: string; imageUrl: string; width: number; height: number }) => void
   defaultName?: string
-  generator?: 'mfcg' | 'opd' | null
+  /** Enables the Generate tab. The user picks City/Dungeon inside the tab. */
+  enableGenerate?: boolean
+  /** Pre-select City (mfcg) or Dungeon (opd) when the POI type implies one. Defaults to City. */
+  defaultGenerator?: 'mfcg' | 'opd'
   onWatabouImport?: (data: WatabouData, seed: string | null) => void
   existingWatabouData?: WatabouData | null
   existingSeed?: string | null
+  /** Shows "generate a map" helper links above the image picker (open a Watabou generator, export PNG, upload). */
+  imageGenerators?: MapGeneratorLink[]
 }
 
 export function MapUploadDialog({
@@ -95,10 +48,12 @@ export function MapUploadDialog({
   onOpenChange,
   onUpload,
   defaultName = '',
-  generator,
+  enableGenerate,
+  defaultGenerator,
   onWatabouImport,
   existingWatabouData,
   existingSeed,
+  imageGenerators,
 }: MapUploadDialogProps) {
   const [name, setName] = useState(defaultName)
   const [file, setFile] = useState<File | null>(null)
@@ -109,11 +64,12 @@ export function MapUploadDialog({
 
   // Generate tab state
   const [seed, setSeed] = useState(existingSeed ?? '')
+  const [genType, setGenType] = useState<'mfcg' | 'opd'>(defaultGenerator ?? 'mfcg')
   const [importError, setImportError] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const jsonFileRef = useRef<HTMLInputElement>(null)
 
-  const hasGenerateTab = !!generator && !!onWatabouImport
+  const hasGenerateTab = !!enableGenerate && !!onWatabouImport
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
@@ -163,22 +119,22 @@ export function MapUploadDialog({
 
   // Generate tab handlers
   const processJsonFile = useCallback((file: File) => {
-    if (!onWatabouImport || !generator) return
+    if (!onWatabouImport) return
     setImportError(null)
     const reader = new FileReader()
     reader.onload = () => {
       try {
         const json = JSON.parse(reader.result as string)
-        const result = detectFormat(json)
+        const result = detectWatabouFormat(json)
         if ('error' in result) {
           setImportError(result.error)
           return
         }
-        if (generator === 'mfcg' && result.data.type !== 'mfcg') {
+        if (genType === 'mfcg' && result.data.type !== 'mfcg') {
           setImportError('Expected city map (MFCG) but got dungeon data.')
           return
         }
-        if (generator === 'opd' && result.data.type !== 'opd') {
+        if (genType === 'opd' && result.data.type !== 'opd') {
           setImportError('Expected dungeon map (OPD) but got city data.')
           return
         }
@@ -189,7 +145,7 @@ export function MapUploadDialog({
       }
     }
     reader.readAsText(file)
-  }, [onWatabouImport, generator, onOpenChange])
+  }, [onWatabouImport, genType, onOpenChange])
 
   const handleJsonDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -206,13 +162,34 @@ export function MapUploadDialog({
   const handleOpenWatabou = () => {
     const s = seed || generateSeed()
     if (!seed) setSeed(s)
-    window.open(getGeneratorUrl(generator!, s), '_blank')
+    window.open(getGeneratorUrl(genType, s), '_blank')
   }
 
-  const generatorLabel = generator === 'mfcg' ? 'City' : 'Dungeon'
+  const generatorLabel = genType === 'mfcg' ? 'City' : 'Dungeon'
 
   const uploadContent = (
     <div className="space-y-4">
+      {imageGenerators && imageGenerators.length > 0 && (
+        <div className="rounded-md border bg-muted/40 p-3 space-y-2">
+          <p className="text-sm font-medium">Need a map?</p>
+          <p className="text-xs text-muted-foreground">
+            Generate one in a Watabou generator, export it as a PNG, then upload it below.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {imageGenerators.map((g) => (
+              <Button
+                key={g.url}
+                size="sm"
+                variant="outline"
+                onClick={() => window.open(g.url, '_blank', 'noopener,noreferrer')}
+              >
+                <ExternalLink className="mr-1.5 size-3.5" />
+                {g.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
       <div>
         <Label htmlFor="map-name">Map Name *</Label>
         <Input
@@ -275,6 +252,18 @@ export function MapUploadDialog({
 
   const generateContent = hasGenerateTab ? (
     <div className="space-y-4">
+      <div>
+        <Label>Map Type</Label>
+        <ToggleGroup
+          type="single"
+          value={genType}
+          onValueChange={(v) => { if (v) { setGenType(v as 'mfcg' | 'opd'); setImportError(null) } }}
+          className="mt-1 w-full"
+        >
+          <ToggleGroupItem value="mfcg" className="flex-1">City</ToggleGroupItem>
+          <ToggleGroupItem value="opd" className="flex-1">Dungeon</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
       <div>
         <Label htmlFor="watabou-seed">Seed (optional)</Label>
         <Input

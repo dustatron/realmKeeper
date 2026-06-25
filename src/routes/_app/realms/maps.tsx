@@ -9,6 +9,7 @@ import { executeDeleteGameMap } from '@application/use-cases/DeleteGameMap'
 import { EmptyState } from '~/components/shared/EmptyState'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { MapUploadDialog } from '~/components/map/MapUploadDialog'
+import { IMAGE_MAP_GENERATORS } from '~/lib/watabou/generators'
 import { MultiMapViewer } from '~/components/map/MultiMapViewer'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '~/components/ui/tabs'
 import { Card, CardContent } from '~/components/ui/card'
@@ -176,6 +177,7 @@ function MapsPage() {
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
         onUpload={handleUpload}
+        imageGenerators={IMAGE_MAP_GENERATORS}
       />
 
       <ConfirmDialog
