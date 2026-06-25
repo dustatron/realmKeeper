@@ -58,6 +58,8 @@ import { useContainer } from "~/ui/hooks/useContainer";
 import { useUIStore } from "~/ui/stores/uiStore";
 import { executeCreateRealm } from "@application/use-cases/CreateRealm";
 import { executeDeleteRealm } from "@application/use-cases/DeleteRealm";
+import { executeGenerateWorld } from "@application/use-cases/GenerateWorld";
+import { newId } from "@shared/ulid";
 import { executeExportRealm } from "@application/use-cases/ExportRealm";
 import { executeImportRealm } from "@application/use-cases/ImportRealm";
 import { Dashboard } from "~/components/realm/Dashboard";
@@ -114,6 +116,26 @@ function RealmsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerateWorld = async () => {
+    setIsGenerating(true);
+    try {
+      const seed = newId();
+      const { realmId, mapId } = await executeGenerateWorld(
+        { name: "Generated World", systemId: "system-cairn-2e", seed },
+        {
+          realmRepo: container.realmRepo,
+          factionRepo: container.factionRepo,
+          realmNoteRepo: container.realmNoteRepo,
+        },
+      );
+      setActiveRealmId(realmId);
+      navigate({ to: "/realms/maps/$mapId", params: { mapId } });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleCreateRealm = async () => {
     if (!createName.trim() || !createSystem) return;
@@ -409,6 +431,13 @@ function RealmsPage() {
                 <Plus className="mr-2 size-4" />
                 New Realm
               </Button>
+              <Button
+                onClick={handleGenerateWorld}
+                disabled={isGenerating}
+                variant="secondary"
+              >
+                {isGenerating ? "Generating…" : "Generate Test World"}
+              </Button>
               <label htmlFor="import-realm">
                 <Button variant="outline" asChild>
                   <span>
@@ -509,6 +538,13 @@ function RealmsPage() {
             <Button onClick={() => setShowCreate(true)}>
               <Plus className="mr-2 size-4" />
               New Realm
+            </Button>
+            <Button
+              onClick={handleGenerateWorld}
+              disabled={isGenerating}
+              variant="secondary"
+            >
+              {isGenerating ? "Generating…" : "Generate Test World"}
             </Button>
             <label htmlFor="import-realm-header">
               <Button variant="outline" asChild>
