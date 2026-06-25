@@ -5,6 +5,23 @@ import { DUNGEON_THEMES } from '~/domain/data/worldgen/poiKinds'
 const REALM = 'realm-1'
 
 describe('generateWorld', () => {
+  it('every region has an outline boundary and a distinct color', () => {
+    const { regions } = generateWorld(REALM, 'seed-a', { cols: 12, rows: 12 })
+    for (const r of regions) {
+      expect(r.boundary).not.toBeNull()
+      expect(r.boundary!.length).toBeGreaterThanOrEqual(3)
+    }
+    const colors = regions.map((r) => r.color)
+    // colors come from a cycling palette — neighbors differ
+    expect(new Set(colors).size).toBeGreaterThan(1)
+  })
+
+  it('carves at least one lake', () => {
+    const { gameMap } = generateWorld(REALM, 'seed-a', { cols: 12, rows: 12 })
+    const lakeCells = gameMap.hexCells!.filter((c) => c.biome === 'lake')
+    expect(lakeCells.length).toBeGreaterThan(0)
+  })
+
   it('every dungeon stub uses a valid DungeonTheme', () => {
     const { pois } = generateWorld(REALM, 'themes', { cols: 12, rows: 12, poiDensity: 'dense' })
     const dungeons = pois.filter((p) => p.type === 'dungeon')

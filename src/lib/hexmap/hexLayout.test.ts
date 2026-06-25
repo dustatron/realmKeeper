@@ -1,6 +1,38 @@
 import { describe, it, expect } from 'vitest'
-import { layoutHexGrid, BIOME_COLORS } from './hexLayout'
+import { layoutHexGrid, BIOME_COLORS, REGION_PALETTE, hexClusterOutline } from './hexLayout'
 import { BIOMES } from '~/domain/data/worldgen/biomes'
+
+describe('hexClusterOutline', () => {
+  it('a single hex outlines to its 6 corners', () => {
+    const { cells } = layoutHexGrid(3, 3, 40)
+    const ring = hexClusterOutline([cells[0]])
+    expect(ring).toHaveLength(6)
+  })
+
+  it('two adjacent hexes share an edge (outline has fewer than 12 vertices)', () => {
+    const { cells } = layoutHexGrid(3, 3, 40)
+    // cells[0] and its right neighbor in the same row are adjacent
+    const a = cells[0]
+    const b = cells.find((c) => c.r === a.r && c.q === a.q + 1)!
+    const ring = hexClusterOutline([a, b])
+    expect(ring.length).toBeGreaterThanOrEqual(6)
+    expect(ring.length).toBeLessThan(12) // shared edge removed
+  })
+
+  it('a full grid cluster outlines to a closed ring', () => {
+    const { cells } = layoutHexGrid(4, 4, 40)
+    const ring = hexClusterOutline(cells)
+    expect(ring.length).toBeGreaterThanOrEqual(3)
+  })
+})
+
+describe('REGION_PALETTE', () => {
+  it('has several distinct hex colors', () => {
+    expect(REGION_PALETTE.length).toBeGreaterThanOrEqual(8)
+    for (const c of REGION_PALETTE) expect(c).toMatch(/^#[0-9a-fA-F]{6}$/)
+    expect(new Set(REGION_PALETTE).size).toBe(REGION_PALETTE.length)
+  })
+})
 
 describe('layoutHexGrid', () => {
   it('produces cols*rows cells', () => {

@@ -1,6 +1,10 @@
 import { SeededRandom } from '~/lib/dungeon/SeededRandom'
-import { hexDistance } from '~/lib/hexmap/hex'
-import { layoutHexGrid, BIOME_COLORS } from '~/lib/hexmap/hexLayout'
+import { hexDistance, hexNeighbors } from '~/lib/hexmap/hex'
+import {
+  layoutHexGrid,
+  REGION_PALETTE,
+  hexClusterOutline,
+} from '~/lib/hexmap/hexLayout'
 import { BIOMES, type Biome, pickBiomeFeature } from '~/domain/data/worldgen/biomes'
 import { pickName } from '~/domain/data/worldgen/names'
 import { POI_KIND_TABLE, poiKindToType, DUNGEON_THEMES } from '~/domain/data/worldgen/poiKinds'
@@ -40,7 +44,7 @@ export function generateWorld(
 
   // Step 3: one Region per center
   const now = Date.now()
-  const regions: Region[] = centers.map((center) => {
+  const regions: Region[] = centers.map((center, idx) => {
     const id = newId()
     return {
       id,
@@ -53,8 +57,10 @@ export function generateWorld(
       settlements: [],
       resources: [],
       people: [],
-      boundary: null,
-      color: BIOME_COLORS[center.biome],
+      boundary: null, // set in step 4c from the region's hex cluster
+      // Distinct per-region color (not the biome color) so adjacent regions of
+      // the same biome still read as separate areas on the map.
+      color: REGION_PALETTE[idx % REGION_PALETTE.length],
       imageUrl: null,
       createdAt: now,
       updatedAt: now,
@@ -92,6 +98,49 @@ export function generateWorld(
       corners: cell.corners,
     }
   })
+
+  // Step 4b: carve lakes. Most maps get at least one small lake (a seed cell
+  // grown outward to a few adjacent cells). Lakes overwrite the cell's biome to
+  // 'lake' (rendered blue); POIs avoid them in step 6.
+  const cellByCoord = new Map<string, CellMeta>()
+  for (const cm of cellMetas) cellByCoord.set(`${cm.q},${cm.r}`, cm)
+
+  const lakeCount = Math.max(1, Math.round(cellMetas.length / 110))
+  for (let l = 0; l < lakeCount; l++) {
+    const start = cellMetas[rng.between(0, cellMetas.length - 1)]
+    const targetSize = rng.between(2, 5)
+    const inLake = new Set<string>([`${start.q},${start.r}`])
+    start.biome = 'lake'
+    const frontier: CellMeta[] = [start]
+    while (inLake.size < targetSize && frontier.length > 0) {
+      const c = frontier[rng.between(0, frontier.length - 1)]
+      const open = hexNeighbors({ q: c.q, r: c.r })
+        .map((n) => cellByCoord.get(`${n.q},${n.r}`))
+        .filter((n): n is CellMeta => !!n && !inLake.has(`${n.q},${n.r}`))
+      if (open.length === 0) {
+        frontier.splice(frontier.indexOf(c), 1)
+        continue
+      }
+      const next = open[rng.between(0, open.length - 1)]
+      next.biome = 'lake'
+      inLake.add(`${next.q},${next.r}`)
+      frontier.push(next)
+    }
+  }
+
+  // Step 4c: each region's boundary = the outline of its hex cluster, so the map
+  // can draw a labeled border around it.
+  const cellsByRegion = new Map<string, CellMeta[]>()
+  for (const cm of cellMetas) {
+    const arr = cellsByRegion.get(cm.regionId)
+    if (arr) arr.push(cm)
+    else cellsByRegion.set(cm.regionId, [cm])
+  }
+  for (const region of regions) {
+    const rcells = cellsByRegion.get(region.id) ?? []
+    const ring = rcells.length > 0 ? hexClusterOutline(rcells) : []
+    region.boundary = ring.length >= 3 ? ring : null
+  }
 
   // Step 5: build GameMap
   const hexCells: HexCell[] = cellMetas.map((cm) => ({
