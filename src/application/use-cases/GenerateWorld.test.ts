@@ -7,7 +7,7 @@ const container = createContainer()
 
 beforeEach(async () => {
   await db.open()
-  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear()])
+  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.regions.clear(), db.pois.clear()])
 })
 
 const deps = () => ({
@@ -38,6 +38,19 @@ describe('executeGenerateWorld', () => {
     expect((await db.gameMaps.get(small.mapId))?.hexCells?.length).toBe(64)
     expect((await db.gameMaps.get(medium.mapId))?.hexCells?.length).toBe(144)
     expect((await db.gameMaps.get(large.mapId))?.hexCells?.length).toBe(256)
+  })
+
+  it('persists regions and POIs linked to the realm and map', async () => {
+    const { realmId, mapId } = await executeGenerateWorld(
+      { name: 'World', systemId: 'system-cairn-2e', seed: 'seed-1', size: 'small', poiDensity: 'normal' },
+      deps()
+    )
+    const regions = await db.regions.where('worldId').equals(realmId).toArray()
+    const pois = await db.pois.where('mapRef').equals(mapId).toArray()
+    expect(regions.length).toBeGreaterThan(0)
+    expect(pois.length).toBeGreaterThan(0)
+    const regionIds = new Set(regions.map((r) => r.id))
+    for (const p of pois) expect(regionIds.has(p.regionId)).toBe(true)
   })
 
   it('is deterministic: same seed + size → same biome layout', async () => {

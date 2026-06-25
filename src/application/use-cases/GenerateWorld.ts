@@ -1,6 +1,7 @@
 import { db } from '@infrastructure/dexie/db'
 import { executeCreateRealm } from '@application/use-cases/CreateRealm'
-import { buildTinyHexMap } from '@domain/services/worldgen/generateTinyWorld'
+import { generateWorld } from '@domain/services/worldgen/generateWorld'
+import type { PoiDensity } from '@domain/services/worldgen/generateWorld'
 import type { IRealmRepository } from '@application/ports/IRealmRepository'
 import type { IFactionRepository } from '@application/ports/IFactionRepository'
 import type { IRealmNoteRepository } from '@application/ports/IRealmNoteRepository'
@@ -32,6 +33,7 @@ export interface GenerateWorldInput {
   daysPerSeason?: number
   daysPerWeek?: number
   factionTurnTrigger?: 'day' | 'week' | 'manual'
+  poiDensity?: PoiDensity
 }
 
 export async function executeGenerateWorld(
@@ -47,7 +49,7 @@ export async function executeGenerateWorld(
   // async context) and the hex map all commit together or roll back together —
   // no orphaned realm if a later write fails. Tables listed = every table the
   // enclosed writes touch.
-  await db.transaction('rw', db.worlds, db.factions, db.realmNotes, db.gameMaps, async () => {
+  await db.transaction('rw', [db.worlds, db.factions, db.realmNotes, db.gameMaps, db.regions, db.pois], async () => {
     const realm = await executeCreateRealm(
       {
         name: input.name,
@@ -60,8 +62,14 @@ export async function executeGenerateWorld(
       },
       deps
     )
-    const gameMap = buildTinyHexMap(realm.id, input.seed, preset)
+    const { gameMap, regions, pois } = generateWorld(realm.id, input.seed, {
+      cols: preset.cols,
+      rows: preset.rows,
+      poiDensity: input.poiDensity ?? 'normal',
+    })
     await db.gameMaps.put(gameMap)
+    await db.regions.bulkPut(regions)
+    await db.pois.bulkPut(pois)
     realmId = realm.id
     mapId = gameMap.id
   })
