@@ -192,7 +192,7 @@ seed → RNG
                     contiguous biome clusters; scatter occasional lake/water hexes
   3. Regions      one Region per biome cluster; boundary = cluster outline;
                     fill flavor from biome tables (forest/mountain/grassland/
-                    desert/marsh)
+                    desert/marsh/frozen/blighted/hills/jungle)
   4. POIs         per-hex allocation by biome + density + danger:
                     settlements, dungeons (lazy DungeonGenerator), ruins, shrines,
                     camps, landmark features; position = hex center; cap to knobs
@@ -312,11 +312,13 @@ byte-identical world.
   party faction.
 - **Hex grid size per preset (no clean hexroll value to copy):** proposed defaults,
   tunable — **Small ≈ 8×8, Medium ≈ 12×12, Large ≈ 16×16** hexes.
-- **Biomes for v1:** **forest, mountains, grasslands, desert, marsh/swamp** as land
-  biomes; **occasional lake (water) hexes**; **no ocean**. **Rivers** rendered as a
-  polyline overlay — deferred to a visual fast-follow (not blocking v1). **No Cairn
-  map tables exist in-repo**; author biome tables ourselves, optionally referencing
-  the Cairn 2e SRD (CC-BY).
+- **Biomes for v1 (9 land + water):** **forest, mountains, grasslands, desert,
+  marsh/swamp, frozen (tundra/glacier), blighted (death lands/cursed wastes),
+  hills, jungle**; **occasional lake (water) hexes**; **no ocean**. Blighted is a
+  high-danger biome tied to the danger knob + looming-threat event. **Rivers**
+  rendered as a polyline overlay — deferred to a visual fast-follow (not blocking
+  v1). **No Cairn map tables exist in-repo**; author biome tables ourselves,
+  optionally referencing the Cairn 2e SRD (CC-BY).
 
 ## Open questions
 
