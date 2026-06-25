@@ -54,6 +54,19 @@ describe('buildDoom', () => {
     expect(notices.some((n) => n.hookId === doomHook.id)).toBe(true)
   })
 
+  it('schedules the doom as a future POI event at the doom faction seat', () => {
+    const { event, poiEvents } = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'))
+    expect(poiEvents).toHaveLength(1)
+    const pe = poiEvents[0]
+    expect(['hqA', 'hqB']).toContain(pe.poiId)
+    expect(pe.tags).toContain('doom')
+    expect(pe.isActive).toBe(false)
+    // its trigger matches the doom's date
+    expect(pe.trigger.year).toBe(event.year)
+    expect(pe.trigger.season).toBe(event.season)
+    expect(pe.trigger.day).toBe(event.day)
+  })
+
   it('is deterministic for a given seed', () => {
     const a = buildDoom(factions, pois, clock, 'w1', new SeededRandom('z'))
     const b = buildDoom(factions, pois, clock, 'w1', new SeededRandom('z'))

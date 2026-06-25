@@ -31,6 +31,7 @@ import type { Hook } from '@domain/entities/Hook'
 import type { Notice } from '@domain/entities/Notice'
 import type { Rumor } from '@domain/entities/Rumor'
 import type { WorldEvent } from '@domain/entities/WorldEvent'
+import type { POIEvent } from '@domain/entities/POIEvent'
 import type { SystemConfig } from '@domain/entities/SystemConfig'
 import { newId } from '@shared/ulid'
 
@@ -70,6 +71,7 @@ export function generateWorld(
   notices: Notice[]
   rumors: Rumor[]
   worldEvents: WorldEvent[]
+  poiEvents: POIEvent[]
 } {
   const { cols, rows, hexSize = 40, poiDensity = 'normal' } = opts
   const rng = new SeededRandom(seed)
@@ -516,9 +518,11 @@ export function generateWorld(
   // WorldEvent, foreshadowed by rumors and opposed by a quest to avert it. Its
   // hook/notice/rumors join the world's quest projections.
   const worldEvents: WorldEvent[] = []
+  const poiEvents: POIEvent[] = []
   if (opts.loomingThreat && opts.systemConfig && opts.clock && factions.length > 0) {
     const doom = buildDoom(factions, pois, opts.clock, realmId, rng)
     worldEvents.push(doom.event)
+    poiEvents.push(...doom.poiEvents)
     hooks.push(...doom.hooks)
     notices.push(...doom.notices)
     rumors.push(...doom.rumors)
@@ -537,5 +541,6 @@ export function generateWorld(
     notices,
     rumors,
     worldEvents,
+    poiEvents,
   }
 }

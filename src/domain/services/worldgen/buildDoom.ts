@@ -2,6 +2,7 @@ import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import type { Faction } from '@domain/entities/Faction'
 import type { POI } from '@domain/entities/POI'
 import type { WorldEvent } from '@domain/entities/WorldEvent'
+import type { POIEvent } from '@domain/entities/POIEvent'
 import type { Hook } from '@domain/entities/Hook'
 import type { Notice } from '@domain/entities/Notice'
 import type { Rumor } from '@domain/entities/Rumor'
@@ -18,6 +19,7 @@ export interface DoomClock {
 
 export interface DoomBundle {
   event: WorldEvent
+  poiEvents: POIEvent[]
   rumors: Rumor[]
   notices: Notice[]
   hooks: Hook[]
@@ -96,6 +98,30 @@ export function buildDoom(
     createdAt: now,
   }
 
+  // The doom also lands on the calendar as a scheduled POI event at the doom
+  // faction's seat of power, so it shows under Scheduled Events as "upcoming".
+  const doomPoiId = doomFaction.headquartersPoiId ?? pois[0]?.id ?? ''
+  const poiEvents: POIEvent[] = doomPoiId
+    ? [
+        {
+          id: newId(),
+          poiId: doomPoiId,
+          worldId,
+          name: event.title,
+          description: event.description,
+          type: 'disaster',
+          trigger: { year: date.year, season: date.season, day: date.day, watch: date.watch },
+          recurring: false,
+          durationWatches: 1,
+          isActive: false,
+          effects: '',
+          tags: ['doom'],
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]
+    : []
+
   // Avert quest: an opposing leader (or the doom faction's own leader as a last
   // resort) wants the doom stopped; the secret points at the doom faction's HQ.
   const leaderToFaction = new Map(factions.filter((f) => f.leaderNpcId).map((f) => [f.leaderNpcId!, f]))
@@ -164,5 +190,5 @@ export function buildDoom(
     updatedAt: now,
   }))
 
-  return { event, rumors, notices, hooks }
+  return { event, poiEvents, rumors, notices, hooks }
 }
