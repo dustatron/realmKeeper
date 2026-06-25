@@ -1,5 +1,6 @@
 import { createWeightedTable, type WeightedTable } from '~/lib/dungeon/SeededRandom'
 import type { PoiType } from '@shared/constants'
+import type { DungeonTheme } from '~/lib/dungeon/types'
 
 export type PoiKind = 'settlement' | 'dungeon' | 'ruin' | 'landmark'
 
@@ -23,4 +24,13 @@ export function poiKindToType(kind: PoiKind): PoiType {
   }
 }
 
-export const DUNGEON_THEMES = ['crypt', 'cave', 'temple', 'ruin', 'mine', 'lair']
+// Typed as DungeonTheme[] so the compiler rejects any value not in the union
+// (e.g. 'ruin' is a POI kind but NOT a valid dungeon theme).
+export const DUNGEON_THEMES: DungeonTheme[] = [
+  'crypt',
+  'cave',
+  'temple',
+  'tomb',
+  'mine',
+  'lair',
+]

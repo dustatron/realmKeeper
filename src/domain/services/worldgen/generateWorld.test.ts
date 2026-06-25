@@ -1,9 +1,19 @@
 import { describe, it, expect } from 'vitest'
 import { generateWorld } from './generateWorld'
+import { DUNGEON_THEMES } from '~/domain/data/worldgen/poiKinds'
 
 const REALM = 'realm-1'
 
 describe('generateWorld', () => {
+  it('every dungeon stub uses a valid DungeonTheme', () => {
+    const { pois } = generateWorld(REALM, 'themes', { cols: 12, rows: 12, poiDensity: 'dense' })
+    const dungeons = pois.filter((p) => p.type === 'dungeon')
+    expect(dungeons.length).toBeGreaterThan(0)
+    for (const d of dungeons) {
+      expect(DUNGEON_THEMES).toContain(d.dungeonGenOptions!.theme)
+    }
+  })
+
   it('produces a hex map, regions, and POIs', () => {
     const { gameMap, regions, pois } = generateWorld(REALM, 'seed-a', { cols: 8, rows: 8 })
     expect(gameMap.kind).toBe('hex')

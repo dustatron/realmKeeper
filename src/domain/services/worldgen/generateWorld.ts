@@ -1,5 +1,4 @@
 import { SeededRandom } from '~/lib/dungeon/SeededRandom'
-import type { DungeonTheme } from '~/lib/dungeon/types'
 import { hexDistance } from '~/lib/hexmap/hex'
 import { layoutHexGrid, BIOME_COLORS } from '~/lib/hexmap/hexLayout'
 import { BIOMES, type Biome, pickBiomeFeature } from '~/domain/data/worldgen/biomes'
@@ -137,7 +136,7 @@ export function generateWorld(
       type === 'dungeon'
         ? {
             seed: `${seed}-${id}`,
-            theme: rng.pick(DUNGEON_THEMES) as DungeonTheme,
+            theme: rng.pick(DUNGEON_THEMES),
             size: 'medium' as const,
             treasureLevel: 'standard' as const,
             dangerLevel: 'medium' as const,
