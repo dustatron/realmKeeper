@@ -188,12 +188,16 @@ three templates so generated hooks surface at their target locations.
 seed → RNG
   1. Realm        create world record (clock defaults, chosen SystemConfig,
                     realm archetype + ruler)
-  2. Hex grid     size grid; seed biome centers; grow contiguous biome clusters
+  2. Hex grid     size grid (S 8x8 / M 12x12 / L 16x16); seed biome centers; grow
+                    contiguous biome clusters; scatter occasional lake/water hexes
   3. Regions      one Region per biome cluster; boundary = cluster outline;
-                    fill flavor from biome tables
+                    fill flavor from biome tables (forest/mountain/grassland/
+                    desert/marsh)
   4. POIs         per-hex allocation by biome + density + danger:
                     settlements, dungeons (lazy DungeonGenerator), ruins, shrines,
                     camps, landmark features; position = hex center; cap to knobs
+  4b. Paths       connect each settlement to nearest 1-2 settlements; travel time
+                    from hex distance → Path records
   5. Factions     N from knob; archetype each (cult/militia/syndicate/…);
                     agendaGoal (goal) + obstacle (blocker) + advantage (plan);
                     assign HQ poi + region
@@ -295,17 +299,26 @@ byte-identical world.
 - **System pick (was Q5):** Dropdown in the generation menu, pre-selected from the
   active realm's system, else Cairn.
 
+- **Towns/population (Q2):** folded into the **POI density** knob — no separate
+  population dial. Town count = density × biome weighting.
+- **Paths/travel (Q3):** **generate `Path` records.** After POIs are placed, build
+  a simple settlement network — connect each settlement to its nearest 1–2
+  settlement neighbors; travel time derived from hex distance. (Hex adjacency still
+  gives implicit distance; Paths make routes explicit and feed the dashboard.)
+- **NPC count (Q4):** **settlements × NPC-density**, plus faction members
+  (leaders/agents) and a small number of region-roaming NPCs. No absolute target.
+  (hexroll allocates "folk" per settlement type; we follow the same shape.)
+- **Party faction in conflicts (Q6):** **yes** — generated conflicts may target the
+  party faction.
+- **Hex grid size per preset (no clean hexroll value to copy):** proposed defaults,
+  tunable — **Small ≈ 8×8, Medium ≈ 12×12, Large ≈ 16×16** hexes.
+- **Biomes for v1:** **forest, mountains, grasslands, desert, marsh/swamp** as land
+  biomes; **occasional lake (water) hexes**; **no ocean**. **Rivers** rendered as a
+  polyline overlay — deferred to a visual fast-follow (not blocking v1). **No Cairn
+  map tables exist in-repo**; author biome tables ourselves, optionally referencing
+  the Cairn 2e SRD (CC-BY).
+
 ## Open questions
 
-1. **Towns/population knob (Q2):** fold into POI density (count of `settlement`
-   POIs per biome), or expose a separate towns/population dial?
-2. **Paths/travel (Q3):** hex adjacency gives implicit travel. Auto-generate
-   explicit `Path` records between settlements in v1, or rely on hex distance and
-   defer Paths?
-3. **NPC count (Q4):** derive from settlement count × NPC-density, or an absolute
-   target number?
-4. **Party faction in conflicts (Q6):** may generated conflicts reference the party
-   faction, or strictly NPC/non-party factions in v1?
-5. **Hex grid size per preset:** rough cols×rows for Small/Med/Large?
-6. **Biome set for v1:** which of forest/desert/plains/jungle/tundra/swamp/mountain
-   /coast to ship, and do we need water/ocean hexes for coastlines?
+_None blocking. Remaining tuning (exact density curves, biome weights, travel-time
+scale) is settled during implementation._
