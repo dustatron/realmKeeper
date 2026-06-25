@@ -717,11 +717,13 @@ export function MapViewer({
       })
     }
 
-    return () => {
-      if (instance.getLayer(lineId)) instance.removeLayer(lineId)
-      if (instance.getLayer(layerId)) instance.removeLayer(layerId)
-      if (instance.getSource(sourceId)) instance.removeSource(sourceId)
-    }
+    // No teardown cleanup — matches the region/path effects in this file. The
+    // init effect's `mapInstance.remove()` destroys all sources/layers on unmount
+    // or map switch. A cleanup here would call `instance.getLayer(...)` on an
+    // already-removed map (whose internal `.style` is undefined), throwing
+    // "Cannot read properties of undefined (reading 'getLayer')" when navigating
+    // away. Re-runs while the same map persists are handled idempotently by the
+    // getSource→setData branch above.
   }, [map.kind, map.hexCells, mapReady, pxToLngLat])
 
   // Render draw-region preview polygon
