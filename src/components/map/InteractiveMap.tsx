@@ -105,11 +105,15 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
   const navigate = useNavigate()
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const container = useContainer()
+  // Load realm-scoped data by the MAP's own realm, not the global active realm —
+  // otherwise regions/POIs vanish whenever you view a map whose realm isn't the
+  // active one (e.g. right after generating, or navigating in from elsewhere).
+  const mapRealmId = gameMap.ownerRealmId ?? activeRealmId
   const poisOnMap = usePOIsOnMap(gameMap.id)
   const pathsOnMap = usePathsOnMap(gameMap.id)
-  const allPois = useRealmPOIs(activeRealmId)
+  const allPois = useRealmPOIs(mapRealmId)
   const isRealmMap = !gameMap.ownerPoiId
-  const regions = useRegions(activeRealmId)
+  const regions = useRegions(mapRealmId)
 
   const mapHandleRef = useRef<MapViewerHandle | null>(null)
   const showLabels = useUIStore((s) => s.mapShowLabels)
