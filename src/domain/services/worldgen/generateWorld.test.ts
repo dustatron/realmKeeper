@@ -80,10 +80,12 @@ describe('generateWorld', () => {
     expect(pois.length).toBeGreaterThan(0)
     for (const p of pois) {
       expect(p.description.length).toBeGreaterThan(0)
-      // Non-settlement descriptions name the POI; settlements carry the name in
-      // their read-aloud instead (description is a clean "A village in the …").
-      const named = p.type === 'settlement' ? p.readAloud : p.description
-      expect(named).toContain(p.name)
+      // Templates display readAloud, so every POI needs non-empty readAloud to
+      // show flavor in the UI.
+      expect(p.readAloud.length).toBeGreaterThan(0)
+      // Non-settlement read-alouds name the POI; settlements carry the name in
+      // their read-aloud too.
+      expect(p.readAloud).toContain(p.name)
     }
   })
 

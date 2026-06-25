@@ -257,7 +257,10 @@ export function generateWorld(
       type,
       subtypeLabel: settlementFlavor?.subtypeLabel ?? null,
       tags: settlementFlavor?.tags ?? [],
-      readAloud: settlementFlavor?.readAloud ?? '',
+      // The POI detail templates display readAloud (not description), so mirror
+      // the generated flavor into readAloud for every kind — otherwise ruins,
+      // landmarks, and dungeons would show no flavor text at all.
+      readAloud: settlementFlavor?.readAloud ?? description,
       position: { x: cell.cx, y: cell.cy },
       mapRef: gameMap.id,
       dungeonGenOptions,
