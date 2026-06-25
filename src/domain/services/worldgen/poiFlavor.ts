@@ -12,49 +12,37 @@ const KIND_TABLES: Record<PoiKind, { type: string; feature: string }> = {
   landmark: { type: 'table-cairn-curiosity', feature: 'table-cairn-curiosity-feature' },
 }
 
-// A one-sentence description weaving the POI's Cairn type + feature with its
-// surrounding biome. Deterministic given the same seed, kind, name, and biome.
-export function describePoi(
-  kind: PoiKind,
-  name: string,
-  biome: string,
-  rng: SeededRandom,
-): string {
-  const ids = KIND_TABLES[kind]
-  const type = pickCairn(rng, ids.type)
-  const feature = pickCairn(rng, ids.feature)
-  return `${name} is a ${feature.toLowerCase()} ${type.toLowerCase()} amid the ${biome}.`
-}
+const article = (word: string): string => (/^[aeiou]/i.test(word) ? 'an' : 'a')
+const cap = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1)
 
-export interface SettlementFlavor {
+export interface PoiFlavor {
   subtypeLabel: string
   tags: string[]
   description: string
   readAloud: string
 }
 
-// Settlements get richer structured flavor than a single description so their
-// detail page reads like the regions/dungeons do: the Cairn settlement type
-// becomes the subtype label, its notable feature becomes a tag, and both feed a
-// description plus a short read-aloud. Sourced entirely from the Cairn settlement
-// tables; deterministic given the same seed.
-const article = (word: string): string => (/^[aeiou]/i.test(word) ? 'an' : 'a')
-
-export function buildSettlementFlavor(
+// Structured flavor for any generated POI, sourced from the Cairn type + feature
+// tables for its kind. The type becomes the subtype label and the feature a tag
+// badge — Cairn features mix adjectives ("Warped") and noun phrases ("Religious
+// Graffiti"), so jamming one in front of the type reads wrong ("a religious
+// graffiti unruly copse"). Keeping the feature as a tag leaves a clean,
+// grammatical description and read-aloud. Deterministic given the same inputs.
+export function buildPoiFlavor(
+  kind: PoiKind,
   name: string,
   biome: string,
   rng: SeededRandom,
-): SettlementFlavor {
-  const type = pickCairn(rng, 'table-cairn-settlement')
-  const feature = pickCairn(rng, 'table-cairn-settlement-feature')
+): PoiFlavor {
+  const ids = KIND_TABLES[kind]
+  const type = pickCairn(rng, ids.type)
+  const feature = pickCairn(rng, ids.feature)
   const lowerType = type.toLowerCase()
+  const art = article(lowerType)
   return {
     subtypeLabel: type,
-    // The notable feature reads as varied phrases (adjectives, "Trading Hub",
-    // "Built Atop Ruins"), so surface it as a tag badge rather than forcing it
-    // into a sentence.
     tags: [feature],
-    description: `${article(lowerType) === 'an' ? 'An' : 'A'} ${lowerType} in the ${biome}.`,
-    readAloud: `${name} is ${article(lowerType)} ${lowerType} set in the ${biome}; known for being ${feature.toLowerCase()}.`,
+    description: `${cap(art)} ${lowerType} in the ${biome}.`,
+    readAloud: `${name} is ${art} ${lowerType} set in the ${biome}.`,
   }
 }

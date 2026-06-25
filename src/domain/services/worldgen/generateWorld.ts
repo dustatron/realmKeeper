@@ -14,7 +14,7 @@ import { buildFaction } from './buildFaction'
 import { buildFactionRelationships } from './buildFactionRelationships'
 import { buildNpc } from './buildNpc'
 import { buildRegionFlavor } from './regionFlavor'
-import { describePoi, buildSettlementFlavor } from './poiFlavor'
+import { buildPoiFlavor } from './poiFlavor'
 import type { GameMap, HexCell } from '@domain/entities/GameMap'
 import type { Region } from '@domain/entities/Region'
 import type { POI } from '@domain/entities/POI'
@@ -224,14 +224,9 @@ export function generateWorld(
     const type = poiKindToType(kind)
     const nameKind = kind === 'landmark' ? 'landmark' : kind
     const name = pickName(nameKind, rng)
-    // Settlements get richer structured flavor (subtype label + feature tag +
-    // read-aloud) so their detail page reads like regions/dungeons; other POI
-    // kinds get a one-line description.
-    const settlementFlavor =
-      kind === 'settlement' ? buildSettlementFlavor(name, cell.biome, rng) : null
-    const description = settlementFlavor
-      ? settlementFlavor.description
-      : describePoi(kind, name, cell.biome, rng)
+    // Every POI gets structured flavor: the Cairn type as a subtype label, its
+    // feature as a tag, plus a clean description and read-aloud.
+    const flavor = buildPoiFlavor(kind, name, cell.biome, rng)
     const dungeonSeedId = newId()
 
     const dungeonGenOptions =
@@ -253,14 +248,13 @@ export function generateWorld(
     return buildPOI({
       regionId: cell.regionId,
       name,
-      description,
+      description: flavor.description,
       type,
-      subtypeLabel: settlementFlavor?.subtypeLabel ?? null,
-      tags: settlementFlavor?.tags ?? [],
-      // The POI detail templates display readAloud (not description), so mirror
-      // the generated flavor into readAloud for every kind — otherwise ruins,
-      // landmarks, and dungeons would show no flavor text at all.
-      readAloud: settlementFlavor?.readAloud ?? description,
+      subtypeLabel: flavor.subtypeLabel,
+      tags: flavor.tags,
+      // Templates display readAloud (not description), so the flavor read-aloud
+      // is what actually surfaces on the POI detail page.
+      readAloud: flavor.readAloud,
       position: { x: cell.cx, y: cell.cy },
       mapRef: gameMap.id,
       dungeonGenOptions,
