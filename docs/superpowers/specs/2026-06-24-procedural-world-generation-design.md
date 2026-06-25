@@ -366,7 +366,8 @@ Follows the existing clean/hexagonal structure:
   (pure stage functions) and `src/domain/data/worldgen/*` (tables).
 - `src/domain/entities/Connection.ts`, `src/domain/entities/Hook.ts`;
   `hookId` added to `Notice` and `Rumor`.
-- `src/lib/hexmap/*` (pure hex math) and `src/components/map/HexMapRenderer.tsx`.
+- `src/lib/hexmap/*` (pure hex math) + a hex-polygon GeoJSON builder; the hex layer
+  added to `MapViewer` (no new renderer component).
 - `src/application/use-cases/GenerateWorldUseCase.ts` + a batch-write port.
 - `src/infrastructure/dexie/repositories/ConnectionRepository.ts`,
   `HookRepository.ts` + container wiring (`new XRepository()` in
