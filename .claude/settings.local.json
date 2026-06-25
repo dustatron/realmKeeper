@@ -115,7 +115,9 @@
       "Bash(git -C /Users/dusty/Code/side-projects/realmKeeper add package.json vitest.config.ts src/test/setup.ts)",
       "Bash(git -C /Users/dusty/Code/side-projects/realmKeeper commit -m ' *)",
       "Bash(tee /tmp/test-output-1.txt)",
-      "Bash(tee /tmp/test-output-2.txt)"
+      "Bash(tee /tmp/test-output-2.txt)",
+      "Bash(rg \"PATH_TYPES|TERRAIN_TYPES|DIRECTIONS\" src/shared/constants* -n -A2)",
+      "Bash(npx vitest *)"
     ]
   }
 }

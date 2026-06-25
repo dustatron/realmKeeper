@@ -45,16 +45,16 @@ export function generateWorld(
   // Step 3: one Region per center (with names unique within the world)
   const now = Date.now()
   const usedRegionNames = new Set<string>()
-  const uniqueRegionName = (): string => {
+  const uniqueRegionName = (biome: Biome): string => {
     for (let i = 0; i < 20; i++) {
-      const candidate = pickName('region', rng)
+      const candidate = pickName('region', rng, { biome })
       if (!usedRegionNames.has(candidate)) {
         usedRegionNames.add(candidate)
         return candidate
       }
     }
     // Name pool exhausted for this map — disambiguate with a numeral.
-    const base = pickName('region', rng)
+    const base = pickName('region', rng, { biome })
     let name = base
     let k = 2
     while (usedRegionNames.has(name)) name = `${base} ${k++}`
@@ -66,7 +66,7 @@ export function generateWorld(
     return {
       id,
       worldId: realmId,
-      name: uniqueRegionName(),
+      name: uniqueRegionName(center.biome),
       description: '',
       terrain: center.biome,
       features: [pickBiomeFeature(center.biome, rng)],
