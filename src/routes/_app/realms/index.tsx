@@ -50,6 +50,10 @@ import {
   ChevronDown,
   Settings,
   Wand2,
+  CheckCircle2,
+  Circle,
+  ListChecks,
+  X,
 } from "lucide-react";
 import {
   DEFAULT_DAYS_PER_SEASON,
@@ -61,6 +65,7 @@ import { useContainer } from "~/ui/hooks/useContainer";
 import { useUIStore } from "~/ui/stores/uiStore";
 import { executeCreateRealm } from "@application/use-cases/CreateRealm";
 import { executeDeleteRealm } from "@application/use-cases/DeleteRealm";
+import { executeDeleteRealms } from "@application/use-cases/DeleteRealms";
 import { executeGenerateWorld } from "@application/use-cases/GenerateWorld";
 import { newId } from "@shared/ulid";
 import { executeExportRealm } from "@application/use-cases/ExportRealm";
@@ -132,6 +137,13 @@ function RealmsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  // Bulk-delete selection mode: lets a GM clear out several realms (e.g.
+  // throwaway test worlds) at once instead of one card at a time.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // Procedural generation params (shown in the Create dialog when enabled).
   // `size` and `seed` are live; the rest are scaffolded for future generation
@@ -247,6 +259,40 @@ function RealmsPage() {
       console.error("Failed to delete realm:", error);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelected = (worldId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(worldId)) next.delete(worldId);
+      else next.add(worldId);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      await executeDeleteRealms([...selectedIds], {
+        realmRepo: container.realmRepo,
+      });
+      // Clear the active realm if it was among those deleted.
+      if (activeRealmId && selectedIds.has(activeRealmId)) {
+        setActiveRealmId(null);
+      }
+      setShowBulkDelete(false);
+      exitSelectMode();
+    } catch (error) {
+      console.error("Failed to delete realms:", error);
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
@@ -778,39 +824,97 @@ function RealmsPage() {
         title="Realms"
         description="Select or create a realm."
         actions={
-          <div className="flex gap-2">
-            <Button onClick={() => setShowCreate(true)}>
-              <Plus className="mr-2 size-4" />
-              New Realm
-            </Button>
-            <label htmlFor="import-realm-header">
-              <Button variant="outline" asChild>
-                <span>
-                  <Upload className="mr-2 size-4" />
-                  Import
-                </span>
+          selectMode ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {selectedIds.size} selected
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setSelectedIds(
+                    selectedIds.size === realms.length
+                      ? new Set()
+                      : new Set(realms.map((r) => r.id)),
+                  )
+                }
+              >
+                {selectedIds.size === realms.length
+                  ? "Clear all"
+                  : "Select all"}
               </Button>
-            </label>
-            <input
-              id="import-realm-header"
-              type="file"
-              accept="application/json"
-              className="hidden"
-              onChange={handleImportRealm}
-            />
-          </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={selectedIds.size === 0}
+                onClick={() => setShowBulkDelete(true)}
+              >
+                <Trash2 className="mr-2 size-4" />
+                Delete ({selectedIds.size})
+              </Button>
+              <Button variant="ghost" size="sm" onClick={exitSelectMode}>
+                <X className="mr-2 size-4" />
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Button onClick={() => setShowCreate(true)}>
+                <Plus className="mr-2 size-4" />
+                New Realm
+              </Button>
+              {realms.length > 1 && (
+                <Button variant="outline" onClick={() => setSelectMode(true)}>
+                  <ListChecks className="mr-2 size-4" />
+                  Select
+                </Button>
+              )}
+              <label htmlFor="import-realm-header">
+                <Button variant="outline" asChild>
+                  <span>
+                    <Upload className="mr-2 size-4" />
+                    Import
+                  </span>
+                </Button>
+              </label>
+              <input
+                id="import-realm-header"
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={handleImportRealm}
+              />
+            </div>
+          )
         }
       />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {realms.map((realm) => {
           const system = systemConfigs.find((s) => s.id === realm.systemId);
+          const selected = selectedIds.has(realm.id);
           return (
             <Card
               key={realm.id}
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => handleRealmClick(realm.id)}
+              className={`relative cursor-pointer transition-shadow hover:shadow-md ${
+                selectMode && selected ? "ring-2 ring-destructive" : ""
+              }`}
+              onClick={() =>
+                selectMode
+                  ? toggleSelected(realm.id)
+                  : handleRealmClick(realm.id)
+              }
             >
+              {selectMode && (
+                <div className="absolute right-3 top-3 text-muted-foreground">
+                  {selected ? (
+                    <CheckCircle2 className="size-5 text-destructive" />
+                  ) : (
+                    <Circle className="size-5" />
+                  )}
+                </div>
+              )}
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
@@ -833,41 +937,43 @@ function RealmsPage() {
                   </p>
                 </CardContent>
               )}
-              <CardFooter className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openEditRealm(realm.id);
-                  }}
-                >
-                  <Pencil className="mr-2 size-3" />
-                  Edit
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleExportRealm(realm.id);
-                  }}
-                >
-                  <Download className="mr-2 size-3" />
-                  Export
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteTarget(realm.id);
-                  }}
-                >
-                  <Trash2 className="mr-2 size-3" />
-                  Delete
-                </Button>
-              </CardFooter>
+              {!selectMode && (
+                <CardFooter className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditRealm(realm.id);
+                    }}
+                  >
+                    <Pencil className="mr-2 size-3" />
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleExportRealm(realm.id);
+                    }}
+                  >
+                    <Download className="mr-2 size-3" />
+                    Export
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteTarget(realm.id);
+                    }}
+                  >
+                    <Trash2 className="mr-2 size-3" />
+                    Delete
+                  </Button>
+                </CardFooter>
+              )}
             </Card>
           );
         })}
@@ -930,6 +1036,16 @@ function RealmsPage() {
         confirmLabel={isDeleting ? "Deleting..." : "Delete"}
         variant="destructive"
         onConfirm={handleDeleteRealm}
+      />
+
+      <ConfirmDialog
+        open={showBulkDelete}
+        onOpenChange={(open) => !open && setShowBulkDelete(false)}
+        title={`Delete ${selectedIds.size} Realm${selectedIds.size === 1 ? "" : "s"}`}
+        description={`Are you sure you want to delete ${selectedIds.size} realm${selectedIds.size === 1 ? "" : "s"}? This action cannot be undone and will remove all associated data.`}
+        confirmLabel={isBulkDeleting ? "Deleting..." : "Delete"}
+        variant="destructive"
+        onConfirm={handleBulkDelete}
       />
     </div>
   );
