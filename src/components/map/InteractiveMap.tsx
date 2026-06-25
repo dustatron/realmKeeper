@@ -829,6 +829,10 @@ function RegionPopupDialog({
           <DialogTitle>{region.name}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          {region.description && (
+            <p className="text-sm text-muted-foreground line-clamp-3">{region.description}</p>
+          )}
+
           {/* Region reassign */}
           {otherRegions.length > 0 && (
             <div>
