@@ -40,12 +40,14 @@ Clock advances → d6 roll per faction → auto-suggest relationship/status chan
 
 ## Build Commands
 
-_Not yet scaffolded. Expected:_
+**Use `pnpm`** — it is the single source of truth (Vercel deploys with `pnpm build`).
+Do not use `npm`; there is no `package-lock.json` and adding one re-breaks CI.
 ```
-npm install        # or pnpm
-npm run dev        # Vite dev server
-npm run build      # production build
-npm run preview    # preview production build
+pnpm install       # frozen-lockfile in CI — keep pnpm-lock.yaml in sync
+pnpm dev           # Vite dev server (port 3000)
+pnpm build         # production build (vite build && tsc --noEmit)
+pnpm test          # vitest run
+pnpm preview       # preview production build
 ```
 
 ## Git Workflow
