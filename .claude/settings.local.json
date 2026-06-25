@@ -107,7 +107,8 @@
       "Bash(gh pr create --base main --head feature/dev-api-map-generation --title 'Watabou map generators, MFCG import fix, upload downscale, NPC denizen rollup' --body ' *)",
       "Bash(rg -rn \"interface WeightedTable|type WeightedTable|WeightedTable<\" src/lib/dungeon/)",
       "Bash(sed -n '/export interface WeightedTable/,/^}/p' src/lib/dungeon/SeededRandom.ts)",
-      "Bash(sed -n '/export function createWeightedTable/,/^}/p' src/lib/dungeon/SeededRandom.ts)"
+      "Bash(sed -n '/export function createWeightedTable/,/^}/p' src/lib/dungeon/SeededRandom.ts)",
+      "Bash(git -C . log --oneline -8)"
     ]
   }
 }
