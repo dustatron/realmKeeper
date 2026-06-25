@@ -8,7 +8,7 @@ const container = createContainer()
 
 beforeEach(async () => {
   await db.open()
-  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.factionRelationships.clear(), db.npcs.clear(), db.connections.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear()])
+  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.factionRelationships.clear(), db.npcs.clear(), db.connections.clear(), db.hooks.clear(), db.notices.clear(), db.rumors.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear()])
   // NPC generation rolls a system-correct stat block, so the system config must exist.
   await db.systemConfigs.put(cairnSystemConfig)
 })
@@ -85,6 +85,31 @@ describe('executeGenerateWorld', () => {
       expect(f.leaderNpcId).not.toBeNull()
       expect(npcs.some((n) => n.id === f.leaderNpcId)).toBe(true)
       expect(f.agentNpcIds.length).toBeGreaterThanOrEqual(1)
+    }
+  })
+
+  it('persists quest hooks with notices/rumors anchored to NPCs and POIs', async () => {
+    const { realmId, mapId } = await executeGenerateWorld(
+      { name: 'Quests', systemId: 'system-cairn-2e', seed: 'seed-hooks', size: 'medium', factionCount: 3 },
+      deps()
+    )
+    const npcIds = new Set((await db.npcs.where('worldId').equals(realmId).toArray()).map((n) => n.id))
+    const poiIds = new Set((await db.pois.where('mapRef').equals(mapId).toArray()).map((p) => p.id))
+    const hooks = await db.hooks.where('worldId').equals(realmId).toArray()
+    const notices = (await db.notices.toArray()).filter((n) => n.worldId === realmId && n.hookId)
+    expect(hooks.length).toBeGreaterThan(0)
+    const hookIds = new Set(hooks.map((h) => h.id))
+    for (const h of hooks) {
+      // contact is a generated NPC; secret points at a real NPC or POI
+      expect(npcIds.has(h.contactNpcId!)).toBe(true)
+      const target = h.secret.targetType === 'npc' ? npcIds : poiIds
+      expect(target.has(h.secret.targetId)).toBe(true)
+    }
+    // notices roll up to a POI and reference a real hook
+    expect(notices.length).toBeGreaterThan(0)
+    for (const n of notices) {
+      expect(hookIds.has(n.hookId!)).toBe(true)
+      expect(poiIds.has(n.poiId!)).toBe(true)
     }
   })
 

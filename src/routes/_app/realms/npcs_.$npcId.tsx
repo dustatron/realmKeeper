@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
 import { useNPC, useNPCs } from '~/ui/hooks/useNPCs'
 import { useNpcConnections } from '~/ui/hooks/useConnections'
+import { useNpcHooks } from '~/ui/hooks/useHooks'
 import { useFactions } from '~/ui/hooks/useFactions'
 import { useRegion, useRegions } from '~/ui/hooks/useRegions'
 import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
@@ -59,6 +60,7 @@ function NPCDetailPage() {
   const pois = useRealmPOIs(activeRealmId)
   const allNpcs = useNPCs(activeRealmId)
   const connections = useNpcConnections(npc?.worldId ?? null, npcId)
+  const hooks = useNpcHooks(npc?.worldId ?? null, npcId)
   const container = useContainer()
 
   // Build POI breadcrumb: walk parentPoiId chain from npc's poi up to root
@@ -969,6 +971,35 @@ function NPCDetailPage() {
                   </div>
                 )
               })}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Quests & Hooks */}
+        {hooks.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="size-4" />
+                Quests &amp; Hooks ({hooks.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {hooks.map((h) => (
+                <div key={h.id} className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="capitalize">{h.type.replace(/_/g, ' ')}</Badge>
+                    <Badge variant="secondary">{h.role === 'contact' ? 'Offers' : 'Subject'}</Badge>
+                    <span className="text-sm font-medium">{h.title}</span>
+                  </div>
+                  {h.secret.detail && (
+                    <p className="text-sm text-muted-foreground">{h.secret.detail}</p>
+                  )}
+                  {h.rewardText && (
+                    <p className="text-xs text-muted-foreground">Reward: {h.rewardText}</p>
+                  )}
+                </div>
+              ))}
             </CardContent>
           </Card>
         )}

@@ -14,6 +14,7 @@ import { buildFaction } from './buildFaction'
 import { buildFactionRelationships } from './buildFactionRelationships'
 import { buildNpc } from './buildNpc'
 import { buildConnections } from './buildConnections'
+import { buildHooks } from './buildHooks'
 import { buildRegionFlavor } from './regionFlavor'
 import { buildPoiFlavor } from './poiFlavor'
 import type { GameMap, HexCell } from '@domain/entities/GameMap'
@@ -24,6 +25,9 @@ import type { Faction } from '@domain/entities/Faction'
 import type { FactionRelationship } from '@domain/entities/FactionRelationship'
 import type { NPC } from '@domain/entities/NPC'
 import type { Connection } from '@domain/entities/Connection'
+import type { Hook } from '@domain/entities/Hook'
+import type { Notice } from '@domain/entities/Notice'
+import type { Rumor } from '@domain/entities/Rumor'
 import type { SystemConfig } from '@domain/entities/SystemConfig'
 import { newId } from '@shared/ulid'
 
@@ -57,6 +61,9 @@ export function generateWorld(
   factionRelationships: FactionRelationship[]
   npcs: NPC[]
   connections: Connection[]
+  hooks: Hook[]
+  notices: Notice[]
+  rumors: Rumor[]
 } {
   const { cols, rows, hexSize = 40, poiDensity = 'normal' } = opts
   const rng = new SeededRandom(seed)
@@ -469,5 +476,23 @@ export function generateWorld(
     ? buildConnections(factions, factionRelationships, realmId)
     : []
 
-  return { gameMap, regions, pois, paths, factions, factionRelationships, npcs, connections }
+  // Step 11: quest Hooks (structured secrets) + their public Notice/Rumor
+  // projections at real POIs. Needs NPCs, so only when a system config is given.
+  const { hooks, notices, rumors } = opts.systemConfig
+    ? buildHooks(factions, npcs, pois, connections, realmId, rng)
+    : { hooks: [], notices: [], rumors: [] }
+
+  return {
+    gameMap,
+    regions,
+    pois,
+    paths,
+    factions,
+    factionRelationships,
+    npcs,
+    connections,
+    hooks,
+    notices,
+    rumors,
+  }
 }
