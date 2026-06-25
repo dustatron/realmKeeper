@@ -1,5 +1,6 @@
 import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import type { PoiKind } from '@domain/data/worldgen/poiKinds'
+import { biomeLabel } from '@domain/data/worldgen/biomes'
 import { pickCairn } from './cairnPick'
 
 // Each POI kind maps to a Cairn type + feature table pair. Cairn has no "ruin"
@@ -39,10 +40,11 @@ export function buildPoiFlavor(
   const feature = pickCairn(rng, ids.feature)
   const lowerType = type.toLowerCase()
   const art = article(lowerType)
+  const where = biomeLabel(biome)
   return {
     subtypeLabel: type,
     tags: [feature],
-    description: `${cap(art)} ${lowerType} in the ${biome}.`,
-    readAloud: `${name} is ${art} ${lowerType} set in the ${biome}.`,
+    description: `${cap(art)} ${lowerType} in the ${where}.`,
+    readAloud: `${name} is ${art} ${lowerType} set in the ${where}.`,
   }
 }

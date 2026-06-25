@@ -13,6 +13,25 @@ export const BIOMES: Biome[] = [
   'frozen', 'blighted', 'hills', 'jungle', 'lake',
 ]
 
+// Display label for prose like "set in the ___": some biome keys are adjectives
+// ("frozen", "blighted") that read wrong with a bare "the", so give them a noun.
+const BIOME_LABELS: Record<Biome, string> = {
+  forest: 'forest',
+  mountains: 'mountains',
+  grasslands: 'grasslands',
+  desert: 'desert',
+  marsh: 'marshes',
+  frozen: 'frozen wastes',
+  blighted: 'blighted lands',
+  hills: 'hills',
+  jungle: 'jungle',
+  lake: 'lakelands',
+}
+
+export function biomeLabel(biome: string): string {
+  return BIOME_LABELS[biome as Biome] ?? biome
+}
+
 // Region "feature" flavor per biome. Re-authored content (no third-party text).
 // Weights are relative; higher = more common.
 export const BIOME_FEATURE_TABLES: Record<Biome, WeightedTable<string>> = {

@@ -1,5 +1,5 @@
 import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
-import { pickBiomeFeature, type Biome } from '@domain/data/worldgen/biomes'
+import { pickBiomeFeature, biomeLabel, type Biome } from '@domain/data/worldgen/biomes'
 import { pickCairn, sampleCairn } from './cairnPick'
 
 // Structured region flavor, sourced from the Cairn region/setting tables that
@@ -67,7 +67,7 @@ export function buildRegionFlavor(biome: Biome, rng: SeededRandom): RegionFlavor
       ? `${resources[0]} and ${resources[1]}`
       : resources[0]
   const description =
-    `A region of ${biome}, marked by ${landmark.toLowerCase()}. ` +
+    `A region of ${biomeLabel(biome)}, marked by ${landmark.toLowerCase()}. ` +
     `Home to ${people[0].toLowerCase()}, prized for its ${resourcePhrase.toLowerCase()}. ` +
     `Travelers speak of ${dangers[0]}.`
 
