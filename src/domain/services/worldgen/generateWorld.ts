@@ -13,6 +13,7 @@ import { buildPath } from './buildPath'
 import { buildFaction } from './buildFaction'
 import { buildFactionRelationships } from './buildFactionRelationships'
 import { buildNpc } from './buildNpc'
+import { buildSettlementBuildings } from './buildSettlement'
 import { buildConnections } from './buildConnections'
 import { buildHooks } from './buildHooks'
 import { buildRegionFlavor } from './regionFlavor'
@@ -464,20 +465,26 @@ export function generateWorld(
       faction.agentNpcIds = agentIds
     }
 
-    // Step 8c: settlement residents — every settlement gets a few inhabitants so
-    // locations are rarely empty (faction HQs carry their leader/agents on top
-    // of these). Each resident gets a personal want, so they read as quest-givers.
+    // Step 8c: settlement interiors — each settlement gets buildings (scaled by
+    // its size), each with a proprietor living in it, plus one notable resident
+    // at the settlement itself. So settlements have an interior and locations are
+    // rarely empty. Each NPC has a personal want, reading as a quest-giver.
     for (const node of settlementNodes) {
-      const residentCount = rng.between(1, 3)
-      for (let i = 0; i < residentCount; i++) {
-        npcs.push(
-          buildNpc(
-            { worldId: realmId, regionId: node.poi.regionId, poiId: node.poi.id, role: 'inhabitant' },
-            opts.systemConfig,
-            rng,
-          ),
-        )
-      }
+      const { buildings, proprietors } = buildSettlementBuildings(
+        node.poi,
+        realmId,
+        opts.systemConfig,
+        rng,
+      )
+      pois.push(...buildings)
+      npcs.push(...proprietors)
+      npcs.push(
+        buildNpc(
+          { worldId: realmId, regionId: node.poi.regionId, poiId: node.poi.id, role: 'inhabitant' },
+          opts.systemConfig,
+          rng,
+        ),
+      )
     }
   }
 

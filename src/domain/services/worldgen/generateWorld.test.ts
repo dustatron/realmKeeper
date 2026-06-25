@@ -290,6 +290,27 @@ describe('generateWorld', () => {
     }
   })
 
+  it('gives settlements buildings (child POIs) with proprietors', () => {
+    const { pois, npcs } = generateWorld(REALM, 'seed-a', {
+      cols: 16,
+      rows: 16,
+      systemConfig: cairnSystemConfig,
+    })
+    const settlements = pois.filter((p) => p.type === 'settlement')
+    const buildings = pois.filter((p) => p.type === 'building')
+    expect(buildings.length).toBeGreaterThan(0)
+    const settlementIds = new Set(settlements.map((s) => s.id))
+    for (const b of buildings) {
+      // each building is parented to a generated settlement and has an occupant
+      expect(settlementIds.has(b.parentPoiId!)).toBe(true)
+      expect(npcs.some((n) => n.poiId === b.id)).toBe(true)
+    }
+    // every settlement has at least one building
+    for (const s of settlements) {
+      expect(buildings.some((b) => b.parentPoiId === s.id)).toBe(true)
+    }
+  })
+
   it('omits NPCs (and leaves leaders empty) when no system config is supplied', () => {
     const { factions, npcs } = generateWorld(REALM, 'seed-a', { cols: 12, rows: 12 })
     expect(npcs).toEqual([])
