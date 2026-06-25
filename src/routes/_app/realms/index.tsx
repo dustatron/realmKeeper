@@ -177,6 +177,7 @@ function RealmsPage() {
             daysPerSeason: createDaysPerSeason,
             daysPerWeek: createDaysPerWeek,
             factionTurnTrigger: createFactionTurnTrigger,
+            poiDensity: genPoiDensity,
           },
           {
             realmRepo: container.realmRepo,
