@@ -6,39 +6,73 @@
 
 ## Goal
 
-One-click generation of a living sandbox world: regions, settlements, ruins,
-dungeons, factions, and NPCs — wired together into a **live web of conflicts and
-quest hooks**. The GM picks a size (and optionally tunes knobs), clicks generate,
-and lands in a populated, internally-consistent realm they can immediately run or
-edit.
+One-click generation of a living sandbox world: a hex-grid map of biome regions
+populated with settlements, ruins, dungeons, factions, and NPCs — wired together
+into a **live web of conflicts and quest hooks**. The GM picks a size (and
+optionally tunes knobs), clicks generate, and lands in a populated,
+internally-consistent realm they can immediately run or edit.
 
 The output is not flavor text. NPC problems point at real records. A "missing
-daughter" is an actual NPC placed somewhere in the world. A faction's goal,
-blocker, and plan are structured data the existing faction-turn engine can act on
-later.
+daughter" is an actual NPC placed in an actual dungeon. A faction's goal, blocker,
+and plan are structured data the existing faction-turn engine can act on later.
 
 ## Pivotal decisions (locked during brainstorming)
 
 1. **Engine: pure local procedural.** Random tables + algorithms only. No LLM, no
    network. Seedable and deterministic. Honors local-first/offline.
-2. **Spatial model: image + pinned coordinates** (the app's existing grain).
-   Content gets `{x,y}` positions; regions get boundary polygons. No procedural
-   terrain art.
-3. **Map: one shipped, *templated* map to start.** The map ships with hand-authored
-   region zones (polygons) + terrain tags + placement slots. The generator fills
-   the template, so a port lands on a coast and a ruin in the mountains.
-4. **World size = density** (with a single map). Small/Med/Large scale how much
-   fills the fixed zones; they do not change map size. (Future: size also selects
-   among multiple map templates.)
+2. **Two map models, one data model.** Image maps (existing maplibre stack) stay
+   for manual/uploaded worlds. **Auto-generated worlds default to a procedural
+   hex-grid map** rendered in-browser — no map image, no hand-authored art. Both
+   are `GameMap` records distinguished by a `kind` field; POIs keep `position
+   {x,y}` (a hex's pixel center is just an `{x,y}`).
+3. **Hex map is view-first in v1.** Render biome fill + POI pins + click-through +
+   pan/zoom. In-hex editing (drag-place, region painting, path drawing) is
+   **deferred**; editing happens on the existing POI/Region detail pages.
+4. **World size = density.** Small/Med/Large scale the grid size and how much fills
+   it (factions, POIs, NPCs). Advanced knobs override individual dials.
 5. **Conflicts are a live, linked web.** Inter-NPC ties create real NPC records and
    a new `NPCRelationship` entity. Quest hooks are navigable, not dead-end prose.
-6. **Quest hooks reuse existing entities.** `Notice` (actionable, has
-   `contactNpcId`/`reward`/`type`) + `Rumor` (`isQuestHook` ambient).
+6. **Quest hooks reuse existing entities** and split into a **public hook** + a
+   hidden **secret** (the hexroll pattern). Public surface: `Notice` (actionable,
+   has `contactNpcId`/`reward`/`type`) and `Rumor` (`isQuestHook` ambient). The
+   secret (the answer) lives in the target POI's `gmNotes`.
 7. **Looming threat reuses `WorldEvent`** — a future-dated event on the existing
-   clock.
+   clock, tied to a faction agenda.
 8. **Commit flow: just commit.** Generation is creative scaffolding, not "world
-   state change." One click writes the realm; the GM edits afterward like any
-   manual entry. No preview/draft layer.
+   state change." One click writes the realm in a single transaction; the GM edits
+   afterward like any manual entry. No preview/draft layer.
+
+## Prior art: hexroll3
+
+[hexroll3](https://github.com/hexroll/hexroll3) (OSR sandbox generator) was
+reviewed. It's Rust + Bevy with a custom content-DSL (`.scroll` files), so **no
+code is portable**, and it is **AGPL-3.0** (dual commercial license). We borrow
+**architecture, taxonomy, and algorithms only, and re-author all content tables
+ourselves** — copying their `.scroll` content verbatim would make this repo a
+derivative work.
+
+Validated borrowings:
+
+- **Hex-grid sandbox model.** `hexmap.rs` lays a hex grid, groups contiguous hexes
+  into biome regions, and allocates **0–1 of {dungeon, settlement, inn, encounter,
+  feature}** per hex. This is the model we adopt for generated worlds (decision 2).
+- **Watabou hand-off.** hexroll generates settlement/dungeon battlemaps via
+  Watabou MFCG/village generators. **We already have Watabou import** — generated
+  settlements/dungeons can lazily get a Watabou map later.
+- **Quest = linked records + secret.** Their `missing_person` quest weights a
+  relative type (`son`/`daughter`/`nephew`/`*(x3) spouse`), creates a **real NPC**,
+  and places them "held captive in {dungeon}." The public rumor says only that
+  something's wrong; the **secret** names the location. We adopt this split.
+- **Quest taxonomy:** `missing_person`, `lost_item`, `delivery`, `escort`,
+  `relation`, `revenge`, `artifacts`.
+- **Relationship verb tables:** grudge / dispute / bad blood / vendetta / affair /
+  fallen in love / special interest — seeds `NPCRelationship` type + description.
+- **Faction archetypes** (Cult / Militia / Syndicate), each with member NPCs and
+  auto "association rumors" ("the Cult is up to something").
+- **Realm archetypes** (Kingdom / Empire / Duchy / Lands), each with a ruler NPC.
+- **Biome region types** (Forest / Desert / Plains / Jungle / Tundra / Swamp /
+  Mountain) and **wilderness feature tables** (watchtower, altar, graveyard, dead
+  adventurers, portal, sacrificial site, …) for landmark POIs.
 
 ## What already exists (reused, not rebuilt)
 
@@ -50,18 +84,35 @@ later.
 | Faction structure | `Faction` (`agendaGoals`, `advantages`, `obstacles`) |
 | Faction relations | `FactionRelationship` (−6..+6) |
 | NPC core | `NPC` (`motivation`, `want`, `traits`, `systemBlock`) |
-| Quest hooks | `Notice` (bounty/job/warning/announcement/request), `Rumor` (`isQuestHook`) |
+| Quest hooks (public) | `Notice` (bounty/job/warning/announcement/request), `Rumor` (`isQuestHook`) |
+| Hook UI components | `RumorList`, `NoticeBoard` (shared) |
 | Doom event | `WorldEvent` (year/season/day/watch + `relatedEntityIds`) |
-| Map render | `InteractiveMap` (maplibre), `POI.position`, `Region.boundary` |
+| Map records (many per realm) | `GameMap` (`ownerRealmId`), `POI.position`, `Region.boundary` |
+| Image map renderer | `InteractiveMap` (maplibre, ~905 lines) — manual worlds |
+| Settlement/dungeon maps | Watabou import (`WatabouImportDialog`, renderers) |
 | System rules | `SystemConfig` (Cairn 2e + Shadowdark), `SystemBlock` |
-| Map/render | `GameMap` (image + width/height) |
 
 POI types available: `settlement`, `dungeon`, `ruin`, `camp`, `shrine`,
-`landmark`, `natural`, `fortification`, etc. ("towns" = `settlement`).
+`landmark`, `natural`, `fortification`, etc.
 
 ## New structures (the actual build)
 
-### 1. `NPCRelationship` entity (mirrors `FactionRelationship`)
+### 1. Hex map: `GameMap.kind` + a view-first renderer
+
+- Extend `GameMap` with `kind: 'image' | 'hex'` and optional hex params
+  (`cols`, `rows`, `hexSize`, orientation). Image maps keep `imageUrl`; hex maps
+  ignore it. Schema migration defaults existing maps to `'image'`.
+- New **`HexMapRenderer`** component (`src/components/map/HexMapRenderer.tsx`):
+  SVG/canvas, biome-colored hex fill, POI pins at hex centers, pan/zoom, click a
+  hex → navigate to its POI(s). **View + navigate only in v1.**
+- Hex math helper (`src/lib/hexmap/`): axial/offset coords, pixel↔hex, neighbors.
+  Standard, ~100 lines, well-tested.
+- POIs keep `position {x,y}` = their hex's pixel center. `Region.boundary` = the
+  outline polygon of its hex cluster (computed at generation time).
+- The map route picks the renderer by `kind`: `InteractiveMap` for `'image'`,
+  `HexMapRenderer` for `'hex'`.
+
+### 2. `NPCRelationship` entity (separate table, mirrors `FactionRelationship`)
 
 ```ts
 interface NPCRelationship {
@@ -78,51 +129,32 @@ interface NPCRelationship {
 }
 ```
 
-Requires: Dexie table + schema migration, a repository, container wiring, and a
-small UI surface on the NPC detail page (a "Connections" list — clickable). The
-relationship surface can be minimal in v1 (read-only list); editing can follow.
-
-### 2. `MapTemplate` asset format
-
-A JSON descriptor shipped alongside the one map image:
-
-```ts
-interface MapTemplate {
-  id: string
-  name: string
-  imageAsset: string          // bundled image path
-  width: number; height: number
-  zones: {
-    id: string
-    name?: string             // optional suggested region name
-    terrain: 'coast' | 'forest' | 'mountain' | 'plains' | 'swamp' | 'desert' | ...
-    boundary: { x: number; y: number }[]   // becomes Region.boundary
-    slots: { x: number; y: number; kind: PlacementKind }[]  // candidate POI spots
-  }[]
-}
-type PlacementKind = 'settlement' | 'dungeon' | 'ruin' | 'wilds' | 'any'
-```
-
-The generator maps each `zone` → a `Region` and fills `slots` with POIs honoring
-`kind` and `terrain`. v1 ships exactly one template.
+Requires: Dexie table + schema migration, repository, container wiring, and a
+read-only **"Connections"** list on the NPC detail page (clickable, navigable).
+Editing can follow.
 
 ### 3. Procedural content data (`src/domain/data/worldgen/`)
 
-System-agnostic weighted tables, keyed where useful by terrain or faction type:
+System-agnostic weighted tables, **re-authored** (not copied from hexroll), keyed
+where useful by biome or archetype:
 
-- Region flavor by terrain (features, dangers, resources, people).
+- Biome → region flavor (features, dangers, resources, people).
+- Wilderness feature/landmark tables (watchtower, altar, graveyard, portal, …).
 - Settlement / dungeon / ruin name + descriptor tables.
 - NPC tables: given/family names, traits, motivations, wants, appearance, voice.
-- **Faction agenda tables:** goal × obstacle × plan, by faction type
-  (cult, guild, noble house, bandit crew, etc.).
-- **Conflict templates:** parameterized problem generators that emit linked
-  records + a hook (see Conflict Web below).
+- **Faction archetype tables** (cult / militia / syndicate / noble house / bandit
+  crew …): goal × obstacle × plan.
+- **Realm archetype tables** (Kingdom / Empire / Duchy / Lands) + ruler.
+- **Conflict templates** (see Conflict Web): missing_person, lost_item, delivery,
+  escort, relation, revenge, artifact.
 - Per-system `SystemBlock` defaults pulled from `SystemConfig`.
 
 ### 4. `WorldGenerator` domain service (pure, seeded)
 
 A composition of stage functions, each pure (`(input, rng) => partialWorld`). No
-Dexie, no IO. Output is an in-memory `GeneratedWorld` bundle of plain entities.
+Dexie, no IO. Output is an in-memory `GeneratedWorld` bundle of plain entities
+(realm, hex map, regions, POIs, factions, faction-rels, NPCs, npc-rels, notices,
+rumors, world-events).
 
 ### 5. `GenerateWorldUseCase` (application layer)
 
@@ -134,52 +166,70 @@ its id for navigation.
 
 A "Generate World" entry (dialog or `/realms` route action):
 
-- **Size preset:** Small / Medium / Large (sets all knob defaults).
+- **Size preset:** Small / Medium / Large (sets all knob defaults + grid size).
+- **System dropdown:** pre-selected from active realm's system, else Cairn.
 - **Advanced (accordion, overrides):** Factions count, Danger level, NPC density,
   POI/dungeon density.
 - **Looming threat:** on/off toggle.
 - **Seed:** optional text field (blank = random); enables reproducible worlds.
-- Submit → run use-case → navigate into the new realm.
+- Submit → run use-case → navigate into the new realm's hex map.
+
+### 7. Hooks on POIs (gap fix)
+
+`RumorList` + `NoticeBoard` already render on **SettlementTemplate** and
+**GenericTemplate** — but **DungeonTemplate, BuildingTemplate, and
+DungeonRoomTemplate show no hooks**, which is exactly where missing-person captives
+and lost items live. Add the hook list (rumors + notices for that POI) to those
+three templates so generated hooks surface at their target locations.
 
 ## Generation pipeline (ordered stages)
 
 ```
 seed → RNG
-  1. Realm        create world record (clock defaults, chosen SystemConfig)
-  2. Regions      one per template zone; fill flavor from terrain tables
-  3. POIs         fill zone slots by density+danger:
-                    settlements, dungeons (lazy DungeonGenerator), ruins, shrines, camps
-                    → each gets position from its slot
-  4. Factions     N from knob; each: agendaGoal (goal) + obstacle (blocker)
-                    + advantage (plan to get unblocked); assign HQ poi + region
-  5. FactionRels  pairwise relationship scores (−6..+6), skewed by danger
-  6. NPCs         density per region/settlement; assign faction membership,
-                    leaders, agents; universal fields + SystemBlock per system
-  7. Conflict web NEW: generate family + conflict ties → NPCRelationship records,
-                    some spanning regions/POIs (missing daughter placed at a dungeon)
-  8. Quest hooks  each conflict → a Notice (contact = aggrieved NPC, reward, type)
-                    and/or a Rumor (isQuestHook) placed at the relevant POI/region
-  9. Doom event   if toggled: pick a faction agenda to escalate → future-dated
-                    WorldEvent + foreshadowing Rumors
- 10. Commit       single transaction write; set realm active
+  1. Realm        create world record (clock defaults, chosen SystemConfig,
+                    realm archetype + ruler)
+  2. Hex grid     size grid; seed biome centers; grow contiguous biome clusters
+  3. Regions      one Region per biome cluster; boundary = cluster outline;
+                    fill flavor from biome tables
+  4. POIs         per-hex allocation by biome + density + danger:
+                    settlements, dungeons (lazy DungeonGenerator), ruins, shrines,
+                    camps, landmark features; position = hex center; cap to knobs
+  5. Factions     N from knob; archetype each (cult/militia/syndicate/…);
+                    agendaGoal (goal) + obstacle (blocker) + advantage (plan);
+                    assign HQ poi + region
+  6. FactionRels  pairwise relationship scores (−6..+6), skewed by danger
+  7. NPCs         density per region/settlement; faction membership, leaders,
+                    agents; universal fields + SystemBlock per system
+  8. Conflict web NEW: family + conflict ties → NPCRelationship records, some
+                    spanning hexes (missing daughter placed at a dungeon)
+  9. Quest hooks  each conflict → public hook (Notice/Rumor at the contact's POI)
+                    + secret (answer written to the target POI's gmNotes)
+ 10. Doom event   if toggled: escalate a faction agenda → future-dated WorldEvent
+                    + foreshadowing Rumors
+ 11. Commit       single transaction write; set realm active
 ```
 
-### The conflict web (stage 7–8 detail)
+### The conflict web (stage 8–9 detail)
 
-Each conflict template is a small function that, given the current NPC pool and
-RNG, produces: linked records + relationships + a hook. Examples:
+Each conflict template is a small pure function: given the current NPC/POI pool +
+RNG, it produces linked records + relationships + a **public hook** + a **secret**.
 
-- **Missing person:** pick aggrieved NPC A; create (or reuse) NPC B as their
-  child/spouse; set B `lifeStatus`/`movementStatus` to missing and place B at a
-  dangerous POI; `NPCRelationship(A→B, parent/spouse, status: missing)`; emit
-  `Notice{type: request, contactNpcId: A, reward}`.
-- **Runaway spouse:** A's spouse B left with C; `NPCRelationship(A→B, spouse,
-  status: estranged)` + `(B→C, lover, active)`; emit a `Rumor` quest hook.
-- **Theft:** A's heirloom taken by B (a faction agent); link B→A as `thief/victim`;
-  the item ties to B's faction HQ POI; emit `Notice{type: bounty}`.
+- **missing_person:** pick aggrieved NPC A; weight a relative type
+  (son/daughter/nephew/spouse); create real NPC B; set B
+  `lifeStatus`/`movementStatus` = missing and place B at a dangerous dungeon POI;
+  `NPCRelationship(A→B, parent/spouse, status: missing)`; **public:**
+  `Notice{type: request, contactNpcId: A, reward}`; **secret:** "B is held captive
+  in {dungeon}" → that dungeon's `gmNotes`.
+- **lost_item:** A lost a notable item; it's actually in a dungeon area;
+  **public:** rumor/advert; **secret:** which area holds it.
+- **runaway spouse / relation:** A's spouse B left with C; `NPCRelationship(A→B,
+  spouse, estranged)` + `(B→C, lover, active)`; **public:** rumor quest hook.
+- **theft:** A's heirloom taken by B (a faction agent); link `thief/victim`; item
+  ties to B's faction HQ POI; **public:** `Notice{type: bounty}`.
+- **delivery / escort:** A needs something/someone moved to a distant POI;
+  **public:** `Notice{type: job}`.
 
-Templates respect existing geography (the thief's faction must exist; the
-dangerous POI must exist) — hence conflicts run **after** factions/POIs/NPCs.
+Conflicts run **after** factions/POIs/NPCs so their referenced records exist.
 
 ## Architecture / layering
 
@@ -187,61 +237,75 @@ Follows the existing clean/hexagonal structure:
 
 - `src/domain/services/WorldGenerator.ts` + `src/domain/services/worldgen/*`
   (pure stage functions) and `src/domain/data/worldgen/*` (tables).
-- `src/domain/entities/NPCRelationship.ts` + value objects as needed.
-- `src/application/use-cases/GenerateWorldUseCase.ts` + a port for the batch write.
+- `src/domain/entities/NPCRelationship.ts`.
+- `src/lib/hexmap/*` (pure hex math) and `src/components/map/HexMapRenderer.tsx`.
+- `src/application/use-cases/GenerateWorldUseCase.ts` + a batch-write port.
 - `src/infrastructure/dexie/repositories/NpcRelationshipRepository.ts` + schema
-  migration + container wiring.
-- `src/components/worldgen/*` for the UI; a new action on `/realms`.
-- Assets: one `MapTemplate` JSON + image under the appropriate assets/public path.
+  migration (NPCRelationship table; `GameMap.kind`) + container wiring.
+- `src/components/worldgen/*` for the generation UI; new action on `/realms`.
+- Hook lists added to Dungeon/Building/DungeonRoom POI templates.
 
 Determinism: every stage takes the shared seeded RNG; same seed + same knobs →
-byte-identical world. Enables reproducible bug reports and "I liked seed X."
+byte-identical world.
 
 ## Testing strategy
 
-- **Pure stage unit tests:** feed a fixed seed, assert structural invariants
-  (counts match knobs, every faction has goal+obstacle+plan, every conflict's
-  links resolve to real records, every Notice `contactNpcId` exists).
-- **Web integrity test:** no dangling `NPCRelationship` endpoints; missing-person
-  targets are actually placed and actually missing.
-- **Determinism test:** same seed twice → identical bundle.
-- **Use-case test:** in-memory/fake Dexie — one transaction, realm becomes active,
-  ids consistent.
-- **Smoke:** generate Small + Large, render on the map, click a quest hook through
-  to its NPC.
+- **Pure stage unit tests** (fixed seed): counts match knobs; every faction has
+  goal+obstacle+plan; every conflict's links resolve to real records; every Notice
+  `contactNpcId` exists; every secret lands in a real POI's `gmNotes`.
+- **Hex math tests:** pixel↔hex round-trips, neighbor correctness, cluster outline.
+- **Web integrity:** no dangling `NPCRelationship` endpoints; missing-person
+  targets are placed and actually missing.
+- **Determinism:** same seed twice → identical bundle.
+- **Use-case test** (fake Dexie): one transaction, realm becomes active, ids
+  consistent.
+- **Smoke:** generate Small + Large, render the hex map, click a hex → POI, click a
+  quest hook through to its NPC and to the secret location.
 
 ## Scope boundaries (explicit non-goals for v1)
 
-- No procedural terrain art (separate future project).
-- No multiple map templates (one ships; the format supports more later).
+- **Hex map editing** (drag-place, region paint, path draw on hex) — deferred;
+  edit via detail pages.
+- No procedural terrain *art* (hex biome fill only).
 - No LLM enrichment (Phase 2, optional, later).
-- No preview/regenerate-section UI (just commit; GM re-rolls by deleting +
+- No preview/regenerate-section UI (just commit; re-roll by deleting +
   regenerating).
-- No Path/travel-time auto-generation between POIs (could be a fast-follow).
-- `NPCRelationship` editing UI is read-only/minimal in v1.
+- No auto Watabou battlemaps at generation time (settlements/dungeons can get one
+  later via existing import).
+- `NPCRelationship` editing UI is read-only in v1.
 
 ## Phasing (single spec, staged build)
 
 1. **Foundation:** `NPCRelationship` entity + table + repo + migration + wiring;
-   `MapTemplate` format + the one shipped map; worldgen data-table scaffolding.
-2. **Core pipeline:** stages 1–6 (realm → regions → POIs → factions → rels → NPCs),
-   pure + tested, behind `GenerateWorldUseCase`.
-3. **The web:** stages 7–9 (conflicts, hooks, doom event).
-4. **UI:** generation menu (preset + advanced + seed + threat toggle) and the NPC
+   `GameMap.kind` migration; `src/lib/hexmap` math; worldgen data-table scaffolding.
+2. **Hex map render:** `HexMapRenderer` (view + navigate) + route wiring.
+3. **Core pipeline:** stages 1–7 (realm → hex grid → regions → POIs → factions →
+   rels → NPCs), pure + tested, behind `GenerateWorldUseCase`.
+4. **The web:** stages 8–10 (conflicts, hooks + secrets, doom event); add hook
+   lists to Dungeon/Building/DungeonRoom templates.
+5. **UI:** generation menu (preset + system + advanced + seed + threat) and the NPC
    Connections surface.
+
+## Resolved
+
+- **Map model (was decision 3 / Q1):** Dual — image map for manual worlds,
+  procedural **hex map** default for generated worlds; view-first in v1; full hex
+  editing deferred. Drops the earlier templated-image + zone-authoring approach.
+- **NPCRelationship storage (was Q7):** Separate table/entity.
+- **System pick (was Q5):** Dropdown in the generation menu, pre-selected from the
+  active realm's system, else Cairn.
 
 ## Open questions
 
-1. New map image + zone polygons — author by hand, or trace from an existing
-   bundled map? Who/what provides the source image?
-2. Settlement "population"/"towns" knob — fold into POI density (count of
-   `settlement` POIs), or expose separately?
-3. Auto-generate `Path`s (travel times) between settlements in v1, or defer?
-4. NPC count — derive from settlement count × density, or an absolute target?
-5. SystemConfig for a generated realm — default to Cairn, prompt at generate-time,
-   or inherit a global default?
-6. Should conflicts be allowed to reference the **party faction**, or strictly
-   NPC/non-party factions in v1?
-7. `NPCRelationship` — embed as an array on `NPC` instead of a separate
-   table/entity? (Separate mirrors `FactionRelationship`; embedded is simpler but
-   harder to query bidirectionally.)
+1. **Towns/population knob (Q2):** fold into POI density (count of `settlement`
+   POIs per biome), or expose a separate towns/population dial?
+2. **Paths/travel (Q3):** hex adjacency gives implicit travel. Auto-generate
+   explicit `Path` records between settlements in v1, or rely on hex distance and
+   defer Paths?
+3. **NPC count (Q4):** derive from settlement count × NPC-density, or an absolute
+   target number?
+4. **Party faction in conflicts (Q6):** may generated conflicts reference the party
+   faction, or strictly NPC/non-party factions in v1?
+5. **Hex grid size per preset:** rough cols×rows for Small/Med/Large?
+6. **Biome set for v1:** which of forest/desert/plains/jungle/tundra/swamp/mountain
+   /coast to ship, and do we need water/ocean hexes for coastlines?
