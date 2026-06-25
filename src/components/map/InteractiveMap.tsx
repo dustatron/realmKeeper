@@ -403,6 +403,10 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
           await executeUpdateRegion({ ...fromRegion, boundary: null }, { regionRepo: container.regionRepo })
           setRegionPopup(null)
         }}
+        onNavigateToRegion={(regionId) => {
+          setRegionPopup(null)
+          navigate({ to: '/realms/regions/$regionId', params: { regionId } })
+        }}
       />
 
       {/* Place & Create POI Sheet */}
@@ -798,6 +802,7 @@ function RegionPopupDialog({
   onChangeTerrain,
   onDeleteBoundary,
   onReassignBoundary,
+  onNavigateToRegion,
 }: {
   region: Region | null
   allRegions: Region[]
@@ -806,6 +811,7 @@ function RegionPopupDialog({
   onChangeTerrain: (region: Region, terrain: string) => void
   onDeleteBoundary: (region: Region) => void
   onReassignBoundary: (fromRegion: Region, toRegionId: string) => void
+  onNavigateToRegion: (regionId: string) => void
 }) {
   if (!region) return null
 
@@ -897,6 +903,16 @@ function RegionPopupDialog({
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose}>
             Close
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              onClose()
+              onNavigateToRegion(region.id)
+            }}
+          >
+            <Eye className="mr-2 size-4" />
+            View Details
           </Button>
         </DialogFooter>
       </DialogContent>

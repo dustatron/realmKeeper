@@ -703,18 +703,30 @@ export function MapViewer({
       existing.setData(geojson as GeoJSON.FeatureCollection)
     } else {
       instance.addSource(sourceId, { type: 'geojson', data: geojson as GeoJSON.FeatureCollection })
-      instance.addLayer({
-        id: layerId,
-        type: 'fill',
-        source: sourceId,
-        paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.85 },
-      })
-      instance.addLayer({
-        id: lineId,
-        type: 'line',
-        source: sourceId,
-        paint: { 'line-color': '#00000033', 'line-width': 1 },
-      })
+      // Insert the biome fill at the BOTTOM (just above the background layer) so
+      // the region fill/outline/labels — added by the region effect — render ON
+      // TOP of the terrain instead of being hidden beneath an 85%-opaque fill.
+      const styleLayers = instance.getStyle().layers
+      const bgIdx = styleLayers.findIndex((l) => l.id === 'background')
+      const beforeId = bgIdx >= 0 ? styleLayers[bgIdx + 1]?.id : undefined
+      instance.addLayer(
+        {
+          id: layerId,
+          type: 'fill',
+          source: sourceId,
+          paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.85 },
+        },
+        beforeId,
+      )
+      instance.addLayer(
+        {
+          id: lineId,
+          type: 'line',
+          source: sourceId,
+          paint: { 'line-color': '#00000033', 'line-width': 1 },
+        },
+        beforeId,
+      )
     }
 
     // No teardown cleanup — matches the region/path effects in this file. The
