@@ -13,6 +13,7 @@ import { buildPath } from './buildPath'
 import { buildFaction } from './buildFaction'
 import { buildFactionRelationships } from './buildFactionRelationships'
 import { buildNpc } from './buildNpc'
+import { buildConnections } from './buildConnections'
 import { buildRegionFlavor } from './regionFlavor'
 import { buildPoiFlavor } from './poiFlavor'
 import type { GameMap, HexCell } from '@domain/entities/GameMap'
@@ -22,6 +23,7 @@ import type { Path } from '@domain/entities/Path'
 import type { Faction } from '@domain/entities/Faction'
 import type { FactionRelationship } from '@domain/entities/FactionRelationship'
 import type { NPC } from '@domain/entities/NPC'
+import type { Connection } from '@domain/entities/Connection'
 import type { SystemConfig } from '@domain/entities/SystemConfig'
 import { newId } from '@shared/ulid'
 
@@ -54,6 +56,7 @@ export function generateWorld(
   factions: Faction[]
   factionRelationships: FactionRelationship[]
   npcs: NPC[]
+  connections: Connection[]
 } {
   const { cols, rows, hexSize = 40, poiDensity = 'normal' } = opts
   const rng = new SeededRandom(seed)
@@ -422,14 +425,30 @@ export function generateWorld(
         regionId: faction.regionId ?? undefined,
         poiId: faction.headquartersPoiId ?? undefined,
       }
-      const leader = buildNpc({ ...link, role: 'leader' }, opts.systemConfig, rng)
+      // Each faction NPC's "want" points at a real faction objective, so the
+      // hook on their page is grounded in a faction agenda (leaders pursue a
+      // long-term aim; agents work an immediate tactical goal).
+      const longTermGoals = faction.agendaGoals.filter((g) => g.timeframe === 'long-term')
+      const immediateGoals = faction.agendaGoals.filter((g) => g.timeframe === 'immediate')
+      const wantFrom = (pool: typeof faction.agendaGoals): string =>
+        (pool.length > 0 ? rng.pick(pool) : faction.agendaGoals[0])?.description ?? ''
+
+      const leader = buildNpc(
+        { ...link, role: 'leader', want: wantFrom(longTermGoals) },
+        opts.systemConfig,
+        rng,
+      )
       npcs.push(leader)
       faction.leaderNpcId = leader.id
 
       const agentIds: string[] = []
       const agentCount = rng.between(1, 3)
       for (let i = 0; i < agentCount; i++) {
-        const agent = buildNpc({ ...link, role: 'agent' }, opts.systemConfig, rng)
+        const agent = buildNpc(
+          { ...link, role: 'agent', want: wantFrom(immediateGoals) },
+          opts.systemConfig,
+          rng,
+        )
         npcs.push(agent)
         agentIds.push(agent.id)
       }
@@ -443,5 +462,12 @@ export function generateWorld(
     rng,
   )
 
-  return { gameMap, regions, pois, paths, factions, factionRelationships, npcs }
+  // Step 10: narrative connections among the NPCs (agents → leader, and
+  // leader↔leader ties from faction sentiment). Needs leaders, so only when
+  // NPCs were generated.
+  const connections = opts.systemConfig
+    ? buildConnections(factions, factionRelationships, realmId)
+    : []
+
+  return { gameMap, regions, pois, paths, factions, factionRelationships, npcs, connections }
 }

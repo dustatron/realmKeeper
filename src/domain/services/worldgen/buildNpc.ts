@@ -18,6 +18,8 @@ export interface BuildNpcInput {
   regionId?: string
   poiId?: string
   role?: NpcRole
+  /** A concrete objective (the "side-quest hook" surfaced on the NPC page). */
+  want?: string
 }
 
 // Races weighted toward human, matching the rest of the app's NPC generation.
@@ -91,7 +93,7 @@ export function buildNpc(
     motivation: virtue,
     appearance,
     voice: speech,
-    want: '',
+    want: input.want ?? '',
     tags: [role],
     imageUrl: null,
     systemBlock: block,

@@ -8,7 +8,7 @@ const container = createContainer()
 
 beforeEach(async () => {
   await db.open()
-  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.factionRelationships.clear(), db.npcs.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear()])
+  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.factionRelationships.clear(), db.npcs.clear(), db.connections.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear()])
   // NPC generation rolls a system-correct stat block, so the system config must exist.
   await db.systemConfigs.put(cairnSystemConfig)
 })
@@ -85,6 +85,21 @@ describe('executeGenerateWorld', () => {
       expect(f.leaderNpcId).not.toBeNull()
       expect(npcs.some((n) => n.id === f.leaderNpcId)).toBe(true)
       expect(f.agentNpcIds.length).toBeGreaterThanOrEqual(1)
+    }
+  })
+
+  it('persists NPC connections (agents serve their leaders)', async () => {
+    const { realmId } = await executeGenerateWorld(
+      { name: 'Ties', systemId: 'system-cairn-2e', seed: 'seed-conn', size: 'medium', factionCount: 3 },
+      deps()
+    )
+    const npcs = await db.npcs.where('worldId').equals(realmId).toArray()
+    const npcIds = new Set(npcs.map((n) => n.id))
+    const connections = await db.connections.where('worldId').equals(realmId).toArray()
+    expect(connections.length).toBeGreaterThan(0)
+    for (const c of connections) {
+      expect(npcIds.has(c.fromId)).toBe(true)
+      expect(npcIds.has(c.toId)).toBe(true)
     }
   })
 

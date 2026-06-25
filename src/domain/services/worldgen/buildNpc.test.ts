@@ -37,6 +37,11 @@ describe('buildNpc', () => {
     expect((npc.systemBlock.className ?? '').length).toBeGreaterThan(0)
   })
 
+  it('carries a want (side-quest hook) when supplied', () => {
+    const npc = buildNpc({ ...BASE, want: 'Plant a spy in a rival faction' }, cairnSystemConfig, new SeededRandom('s'))
+    expect(npc.want).toBe('Plant a spy in a rival faction')
+  })
+
   it('leaves faction empty when no factionId is given (e.g. a settlement local)', () => {
     const npc = buildNpc({ worldId: 'w1', regionId: 'reg-1', role: 'inhabitant' }, cairnSystemConfig, new SeededRandom('s'))
     expect(npc.factionIds).toEqual([])

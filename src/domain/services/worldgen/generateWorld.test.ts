@@ -255,12 +255,56 @@ describe('generateWorld', () => {
     }
   })
 
+  it("gives faction NPCs a want drawn from their faction's agenda", () => {
+    const { factions, npcs } = generateWorld(REALM, 'seed-a', {
+      cols: 16,
+      rows: 16,
+      factionCount: 4,
+      systemConfig: cairnSystemConfig,
+    })
+    const factionById = new Map(factions.map((f) => [f.id, f]))
+    const factionNpcs = npcs.filter((n) => n.factionIds.length > 0)
+    expect(factionNpcs.length).toBeGreaterThan(0)
+    for (const npc of factionNpcs) {
+      expect(npc.want.length).toBeGreaterThan(0)
+      const faction = factionById.get(npc.factionIds[0])!
+      const goalDescriptions = faction.agendaGoals.map((g) => g.description)
+      expect(goalDescriptions).toContain(npc.want)
+    }
+  })
+
   it('omits NPCs (and leaves leaders empty) when no system config is supplied', () => {
     const { factions, npcs } = generateWorld(REALM, 'seed-a', { cols: 12, rows: 12 })
     expect(npcs).toEqual([])
     for (const f of factions) {
       expect(f.leaderNpcId).toBeNull()
       expect(f.agentNpcIds).toEqual([])
+    }
+  })
+
+  it('connects NPCs: agents serve their leader, hostile leaders are enemies', () => {
+    const { factions, npcs, connections } = generateWorld(REALM, 'seed-a', {
+      cols: 16,
+      rows: 16,
+      factionCount: 4,
+      systemConfig: cairnSystemConfig,
+    })
+    const npcIds = new Set(npcs.map((n) => n.id))
+    expect(connections.length).toBeGreaterThan(0)
+    for (const c of connections) {
+      expect(c.fromType).toBe('npc')
+      expect(c.toType).toBe('npc')
+      expect(npcIds.has(c.fromId)).toBe(true)
+      expect(npcIds.has(c.toId)).toBe(true)
+      expect(c.fromId).not.toBe(c.toId)
+    }
+    // every agent has a 'serves' (ally) edge to its faction leader
+    for (const f of factions) {
+      for (const agentId of f.agentNpcIds) {
+        expect(
+          connections.some((c) => c.fromId === agentId && c.toId === f.leaderNpcId && c.kind === 'ally'),
+        ).toBe(true)
+      }
     }
   })
 
