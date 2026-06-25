@@ -273,6 +273,23 @@ describe('generateWorld', () => {
     }
   })
 
+  it('gives every settlement at least one resident NPC (locations are rarely empty)', () => {
+    const { pois, npcs } = generateWorld(REALM, 'seed-a', {
+      cols: 16,
+      rows: 16,
+      systemConfig: cairnSystemConfig,
+    })
+    const settlements = pois.filter((p) => p.type === 'settlement')
+    const npcCountByPoi = new Map<string, number>()
+    for (const n of npcs) {
+      if (n.poiId) npcCountByPoi.set(n.poiId, (npcCountByPoi.get(n.poiId) ?? 0) + 1)
+    }
+    expect(settlements.length).toBeGreaterThan(0)
+    for (const s of settlements) {
+      expect(npcCountByPoi.get(s.id) ?? 0).toBeGreaterThanOrEqual(1)
+    }
+  })
+
   it('omits NPCs (and leaves leaders empty) when no system config is supplied', () => {
     const { factions, npcs } = generateWorld(REALM, 'seed-a', { cols: 12, rows: 12 })
     expect(npcs).toEqual([])

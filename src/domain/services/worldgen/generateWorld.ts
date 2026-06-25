@@ -463,6 +463,22 @@ export function generateWorld(
       }
       faction.agentNpcIds = agentIds
     }
+
+    // Step 8c: settlement residents — every settlement gets a few inhabitants so
+    // locations are rarely empty (faction HQs carry their leader/agents on top
+    // of these). Each resident gets a personal want, so they read as quest-givers.
+    for (const node of settlementNodes) {
+      const residentCount = rng.between(1, 3)
+      for (let i = 0; i < residentCount; i++) {
+        npcs.push(
+          buildNpc(
+            { worldId: realmId, regionId: node.poi.regionId, poiId: node.poi.id, role: 'inhabitant' },
+            opts.systemConfig,
+            rng,
+          ),
+        )
+      }
+    }
   }
 
   // Step 9: seeded pairwise relationships among the generated factions.
