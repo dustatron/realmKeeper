@@ -79,12 +79,15 @@ export function generateWorld(
   // Step 1: layout grid
   const { cells, width, height } = layoutHexGrid(cols, rows, hexSize)
 
-  // Step 2: seed biome centers (lake excluded)
+  // Step 2: seed biome centers (lake excluded). Centers sit on DISTINCT cells —
+  // sampling without replacement so two centers never share a cell, which would
+  // leave the later (tie-losing) center's region owning zero cells.
   const seedCount = Math.max(3, Math.round(Math.sqrt(cells.length) / 2))
-  const centers = Array.from({ length: seedCount }, () => {
-    const cell = cells[rng.between(0, cells.length - 1)]
-    return { q: cell.q, r: cell.r, biome: rng.pick(LAND_BIOMES) }
-  })
+  const centers = rng.sample(cells, seedCount).map((cell) => ({
+    q: cell.q,
+    r: cell.r,
+    biome: rng.pick(LAND_BIOMES),
+  }))
 
   // Step 3: one Region per center (with names unique within the world)
   const now = Date.now()
@@ -105,7 +108,7 @@ export function generateWorld(
     usedRegionNames.add(name)
     return name
   }
-  const regions: Region[] = centers.map((center, idx) => {
+  let regions: Region[] = centers.map((center, idx) => {
     const id = newId()
     const name = uniqueRegionName(center.biome)
     const flavor = buildRegionFlavor(center.biome, rng)
@@ -190,6 +193,18 @@ export function generateWorld(
       frontier.push(next)
     }
   }
+
+  // Step 4b-ii: drop any region left with no LAND cells — a region whose only
+  // cells were all swallowed by a lake. Such a region gets no POIs (step 6
+  // skips it) and would read as an empty, content-free place, so it should not
+  // be persisted at all. (Distinct centers already guarantee every region owns
+  // at least one cell; this catches the lake case.)
+  const landCellCount = new Map<string, number>()
+  for (const cm of cellMetas) {
+    if (cm.biome === 'lake') continue
+    landCellCount.set(cm.regionId, (landCellCount.get(cm.regionId) ?? 0) + 1)
+  }
+  regions = regions.filter((r) => (landCellCount.get(r.id) ?? 0) > 0)
 
   // Step 4c: each region's boundary = the outline of its hex cluster, so the map
   // can draw a labeled border around it.
