@@ -995,6 +995,36 @@ function NPCDetailPage() {
                   {h.secret.detail && (
                     <p className="text-sm text-muted-foreground">{h.secret.detail}</p>
                   )}
+                  {h.secret.targetType === 'poi' && (() => {
+                    const target = pois.find((p) => p.id === h.secret.targetId)
+                    return target ? (
+                      <p className="text-xs">
+                        <span className="text-muted-foreground">Location: </span>
+                        <Link
+                          to="/realms/pois/$poiId"
+                          params={{ poiId: target.id }}
+                          className="font-medium hover:underline"
+                        >
+                          {target.name}
+                        </Link>
+                      </p>
+                    ) : null
+                  })()}
+                  {h.secret.targetType === 'npc' && (() => {
+                    const target = allNpcs.find((n) => n.id === h.secret.targetId)
+                    return target ? (
+                      <p className="text-xs">
+                        <span className="text-muted-foreground">Target: </span>
+                        <Link
+                          to="/realms/npcs/$npcId"
+                          params={{ npcId: target.id }}
+                          className="font-medium hover:underline"
+                        >
+                          {target.name}
+                        </Link>
+                      </p>
+                    ) : null
+                  })()}
                   {h.rewardText && (
                     <p className="text-xs text-muted-foreground">Reward: {h.rewardText}</p>
                   )}
