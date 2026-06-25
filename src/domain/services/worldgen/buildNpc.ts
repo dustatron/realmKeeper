@@ -84,6 +84,7 @@ export function buildNpc(
 
   const role: NpcRole = input.role ?? 'inhabitant'
   const roleLabel = input.occupation ?? role
+  const article = /^[aeiou]/i.test(race) ? 'An' : 'A'
 
   return {
     id: newId(),
@@ -95,7 +96,7 @@ export function buildNpc(
     poiId: input.poiId ?? null,
     lifeStatus: 'alive',
     movementStatus: 'present',
-    description: `A ${race} ${roleLabel} — ${virtue.toLowerCase()} but ${vice.toLowerCase()}.`,
+    description: `${article} ${race} ${roleLabel} — ${virtue.toLowerCase()} but ${vice.toLowerCase()}.`,
     traits: [virtue, vice],
     motivation: virtue,
     appearance,
