@@ -1,8 +1,26 @@
 import { describe, it, expect } from 'vitest'
 import { generateWorld } from './generateWorld'
 import { DUNGEON_THEMES } from '~/domain/data/worldgen/poiKinds'
+import { hexLine } from '~/lib/hexmap/hex'
+import type { GameMap } from '@domain/entities/GameMap'
 
 const REALM = 'realm-1'
+
+// Reconstruct each POI's axial hex from its pixel position by matching the
+// position to a hex cell's centroid (the generator places POIs at cell centers).
+function axialLookup(gameMap: GameMap) {
+  const centroid = (corners: { x: number; y: number }[]) => ({
+    x: corners.reduce((s, c) => s + c.x, 0) / corners.length,
+    y: corners.reduce((s, c) => s + c.y, 0) / corners.length,
+  })
+  const byCenter = new Map<string, { q: number; r: number; biome: string }>()
+  for (const c of gameMap.hexCells!) {
+    const ctr = centroid(c.corners)
+    byCenter.set(`${Math.round(ctr.x)},${Math.round(ctr.y)}`, { q: c.q, r: c.r, biome: c.biome })
+  }
+  return (poi: { position: { x: number; y: number } | null }) =>
+    byCenter.get(`${Math.round(poi.position!.x)},${Math.round(poi.position!.y)}`)!
+}
 
 describe('generateWorld', () => {
   it('every region has an outline boundary and a distinct color', () => {
@@ -123,6 +141,54 @@ describe('generateWorld', () => {
       expect(seenEdges.has(key)).toBe(false)
       seenEdges.add(key)
     }
+  })
+
+  it('no path crosses a body of water', () => {
+    for (const seed of ['seed-a', 'water-1', 'water-2', 'water-3']) {
+      const { gameMap, pois, paths } = generateWorld(REALM, seed, { cols: 16, rows: 16 })
+      const axialOf = axialLookup(gameMap)
+      const poiById = new Map(pois.map((p) => [p.id, p]))
+      const lake = new Set(
+        gameMap.hexCells!.filter((c) => c.biome === 'lake').map((c) => `${c.q},${c.r}`),
+      )
+      for (const path of paths) {
+        const a = axialOf(poiById.get(path.fromPoiId)!)
+        const b = axialOf(poiById.get(path.toPoiId)!)
+        for (const h of hexLine(a, b)) {
+          expect(lake.has(`${h.q},${h.r}`)).toBe(false)
+        }
+      }
+    }
+  })
+
+  it('connects regions: most settlements share one road network', () => {
+    const { pois, paths } = generateWorld(REALM, 'seed-a', { cols: 16, rows: 16 })
+    const settlements = pois.filter((p) => p.type === 'settlement')
+    const regionOf = new Map(settlements.map((s) => [s.id, s.regionId]))
+
+    // union-find over settlement POIs joined by paths
+    const parent = new Map<string, string>(settlements.map((s) => [s.id, s.id]))
+    const find = (x: string): string => {
+      while (parent.get(x) !== x) {
+        parent.set(x, parent.get(parent.get(x)!)!)
+        x = parent.get(x)!
+      }
+      return x
+    }
+    const union = (a: string, b: string) => parent.set(find(a), find(b))
+    for (const p of paths) union(p.fromPoiId, p.toPoiId)
+
+    const components = new Map<string, string[]>()
+    for (const s of settlements) {
+      const root = find(s.id)
+      ;(components.get(root) ?? components.set(root, []).get(root)!).push(s.id)
+    }
+    const largest = [...components.values()].sort((a, b) => b.length - a.length)[0]
+    // the backbone ties a clear majority of settlements together...
+    expect(largest.length).toBeGreaterThan(settlements.length / 2)
+    // ...spanning more than one region (cross-region roads exist)
+    const regionsInLargest = new Set(largest.map((id) => regionOf.get(id)))
+    expect(regionsInLargest.size).toBeGreaterThan(1)
   })
 
   it('path generation is deterministic for a given seed', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  axialToPixel, pixelToAxial, hexNeighbors, hexDistance, hexCorners,
+  axialToPixel, pixelToAxial, hexNeighbors, hexDistance, hexCorners, hexLine,
 } from './hex'
 
 describe('hex math', () => {
@@ -27,6 +27,25 @@ describe('hex math', () => {
     expect(hexDistance({ q: 0, r: 0 }, { q: 0, r: 0 })).toBe(0)
     expect(hexDistance({ q: 0, r: 0 }, { q: 3, r: -1 })).toBe(hexDistance({ q: 3, r: -1 }, { q: 0, r: 0 }))
     expect(hexDistance({ q: 0, r: 0 }, { q: 3, r: 0 })).toBe(3)
+  })
+
+  it('hexLine connects two hexes with contiguous steps', () => {
+    const a = { q: 0, r: 0 }
+    const b = { q: 3, r: -1 }
+    const line = hexLine(a, b)
+    // includes both endpoints
+    expect(line[0]).toEqual(a)
+    expect(line[line.length - 1]).toEqual(b)
+    // length is distance + 1
+    expect(line).toHaveLength(hexDistance(a, b) + 1)
+    // every consecutive pair is adjacent
+    for (let i = 1; i < line.length; i++) {
+      expect(hexDistance(line[i - 1], line[i])).toBe(1)
+    }
+  })
+
+  it('hexLine from a hex to itself is just that hex', () => {
+    expect(hexLine({ q: 2, r: 2 }, { q: 2, r: 2 })).toEqual([{ q: 2, r: 2 }])
   })
 
   it('hexCorners returns 6 points around the center', () => {

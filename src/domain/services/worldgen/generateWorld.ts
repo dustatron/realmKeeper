@@ -1,5 +1,5 @@
 import { SeededRandom } from '~/lib/dungeon/SeededRandom'
-import { hexDistance, hexNeighbors } from '~/lib/hexmap/hex'
+import { hexDistance, hexNeighbors, hexLine } from '~/lib/hexmap/hex'
 import {
   layoutHexGrid,
   REGION_PALETTE,
@@ -261,39 +261,106 @@ export function generateWorld(
     }
   }
 
-  // Step 7: connect each settlement to its nearest 1-2 settlements by hex
-  // distance. Travel time scales with distance (~2-4 watches per hex). Edges are
-  // undirected, so we dedupe by the sorted POI-id pair and never link a
-  // settlement to itself.
+  // Step 7: build the road network. Travel time scales with distance (~2-4
+  // watches per hex). Edges are undirected, deduped by sorted POI-id pair, never
+  // self-linking, and never crossing water (a road is invalid if the hex line
+  // between its endpoints passes through a lake).
   const WATCHES_PER_HEX_MIN = 2
   const WATCHES_PER_HEX_MAX = 4
+  type Node = (typeof settlementNodes)[number]
+
+  const lakeSet = new Set<string>()
+  for (const cm of cellMetas) if (cm.biome === 'lake') lakeSet.add(`${cm.q},${cm.r}`)
+  const crossesWater = (a: Node, b: Node): boolean =>
+    hexLine({ q: a.q, r: a.r }, { q: b.q, r: b.r }).some((h) => lakeSet.has(`${h.q},${h.r}`))
+
   const paths: Path[] = []
   const seenEdges = new Set<string>()
-  for (const node of settlementNodes) {
-    const neighbors = settlementNodes
-      .filter((other) => other.poi.id !== node.poi.id)
-      .map((other) => ({
-        other,
-        dist: hexDistance({ q: node.q, r: node.r }, { q: other.q, r: other.r }),
-      }))
-      .sort((a, b) => a.dist - b.dist)
+  const addPath = (a: Node, b: Node, dist: number): void => {
+    const key = [a.poi.id, b.poi.id].sort().join('|')
+    if (seenEdges.has(key)) return
+    seenEdges.add(key)
+    const watchesPerHex = rng.between(WATCHES_PER_HEX_MIN, WATCHES_PER_HEX_MAX)
+    paths.push(
+      buildPath({
+        fromPoiId: a.poi.id,
+        toPoiId: b.poi.id,
+        name: `${a.poi.name} to ${b.poi.name}`,
+        baseTravelWatches: Math.max(1, dist * watchesPerHex),
+      }),
+    )
+  }
 
-    const linkCount = rng.between(1, 2)
-    for (const { other, dist } of neighbors.slice(0, linkCount)) {
-      const key = [node.poi.id, other.poi.id].sort().join('|')
-      if (seenEdges.has(key)) continue
-      seenEdges.add(key)
-      const watchesPerHex = rng.between(WATCHES_PER_HEX_MIN, WATCHES_PER_HEX_MAX)
-      paths.push(
-        buildPath({
-          fromPoiId: node.poi.id,
-          toPoiId: other.poi.id,
-          name: `${node.poi.name} to ${other.poi.name}`,
-          baseTravelWatches: Math.max(1, dist * watchesPerHex),
-        }),
-      )
+  const nodesByRegion = new Map<string, Node[]>()
+  for (const node of settlementNodes) {
+    const arr = nodesByRegion.get(node.poi.regionId)
+    if (arr) arr.push(node)
+    else nodesByRegion.set(node.poi.regionId, [node])
+  }
+
+  // 7a: intra-region — link each settlement to its nearest 1-2 dry neighbors in
+  // the same region, so a region's own settlements form a local network.
+  for (const nodes of nodesByRegion.values()) {
+    for (const node of nodes) {
+      const candidates = nodes
+        .filter((o) => o.poi.id !== node.poi.id && !crossesWater(node, o))
+        .map((o) => ({ o, dist: hexDistance({ q: node.q, r: node.r }, { q: o.q, r: o.r }) }))
+        .sort((a, b) => a.dist - b.dist)
+      const linkCount = rng.between(1, 2)
+      for (const { o, dist } of candidates.slice(0, linkCount)) addPath(node, o, dist)
     }
   }
+
+  // 7b: inter-region — connect regions into a backbone. Each region pair's
+  // candidate road is its closest settlement pair; if that closest pair crosses
+  // water, the pair is skipped (regions only reachable across water stay islands).
+  const regionKeys = [...nodesByRegion.keys()]
+  interface RegionEdge {
+    ri: string
+    rj: string
+    a: Node
+    b: Node
+    dist: number
+  }
+  const regionEdges: RegionEdge[] = []
+  for (let i = 0; i < regionKeys.length; i++) {
+    for (let j = i + 1; j < regionKeys.length; j++) {
+      const groupA = nodesByRegion.get(regionKeys[i])!
+      const groupB = nodesByRegion.get(regionKeys[j])!
+      let best: { a: Node; b: Node; dist: number } | null = null
+      for (const a of groupA) {
+        for (const b of groupB) {
+          const dist = hexDistance({ q: a.q, r: a.r }, { q: b.q, r: b.r })
+          if (!best || dist < best.dist) best = { a, b, dist }
+        }
+      }
+      if (!best || crossesWater(best.a, best.b)) continue
+      regionEdges.push({ ri: regionKeys[i], rj: regionKeys[j], a: best.a, b: best.b, dist: best.dist })
+    }
+  }
+
+  // Minimum spanning tree over regions (Kruskal), then a few shortest leftover
+  // edges as redundant cross-links so the network has some loops, not just a tree.
+  regionEdges.sort((x, y) => x.dist - y.dist)
+  const parent = new Map<string, string>(regionKeys.map((k) => [k, k]))
+  const find = (k: string): string => {
+    while (parent.get(k) !== k) {
+      parent.set(k, parent.get(parent.get(k)!)!)
+      k = parent.get(k)!
+    }
+    return k
+  }
+  const extraEdges: RegionEdge[] = []
+  for (const edge of regionEdges) {
+    if (find(edge.ri) !== find(edge.rj)) {
+      parent.set(find(edge.ri), find(edge.rj))
+      addPath(edge.a, edge.b, edge.dist)
+    } else {
+      extraEdges.push(edge)
+    }
+  }
+  const extraCount = Math.min(extraEdges.length, Math.max(1, Math.round(regionKeys.length / 3)))
+  for (const edge of extraEdges.slice(0, extraCount)) addPath(edge.a, edge.b, edge.dist)
 
   return { gameMap, regions, pois, paths }
 }

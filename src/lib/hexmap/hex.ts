@@ -50,6 +50,22 @@ export function hexDistance(a: Axial, b: Axial): number {
   return (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2
 }
 
+// All hexes on the straight line from a to b (inclusive), via cube-coordinate
+// lerp with rounding. Useful for testing whether a route passes through a given
+// terrain (e.g. avoiding lakes).
+export function hexLine(a: Axial, b: Axial): Axial[] {
+  const n = hexDistance(a, b)
+  if (n === 0) return [{ q: a.q, r: a.r }]
+  const result: Axial[] = []
+  for (let i = 0; i <= n; i++) {
+    const t = i / n
+    const qf = a.q + (b.q - a.q) * t
+    const rf = a.r + (b.r - a.r) * t
+    result.push(cubeRound(qf, rf))
+  }
+  return result
+}
+
 // Pointy-top corners, starting at the top-right and going clockwise.
 export function hexCorners(center: Point, size: number): Point[] {
   const corners: Point[] = []
