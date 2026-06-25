@@ -42,14 +42,31 @@ export function generateWorld(
     return { q: cell.q, r: cell.r, biome: rng.pick(LAND_BIOMES) }
   })
 
-  // Step 3: one Region per center
+  // Step 3: one Region per center (with names unique within the world)
   const now = Date.now()
+  const usedRegionNames = new Set<string>()
+  const uniqueRegionName = (): string => {
+    for (let i = 0; i < 20; i++) {
+      const candidate = pickName('region', rng)
+      if (!usedRegionNames.has(candidate)) {
+        usedRegionNames.add(candidate)
+        return candidate
+      }
+    }
+    // Name pool exhausted for this map — disambiguate with a numeral.
+    const base = pickName('region', rng)
+    let name = base
+    let k = 2
+    while (usedRegionNames.has(name)) name = `${base} ${k++}`
+    usedRegionNames.add(name)
+    return name
+  }
   const regions: Region[] = centers.map((center, idx) => {
     const id = newId()
     return {
       id,
       worldId: realmId,
-      name: pickName('region', rng),
+      name: uniqueRegionName(),
       description: '',
       terrain: center.biome,
       features: [pickBiomeFeature(center.biome, rng)],
@@ -169,22 +186,22 @@ export function generateWorld(
     updatedAt: now,
   }
 
-  // Step 6: scatter POIs
-  const landCells = cellMetas.filter((cm) => cm.biome !== 'lake')
-  const poiCount = Math.round(landCells.length * DENSITY[poiDensity])
-  const pickedCells = rng.sample(landCells, poiCount)
+  // Step 6: scatter POIs PER REGION so no region is left empty. Each region gets
+  // at least MIN_POIS_PER_REGION (capped by its available land cells), scaling up
+  // with the density knob.
+  const MIN_POIS_PER_REGION = 4
 
-  const pois: POI[] = pickedCells.map((cell) => {
+  const makePoi = (cell: CellMeta): POI => {
     const kind = rng.pickWeighted(POI_KIND_TABLE)
     const type = poiKindToType(kind)
     const nameKind = kind === 'landmark' ? 'landmark' : kind
     const name = pickName(nameKind, rng)
-    const id = newId()
+    const dungeonSeedId = newId()
 
     const dungeonGenOptions =
       type === 'dungeon'
         ? {
-            seed: `${seed}-${id}`,
+            seed: `${seed}-${dungeonSeedId}`,
             theme: rng.pick(DUNGEON_THEMES),
             size: 'medium' as const,
             treasureLevel: 'standard' as const,
@@ -197,7 +214,7 @@ export function generateWorld(
           }
         : null
 
-    const poi = buildPOI({
+    return buildPOI({
       regionId: cell.regionId,
       name,
       type,
@@ -205,10 +222,29 @@ export function generateWorld(
       mapRef: gameMap.id,
       dungeonGenOptions,
     })
+  }
 
-    // buildPOI generates its own id; we used id only for the dungeon seed
-    return poi
-  })
+  const landByRegion = new Map<string, CellMeta[]>()
+  for (const cm of cellMetas) {
+    if (cm.biome === 'lake') continue
+    const arr = landByRegion.get(cm.regionId)
+    if (arr) arr.push(cm)
+    else landByRegion.set(cm.regionId, [cm])
+  }
+
+  const pois: POI[] = []
+  for (const region of regions) {
+    const regionLand = landByRegion.get(region.id) ?? []
+    if (regionLand.length === 0) continue
+    const densityTarget = Math.round(regionLand.length * DENSITY[poiDensity])
+    const target = Math.min(
+      regionLand.length,
+      Math.max(MIN_POIS_PER_REGION, densityTarget),
+    )
+    for (const cell of rng.sample(regionLand, target)) {
+      pois.push(makePoi(cell))
+    }
+  }
 
   return { gameMap, regions, pois }
 }

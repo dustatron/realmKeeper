@@ -16,6 +16,24 @@ describe('generateWorld', () => {
     expect(new Set(colors).size).toBeGreaterThan(1)
   })
 
+  it('region names are unique within the world', () => {
+    const { regions } = generateWorld(REALM, 'seed-a', { cols: 16, rows: 16 })
+    const names = regions.map((r) => r.name)
+    expect(new Set(names).size).toBe(names.length)
+  })
+
+  it('every region gets at least the per-region POI minimum (capped by its land cells)', () => {
+    const { regions, pois } = generateWorld(REALM, 'seed-a', { cols: 12, rows: 12, poiDensity: 'sparse' })
+    const countByRegion = new Map<string, number>()
+    for (const p of pois) countByRegion.set(p.regionId, (countByRegion.get(p.regionId) ?? 0) + 1)
+    for (const r of regions) {
+      // each region with any POIs should have a healthy minimum (>= 3);
+      // sparse density would otherwise leave some regions near-empty.
+      const c = countByRegion.get(r.id) ?? 0
+      expect(c).toBeGreaterThanOrEqual(3)
+    }
+  })
+
   it('carves at least one lake', () => {
     const { gameMap } = generateWorld(REALM, 'seed-a', { cols: 12, rows: 12 })
     const lakeCells = gameMap.hexCells!.filter((c) => c.biome === 'lake')

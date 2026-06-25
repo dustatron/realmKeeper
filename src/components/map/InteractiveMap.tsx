@@ -887,20 +887,17 @@ function RegionPopupDialog({
             </div>
           </div>
 
-          {/* Delete boundary */}
-          <div>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="w-full"
-              onClick={() => onDeleteBoundary(region)}
-            >
-              <Trash2 className="mr-2 size-4" />
-              Delete Boundary
-            </Button>
-          </div>
         </div>
         <DialogFooter>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="mr-auto"
+            onClick={() => onDeleteBoundary(region)}
+          >
+            <Trash2 className="mr-2 size-4" />
+            Delete Boundary
+          </Button>
           <Button variant="outline" size="sm" onClick={onClose}>
             Close
           </Button>
