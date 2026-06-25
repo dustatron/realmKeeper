@@ -34,6 +34,7 @@ export interface GenerateWorldInput {
   daysPerWeek?: number
   factionTurnTrigger?: 'day' | 'week' | 'manual'
   poiDensity?: PoiDensity
+  factionCount?: number
 }
 
 export async function executeGenerateWorld(
@@ -62,15 +63,17 @@ export async function executeGenerateWorld(
       },
       deps
     )
-    const { gameMap, regions, pois, paths } = generateWorld(realm.id, input.seed, {
+    const { gameMap, regions, pois, paths, factions } = generateWorld(realm.id, input.seed, {
       cols: preset.cols,
       rows: preset.rows,
       poiDensity: input.poiDensity ?? 'normal',
+      factionCount: input.factionCount,
     })
     await db.gameMaps.put(gameMap)
     await db.regions.bulkPut(regions)
     await db.pois.bulkPut(pois)
     await db.paths.bulkPut(paths)
+    await db.factions.bulkPut(factions)
     realmId = realm.id
     mapId = gameMap.id
   })

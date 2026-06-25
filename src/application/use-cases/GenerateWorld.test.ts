@@ -53,6 +53,23 @@ describe('executeGenerateWorld', () => {
     for (const p of pois) expect(regionIds.has(p.regionId)).toBe(true)
   })
 
+  it('persists factions headquartered at generated settlements', async () => {
+    const { realmId, mapId } = await executeGenerateWorld(
+      { name: 'Powers', systemId: 'system-cairn-2e', seed: 'seed-fac', size: 'medium', factionCount: 3 },
+      deps()
+    )
+    const pois = await db.pois.where('mapRef').equals(mapId).toArray()
+    const settlementIds = new Set(pois.filter((p) => p.type === 'settlement').map((p) => p.id))
+    const factions = await db.factions.where('worldId').equals(realmId).toArray()
+    // generated factions (the party faction created by CreateRealm is isParty)
+    const generated = factions.filter((f) => !f.isParty)
+    expect(generated.length).toBe(3)
+    for (const f of generated) {
+      expect(settlementIds.has(f.headquartersPoiId!)).toBe(true)
+      expect(f.name.length).toBeGreaterThan(0)
+    }
+  })
+
   it('persists paths linking generated settlements', async () => {
     const { mapId } = await executeGenerateWorld(
       { name: 'Roads', systemId: 'system-cairn-2e', seed: 'seed-paths', size: 'medium', poiDensity: 'normal' },

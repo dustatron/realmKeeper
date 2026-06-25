@@ -1,6 +1,6 @@
 import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
-import { cairnTableDefs } from '@domain/data/cairn-tables'
 import { pickBiomeFeature, type Biome } from '@domain/data/worldgen/biomes'
+import { pickCairn, sampleCairn } from './cairnPick'
 
 // Structured region flavor, sourced from the Cairn region/setting tables that
 // already ship in the codebase. Used for every system (the Cairn tables are the
@@ -30,13 +30,6 @@ const BIOME_TIER: Record<Biome, Tier> = {
   blighted: 'perilous',
 }
 
-const tableTexts = (id: string): string[] => {
-  const table = cairnTableDefs.find((t) => t.id === id)
-  return table ? table.entries.map((e) => e.text) : []
-}
-
-const pickFrom = (rng: SeededRandom, id: string): string => rng.pick(tableTexts(id))
-
 // Cairn has no generic "region danger" table; derive danger from a Lair (its
 // type + feature) and, when the region's people are themselves a threat, from
 // them too.
@@ -53,21 +46,19 @@ export function buildRegionFlavor(biome: Biome, rng: SeededRandom): RegionFlavor
 
   // Features: the biome's own evocative feature plus a Cairn landmark.
   const biomeFeature = pickBiomeFeature(biome, rng)
-  const landmark = pickFrom(rng, `table-cairn-landmark-${tier}`)
+  const landmark = pickCairn(rng, `table-cairn-landmark-${tier}`)
   const features = [biomeFeature, landmark]
 
   // People: exactly one group.
-  const people = [pickFrom(rng, 'table-cairn-region-people')]
+  const people = [pickCairn(rng, 'table-cairn-region-people')]
 
   // Resources: one or two, no duplicates.
-  const resourcePool = tableTexts('table-cairn-region-resources')
-  const resourceCount = rng.between(1, 2)
-  const resources = rng.sample(resourcePool, resourceCount)
+  const resources = sampleCairn(rng, 'table-cairn-region-resources', rng.between(1, 2))
 
   // Dangers: a lair-based threat, plus the people when they are themselves
   // dangerous.
-  const lair = pickFrom(rng, 'table-cairn-lair')
-  const lairFeature = pickFrom(rng, 'table-cairn-lair-feature')
+  const lair = pickCairn(rng, 'table-cairn-lair')
+  const lairFeature = pickCairn(rng, 'table-cairn-lair-feature')
   const dangers = [`${lairFeature} ${lair}`.toLowerCase()]
   if (THREATENING_PEOPLE.has(people[0])) dangers.push(people[0].toLowerCase())
 

@@ -191,6 +191,41 @@ describe('generateWorld', () => {
     expect(regionsInLargest.size).toBeGreaterThan(1)
   })
 
+  it('generates factions anchored to settlement headquarters', () => {
+    const { pois, regions, factions } = generateWorld(REALM, 'seed-a', { cols: 16, rows: 16 })
+    const settlements = new Map(pois.filter((p) => p.type === 'settlement').map((p) => [p.id, p]))
+    const regionIds = new Set(regions.map((r) => r.id))
+
+    expect(factions.length).toBeGreaterThanOrEqual(2)
+    expect(factions.length).toBeLessThanOrEqual(settlements.size)
+
+    const hqs = new Set<string>()
+    for (const f of factions) {
+      expect(f.worldId).toBe(REALM)
+      expect(f.isParty).toBe(false)
+      expect(f.name.length).toBeGreaterThan(0)
+      // HQ is a generated settlement, and distinct per faction
+      expect(settlements.has(f.headquartersPoiId!)).toBe(true)
+      expect(hqs.has(f.headquartersPoiId!)).toBe(false)
+      hqs.add(f.headquartersPoiId!)
+      // region matches the HQ settlement's region
+      expect(f.regionId).toBe(settlements.get(f.headquartersPoiId!)!.regionId)
+      expect(regionIds.has(f.regionId!)).toBe(true)
+    }
+  })
+
+  it('respects an explicit faction count (capped by settlements)', () => {
+    const { factions } = generateWorld(REALM, 'seed-a', { cols: 16, rows: 16, factionCount: 3 })
+    expect(factions.length).toBe(3)
+  })
+
+  it('faction generation is deterministic for a given seed', () => {
+    const a = generateWorld(REALM, 'fixed', { cols: 12, rows: 12 })
+    const b = generateWorld(REALM, 'fixed', { cols: 12, rows: 12 })
+    expect(a.factions.length).toBe(b.factions.length)
+    expect(a.factions.map((f) => f.name)).toEqual(b.factions.map((f) => f.name))
+  })
+
   it('path generation is deterministic for a given seed', () => {
     const a = generateWorld(REALM, 'fixed', { cols: 12, rows: 12 })
     const b = generateWorld(REALM, 'fixed', { cols: 12, rows: 12 })

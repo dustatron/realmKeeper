@@ -10,12 +10,14 @@ import { pickName } from '~/domain/data/worldgen/names'
 import { POI_KIND_TABLE, poiKindToType, DUNGEON_THEMES } from '~/domain/data/worldgen/poiKinds'
 import { buildPOI } from './buildPoi'
 import { buildPath } from './buildPath'
+import { buildFaction } from './buildFaction'
 import { buildRegionFlavor } from './regionFlavor'
 import { describePoi } from './poiFlavor'
 import type { GameMap, HexCell } from '@domain/entities/GameMap'
 import type { Region } from '@domain/entities/Region'
 import type { POI } from '@domain/entities/POI'
 import type { Path } from '@domain/entities/Path'
+import type { Faction } from '@domain/entities/Faction'
 import { newId } from '@shared/ulid'
 
 export type PoiDensity = 'sparse' | 'normal' | 'dense'
@@ -31,8 +33,14 @@ const LAND_BIOMES: Biome[] = BIOMES.filter((b) => b !== 'lake')
 export function generateWorld(
   realmId: string,
   seed: string,
-  opts: { cols: number; rows: number; hexSize?: number; poiDensity?: PoiDensity }
-): { gameMap: GameMap; regions: Region[]; pois: POI[]; paths: Path[] } {
+  opts: {
+    cols: number
+    rows: number
+    hexSize?: number
+    poiDensity?: PoiDensity
+    factionCount?: number
+  }
+): { gameMap: GameMap; regions: Region[]; pois: POI[]; paths: Path[]; factions: Faction[] } {
   const { cols, rows, hexSize = 40, poiDensity = 'normal' } = opts
   const rng = new SeededRandom(seed)
 
@@ -362,5 +370,23 @@ export function generateWorld(
   const extraCount = Math.min(extraEdges.length, Math.max(1, Math.round(regionKeys.length / 3)))
   for (const edge of extraEdges.slice(0, extraCount)) addPath(edge.a, edge.b, edge.dist)
 
-  return { gameMap, regions, pois, paths }
+  // Step 8: factions. Each gets a distinct settlement as its headquarters (and
+  // inherits that settlement's region). Count scales with the number of
+  // settlements unless overridden, and can never exceed the settlements
+  // available to host them. Faction leadership/agents are assigned in a later
+  // NPC stage, so those references start empty.
+  const defaultFactionCount = Math.max(2, Math.round(settlementNodes.length / 4))
+  const factionCount = Math.min(
+    settlementNodes.length,
+    opts.factionCount ?? defaultFactionCount,
+  )
+  const hqNodes = rng.sample(settlementNodes, factionCount)
+  const factions: Faction[] = hqNodes.map((node) =>
+    buildFaction(
+      { worldId: realmId, hqPoiId: node.poi.id, regionId: node.poi.regionId },
+      rng,
+    ),
+  )
+
+  return { gameMap, regions, pois, paths, factions }
 }
