@@ -26,6 +26,7 @@ import { executeCreateNPC } from '@application/use-cases/CreateNPC'
 import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import { NPCEditSheet } from '~/components/shared/NPCEditSheet'
 import { MapUploadDialog } from '~/components/map/MapUploadDialog'
+import { IMAGE_MAP_GENERATORS } from '~/lib/watabou/generators'
 import { MultiMapViewer } from '~/components/map/MultiMapViewer'
 import { WatabouMapSection } from '~/components/watabou/WatabouMapSection'
 import { SpatialDungeonRenderer } from '~/components/dungeon/SpatialDungeonRenderer'
@@ -229,7 +230,10 @@ function POIDetailPage() {
   if (poi === null) return <div className="py-8 text-center text-muted-foreground">POI not found.</div>
 
   const Icon = POI_TYPE_ICONS[poi.type]
-  const watabouGenerator = poi.type === 'settlement' ? 'mfcg' as const : poi.type === 'dungeon' ? 'opd' as const : null
+  // POI type implies a default generator; the user can still pick either in the Add Map dialog.
+  const impliedGenerator = poi.type === 'settlement' ? 'mfcg' as const : poi.type === 'dungeon' ? 'opd' as const : null
+  // Render whatever generator was actually saved on this POI, regardless of type.
+  const activeWatabouGenerator = poi.watabouGenerator ?? impliedGenerator
 
   const notesSection = region ? <NotesPanel ownerType="poi" ownerId={poiId} worldId={region.worldId} /> : null
 
@@ -243,11 +247,11 @@ function POIDetailPage() {
     />
   ) : null
 
-  const watabouInline = watabouGenerator && poi.watabouData ? (
+  const watabouInline = activeWatabouGenerator && poi.watabouData ? (
     <WatabouMapSection
       data={poi.watabouData}
       seed={poi.watabouSeed}
-      generator={watabouGenerator}
+      generator={activeWatabouGenerator}
       onImport={actions.handleImportWatabou}
       onClear={actions.handleClearWatabou}
     />
@@ -422,6 +426,7 @@ function POIDetailPage() {
             poi={poi}
             children={children}
             npcs={npcs}
+            childNPCs={childNPCs}
             allWorldNPCs={allWorldNPCs}
             factionPresences={factionPresences}
             paths={paths}
@@ -572,8 +577,10 @@ function POIDetailPage() {
         open={mapUploadDialogOpen}
         onOpenChange={setMapUploadDialogOpen}
         onUpload={actions.handleUploadMap}
-        generator={watabouGenerator}
-        onWatabouImport={watabouGenerator ? actions.handleImportWatabou : undefined}
+        enableGenerate
+        defaultGenerator={poi.watabouGenerator ?? impliedGenerator ?? undefined}
+        onWatabouImport={actions.handleImportWatabou}
+        imageGenerators={IMAGE_MAP_GENERATORS}
         existingWatabouData={poi.watabouData}
         existingSeed={poi.watabouSeed}
       />

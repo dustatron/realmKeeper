@@ -8,68 +8,13 @@ import {
 } from '~/components/ui/dialog'
 import { Button } from '~/components/ui/button'
 import { Upload, FileJson, AlertCircle } from 'lucide-react'
-import type { WatabouCityData } from '@domain/value-objects/WatabouCityData'
-import type { WatabouDungeonData } from '@domain/value-objects/WatabouDungeonData'
-
-type WatabouData = WatabouCityData | WatabouDungeonData
+import { detectWatabouFormat, type WatabouData } from '~/lib/watabou/parseWatabouExport'
 
 interface WatabouImportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onImport: (data: WatabouData, seed: string | null) => void
   expectedGenerator?: 'mfcg' | 'opd' | null
-}
-
-function detectFormat(json: unknown): { data: WatabouData; seed: string | null } | { error: string } {
-  if (!json || typeof json !== 'object') return { error: 'Invalid JSON' }
-
-  const obj = json as Record<string, unknown>
-
-  // OPD format: has rects array
-  if (Array.isArray(obj.rects)) {
-    const data: WatabouDungeonData = {
-      type: 'opd',
-      rects: obj.rects as WatabouDungeonData['rects'],
-      doors: Array.isArray(obj.doors) ? obj.doors as WatabouDungeonData['doors'] : [],
-      columns: Array.isArray(obj.columns) ? obj.columns as WatabouDungeonData['columns'] : [],
-      water: Array.isArray(obj.water) ? obj.water : [],
-      notes: Array.isArray(obj.notes) ? obj.notes as WatabouDungeonData['notes'] : [],
-      version: typeof obj.version === 'number' ? obj.version : undefined,
-      seed: typeof obj.seed === 'string' ? obj.seed : undefined,
-    }
-    return { data, seed: data.seed ?? null }
-  }
-
-  // MFCG GeoJSON format: has features array with type=Feature entries
-  if (Array.isArray(obj.features) && obj.features.length > 0) {
-    const features = obj.features as Array<Record<string, unknown>>
-    const isGeoJSON = features.some(f => f.type === 'Feature' && f.geometry)
-    if (isGeoJSON) {
-      // Extract metadata from first feature if it has properties with known MFCG keys
-      let metadata: WatabouCityData['metadata']
-      const first = features[0]?.properties as Record<string, unknown> | undefined
-      if (first) {
-        metadata = {
-          roadWidth: typeof first.roadWidth === 'number' ? first.roadWidth : undefined,
-          towerRadius: typeof first.towerRadius === 'number' ? first.towerRadius : undefined,
-          wallThickness: typeof first.wallThickness === 'number' ? first.wallThickness : undefined,
-          riverWidth: typeof first.riverWidth === 'number' ? first.riverWidth : undefined,
-          version: typeof first.version === 'number' ? first.version : undefined,
-        }
-      }
-      const seed = typeof (first?.seed) === 'string' ? first.seed as string
-        : typeof obj.seed === 'string' ? obj.seed as string
-        : null
-      const data: WatabouCityData = {
-        type: 'mfcg',
-        features: obj.features as WatabouCityData['features'],
-        metadata,
-      }
-      return { data, seed }
-    }
-  }
-
-  return { error: 'Unrecognized format. Expected MFCG GeoJSON or One Page Dungeon JSON.' }
 }
 
 export function WatabouImportDialog({ open, onOpenChange, onImport, expectedGenerator }: WatabouImportDialogProps) {
@@ -83,7 +28,7 @@ export function WatabouImportDialog({ open, onOpenChange, onImport, expectedGene
     reader.onload = () => {
       try {
         const json = JSON.parse(reader.result as string)
-        const result = detectFormat(json)
+        const result = detectWatabouFormat(json)
         if ('error' in result) {
           setError(result.error)
           return
