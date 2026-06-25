@@ -64,12 +64,26 @@ describe('generateWorld', () => {
     }
   })
 
+  it('settlements get a subtype label and a feature tag (richer detail)', () => {
+    const { pois } = generateWorld(REALM, 'seed-a', { cols: 16, rows: 16 })
+    const settlements = pois.filter((p) => p.type === 'settlement')
+    expect(settlements.length).toBeGreaterThan(0)
+    for (const s of settlements) {
+      expect(s.subtypeLabel).toBeTruthy()
+      expect(s.tags.length).toBeGreaterThanOrEqual(1)
+      expect(s.readAloud.length).toBeGreaterThan(0)
+    }
+  })
+
   it('every POI gets a non-empty description', () => {
     const { pois } = generateWorld(REALM, 'seed-a', { cols: 12, rows: 12 })
     expect(pois.length).toBeGreaterThan(0)
     for (const p of pois) {
       expect(p.description.length).toBeGreaterThan(0)
-      expect(p.description).toContain(p.name)
+      // Non-settlement descriptions name the POI; settlements carry the name in
+      // their read-aloud instead (description is a clean "A village in the …").
+      const named = p.type === 'settlement' ? p.readAloud : p.description
+      expect(named).toContain(p.name)
     }
   })
 

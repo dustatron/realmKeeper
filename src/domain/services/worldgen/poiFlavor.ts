@@ -25,3 +25,36 @@ export function describePoi(
   const feature = pickCairn(rng, ids.feature)
   return `${name} is a ${feature.toLowerCase()} ${type.toLowerCase()} amid the ${biome}.`
 }
+
+export interface SettlementFlavor {
+  subtypeLabel: string
+  tags: string[]
+  description: string
+  readAloud: string
+}
+
+// Settlements get richer structured flavor than a single description so their
+// detail page reads like the regions/dungeons do: the Cairn settlement type
+// becomes the subtype label, its notable feature becomes a tag, and both feed a
+// description plus a short read-aloud. Sourced entirely from the Cairn settlement
+// tables; deterministic given the same seed.
+const article = (word: string): string => (/^[aeiou]/i.test(word) ? 'an' : 'a')
+
+export function buildSettlementFlavor(
+  name: string,
+  biome: string,
+  rng: SeededRandom,
+): SettlementFlavor {
+  const type = pickCairn(rng, 'table-cairn-settlement')
+  const feature = pickCairn(rng, 'table-cairn-settlement-feature')
+  const lowerType = type.toLowerCase()
+  return {
+    subtypeLabel: type,
+    // The notable feature reads as varied phrases (adjectives, "Trading Hub",
+    // "Built Atop Ruins"), so surface it as a tag badge rather than forcing it
+    // into a sentence.
+    tags: [feature],
+    description: `${article(lowerType) === 'an' ? 'An' : 'A'} ${lowerType} in the ${biome}.`,
+    readAloud: `${name} is ${article(lowerType)} ${lowerType} set in the ${biome}; known for being ${feature.toLowerCase()}.`,
+  }
+}

@@ -14,7 +14,7 @@ import { buildFaction } from './buildFaction'
 import { buildFactionRelationships } from './buildFactionRelationships'
 import { buildNpc } from './buildNpc'
 import { buildRegionFlavor } from './regionFlavor'
-import { describePoi } from './poiFlavor'
+import { describePoi, buildSettlementFlavor } from './poiFlavor'
 import type { GameMap, HexCell } from '@domain/entities/GameMap'
 import type { Region } from '@domain/entities/Region'
 import type { POI } from '@domain/entities/POI'
@@ -224,7 +224,14 @@ export function generateWorld(
     const type = poiKindToType(kind)
     const nameKind = kind === 'landmark' ? 'landmark' : kind
     const name = pickName(nameKind, rng)
-    const description = describePoi(kind, name, cell.biome, rng)
+    // Settlements get richer structured flavor (subtype label + feature tag +
+    // read-aloud) so their detail page reads like regions/dungeons; other POI
+    // kinds get a one-line description.
+    const settlementFlavor =
+      kind === 'settlement' ? buildSettlementFlavor(name, cell.biome, rng) : null
+    const description = settlementFlavor
+      ? settlementFlavor.description
+      : describePoi(kind, name, cell.biome, rng)
     const dungeonSeedId = newId()
 
     const dungeonGenOptions =
@@ -248,6 +255,9 @@ export function generateWorld(
       name,
       description,
       type,
+      subtypeLabel: settlementFlavor?.subtypeLabel ?? null,
+      tags: settlementFlavor?.tags ?? [],
+      readAloud: settlementFlavor?.readAloud ?? '',
       position: { x: cell.cx, y: cell.cy },
       mapRef: gameMap.id,
       dungeonGenOptions,

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { cairnTableDefs } from '@domain/data/cairn-tables'
 import type { PoiKind } from '@domain/data/worldgen/poiKinds'
-import { describePoi } from './poiFlavor'
+import { describePoi, buildSettlementFlavor } from './poiFlavor'
 
 const textsOf = (id: string) =>
   cairnTableDefs.find((t) => t.id === id)!.entries.map((e) => e.text)
@@ -34,5 +34,29 @@ describe('describePoi', () => {
     const types = textsOf('table-cairn-curiosity').map((t) => t.toLowerCase())
     const desc = describePoi('landmark', 'Place', 'desert', new SeededRandom('c')).toLowerCase()
     expect(types.some((t) => desc.includes(t.toLowerCase()))).toBe(true)
+  })
+})
+
+describe('buildSettlementFlavor', () => {
+  it('surfaces the Cairn settlement type and feature as structured fields', () => {
+    const types = textsOf('table-cairn-settlement')
+    const features = textsOf('table-cairn-settlement-feature')
+    const f = buildSettlementFlavor('Ashwick', 'forest', new SeededRandom('s'))
+    expect(types).toContain(f.subtypeLabel)
+    expect(f.tags).toHaveLength(1)
+    expect(features).toContain(f.tags[0])
+  })
+
+  it('fills a description and a read-aloud naming the settlement', () => {
+    const f = buildSettlementFlavor('Ashwick', 'forest', new SeededRandom('s'))
+    expect(f.description.length).toBeGreaterThan(0)
+    expect(f.description.toLowerCase()).toContain('forest')
+    expect(f.readAloud).toContain('Ashwick')
+  })
+
+  it('is deterministic for a given seed', () => {
+    const a = buildSettlementFlavor('Ashwick', 'hills', new SeededRandom('z'))
+    const b = buildSettlementFlavor('Ashwick', 'hills', new SeededRandom('z'))
+    expect(a).toEqual(b)
   })
 })
