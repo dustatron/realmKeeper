@@ -15,16 +15,24 @@ export async function executeGenerateWorld(
   input: { name: string; systemId: string; seed: string },
   deps: GenerateWorldDeps
 ): Promise<{ realmId: string; mapId: string }> {
-  const realm = await executeCreateRealm(
-    { name: input.name, systemId: input.systemId, description: '' },
-    deps
-  )
+  let realmId = ''
+  let mapId = ''
 
-  const gameMap = buildTinyHexMap(realm.id, input.seed)
-
-  await db.transaction('rw', db.gameMaps, async () => {
+  // One atomic transaction: the realm (+ its party faction and main note,
+  // written by executeCreateRealm via the repos, which join this transaction's
+  // async context) and the hex map all commit together or roll back together —
+  // no orphaned realm if a later write fails. Tables listed = every table the
+  // enclosed writes touch.
+  await db.transaction('rw', db.worlds, db.factions, db.realmNotes, db.gameMaps, async () => {
+    const realm = await executeCreateRealm(
+      { name: input.name, systemId: input.systemId, description: '' },
+      deps
+    )
+    const gameMap = buildTinyHexMap(realm.id, input.seed)
     await db.gameMaps.put(gameMap)
+    realmId = realm.id
+    mapId = gameMap.id
   })
 
-  return { realmId: realm.id, mapId: gameMap.id }
+  return { realmId, mapId }
 }

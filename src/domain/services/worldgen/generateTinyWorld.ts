@@ -5,7 +5,8 @@ import { BIOMES, type Biome } from '~/domain/data/worldgen/biomes'
 import type { GameMap, HexCell } from '@domain/entities/GameMap'
 import { newId } from '@shared/ulid'
 
-// Land biomes used as cluster seeds (lake is scattered as filler, not a seed).
+// Land biomes used as cluster seeds. `lake` is excluded from the seed set; it
+// does not appear in v1 tiny worlds (no scatter/filler pass yet).
 const LAND_BIOMES: Biome[] = BIOMES.filter((b) => b !== 'lake')
 
 export function buildTinyHexMap(
