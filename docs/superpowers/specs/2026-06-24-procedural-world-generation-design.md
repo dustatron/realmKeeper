@@ -30,12 +30,19 @@ and plan are structured data the existing faction-turn engine can act on later.
    **deferred**; editing happens on the existing POI/Region detail pages.
 4. **World size = density.** Small/Med/Large scale the grid size and how much fills
    it (factions, POIs, NPCs). Advanced knobs override individual dials.
-5. **Conflicts are a live, linked web.** Inter-NPC ties create real NPC records and
-   a new `NPCRelationship` entity. Quest hooks are navigable, not dead-end prose.
-6. **Quest hooks reuse existing entities** and split into a **public hook** + a
-   hidden **secret** (the hexroll pattern). Public surface: `Notice` (actionable,
-   has `contactNpcId`/`reward`/`type`) and `Rumor` (`isQuestHook` ambient). The
-   secret (the answer) lives in the target POI's `gmNotes`.
+5. **Conflicts are a live, linked web on a unified graph.** Inter-entity ties
+   create real records and edges in **one polymorphic `Connection` table** (NPC↔NPC,
+   NPC↔POI, NPC↔faction-narrative, NPC↔item). This mirrors the existing
+   `EntityNote` polymorphic-owner pattern. "Everything connected to X" is one query
+   for any entity type. Structural membership (`NPC.factionIds`, leader/agent) and
+   the scored `FactionRelationship` matrix stay as-is — `Connection` carries only
+   **narrative/quest** edges, so there is no dual source of truth.
+6. **Quests are a first-class `Hook` aggregate** (source of truth), split into a
+   **public surface** + a hidden **structured secret** (the hexroll pattern). The
+   `Hook` owns type, status, contact, reward, and a **queryable `secret`**
+   (`{kind, targetType, targetId, detail}`) — *not* prose in `gmNotes`. `Notice`
+   and `Rumor` become **public projections** of a `Hook` (gain a `hookId`
+   back-ref). Quest lifecycle lives in one place.
 7. **Looming threat reuses `WorldEvent`** — a future-dated event on the existing
    clock, tied to a faction agenda.
 8. **Commit flow: just commit.** Generation is creative scaffolding, not "world
@@ -66,7 +73,7 @@ Validated borrowings:
 - **Quest taxonomy:** `missing_person`, `lost_item`, `delivery`, `escort`,
   `relation`, `revenge`, `artifacts`.
 - **Relationship verb tables:** grudge / dispute / bad blood / vendetta / affair /
-  fallen in love / special interest — seeds `NPCRelationship` type + description.
+  fallen in love / special interest — seeds `Connection` kind + label.
 - **Faction archetypes** (Cult / Militia / Syndicate), each with member NPCs and
   auto "association rumors" ("the Cult is up to something").
 - **Realm archetypes** (Kingdom / Empire / Duchy / Lands), each with a ruler NPC.
@@ -84,8 +91,9 @@ Validated borrowings:
 | Faction structure | `Faction` (`agendaGoals`, `advantages`, `obstacles`) |
 | Faction relations | `FactionRelationship` (−6..+6) |
 | NPC core | `NPC` (`motivation`, `want`, `traits`, `systemBlock`) |
-| Quest hooks (public) | `Notice` (bounty/job/warning/announcement/request), `Rumor` (`isQuestHook`) |
+| Quest public projections | `Notice` (bounty/job/warning/announcement/request), `Rumor` (`isQuestHook`) — gain `hookId` |
 | Hook UI components | `RumorList`, `NoticeBoard` (shared) |
+| Polymorphic-link precedent | `EntityNote` (`ownerType`/`ownerId`) — pattern the `Connection` table follows |
 | Doom event | `WorldEvent` (year/season/day/watch + `relatedEntityIds`) |
 | Map records (many per realm) | `GameMap` (`ownerRealmId`), `POI.position`, `Region.boundary` |
 | Image map renderer | `InteractiveMap` (maplibre, ~905 lines) — manual worlds |
@@ -112,26 +120,78 @@ POI types available: `settlement`, `dungeon`, `ruin`, `camp`, `shrine`,
 - The map route picks the renderer by `kind`: `InteractiveMap` for `'image'`,
   `HexMapRenderer` for `'hex'`.
 
-### 2. `NPCRelationship` entity (separate table, mirrors `FactionRelationship`)
+### 2. `Connection` entity — unified polymorphic edge table
+
+The single graph table for all **narrative** ties. Follows `EntityNote`'s
+`ownerType`/`ownerId` idiom.
 
 ```ts
-interface NPCRelationship {
+type EntityRef = 'npc' | 'faction' | 'poi' | 'item'
+
+interface Connection {
   id: string
   worldId: string
-  fromNpcId: string
-  toNpcId: string
-  type: 'spouse' | 'parent' | 'child' | 'sibling' | 'rival' |
-        'ally' | 'debtor' | 'creditor' | 'thief' | 'victim' | 'lover' | 'enemy'
-  description: string        // "ran away with the caravan master"
+  fromType: EntityRef
+  fromId: string
+  toType: EntityRef
+  toId: string
+  kind: 'parent' | 'child' | 'spouse' | 'sibling' | 'lover' | 'rival' | 'enemy' |
+        'ally' | 'debtor' | 'creditor' | 'thief' | 'victim' | 'captive_in' |
+        'hides' | 'wants'              // open set; new kinds need no migration
+  label: string                        // "ran away with the caravan master"
   status: 'active' | 'missing' | 'estranged' | 'dead' | 'resolved'
+  hookId: string | null                // edge born from a Hook
   createdAt: number
   updatedAt: number
 }
 ```
 
-Requires: Dexie table + schema migration, repository, container wiring, and a
-read-only **"Connections"** list on the NPC detail page (clickable, navigable).
-Editing can follow.
+Indexed on `[worldId+fromId]` and `[worldId+toId]` so **"everything connected to
+entity X"** is one query regardless of type. On entity delete, orphan cleanup is
+`delete where fromId = X or toId = X`.
+
+Requires: Dexie table + migration, repository, container wiring, and a read-only
+**"Connections"** panel on the NPC (and POI) detail page — resolves edges to their
+target records and links through. Editing can follow.
+
+**Boundaries:** `Connection` does **not** duplicate structural membership
+(`NPC.factionIds`, `Faction.leaderNpcId`/`agentNpcIds`) or the scored
+`FactionRelationship` matrix. Those keep their existing homes; `Connection` is
+narrative edges only.
+
+### 2b. `Hook` entity — quest aggregate (source of truth)
+
+```ts
+interface HookSecret {
+  kind: 'captive' | 'hidden_item' | 'culprit' | 'destination' | 'truth'
+  targetType: 'poi' | 'npc' | 'faction'
+  targetId: string
+  detail: string                       // GM-facing answer text
+}
+
+interface Hook {
+  id: string
+  worldId: string
+  type: 'missing_person' | 'lost_item' | 'theft' | 'relation' |
+        'revenge' | 'delivery' | 'escort' | 'artifact'
+  title: string
+  status: 'open' | 'active' | 'resolved' | 'abandoned'
+  contactNpcId: string | null          // who offers it
+  rewardText: string
+  secret: HookSecret                   // structured + queryable (NOT gmNotes)
+  createdAt: number
+  updatedAt: number
+}
+```
+
+`Notice`/`Rumor` are generated **from** a `Hook` and carry its `hookId` back-ref —
+they are the player-facing surface; the `Hook` is the truth. Because `secret` is
+structured, a future feature can ask "which Hook does this POI resolve?" and
+auto-offer resolution when the party reaches `secret.targetId`.
+
+Requires: Dexie table + migration, repository, container wiring; `hookId` added to
+`Notice` and `Rumor`; a GM-only Hook view (can reuse `NoticeBoard`/`RumorList`
+surfaces plus a secret reveal).
 
 ### 3. Procedural content data (`src/domain/data/worldgen/`)
 
@@ -153,8 +213,8 @@ where useful by biome or archetype:
 
 A composition of stage functions, each pure (`(input, rng) => partialWorld`). No
 Dexie, no IO. Output is an in-memory `GeneratedWorld` bundle of plain entities
-(realm, hex map, regions, POIs, factions, faction-rels, NPCs, npc-rels, notices,
-rumors, world-events).
+(realm, hex map, regions, POIs, paths, factions, faction-rels, NPCs, connections,
+hooks, notices, rumors, world-events).
 
 ### 5. `GenerateWorldUseCase` (application layer)
 
@@ -204,10 +264,10 @@ seed → RNG
   6. FactionRels  pairwise relationship scores (−6..+6), skewed by danger
   7. NPCs         density per region/settlement; faction membership, leaders,
                     agents; universal fields + SystemBlock per system
-  8. Conflict web NEW: family + conflict ties → NPCRelationship records, some
-                    spanning hexes (missing daughter placed at a dungeon)
-  9. Quest hooks  each conflict → public hook (Notice/Rumor at the contact's POI)
-                    + secret (answer written to the target POI's gmNotes)
+  8. Conflict web NEW: family + conflict ties → Connection edges, some spanning
+                    hexes (missing daughter placed at a dungeon via captive_in)
+  9. Quests       each conflict → a Hook (structured secret) + its public
+                    projections (Notice/Rumor with hookId, at the contact's POI)
  10. Doom event   if toggled: escalate a faction agenda → future-dated WorldEvent
                     + foreshadowing Rumors
  11. Commit       single transaction write; set realm active
@@ -215,25 +275,32 @@ seed → RNG
 
 ### The conflict web (stage 8–9 detail)
 
-Each conflict template is a small pure function: given the current NPC/POI pool +
-RNG, it produces linked records + relationships + a **public hook** + a **secret**.
+Each conflict template is a small pure function: given the current NPC/POI/faction
+pool + RNG, it emits **Connection edges** + a **Hook** (with structured secret) +
+the Hook's **public projections** (Notice/Rumor).
 
 - **missing_person:** pick aggrieved NPC A; weight a relative type
   (son/daughter/nephew/spouse); create real NPC B; set B
   `lifeStatus`/`movementStatus` = missing and place B at a dangerous dungeon POI;
-  `NPCRelationship(A→B, parent/spouse, status: missing)`; **public:**
-  `Notice{type: request, contactNpcId: A, reward}`; **secret:** "B is held captive
-  in {dungeon}" → that dungeon's `gmNotes`.
-- **lost_item:** A lost a notable item; it's actually in a dungeon area;
-  **public:** rumor/advert; **secret:** which area holds it.
-- **runaway spouse / relation:** A's spouse B left with C; `NPCRelationship(A→B,
-  spouse, estranged)` + `(B→C, lover, active)`; **public:** rumor quest hook.
-- **theft:** A's heirloom taken by B (a faction agent); link `thief/victim`; item
-  ties to B's faction HQ POI; **public:** `Notice{type: bounty}`.
+  edges `Connection(npc A → npc B, parent/spouse, status: missing)` and
+  `Connection(npc B → poi D, captive_in)`; `Hook{type: missing_person,
+  contactNpcId: A, secret:{kind: captive, targetType: poi, targetId: D}}`;
+  **public:** `Notice{type: request, contactNpcId: A, hookId}`.
+- **lost_item:** A lost a notable item; it's in a dungeon area; `Connection(item →
+  poi, hides)`; `Hook{type: lost_item, secret:{kind: hidden_item, targetType: poi}}`;
+  **public:** Rumor/advert with `hookId`.
+- **runaway spouse / relation:** A's spouse B left with C; `Connection(A→B, spouse,
+  estranged)` + `(B→C, lover, active)`; `Hook{type: relation}`; **public:** Rumor.
+- **theft:** A's heirloom taken by faction agent B; `Connection(B→A, thief)` +
+  `(item → faction, hides)`; `Hook{type: theft, secret:{kind: culprit,
+  targetType: faction}}`; **public:** `Notice{type: bounty, hookId}`.
 - **delivery / escort:** A needs something/someone moved to a distant POI;
-  **public:** `Notice{type: job}`.
+  `Hook{type: delivery/escort, secret:{kind: destination, targetType: poi}}`;
+  **public:** `Notice{type: job, hookId}`.
 
-Conflicts run **after** factions/POIs/NPCs so their referenced records exist.
+Conflicts run **after** factions/POIs/NPCs so every referenced record exists. Items
+referenced by `Connection` (`fromType: 'item'`) are lightweight — modeled as
+`TreasureItem` on the holding POI or a tagged record; the edge just points at them.
 
 ## Architecture / layering
 
@@ -241,26 +308,35 @@ Follows the existing clean/hexagonal structure:
 
 - `src/domain/services/WorldGenerator.ts` + `src/domain/services/worldgen/*`
   (pure stage functions) and `src/domain/data/worldgen/*` (tables).
-- `src/domain/entities/NPCRelationship.ts`.
+- `src/domain/entities/Connection.ts`, `src/domain/entities/Hook.ts`;
+  `hookId` added to `Notice` and `Rumor`.
 - `src/lib/hexmap/*` (pure hex math) and `src/components/map/HexMapRenderer.tsx`.
 - `src/application/use-cases/GenerateWorldUseCase.ts` + a batch-write port.
-- `src/infrastructure/dexie/repositories/NpcRelationshipRepository.ts` + schema
-  migration (NPCRelationship table; `GameMap.kind`) + container wiring.
+- `src/infrastructure/dexie/repositories/ConnectionRepository.ts`,
+  `HookRepository.ts` + schema migration (`connections`, `hooks` tables;
+  `GameMap.kind`; `Notice.hookId`/`Rumor.hookId`) + container wiring.
 - `src/components/worldgen/*` for the generation UI; new action on `/realms`.
-- Hook lists added to Dungeon/Building/DungeonRoom POI templates.
+- Hook lists added to Dungeon/Building/DungeonRoom POI templates; Connections panel
+  on NPC/POI detail pages.
 
-Determinism: every stage takes the shared seeded RNG; same seed + same knobs →
-byte-identical world.
+Determinism: every stage takes the shared seeded RNG, so the world is
+**structurally identical** per (seed, knobs) — same regions, links, and hooks.
+Record **IDs are not byte-identical** across runs: ULIDs embed a timestamp +
+randomness. If seed-reproducible IDs are ever required, derive them from the seeded
+PRNG instead of `newId()`; v1 does not.
 
 ## Testing strategy
 
 - **Pure stage unit tests** (fixed seed): counts match knobs; every faction has
-  goal+obstacle+plan; every conflict's links resolve to real records; every Notice
-  `contactNpcId` exists; every secret lands in a real POI's `gmNotes`.
+  goal+obstacle+plan; every Connection endpoint resolves to a real record; every
+  Hook's `contactNpcId` and `secret.targetId` resolve; every Notice/Rumor has a
+  valid `hookId`.
 - **Hex math tests:** pixel↔hex round-trips, neighbor correctness, cluster outline.
-- **Web integrity:** no dangling `NPCRelationship` endpoints; missing-person
-  targets are placed and actually missing.
-- **Determinism:** same seed twice → identical bundle.
+- **Web integrity:** no dangling `Connection` endpoints (from/to both exist); no
+  Hook references a missing target; missing-person targets are placed and actually
+  missing; `Connection` carries no structural-membership duplication.
+- **Determinism:** same seed twice → structurally identical bundle (compare with
+  IDs normalized).
 - **Use-case test** (fake Dexie): one transaction, realm becomes active, ids
   consistent.
 - **Smoke:** generate Small + Large, render the hex map, click a hex → POI, click a
@@ -276,26 +352,32 @@ byte-identical world.
   regenerating).
 - No auto Watabou battlemaps at generation time (settlements/dungeons can get one
   later via existing import).
-- `NPCRelationship` editing UI is read-only in v1.
+- `Connection` and `Hook` editing UI is read-only in v1 (view + navigate).
 
 ## Phasing (single spec, staged build)
 
-1. **Foundation:** `NPCRelationship` entity + table + repo + migration + wiring;
-   `GameMap.kind` migration; `src/lib/hexmap` math; worldgen data-table scaffolding.
+1. **Foundation:** `Connection` + `Hook` entities + tables + repos + migration
+   (incl. `Notice.hookId`/`Rumor.hookId`, `GameMap.kind`) + wiring;
+   `src/lib/hexmap` math; worldgen data-table scaffolding.
 2. **Hex map render:** `HexMapRenderer` (view + navigate) + route wiring.
-3. **Core pipeline:** stages 1–7 (realm → hex grid → regions → POIs → factions →
-   rels → NPCs), pure + tested, behind `GenerateWorldUseCase`.
-4. **The web:** stages 8–10 (conflicts, hooks + secrets, doom event); add hook
-   lists to Dungeon/Building/DungeonRoom templates.
-5. **UI:** generation menu (preset + system + advanced + seed + threat) and the NPC
-   Connections surface.
+3. **Core pipeline:** stages 1–7 (realm → hex grid → regions → POIs → paths →
+   factions → rels → NPCs), pure + tested, behind `GenerateWorldUseCase`.
+4. **The web:** stages 8–10 (Connection edges, Hooks + projections, doom event);
+   add hook lists to Dungeon/Building/DungeonRoom templates; Connections panel on
+   NPC/POI detail.
+5. **UI:** generation menu (preset + system + advanced + seed + threat).
 
 ## Resolved
 
 - **Map model (was decision 3 / Q1):** Dual — image map for manual worlds,
   procedural **hex map** default for generated worlds; view-first in v1; full hex
   editing deferred. Drops the earlier templated-image + zone-authoring approach.
-- **NPCRelationship storage (was Q7):** Separate table/entity.
+- **Graph + quest model (data-engineer pass):** Replaced the bespoke
+  `NPCRelationship` table with **one polymorphic `Connection` edge table** (follows
+  `EntityNote`'s pattern) and introduced a first-class **`Hook` aggregate** with a
+  **structured secret** (not `gmNotes`). `Notice`/`Rumor` become public projections
+  via `hookId`. `FactionRelationship` (scored matrix) and membership FK fields stay
+  as-is; `Connection` is narrative edges only — no dual source of truth.
 - **System pick (was Q5):** Dropdown in the generation menu, pre-selected from the
   active realm's system, else Cairn.
 
