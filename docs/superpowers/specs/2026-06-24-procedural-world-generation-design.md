@@ -20,14 +20,20 @@ and plan are structured data the existing faction-turn engine can act on later.
 
 1. **Engine: pure local procedural.** Random tables + algorithms only. No LLM, no
    network. Seedable and deterministic. Honors local-first/offline.
-2. **Two map models, one data model.** Image maps (existing maplibre stack) stay
-   for manual/uploaded worlds. **Auto-generated worlds default to a procedural
-   hex-grid map** rendered in-browser — no map image, no hand-authored art. Both
-   are `GameMap` records distinguished by a `kind` field; POIs keep `position
-   {x,y}` (a hex's pixel center is just an `{x,y}`).
-3. **Hex map is view-first in v1.** Render biome fill + POI pins + click-through +
-   pan/zoom. In-hex editing (drag-place, region painting, path drawing) is
-   **deferred**; editing happens on the existing POI/Region detail pages.
+2. **Two map models, one renderer, one data model.** Image maps stay for
+   manual/uploaded worlds. **Auto-generated worlds default to a procedural
+   hex-grid map** — no image, no hand-authored art. Both are `GameMap` records
+   distinguished by `kind: 'image' | 'hex'`; POIs keep `position {x,y}` (a hex's
+   pixel center is just an `{x,y}`). **Review finding:** the existing `MapViewer`
+   already runs maplibre in a *flat pixel coordinate space* (`pxToLngLat`) and
+   renders GeoJSON polygons (regions), lines (paths), markers, and click/popups —
+   so the hex map is **the same MapViewer with a hex-polygon GeoJSON layer instead
+   of a raster image source**, not a new renderer. iPad pinch-zoom/pan, pins, and
+   region/path layers come for free.
+3. **Hex map is view-first in v1.** Biome-colored hex fill + POI pins +
+   click-through + pan/zoom (all inherited from `MapViewer`). In-hex editing
+   (drag-place, region painting, path drawing) is **deferred**; editing happens on
+   the existing POI/Region detail pages.
 4. **World size = density.** Small/Med/Large scale the grid size and how much fills
    it (factions, POIs, NPCs). Advanced knobs override individual dials.
 5. **Conflicts are a live, linked web on a unified graph.** Inter-entity ties
@@ -105,20 +111,21 @@ POI types available: `settlement`, `dungeon`, `ruin`, `camp`, `shrine`,
 
 ## New structures (the actual build)
 
-### 1. Hex map: `GameMap.kind` + a view-first renderer
+### 1. Hex map: `GameMap.kind` + a hex layer in the existing `MapViewer`
 
 - Extend `GameMap` with `kind: 'image' | 'hex'` and optional hex params
   (`cols`, `rows`, `hexSize`, orientation). Image maps keep `imageUrl`; hex maps
-  ignore it. Schema migration defaults existing maps to `'image'`.
-- New **`HexMapRenderer`** component (`src/components/map/HexMapRenderer.tsx`):
-  SVG/canvas, biome-colored hex fill, POI pins at hex centers, pan/zoom, click a
-  hex → navigate to its POI(s). **View + navigate only in v1.**
-- Hex math helper (`src/lib/hexmap/`): axial/offset coords, pixel↔hex, neighbors.
-  Standard, ~100 lines, well-tested.
+  carry the grid params. Schema migration defaults existing maps to `'image'`.
+- **No new renderer.** Reuse `MapViewer` (maplibre, flat pixel CRS via
+  `pxToLngLat`). When `kind === 'hex'`, replace the raster image source with a
+  **hex-polygon GeoJSON `FeatureCollection`** (biome-colored fill, one feature per
+  hex), built from the grid params. POI markers, region polygons, path lines, and
+  click/popup already work in that coordinate space; iPad gestures are inherited.
+  In v1 the hex map renders with editing interactions disabled.
+- Hex math helper (`src/lib/hexmap/`): axial/offset coords, pixel↔hex, neighbors,
+  hex→polygon-corners. Standard, small, well-tested.
 - POIs keep `position {x,y}` = their hex's pixel center. `Region.boundary` = the
   outline polygon of its hex cluster (computed at generation time).
-- The map route picks the renderer by `kind`: `InteractiveMap` for `'image'`,
-  `HexMapRenderer` for `'hex'`.
 
 ### 2. `Connection` entity — unified polymorphic edge table
 
@@ -207,7 +214,16 @@ where useful by biome or archetype:
 - **Realm archetype tables** (Kingdom / Empire / Duchy / Lands) + ruler.
 - **Conflict templates** (see Conflict Web): missing_person, lost_item, delivery,
   escort, relation, revenge, artifact.
-- Per-system `SystemBlock` defaults pulled from `SystemConfig`.
+
+**NPC stat blocks — reuse, don't reimplement** (domain review). Build each
+generated NPC's `systemBlock` via the existing `SystemConfigService` helpers —
+`buildDefaultSystemBlock(config)` + `rollStats(config, rollDice)` +
+`rollHpForLevel(...)` — the exact composition already in `executeGenerateNPC`
+(`src/application/use-cases/GenerateNPC.ts`). Extract a **pure NPC builder** from
+that use-case (the use-case currently writes to the repo; the generator needs the
+returned object, not a write) and share it. Do **not** use `DungeonNPCGenerator`
+(it emits a lighter non-stat type). Cairn → `str/dex/wil` (3d6), HP 1d6, armor;
+Shadowdark → 6 stats with modifiers, level (1d4), class, AC, HP class-die+CON.
 
 ### 4. `WorldGenerator` domain service (pure, seeded)
 
@@ -218,21 +234,59 @@ hooks, notices, rumors, world-events).
 
 ### 5. `GenerateWorldUseCase` (application layer)
 
-Orchestrates the stages, then persists the whole bundle in **one Dexie
-transaction** via the existing repositories. Sets the new realm active and returns
-its id for navigation.
+Orchestrates the stages, then persists the whole bundle. Sets the new realm active
+and returns its id for navigation. **See Performance & write strategy** — the
+"single transaction" needs new bulk-write support that does not exist today.
+
+### 5b. Performance & write strategy (review-driven, MUST-have)
+
+A Large world = **16×16 = 256 hexes → ~600–1,500 rows across ~10 tables** — an
+order of magnitude beyond anything the app writes today. The performance review
+found three hard requirements:
+
+- 🚨 **Bulk writes + one real transaction.** Today every repo does **sequential
+  single-row `put`s**; there is *no* `bulkPut`/`transaction()` in app code.
+  600–1,500 serial IndexedDB writes would freeze iPad Safari for **0.5–2s+**. Add a
+  `bulkCreate(items[])` (→ `bulkPut`) to the repos the generator touches, and wrap
+  the commit in a single `db.transaction('rw', [...tables], …)`. This is the
+  dominant fix and a new pattern for the codebase.
+- 🚨 **Dungeons stay lazy — write a stub only.** Do **not** call the dungeon
+  generator in the world-gen loop. A generated dungeon POI gets
+  `dungeonGenOptions` (seed + theme + size) and `spatialDungeon: null`; contents
+  generate deterministically on first open (seeded, so the stub reproduces it
+  exactly). For lazily-generated dungeons, store only the `spatialDungeon` blob on
+  first open and **skip exploding rooms into child POIs** (the current
+  generate-dungeon flow double-writes a blob *and* N child rows — avoid that here).
+  Cap auto-generated dungeon size to **≤ medium** to bound first-open cost.
+- **Yield + progress UI.** `await` a macrotask between the heavy stages so the UI
+  can paint a staged progress indicator ("Placing factions… Writing world…").
+  Reuse the existing `isGenerating` button pattern from the generate-dungeon route.
+- **Pure builders, not write-coupled use-cases** in the pipeline (the generator
+  collects plain objects for one bulk write; it must not call use-cases that write
+  per-row). Extract pure builders where reuse is wanted (see NPC builder above).
+
+Flagged, non-blocking: the existing dungeon **A\* pathfinder**
+(`DungeonLayoutEngine.findPassagePath`) is inefficient (re-sorted-array open set +
+per-node path cloning) and can hitch 100–300ms on first-open of a large dungeon.
+Independent of world-gen; track as a separate optimization bead.
 
 ### 6. Generation UI
 
-A "Generate World" entry (dialog or `/realms` route action):
+Extend the **existing "Create New Realm" dialog** on `/realms`
+(`src/routes/_app/realms/index.tsx`) with a **"Generate World"** mode rather than a
+separate page — it already has the system `Select`, `Dialog`, and `Collapsible`
+(accordion) primitives imported. Fields:
 
+- **Mode toggle:** "Empty realm" (existing) vs "Generate world".
 - **Size preset:** Small / Medium / Large (sets all knob defaults + grid size).
-- **System dropdown:** pre-selected from active realm's system, else Cairn.
-- **Advanced (accordion, overrides):** Factions count, Danger level, NPC density,
+- **System dropdown:** the dialog's existing Select, pre-selected from active
+  realm's system, else Cairn.
+- **Advanced (Collapsible, overrides):** Factions count, Danger level, NPC density,
   POI/dungeon density.
 - **Looming threat:** on/off toggle.
-- **Seed:** optional text field (blank = random); enables reproducible worlds.
-- Submit → run use-case → navigate into the new realm's hex map.
+- **Seed:** optional text field (blank = random).
+- Submit → `isGenerating` state (disable + staged progress, per the existing
+  pattern) → run use-case → navigate into the new realm's hex map.
 
 ### 7. Hooks on POIs (gap fix)
 
@@ -254,7 +308,8 @@ seed → RNG
                     fill flavor from biome tables (forest/mountain/grassland/
                     desert/marsh/frozen/blighted/hills/jungle)
   4. POIs         per-hex allocation by biome + density + danger:
-                    settlements, dungeons (lazy DungeonGenerator), ruins, shrines,
+                    settlements, dungeons (STUB only: dungeonGenOptions seed+theme+
+                    size, spatialDungeon=null, lazy first-open gen), ruins, shrines,
                     camps, landmark features; position = hex center; cap to knobs
   4b. Paths       connect each settlement to nearest 1-2 settlements; travel time
                     from hex distance → Path records
@@ -270,7 +325,8 @@ seed → RNG
                     projections (Notice/Rumor with hookId, at the contact's POI)
  10. Doom event   if toggled: escalate a faction agenda → future-dated WorldEvent
                     + foreshadowing Rumors
- 11. Commit       single transaction write; set realm active
+ 11. Commit       bulkPut per table inside ONE db.transaction('rw', …);
+                    set realm active (see Performance & write strategy)
 ```
 
 ### The conflict web (stage 8–9 detail)
@@ -313,11 +369,32 @@ Follows the existing clean/hexagonal structure:
 - `src/lib/hexmap/*` (pure hex math) and `src/components/map/HexMapRenderer.tsx`.
 - `src/application/use-cases/GenerateWorldUseCase.ts` + a batch-write port.
 - `src/infrastructure/dexie/repositories/ConnectionRepository.ts`,
-  `HookRepository.ts` + schema migration (`connections`, `hooks` tables;
-  `GameMap.kind`; `Notice.hookId`/`Rumor.hookId`) + container wiring.
-- `src/components/worldgen/*` for the generation UI; new action on `/realms`.
+  `HookRepository.ts` + container wiring (`new XRepository()` in
+  `createContainer()`). Repos follow the `EntityNoteRepository` shape
+  (`create`/`update` are both `put`; `getById`, `getByXId`); add a `bulkCreate`.
+- Generation UI in the existing `/realms` create dialog.
 - Hook lists added to Dungeon/Building/DungeonRoom POI templates; Connections panel
-  on NPC/POI detail pages.
+  on NPC/POI detail pages, via a `useConnectionsByEntity` live-query hook
+  (mirror `useEntityNotes`).
+
+**Dexie migration (review-confirmed mechanics).** Current schema version is **35**;
+add `db.version(36)`. `Connection` mirrors the polymorphic `EntityNote`
+(`ownerType`/`ownerId`) precedent. Store strings:
+
+```
+connections: 'id, worldId, fromId, toId, hookId, [worldId+fromId], [worldId+toId]'
+hooks:       'id, worldId, status, contactNpcId'
+notices:     '… , hookId'      // append hookId index to existing string
+rumors:      '… , hookId'      // append hookId index
+gameMaps:    '… , kind'        // append kind index
+```
+
+Query both endpoints of a Connection and merge (Dexie has no cross-index OR).
+`upgrade((tx) => …)` MUST backfill existing rows: `Notice.hookId = null`,
+`Rumor.hookId = null`, `GameMap.kind = 'image'`. Use `worldId` (never `realmId` —
+reserved by Dexie Cloud). Never edit a released `version()`/`upgrade()`. IDs via
+`newId()` (ULID); `createdAt`/`updatedAt = Date.now()`. Read path = `useLiveQuery`
+hooks querying `db` directly; write path = use-cases → repos.
 
 Determinism: every stage takes the shared seeded RNG, so the world is
 **structurally identical** per (seed, knobs) — same regions, links, and hooks.
@@ -356,10 +433,12 @@ PRNG instead of `newId()`; v1 does not.
 
 ## Phasing (single spec, staged build)
 
-1. **Foundation:** `Connection` + `Hook` entities + tables + repos + migration
-   (incl. `Notice.hookId`/`Rumor.hookId`, `GameMap.kind`) + wiring;
-   `src/lib/hexmap` math; worldgen data-table scaffolding.
-2. **Hex map render:** `HexMapRenderer` (view + navigate) + route wiring.
+1. **Foundation:** `Connection` + `Hook` entities + tables + repos (+ `bulkCreate`)
+   + `db.version(36)` migration (incl. `Notice.hookId`/`Rumor.hookId` backfill,
+   `GameMap.kind` backfill) + wiring; `src/lib/hexmap` math; worldgen data-table
+   scaffolding.
+2. **Hex map render:** hex-polygon GeoJSON layer in `MapViewer` (no new renderer) +
+   `kind`-based source selection.
 3. **Core pipeline:** stages 1–7 (realm → hex grid → regions → POIs → paths →
    factions → rels → NPCs), pure + tested, behind `GenerateWorldUseCase`.
 4. **The web:** stages 8–10 (Connection edges, Hooks + projections, doom event);
@@ -402,7 +481,25 @@ PRNG instead of `newId()`; v1 does not.
   v1). **No Cairn map tables exist in-repo**; author biome tables ourselves,
   optionally referencing the Cairn 2e SRD (CC-BY).
 
+## Pre-plan reviews performed (2026-06-24)
+
+- **Performance/scale:** drove §5b — bulk writes + one transaction, lazy dungeon
+  stubs, yield+progress, pure builders. Flagged the A* pathfinder as a separate
+  optimization.
+- **Codebase integration:** confirmed Dexie v35→v36 mechanics, `EntityNote`
+  polymorphic precedent, exact index strings + backfill, repo/use-case/container
+  conventions. Folded into Architecture.
+- **Domain/rules (SystemBlock):** reuse `SystemConfigService` helpers via a pure
+  NPC builder; confirmed Cairn/Shadowdark field shapes; `fallbackSystemBlock`
+  scales dungeon-creature stats by danger. **Decision:** v1 narrative NPCs use
+  baseline stats (no per-NPC danger scaling — `executeGenerateNPC` has no danger
+  input); danger affects POI/dungeon density and dungeon-creature stats only.
+  Wiring danger into narrative-NPC stats is a future enhancement.
+- **UX/product flow:** hex map reuses `MapViewer` (free iPad gestures); generation
+  lives in the existing create-realm dialog with `isGenerating` progress. Folded
+  into §1, §6.
+
 ## Open questions
 
 _None blocking. Remaining tuning (exact density curves, biome weights, travel-time
-scale) is settled during implementation._
+scale, dungeon-size cap value) is settled during implementation._
