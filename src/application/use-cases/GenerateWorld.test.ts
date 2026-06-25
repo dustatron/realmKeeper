@@ -17,6 +17,11 @@ const deps = () => ({
   realmRepo: container.realmRepo,
   factionRepo: container.factionRepo,
   realmNoteRepo: container.realmNoteRepo,
+  poiRepo: container.poiRepo,
+  npcRepo: container.npcRepo,
+  pathRepo: container.pathRepo,
+  factionPresenceRepo: container.factionPresenceRepo,
+  poiEventRepo: container.poiEventRepo,
 })
 
 describe('executeGenerateWorld', () => {
@@ -86,6 +91,20 @@ describe('executeGenerateWorld', () => {
       expect(npcs.some((n) => n.id === f.leaderNpcId)).toBe(true)
       expect(f.agentNpcIds.length).toBeGreaterThanOrEqual(1)
     }
+  })
+
+  it('pre-generates dungeons (rooms exist, spatial dungeon set) up to the cap', async () => {
+    const { mapId } = await executeGenerateWorld(
+      { name: 'Depths', systemId: 'system-cairn-2e', seed: 'seed-dungeon', size: 'small' },
+      deps()
+    )
+    const mapPois = await db.pois.where('mapRef').equals(mapId).toArray()
+    const dungeons = mapPois.filter((p) => p.type === 'dungeon')
+    const built = dungeons.filter((d) => d.spatialDungeon != null)
+    expect(built.length).toBeGreaterThan(0)
+    // a built dungeon has child room POIs
+    const children = await db.pois.where('parentPoiId').equals(built[0].id).toArray()
+    expect(children.length).toBeGreaterThan(0)
   })
 
   it('persists quest hooks with notices/rumors anchored to NPCs and POIs', async () => {

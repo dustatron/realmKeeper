@@ -194,6 +194,11 @@ function RealmsPage() {
             realmRepo: container.realmRepo,
             factionRepo: container.factionRepo,
             realmNoteRepo: container.realmNoteRepo,
+            poiRepo: container.poiRepo,
+            npcRepo: container.npcRepo,
+            pathRepo: container.pathRepo,
+            factionPresenceRepo: container.factionPresenceRepo,
+            poiEventRepo: container.poiEventRepo,
           },
         );
         resetCreateForm();

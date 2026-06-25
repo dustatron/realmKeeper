@@ -244,7 +244,9 @@ export function generateWorld(
         ? {
             seed: `${seed}-${dungeonSeedId}`,
             theme: rng.pick(DUNGEON_THEMES),
-            size: 'medium' as const,
+            // Smaller dungeons (3-8 rooms) keep pre-generation fast and the POI
+            // count manageable when every dungeon is built up front.
+            size: rng.pick(['lair', 'small'] as const),
             treasureLevel: 'standard' as const,
             dangerLevel: 'medium' as const,
             includeWeapons: true,

@@ -43,7 +43,16 @@ describe('buildFaction', () => {
   it('is deterministic for a given seed', () => {
     const a = buildFaction(INPUT, new SeededRandom('z'))
     const b = buildFaction(INPUT, new SeededRandom('z'))
-    expect({ ...a, id: '', createdAt: 0, updatedAt: 0, agendaGoals: a.agendaGoals.map((g) => g.description), advantages: a.advantages.map((x) => x.description), obstacles: a.obstacles.map((x) => x.description) })
-      .toEqual({ ...b, id: '', createdAt: 0, updatedAt: 0, agendaGoals: b.agendaGoals.map((g) => g.description), advantages: b.advantages.map((x) => x.description), obstacles: b.obstacles.map((x) => x.description) })
+    const normalize = (f: typeof a) => ({
+      ...f,
+      id: '',
+      createdAt: 0,
+      updatedAt: 0,
+      sortOrder: 0,
+      agendaGoals: f.agendaGoals.map((g) => g.description),
+      advantages: f.advantages.map((x) => x.description),
+      obstacles: f.obstacles.map((x) => x.description),
+    })
+    expect(normalize(a)).toEqual(normalize(b))
   })
 })
