@@ -11,10 +11,34 @@ export interface GenerateWorldDeps {
   realmNoteRepo: IRealmNoteRepository
 }
 
+export type WorldSize = 'small' | 'medium' | 'large'
+
+// World size → hex grid dimensions. This is the live generation knob: it changes
+// how big the generated map is. Other planned knobs (factions/danger/density) are
+// not yet threaded here — they activate as their generation stages are built.
+const SIZE_PRESETS: Record<WorldSize, { cols: number; rows: number }> = {
+  small: { cols: 8, rows: 8 },
+  medium: { cols: 12, rows: 12 },
+  large: { cols: 16, rows: 16 },
+}
+
+export interface GenerateWorldInput {
+  name: string
+  systemId: string
+  seed: string
+  size: WorldSize
+  description?: string
+  watchesPerDay?: number
+  daysPerSeason?: number
+  daysPerWeek?: number
+  factionTurnTrigger?: 'day' | 'week' | 'manual'
+}
+
 export async function executeGenerateWorld(
-  input: { name: string; systemId: string; seed: string },
+  input: GenerateWorldInput,
   deps: GenerateWorldDeps
 ): Promise<{ realmId: string; mapId: string }> {
+  const preset = SIZE_PRESETS[input.size]
   let realmId = ''
   let mapId = ''
 
@@ -25,10 +49,18 @@ export async function executeGenerateWorld(
   // enclosed writes touch.
   await db.transaction('rw', db.worlds, db.factions, db.realmNotes, db.gameMaps, async () => {
     const realm = await executeCreateRealm(
-      { name: input.name, systemId: input.systemId, description: '' },
+      {
+        name: input.name,
+        systemId: input.systemId,
+        description: input.description ?? '',
+        watchesPerDay: input.watchesPerDay,
+        daysPerSeason: input.daysPerSeason,
+        daysPerWeek: input.daysPerWeek,
+        factionTurnTrigger: input.factionTurnTrigger,
+      },
       deps
     )
-    const gameMap = buildTinyHexMap(realm.id, input.seed)
+    const gameMap = buildTinyHexMap(realm.id, input.seed, preset)
     await db.gameMaps.put(gameMap)
     realmId = realm.id
     mapId = gameMap.id

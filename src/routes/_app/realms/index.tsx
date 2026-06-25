@@ -37,6 +37,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/components/ui/collapsible";
+import { Switch } from "~/components/ui/switch";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import {
   LayoutDashboard,
   Plus,
@@ -47,6 +49,7 @@ import {
   Pencil,
   ChevronDown,
   Settings,
+  Wand2,
 } from "lucide-react";
 import {
   DEFAULT_DAYS_PER_SEASON,
@@ -116,25 +119,42 @@ function RealmsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleGenerateWorld = async () => {
-    setIsGenerating(true);
-    try {
-      const seed = newId();
-      const { realmId, mapId } = await executeGenerateWorld(
-        { name: "Generated World", systemId: "system-cairn-2e", seed },
-        {
-          realmRepo: container.realmRepo,
-          factionRepo: container.factionRepo,
-          realmNoteRepo: container.realmNoteRepo,
-        },
-      );
-      setActiveRealmId(realmId);
-      navigate({ to: "/realms/maps/$mapId", params: { mapId } });
-    } finally {
-      setIsGenerating(false);
-    }
+  // Procedural generation params (shown in the Create dialog when enabled).
+  // `size` and `seed` are live; the rest are scaffolded for future generation
+  // stages (factions, dangers, NPCs, POIs) and don't affect output yet.
+  const [genEnabled, setGenEnabled] = useState(false);
+  const [genSize, setGenSize] = useState<"small" | "medium" | "large">(
+    "medium",
+  );
+  const [genSeed, setGenSeed] = useState("");
+  const [genAdvancedOpen, setGenAdvancedOpen] = useState(false);
+  const [genFactions, setGenFactions] = useState(4);
+  const [genDanger, setGenDanger] = useState<"low" | "medium" | "high">(
+    "medium",
+  );
+  const [genNpcDensity, setGenNpcDensity] = useState<
+    "sparse" | "normal" | "dense"
+  >("normal");
+  const [genPoiDensity, setGenPoiDensity] = useState<
+    "sparse" | "normal" | "dense"
+  >("normal");
+  const [genLoomingThreat, setGenLoomingThreat] = useState(false);
+
+  const resetCreateForm = () => {
+    setShowCreate(false);
+    setCreateName("");
+    setCreateSystem("");
+    setCreateDesc("");
+    setCalendarOpen(false);
+    setCreateWatchesPerDay(DEFAULT_WATCHES_PER_DAY);
+    setCreateDaysPerSeason(DEFAULT_DAYS_PER_SEASON);
+    setCreateDaysPerWeek(7);
+    setCreateFactionTurnTrigger("day");
+    setGenEnabled(false);
+    setGenSize("medium");
+    setGenSeed("");
+    setGenAdvancedOpen(false);
   };
 
   const handleCreateRealm = async () => {
@@ -142,6 +162,31 @@ function RealmsPage() {
 
     setIsCreating(true);
     try {
+      if (genEnabled) {
+        const { realmId, mapId } = await executeGenerateWorld(
+          {
+            name: createName.trim(),
+            systemId: createSystem,
+            description: createDesc.trim(),
+            seed: genSeed.trim() || newId(),
+            size: genSize,
+            watchesPerDay: createWatchesPerDay,
+            daysPerSeason: createDaysPerSeason,
+            daysPerWeek: createDaysPerWeek,
+            factionTurnTrigger: createFactionTurnTrigger,
+          },
+          {
+            realmRepo: container.realmRepo,
+            factionRepo: container.factionRepo,
+            realmNoteRepo: container.realmNoteRepo,
+          },
+        );
+        resetCreateForm();
+        setActiveRealmId(realmId);
+        navigate({ to: "/realms/maps/$mapId", params: { mapId } });
+        return;
+      }
+
       const newRealm = await executeCreateRealm(
         {
           name: createName.trim(),
@@ -160,15 +205,7 @@ function RealmsPage() {
       );
 
       setActiveRealmId(newRealm.id);
-      setShowCreate(false);
-      setCreateName("");
-      setCreateSystem("");
-      setCreateDesc("");
-      setCalendarOpen(false);
-      setCreateWatchesPerDay(DEFAULT_WATCHES_PER_DAY);
-      setCreateDaysPerSeason(DEFAULT_DAYS_PER_SEASON);
-      setCreateDaysPerWeek(7);
-      setCreateFactionTurnTrigger("day");
+      resetCreateForm();
     } catch (error) {
       console.error("Failed to create realm:", error);
     } finally {
@@ -396,6 +433,184 @@ function RealmsPage() {
     </Collapsible>
   );
 
+  const generationSettingsSection = (
+    <div className="space-y-3 rounded-lg border p-3">
+      <div className="flex items-center justify-between">
+        <Label
+          htmlFor="gen-toggle"
+          className="flex items-center gap-2 font-medium"
+        >
+          <Wand2 className="size-4" />
+          Procedurally generate world
+        </Label>
+        <Switch
+          id="gen-toggle"
+          checked={genEnabled}
+          onCheckedChange={setGenEnabled}
+          disabled={isCreating}
+        />
+      </div>
+      {genEnabled && (
+        <div className="space-y-3 pt-1">
+          <p className="text-xs text-muted-foreground">
+            Off creates a blank world. On generates a biome hex map sized to your
+            choice — a starting canvas you can flesh out.
+          </p>
+          <div className="grid gap-1.5">
+            <Label className="text-xs">World size</Label>
+            <ToggleGroup
+              type="single"
+              value={genSize}
+              onValueChange={(v) =>
+                v && setGenSize(v as typeof genSize)
+              }
+              className="justify-start"
+              disabled={isCreating}
+            >
+              <ToggleGroupItem value="small">Small · 8×8</ToggleGroupItem>
+              <ToggleGroupItem value="medium">Medium · 12×12</ToggleGroupItem>
+              <ToggleGroupItem value="large">Large · 16×16</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="gen-seed" className="text-xs">
+              Seed (optional)
+            </Label>
+            <Input
+              id="gen-seed"
+              placeholder="Leave blank for a random world"
+              value={genSeed}
+              onChange={(e) => setGenSeed(e.target.value)}
+              disabled={isCreating}
+            />
+          </div>
+          <Collapsible open={genAdvancedOpen} onOpenChange={setGenAdvancedOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-between px-0 font-medium"
+                disabled={isCreating}
+              >
+                <span className="flex items-center gap-2">
+                  <Settings className="size-4" />
+                  Advanced
+                </span>
+                <ChevronDown
+                  className={`size-4 transition-transform ${genAdvancedOpen ? "rotate-180" : ""}`}
+                />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 pt-2">
+              <p className="text-xs text-muted-foreground">
+                These tune future generation stages (factions, dangers, NPCs,
+                points of interest). They're saved with your choice but don't
+                change the map yet.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="gen-factions" className="text-xs">
+                    Factions
+                  </Label>
+                  <Input
+                    id="gen-factions"
+                    type="number"
+                    min="0"
+                    max="20"
+                    value={genFactions}
+                    onChange={(e) =>
+                      setGenFactions(parseInt(e.target.value) || 0)
+                    }
+                    disabled={isCreating}
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="gen-danger" className="text-xs">
+                    Danger level
+                  </Label>
+                  <Select
+                    value={genDanger}
+                    onValueChange={(v) => setGenDanger(v as typeof genDanger)}
+                    disabled={isCreating}
+                  >
+                    <SelectTrigger id="gen-danger">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="gen-npc" className="text-xs">
+                    NPC density
+                  </Label>
+                  <Select
+                    value={genNpcDensity}
+                    onValueChange={(v) =>
+                      setGenNpcDensity(v as typeof genNpcDensity)
+                    }
+                    disabled={isCreating}
+                  >
+                    <SelectTrigger id="gen-npc">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sparse">Sparse</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
+                      <SelectItem value="dense">Dense</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="gen-poi" className="text-xs">
+                    POI density
+                  </Label>
+                  <Select
+                    value={genPoiDensity}
+                    onValueChange={(v) =>
+                      setGenPoiDensity(v as typeof genPoiDensity)
+                    }
+                    disabled={isCreating}
+                  >
+                    <SelectTrigger id="gen-poi">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sparse">Sparse</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
+                      <SelectItem value="dense">Dense</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="gen-threat" className="text-xs">
+                  Looming threat
+                </Label>
+                <Switch
+                  id="gen-threat"
+                  checked={genLoomingThreat}
+                  onCheckedChange={setGenLoomingThreat}
+                  disabled={isCreating}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+      )}
+    </div>
+  );
+
+  // Wait for the realms query to resolve before deciding what to render —
+  // otherwise the "No realms yet" empty state flashes for a frame on every load
+  // while useLiveQuery is still pending (rawRealms === undefined).
+  if (!realmsLoaded) {
+    return null;
+  }
+
   // Show dashboard when a realm is active and confirmed to exist
   if (
     activeRealmId &&
@@ -430,13 +645,6 @@ function RealmsPage() {
               <Button onClick={() => setShowCreate(true)}>
                 <Plus className="mr-2 size-4" />
                 New Realm
-              </Button>
-              <Button
-                onClick={handleGenerateWorld}
-                disabled={isGenerating}
-                variant="secondary"
-              >
-                {isGenerating ? "Generating…" : "Generate Test World"}
               </Button>
               <label htmlFor="import-realm">
                 <Button variant="outline" asChild>
@@ -506,6 +714,7 @@ function RealmsPage() {
                 />
               </div>
               {calendarSettingsSection}
+              {generationSettingsSection}
             </div>
             <DialogFooter>
               <Button
@@ -519,7 +728,13 @@ function RealmsPage() {
                 onClick={handleCreateRealm}
                 disabled={!createName.trim() || !createSystem || isCreating}
               >
-                {isCreating ? "Creating..." : "Create Realm"}
+                {isCreating
+                  ? genEnabled
+                    ? "Generating…"
+                    : "Creating..."
+                  : genEnabled
+                    ? "Generate World"
+                    : "Create Realm"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -538,13 +753,6 @@ function RealmsPage() {
             <Button onClick={() => setShowCreate(true)}>
               <Plus className="mr-2 size-4" />
               New Realm
-            </Button>
-            <Button
-              onClick={handleGenerateWorld}
-              disabled={isGenerating}
-              variant="secondary"
-            >
-              {isGenerating ? "Generating…" : "Generate Test World"}
             </Button>
             <label htmlFor="import-realm-header">
               <Button variant="outline" asChild>
