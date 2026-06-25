@@ -176,6 +176,10 @@ export interface HistoryLayer {
 export interface DungeonEcology {
   builderCulture?: string
   currentInhabitants?: string
+  /** Creature slug extracted from currentInhabitants (e.g. "Hobgoblin"), used to
+   *  populate the dungeon's rooms and wandering monsters with the actual faction
+   *  that holds it. Undefined when the inhabitants aren't a known creature. */
+  inhabitantCreature?: string
   history?: string
   factionInfluence?: Record<string, string[]>
   historyLayers?: HistoryLayer[]

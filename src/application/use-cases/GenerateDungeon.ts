@@ -313,6 +313,13 @@ export async function executeGenerateDungeon(
   // Fall back to blueprint pool only if wandering table is empty
   const useBlueprintFallback = wmPool.length === 0
 
+  // The faction that holds this dungeon (ecology.currentInhabitants) and the
+  // rooms it controls — those rooms are stocked with that actual creature so the
+  // monsters match the lore ("claimed by the hobgoblin legion").
+  const inhabitantCreature = generated.ecology?.inhabitantCreature
+  const inhabitants = generated.ecology?.currentInhabitants ?? ''
+  const inhabitantRooms = new Set(generated.ecology?.factionInfluence?.[inhabitants] ?? [])
+
   for (const room of generated.rooms) {
     if (room.type === 'entrance' || room.type === 'exit') continue
     if (roomsWithNPC.has(room.id)) continue
@@ -321,7 +328,12 @@ export async function executeGenerateDungeon(
     let creatureName: string
     let compendiumId: string | null
 
-    if (!useBlueprintFallback) {
+    if (inhabitantCreature && inhabitantRooms.has(room.id)) {
+      // This room is held by the dungeon's current faction — stock it with them.
+      const resolved = resolveCreature(inhabitantCreature, systemId, creatureRng, room.depth)
+      creatureName = resolved?.name ?? inhabitantCreature
+      compendiumId = resolved?.id ?? null
+    } else if (!useBlueprintFallback) {
       // Pick from the wandering monster table — same creatures that haunt this dungeon
       const wmEntry = creatureRng.pick(wmPool)
       creatureName = wmEntry.name
