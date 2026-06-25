@@ -12,6 +12,7 @@ import { buildPOI } from './buildPoi'
 import { buildPath } from './buildPath'
 import { buildFaction } from './buildFaction'
 import { buildFactionRelationships } from './buildFactionRelationships'
+import { buildNpc } from './buildNpc'
 import { buildRegionFlavor } from './regionFlavor'
 import { describePoi } from './poiFlavor'
 import type { GameMap, HexCell } from '@domain/entities/GameMap'
@@ -20,6 +21,8 @@ import type { POI } from '@domain/entities/POI'
 import type { Path } from '@domain/entities/Path'
 import type { Faction } from '@domain/entities/Faction'
 import type { FactionRelationship } from '@domain/entities/FactionRelationship'
+import type { NPC } from '@domain/entities/NPC'
+import type { SystemConfig } from '@domain/entities/SystemConfig'
 import { newId } from '@shared/ulid'
 
 export type PoiDensity = 'sparse' | 'normal' | 'dense'
@@ -41,6 +44,7 @@ export function generateWorld(
     hexSize?: number
     poiDensity?: PoiDensity
     factionCount?: number
+    systemConfig?: SystemConfig
   }
 ): {
   gameMap: GameMap
@@ -49,6 +53,7 @@ export function generateWorld(
   paths: Path[]
   factions: Faction[]
   factionRelationships: FactionRelationship[]
+  npcs: NPC[]
 } {
   const { cols, rows, hexSize = 40, poiDensity = 'normal' } = opts
   const rng = new SeededRandom(seed)
@@ -397,11 +402,39 @@ export function generateWorld(
     ),
   )
 
+  // Step 8b: faction leaders + agents. Only runs when the realm's system config
+  // is supplied (the SystemBlock is rolled for that system). Each faction gets
+  // one leader and 1-3 agents, all headquartered with the faction; the faction's
+  // leaderNpcId/agentNpcIds are filled in here.
+  const npcs: NPC[] = []
+  if (opts.systemConfig) {
+    for (const faction of factions) {
+      const link = {
+        worldId: realmId,
+        factionId: faction.id,
+        regionId: faction.regionId ?? undefined,
+        poiId: faction.headquartersPoiId ?? undefined,
+      }
+      const leader = buildNpc({ ...link, role: 'leader' }, opts.systemConfig, rng)
+      npcs.push(leader)
+      faction.leaderNpcId = leader.id
+
+      const agentIds: string[] = []
+      const agentCount = rng.between(1, 3)
+      for (let i = 0; i < agentCount; i++) {
+        const agent = buildNpc({ ...link, role: 'agent' }, opts.systemConfig, rng)
+        npcs.push(agent)
+        agentIds.push(agent.id)
+      }
+      faction.agentNpcIds = agentIds
+    }
+  }
+
   // Step 9: seeded pairwise relationships among the generated factions.
   const factionRelationships = buildFactionRelationships(
     factions.map((f) => f.id),
     rng,
   )
 
-  return { gameMap, regions, pois, paths, factions, factionRelationships }
+  return { gameMap, regions, pois, paths, factions, factionRelationships, npcs }
 }

@@ -45,12 +45,17 @@ export async function executeGenerateWorld(
   let realmId = ''
   let mapId = ''
 
+  // Load the realm's system config up front (outside the transaction) so world
+  // generation can roll system-correct NPC stat blocks. Generation degrades
+  // gracefully (no NPCs) if the system is somehow missing.
+  const systemConfig = await db.systemConfigs.get(input.systemId)
+
   // One atomic transaction: the realm (+ its party faction and main note,
   // written by executeCreateRealm via the repos, which join this transaction's
   // async context) and the hex map all commit together or roll back together —
   // no orphaned realm if a later write fails. Tables listed = every table the
   // enclosed writes touch.
-  await db.transaction('rw', [db.worlds, db.factions, db.factionRelationships, db.realmNotes, db.gameMaps, db.regions, db.pois, db.paths], async () => {
+  await db.transaction('rw', [db.worlds, db.factions, db.factionRelationships, db.npcs, db.realmNotes, db.gameMaps, db.regions, db.pois, db.paths], async () => {
     const realm = await executeCreateRealm(
       {
         name: input.name,
@@ -63,11 +68,12 @@ export async function executeGenerateWorld(
       },
       deps
     )
-    const { gameMap, regions, pois, paths, factions, factionRelationships } = generateWorld(realm.id, input.seed, {
+    const { gameMap, regions, pois, paths, factions, factionRelationships, npcs } = generateWorld(realm.id, input.seed, {
       cols: preset.cols,
       rows: preset.rows,
       poiDensity: input.poiDensity ?? 'normal',
       factionCount: input.factionCount,
+      systemConfig,
     })
     await db.gameMaps.put(gameMap)
     await db.regions.bulkPut(regions)
@@ -75,6 +81,7 @@ export async function executeGenerateWorld(
     await db.paths.bulkPut(paths)
     await db.factions.bulkPut(factions)
     await db.factionRelationships.bulkPut(factionRelationships)
+    await db.npcs.bulkPut(npcs)
     realmId = realm.id
     mapId = gameMap.id
   })

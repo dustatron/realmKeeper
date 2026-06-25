@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { generateWorld } from './generateWorld'
 import { DUNGEON_THEMES } from '~/domain/data/worldgen/poiKinds'
 import { hexLine } from '~/lib/hexmap/hex'
+import { cairnSystemConfig } from '@infrastructure/dexie/seed-system-configs'
 import type { GameMap } from '@domain/entities/GameMap'
 
 const REALM = 'realm-1'
@@ -211,6 +212,39 @@ describe('generateWorld', () => {
       // region matches the HQ settlement's region
       expect(f.regionId).toBe(settlements.get(f.headquartersPoiId!)!.regionId)
       expect(regionIds.has(f.regionId!)).toBe(true)
+    }
+  })
+
+  it('generates a leader and agents for each faction when a system config is supplied', () => {
+    const { factions, npcs } = generateWorld(REALM, 'seed-a', {
+      cols: 16,
+      rows: 16,
+      factionCount: 4,
+      systemConfig: cairnSystemConfig,
+    })
+    const npcById = new Map(npcs.map((n) => [n.id, n]))
+    expect(npcs.length).toBeGreaterThanOrEqual(factions.length * 2)
+    for (const f of factions) {
+      // leader assigned and present
+      expect(f.leaderNpcId).not.toBeNull()
+      const leader = npcById.get(f.leaderNpcId!)!
+      expect(leader.factionIds).toContain(f.id)
+      expect(leader.regionId).toBe(f.regionId)
+      // 1-3 agents assigned, all present and linked
+      expect(f.agentNpcIds.length).toBeGreaterThanOrEqual(1)
+      expect(f.agentNpcIds.length).toBeLessThanOrEqual(3)
+      for (const aid of f.agentNpcIds) {
+        expect(npcById.get(aid)!.factionIds).toContain(f.id)
+      }
+    }
+  })
+
+  it('omits NPCs (and leaves leaders empty) when no system config is supplied', () => {
+    const { factions, npcs } = generateWorld(REALM, 'seed-a', { cols: 12, rows: 12 })
+    expect(npcs).toEqual([])
+    for (const f of factions) {
+      expect(f.leaderNpcId).toBeNull()
+      expect(f.agentNpcIds).toEqual([])
     }
   })
 

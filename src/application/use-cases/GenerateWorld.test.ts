@@ -1,13 +1,16 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '@infrastructure/dexie/db'
 import { createContainer } from '@infrastructure/container'
+import { cairnSystemConfig } from '@infrastructure/dexie/seed-system-configs'
 import { executeGenerateWorld } from './GenerateWorld'
 
 const container = createContainer()
 
 beforeEach(async () => {
   await db.open()
-  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.factionRelationships.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear()])
+  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.factionRelationships.clear(), db.npcs.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear()])
+  // NPC generation rolls a system-correct stat block, so the system config must exist.
+  await db.systemConfigs.put(cairnSystemConfig)
 })
 
 const deps = () => ({
@@ -67,6 +70,21 @@ describe('executeGenerateWorld', () => {
     for (const f of generated) {
       expect(settlementIds.has(f.headquartersPoiId!)).toBe(true)
       expect(f.name.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('persists faction leaders and agents as NPCs', async () => {
+    const { realmId } = await executeGenerateWorld(
+      { name: 'Folk', systemId: 'system-cairn-2e', seed: 'seed-npc', size: 'medium', factionCount: 3 },
+      deps()
+    )
+    const factions = (await db.factions.where('worldId').equals(realmId).toArray()).filter((f) => !f.isParty)
+    const npcs = await db.npcs.where('worldId').equals(realmId).toArray()
+    expect(npcs.length).toBeGreaterThanOrEqual(factions.length * 2)
+    for (const f of factions) {
+      expect(f.leaderNpcId).not.toBeNull()
+      expect(npcs.some((n) => n.id === f.leaderNpcId)).toBe(true)
+      expect(f.agentNpcIds.length).toBeGreaterThanOrEqual(1)
     }
   })
 
