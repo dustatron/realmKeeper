@@ -16,6 +16,7 @@ import { buildNpc } from './buildNpc'
 import { buildSettlementBuildings } from './buildSettlement'
 import { buildConnections } from './buildConnections'
 import { buildHooks } from './buildHooks'
+import { buildDoom, type DoomClock } from './buildDoom'
 import { buildRegionFlavor } from './regionFlavor'
 import { buildPoiFlavor } from './poiFlavor'
 import type { GameMap, HexCell } from '@domain/entities/GameMap'
@@ -29,6 +30,7 @@ import type { Connection } from '@domain/entities/Connection'
 import type { Hook } from '@domain/entities/Hook'
 import type { Notice } from '@domain/entities/Notice'
 import type { Rumor } from '@domain/entities/Rumor'
+import type { WorldEvent } from '@domain/entities/WorldEvent'
 import type { SystemConfig } from '@domain/entities/SystemConfig'
 import { newId } from '@shared/ulid'
 
@@ -52,6 +54,8 @@ export function generateWorld(
     poiDensity?: PoiDensity
     factionCount?: number
     systemConfig?: SystemConfig
+    clock?: DoomClock
+    loomingThreat?: boolean
   }
 ): {
   gameMap: GameMap
@@ -65,6 +69,7 @@ export function generateWorld(
   hooks: Hook[]
   notices: Notice[]
   rumors: Rumor[]
+  worldEvents: WorldEvent[]
 } {
   const { cols, rows, hexSize = 40, poiDensity = 'normal' } = opts
   const rng = new SeededRandom(seed)
@@ -507,6 +512,18 @@ export function generateWorld(
     ? buildHooks(factions, npcs, pois, connections, realmId, rng)
     : { hooks: [], notices: [], rumors: [] }
 
+  // Step 12: the looming doom — a faction's agenda escalates into a dated
+  // WorldEvent, foreshadowed by rumors and opposed by a quest to avert it. Its
+  // hook/notice/rumors join the world's quest projections.
+  const worldEvents: WorldEvent[] = []
+  if (opts.loomingThreat && opts.systemConfig && opts.clock && factions.length > 0) {
+    const doom = buildDoom(factions, pois, opts.clock, realmId, rng)
+    worldEvents.push(doom.event)
+    hooks.push(...doom.hooks)
+    notices.push(...doom.notices)
+    rumors.push(...doom.rumors)
+  }
+
   return {
     gameMap,
     regions,
@@ -519,5 +536,6 @@ export function generateWorld(
     hooks,
     notices,
     rumors,
+    worldEvents,
   }
 }

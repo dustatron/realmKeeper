@@ -152,7 +152,7 @@ function RealmsPage() {
   const [genPoiDensity, setGenPoiDensity] = useState<
     "sparse" | "normal" | "dense"
   >("normal");
-  const [genLoomingThreat, setGenLoomingThreat] = useState(false);
+  const [genLoomingThreat, setGenLoomingThreat] = useState(true);
 
   const resetCreateForm = () => {
     setShowCreate(false);
@@ -189,6 +189,7 @@ function RealmsPage() {
             factionTurnTrigger: createFactionTurnTrigger,
             poiDensity: genPoiDensity,
             factionCount: genFactions,
+            loomingThreat: genLoomingThreat,
           },
           {
             realmRepo: container.realmRepo,

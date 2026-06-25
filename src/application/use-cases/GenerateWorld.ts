@@ -41,6 +41,7 @@ export interface GenerateWorldInput {
   factionTurnTrigger?: 'day' | 'week' | 'manual'
   poiDensity?: PoiDensity
   factionCount?: number
+  loomingThreat?: boolean
 }
 
 export async function executeGenerateWorld(
@@ -64,7 +65,7 @@ export async function executeGenerateWorld(
   // async context) and the hex map all commit together or roll back together —
   // no orphaned realm if a later write fails. Tables listed = every table the
   // enclosed writes touch.
-  await db.transaction('rw', [db.worlds, db.factions, db.factionRelationships, db.npcs, db.connections, db.hooks, db.notices, db.rumors, db.realmNotes, db.gameMaps, db.regions, db.pois, db.paths], async () => {
+  await db.transaction('rw', [db.worlds, db.factions, db.factionRelationships, db.npcs, db.connections, db.hooks, db.notices, db.rumors, db.worldEvents, db.realmNotes, db.gameMaps, db.regions, db.pois, db.paths], async () => {
     const realm = await executeCreateRealm(
       {
         name: input.name,
@@ -77,12 +78,20 @@ export async function executeGenerateWorld(
       },
       deps
     )
-    const { gameMap, regions, pois, paths, factions, factionRelationships, npcs, connections, hooks, notices, rumors } = generateWorld(realm.id, input.seed, {
+    const { gameMap, regions, pois, paths, factions, factionRelationships, npcs, connections, hooks, notices, rumors, worldEvents } = generateWorld(realm.id, input.seed, {
       cols: preset.cols,
       rows: preset.rows,
       poiDensity: input.poiDensity ?? 'normal',
       factionCount: input.factionCount,
       systemConfig,
+      loomingThreat: input.loomingThreat ?? true,
+      clock: {
+        year: realm.currentYear,
+        season: realm.currentSeason,
+        day: realm.currentDay,
+        watch: realm.currentWatch,
+        daysPerSeason: realm.daysPerSeason,
+      },
     })
     await db.gameMaps.put(gameMap)
     await db.regions.bulkPut(regions)
@@ -95,6 +104,7 @@ export async function executeGenerateWorld(
     await db.hooks.bulkPut(hooks)
     await db.notices.bulkPut(notices)
     await db.rumors.bulkPut(rumors)
+    await db.worldEvents.bulkPut(worldEvents)
     realmId = realm.id
     mapId = gameMap.id
     dungeonStubs = pois.filter((p) => p.type === 'dungeon' && p.dungeonGenOptions != null)

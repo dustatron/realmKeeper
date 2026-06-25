@@ -8,7 +8,7 @@ const container = createContainer()
 
 beforeEach(async () => {
   await db.open()
-  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.factionRelationships.clear(), db.npcs.clear(), db.connections.clear(), db.hooks.clear(), db.notices.clear(), db.rumors.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear()])
+  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.factionRelationships.clear(), db.npcs.clear(), db.connections.clear(), db.hooks.clear(), db.notices.clear(), db.rumors.clear(), db.worldEvents.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear()])
   // NPC generation rolls a system-correct stat block, so the system config must exist.
   await db.systemConfigs.put(cairnSystemConfig)
 })
@@ -105,6 +105,30 @@ describe('executeGenerateWorld', () => {
     // a built dungeon has child room POIs
     const children = await db.pois.where('parentPoiId').equals(built[0].id).toArray()
     expect(children.length).toBeGreaterThan(0)
+  })
+
+  it('persists a future-dated doom event with foreshadowing rumors', async () => {
+    const { realmId } = await executeGenerateWorld(
+      { name: 'Doomed', systemId: 'system-cairn-2e', seed: 'seed-doom', size: 'medium', loomingThreat: true },
+      deps()
+    )
+    const realm = await db.worlds.get(realmId)
+    const events = (await db.worldEvents.toArray()).filter((e) => e.worldId === realmId)
+    expect(events.length).toBeGreaterThanOrEqual(1)
+    const doom = events.find((e) => e.type === 'doom')!
+    expect(doom).toBeTruthy()
+    // dated strictly in the future relative to the realm's start
+    const abs = (e: { year: number; season: string; day: number }) =>
+      (e.year - 1) * 4 * realm!.daysPerSeason +
+      ['spring', 'summer', 'fall', 'winter'].indexOf(e.season) * realm!.daysPerSeason +
+      (e.day - 1)
+    const startAbs = (realm!.currentYear - 1) * 4 * realm!.daysPerSeason +
+      ['spring', 'summer', 'fall', 'winter'].indexOf(realm!.currentSeason) * realm!.daysPerSeason +
+      (realm!.currentDay - 1)
+    expect(abs(doom)).toBeGreaterThan(startAbs)
+    // foreshadowed by rumors tagged doom
+    const doomRumors = (await db.rumors.toArray()).filter((r) => r.worldId === realmId && r.tags.includes('doom'))
+    expect(doomRumors.length).toBeGreaterThanOrEqual(1)
   })
 
   it('persists quest hooks with notices/rumors anchored to NPCs and POIs', async () => {
