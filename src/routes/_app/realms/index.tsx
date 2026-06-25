@@ -89,14 +89,24 @@ function RealmsPage() {
   const activeRealmId = useUIStore((state) => state.activeRealmId);
   const { tab } = Route.useSearch();
 
-  // Clear stale activeRealmId if the realm no longer exists in DB (e.g. DB was deleted)
+  // Clear stale activeRealmId if the realm no longer exists in DB (e.g. DB was
+  // deleted). The `realms` live query can briefly lag a just-created realm, so
+  // confirm against the DB before clearing — otherwise we'd null the active
+  // realm immediately after generating a world (the race that left a freshly
+  // generated realm showing "No Realm").
   useEffect(() => {
     if (
       realmsLoaded &&
       activeRealmId &&
       !realms.some((r) => r.id === activeRealmId)
     ) {
-      setActiveRealmId(null);
+      let cancelled = false;
+      db.worlds.get(activeRealmId).then((world) => {
+        if (!cancelled && !world) setActiveRealmId(null);
+      });
+      return () => {
+        cancelled = true;
+      };
     }
   }, [realmsLoaded, activeRealmId, realms, setActiveRealmId]);
 
@@ -178,6 +188,7 @@ function RealmsPage() {
             daysPerWeek: createDaysPerWeek,
             factionTurnTrigger: createFactionTurnTrigger,
             poiDensity: genPoiDensity,
+            factionCount: genFactions,
           },
           {
             realmRepo: container.realmRepo,
