@@ -2,6 +2,7 @@ import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { GameMap } from '@domain/entities/GameMap'
+import { BIOME_COLORS } from '~/lib/hexmap/hexLayout'
 import type { POI } from '@domain/entities/POI'
 import type { Path } from '@domain/entities/Path'
 import type { Region } from '@domain/entities/Region'
@@ -174,34 +175,41 @@ export function MapViewer({
     const [swLng, swLat] = pxToLngLat(0, map.height)
     const [neLng, neLat] = pxToLngLat(map.width, 0)
 
+    const hasImage = !!map.imageUrl
     const mapInstance = new maplibregl.Map({
       container: containerRef.current,
       style: {
         version: 8,
-        sources: {
-          'map-image': {
-            type: 'image',
-            url: map.imageUrl,
-            coordinates: [
-              [swLng, neLat], // top-left
-              [neLng, neLat], // top-right
-              [neLng, swLat], // bottom-right
-              [swLng, swLat], // bottom-left
-            ],
-          },
-        },
+        sources: hasImage
+          ? {
+              'map-image': {
+                type: 'image',
+                url: map.imageUrl,
+                coordinates: [
+                  [swLng, neLat], // top-left
+                  [neLng, neLat], // top-right
+                  [neLng, swLat], // bottom-right
+                  [swLng, swLat], // bottom-left
+                ],
+              },
+            }
+          : {},
         layers: [
           {
             id: 'background',
             type: 'background',
-            paint: { 'background-color': '#1a1a2e' },
+            paint: { 'background-color': hasImage ? '#1a1a2e' : '#0f172a' },
           },
-          {
-            id: 'map-image-layer',
-            type: 'raster',
-            source: 'map-image',
-            paint: { 'raster-opacity': 1 },
-          },
+          ...(hasImage
+            ? [
+                {
+                  id: 'map-image-layer',
+                  type: 'raster' as const,
+                  source: 'map-image',
+                  paint: { 'raster-opacity': 1 },
+                },
+              ]
+            : []),
         ],
       },
       center: initialViewState?.center ?? [0, 0],
@@ -666,6 +674,55 @@ export function MapViewer({
       instance.off('mouseleave', 'regions-fill', cursorLeave)
     }
   }, [mapReady, mode])
+
+  // Render hex-grid biome fill for kind:'hex' maps.
+  useEffect(() => {
+    const instance = mapRef.current
+    if (!instance || !mapReady) return
+    if (map.kind !== 'hex' || !map.hexCells || map.hexCells.length === 0) return
+
+    const sourceId = 'hex-cells'
+    const layerId = 'hex-cells-fill'
+    const lineId = 'hex-cells-line'
+
+    const features = map.hexCells.map((cell) => ({
+      type: 'Feature' as const,
+      properties: { color: BIOME_COLORS[cell.biome] },
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: [
+          [...cell.corners.map((c) => pxToLngLat(c.x, c.y)),
+           pxToLngLat(cell.corners[0].x, cell.corners[0].y)],
+        ],
+      },
+    }))
+    const geojson = { type: 'FeatureCollection' as const, features }
+
+    const existing = instance.getSource(sourceId) as maplibregl.GeoJSONSource | undefined
+    if (existing) {
+      existing.setData(geojson as GeoJSON.FeatureCollection)
+    } else {
+      instance.addSource(sourceId, { type: 'geojson', data: geojson as GeoJSON.FeatureCollection })
+      instance.addLayer({
+        id: layerId,
+        type: 'fill',
+        source: sourceId,
+        paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.85 },
+      })
+      instance.addLayer({
+        id: lineId,
+        type: 'line',
+        source: sourceId,
+        paint: { 'line-color': '#00000033', 'line-width': 1 },
+      })
+    }
+
+    return () => {
+      if (instance.getLayer(lineId)) instance.removeLayer(lineId)
+      if (instance.getLayer(layerId)) instance.removeLayer(layerId)
+      if (instance.getSource(sourceId)) instance.removeSource(sourceId)
+    }
+  }, [map.kind, map.hexCells, mapReady, pxToLngLat])
 
   // Render draw-region preview polygon
   useEffect(() => {
