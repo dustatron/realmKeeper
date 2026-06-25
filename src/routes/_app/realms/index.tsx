@@ -312,6 +312,8 @@ function RealmsPage() {
         factionPresenceRepo: container.factionPresenceRepo,
         poiEventRepo: container.poiEventRepo,
         gameMapRepo: container.gameMapRepo,
+        connectionRepo: container.connectionRepo,
+        hookRepo: container.hookRepo,
       });
 
       if (!data) return;
@@ -356,6 +358,8 @@ function RealmsPage() {
         factionPresenceRepo: container.factionPresenceRepo,
         poiEventRepo: container.poiEventRepo,
         gameMapRepo: container.gameMapRepo,
+        connectionRepo: container.connectionRepo,
+        hookRepo: container.hookRepo,
       });
 
       setActiveRealmId(newRealmId);

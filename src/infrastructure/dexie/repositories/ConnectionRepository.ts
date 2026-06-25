@@ -13,6 +13,10 @@ export class ConnectionRepository implements IConnectionRepository {
     return [...byId.values()]
   }
 
+  async getByWorld(worldId: string): Promise<Connection[]> {
+    return db.connections.where('worldId').equals(worldId).toArray()
+  }
+
   async getByHook(hookId: string): Promise<Connection[]> {
     return db.connections.where('hookId').equals(hookId).toArray()
   }
