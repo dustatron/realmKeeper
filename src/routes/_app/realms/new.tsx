@@ -19,7 +19,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/components/ui/collapsible";
-import { ChevronDown, Settings, Wand2 } from "lucide-react";
+import { ChevronDown, Gem, Settings, Skull, Sparkles, Wand2 } from "lucide-react";
 import {
   DEFAULT_DAYS_PER_SEASON,
   DEFAULT_WATCHES_PER_DAY,
@@ -69,6 +69,9 @@ function NewRealmPage() {
     "sparse" | "normal" | "dense"
   >("normal");
   const [genLoomingThreat, setGenLoomingThreat] = useState(true);
+  const [genAutoTreasure, setGenAutoTreasure] = useState(true);
+  const [genAutoMagicItems, setGenAutoMagicItems] = useState(true);
+  const [genAutoMonsters, setGenAutoMonsters] = useState(true);
 
   const handleCreateRealm = async () => {
     if (!createName.trim() || !createSystem) return;
@@ -90,6 +93,9 @@ function NewRealmPage() {
             poiDensity: genPoiDensity,
             factionCount: genFactions,
             loomingThreat: genLoomingThreat,
+            autoTreasure: genAutoTreasure,
+            autoMagicItems: genAutoMagicItems,
+            autoMonsters: genAutoMonsters,
           },
           {
             realmRepo: container.realmRepo,
@@ -340,6 +346,47 @@ function NewRealmPage() {
                 onCheckedChange={setGenLoomingThreat}
                 disabled={isCreating}
               />
+            </div>
+            <div className="space-y-2 rounded-md border bg-muted/20 p-3">
+              <p className="text-xs font-medium">Realm content</p>
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="gen-treasure" className="flex items-center gap-2 text-xs">
+                    <Gem className="size-3.5" />
+                    Auto add treasure
+                  </Label>
+                  <Switch
+                    id="gen-treasure"
+                    checked={genAutoTreasure}
+                    onCheckedChange={setGenAutoTreasure}
+                    disabled={isCreating}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="gen-magic-items" className="flex items-center gap-2 text-xs">
+                    <Sparkles className="size-3.5" />
+                    Sprinkle magic items
+                  </Label>
+                  <Switch
+                    id="gen-magic-items"
+                    checked={genAutoMagicItems}
+                    onCheckedChange={setGenAutoMagicItems}
+                    disabled={isCreating}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="gen-monsters" className="flex items-center gap-2 text-xs">
+                    <Skull className="size-3.5" />
+                    Sprinkle monsters
+                  </Label>
+                  <Switch
+                    id="gen-monsters"
+                    checked={genAutoMonsters}
+                    onCheckedChange={setGenAutoMonsters}
+                    disabled={isCreating}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

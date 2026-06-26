@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { cairnTableDefs } from '@domain/data/cairn-tables'
+import { settlementProblemTexts } from '@domain/data/worldgen/settlementProblems'
 import type { PoiKind } from '@domain/data/worldgen/poiKinds'
 import { buildPoiFlavor } from './poiFlavor'
 
@@ -34,6 +35,12 @@ describe('buildPoiFlavor', () => {
     const f = buildPoiFlavor('settlement', 'Place', 'grasslands', new SeededRandom('c'))
     expect(types).toContain(f.subtypeLabel)
     expect(features).toContain(f.tags[0])
+  })
+
+  it('sources settlement problems from the worldgen problem table', () => {
+    const f = buildPoiFlavor('settlement', 'Place', 'grasslands', new SeededRandom('problem'))
+    expect(settlementProblemTexts.length).toBeGreaterThan(20)
+    expect(settlementProblemTexts).toContain(f.trouble)
   })
 
   it('sources a landmark subtype from the Cairn curiosity tables', () => {

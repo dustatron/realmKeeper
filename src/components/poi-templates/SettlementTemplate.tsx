@@ -20,33 +20,47 @@ import {
   FileText,
   Columns2,
   Rows2,
-  ChevronDown,
   ChevronRight,
   Eye,
   ShoppingBag,
   Sparkles,
   ShieldAlert,
   Landmark,
-  UserRound,
+  RefreshCw,
 } from "lucide-react";
 import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
 import { RumorList } from "~/components/shared/RumorList";
 import { NoticeBoard } from "~/components/shared/NoticeBoard";
 import { EncounterTableUI } from "~/components/shared/EncounterTableUI";
 import { ServicesList } from "~/components/shared/ServicesList";
-import { AtAGlancePanel } from "~/components/shared/AtAGlancePanel";
 import { POI_TYPE_ICONS } from "@shared/poi-icons";
+import { settlementSize } from "@domain/data/worldgen/settlementSize";
+import { formatDistance } from "~/lib/hexmap/travel";
 import type { POI } from "@domain/entities/POI";
 import type { ResolvedPath } from "~/ui/hooks/useResolvedPaths";
 import type { NPC } from "@domain/entities/NPC";
 import type { Rumor } from "@domain/entities/Rumor";
 import type { Notice } from "@domain/entities/Notice";
 import type { EncounterTable } from "@domain/entities/EncounterTable";
-import type { FactionPresence } from "@domain/entities/FactionPresence";
 import type { POIEvent } from "@domain/entities/POIEvent";
 import type { GameMap } from "@domain/entities/GameMap";
-import type { NoticeType } from "@shared/constants";
+import { OPPOSITE_DIRECTION, type Direction, type NoticeType } from "@shared/constants";
 import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
+
+type SettlementTab = "locations" | "denizens" | "rumors" | "encounters" | "events" | "notes";
+
+const SETTLEMENT_TABS: readonly SettlementTab[] = [
+  "locations",
+  "denizens",
+  "rumors",
+  "encounters",
+  "events",
+  "notes",
+];
+
+function isSettlementTab(value: string | null | undefined): value is SettlementTab {
+  return SETTLEMENT_TABS.includes(value as SettlementTab);
+}
 
 function LocationDetailPanel({
   location,
@@ -184,7 +198,6 @@ interface SettlementTemplateProps {
   childNPCs: NPC[];
   selectedChildId: string | null;
   onSelectChild: (id: string | null) => void;
-  factionPresences: FactionPresence[];
   paths: ResolvedPath[];
   rumors: Rumor[];
   notices: Notice[];
@@ -224,8 +237,11 @@ interface SettlementTemplateProps {
   onCreateNPC: () => void;
   onCreateEvent: () => void;
   onDeleteEvent: (id: string) => void;
-  onToggleTrapDisarmed?: (trapId: string) => void;
   onUpdateNPC?: (npc: NPC) => void;
+  onRerollProblem?: () => void | Promise<void>;
+  isRerollingProblem?: boolean;
+  activeTab?: string | null;
+  onTabChange?: (tab: SettlementTab) => void;
   mapSection: React.ReactNode;
   notesSection?: React.ReactNode;
   actionBar?: React.ReactNode;
@@ -240,8 +256,10 @@ function cleanText(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
-function formatTypeLabel(poi: POI): string {
-  return [poi.subtypeLabel, poi.type].filter(Boolean).join(" ");
+function settlementTypeDetail(poi: POI, displaySize: string): string {
+  return poi.subtypeLabel
+    ? `${displaySize} ${poi.subtypeLabel.toLowerCase()}`
+    : `${displaySize} settlement`;
 }
 
 function OverviewFact({
@@ -256,13 +274,93 @@ function OverviewFact({
   detail?: ReactNode;
 }) {
   return (
-    <div className="min-w-0 rounded-md bg-muted/35 p-3">
+    <div className="min-w-0 rounded-md bg-muted/30 px-3 py-2">
       <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         <Icon className="size-3.5" />
         {label}
       </div>
       <div className="truncate text-sm font-medium">{value}</div>
       {detail && <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{detail}</div>}
+    </div>
+  );
+}
+
+function formatPathTravel(path: ResolvedPath): string {
+  const watches = `${path.baseTravelWatches} ${path.baseTravelWatches === 1 ? "watch" : "watches"}`;
+  return path.hexes != null
+    ? `${formatDistance(path.hexes)} - ${watches}`
+    : watches;
+}
+
+function OverviewRoutes({
+  paths,
+  currentPoiId,
+}: {
+  paths: ResolvedPath[];
+  currentPoiId: string;
+}) {
+  return (
+    <div className="space-y-1.5 rounded-md border bg-muted/20 px-3 py-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <MapPin className="size-3.5" />
+          Routes
+        </p>
+        {paths.length > 0 && (
+          <Badge variant="outline" className="text-xs">
+            {pluralize(paths.length, "route")}
+          </Badge>
+        )}
+      </div>
+      {paths.length > 0 ? (
+        <div className="space-y-1">
+          {paths.map((path) => {
+            const isFrom = path.fromPoiId === currentPoiId;
+            const destId = isFrom ? path.toPoiId : path.fromPoiId;
+            const dest = isFrom ? path.toName : path.fromName;
+            const displayDir: Direction | null = path.direction
+              ? (isFrom ? path.direction : OPPOSITE_DIRECTION[path.direction])
+              : null;
+            const description = cleanText(path.description);
+            return (
+              <Link
+                key={path.id}
+                to="/realms/pois/$poiId"
+                params={{ poiId: destId }}
+                className="group block rounded-md border bg-background/70 px-2.5 py-1.5 transition-colors hover:bg-accent"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  {displayDir ? (
+                    <Badge variant="secondary" className="w-8 shrink-0 justify-center text-xs font-mono">
+                      {displayDir.toUpperCase()}
+                    </Badge>
+                  ) : (
+                    <span className="w-8 shrink-0 text-center text-xs text-muted-foreground">→</span>
+                  )}
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium group-hover:underline">
+                    {dest}
+                  </span>
+                  <Badge variant="outline" className="shrink-0 text-[10px]">
+                    {path.type}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formatPathTravel(path)}
+                </p>
+                {description && (
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                    {description}
+                  </p>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="rounded-md border border-dashed bg-background/50 px-3 py-2 text-sm text-muted-foreground">
+          No routes recorded.
+        </p>
+      )}
     </div>
   );
 }
@@ -274,7 +372,6 @@ export function SettlementTemplate({
   childNPCs,
   selectedChildId,
   onSelectChild,
-  factionPresences,
   paths,
   rumors,
   notices,
@@ -292,8 +389,11 @@ export function SettlementTemplate({
   onCreateNPC,
   onCreateEvent,
   onDeleteEvent,
-  onToggleTrapDisarmed,
   onUpdateNPC,
+  onRerollProblem,
+  isRerollingProblem = false,
+  activeTab,
+  onTabChange,
   mapSection,
   notesSection,
   actionBar,
@@ -343,6 +443,14 @@ export function SettlementTemplate({
   }, [selectedChildId]);
 
   const [overviewOpen, setOverviewOpen] = useState(true);
+  const [localTab, setLocalTab] = useState<SettlementTab>("locations");
+  const selectedTab = isSettlementTab(activeTab) ? activeTab : localTab;
+
+  const handleTabChange = (tab: string) => {
+    const nextTab = isSettlementTab(tab) ? tab : "locations";
+    setLocalTab(nextTab);
+    onTabChange?.(nextTab);
+  };
 
   useEffect(() => {
     setOverviewOpen(true);
@@ -371,38 +479,11 @@ export function SettlementTemplate({
 
   const detailLine = cleanText(poi.description);
   const localProblem = cleanText(poi.trouble);
-  const activeEvents = poiEvents.filter((event) => event.isActive);
-  const openRumors = rumors.filter((rumor) => !rumor.isUsed);
-  const openNotices = notices.filter((notice) => !notice.isUsed);
-  const questHookCount = new Set([
-    ...rumors.filter((rumor) => rumor.isQuestHook || rumor.hookId).map((rumor) => rumor.hookId ?? rumor.id),
-    ...notices.filter((notice) => notice.hookId).map((notice) => notice.hookId!),
-  ]).size;
+  const sizeLabel = settlementSize(poi.subtypeLabel);
+  const displaySize = sizeLabel.charAt(0).toUpperCase() + sizeLabel.slice(1);
   const npcWants = allNPCs
     .filter(({ npc }) => cleanText(npc.want))
     .slice(0, 3);
-  const fallbackNpcProblem = localProblem || npcWants.length === 0
-    ? null
-    : `${npcWants[0].npc.name}: ${npcWants[0].npc.want}`;
-  const leaderNpc = allNPCs.find(({ npc }) => npc.tags.includes("leader")) ?? null;
-  const notableNpc = leaderNpc ?? allNPCs.find(({ npc }) => npc.starred) ?? allNPCs[0] ?? null;
-  const situationParts = [
-    localProblem ? "local problem" : fallbackNpcProblem ? "local agenda" : null,
-    questHookCount > 0 ? pluralize(questHookCount, "quest hook") : null,
-    openRumors.length > 0 ? pluralize(openRumors.length, "open rumor") : null,
-    openNotices.length > 0 ? pluralize(openNotices.length, "open notice") : null,
-    activeEvents.length > 0 ? pluralize(activeEvents.length, "active event") : null,
-    questHookCount === 0 && npcWants.length > 0 ? `${pluralize(npcWants.length, "NPC want")} visible` : null,
-  ].filter((part): part is string => part !== null);
-  const situationLine = situationParts.length > 0
-    ? situationParts.join(" - ")
-    : "Quiet: no hooks, rumors, notices, or active events recorded.";
-  const notableNpcLocationName = notableNpc?.npc.poiId
-    ? notableNpc.poiName ?? poi.name
-    : null;
-  const notableNpcDetail = notableNpc
-    ? cleanText(notableNpc.npc.want) ?? cleanText(notableNpc.npc.description)
-    : null;
 
   const overviewSection = (
     <Collapsible open={overviewOpen} onOpenChange={setOverviewOpen}>
@@ -410,142 +491,125 @@ export function SettlementTemplate({
         <CollapsibleTrigger asChild>
           <button className="flex w-full items-center justify-between px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted/50">
             <span className="flex items-center gap-2">
+              <ChevronRight
+                className={`size-4 text-muted-foreground transition-transform ${overviewOpen ? "rotate-90" : ""}`}
+              />
               <Eye className="size-4 text-muted-foreground" />
               Overview
             </span>
-            <ChevronDown
-              className={`size-4 text-muted-foreground transition-transform ${overviewOpen ? "rotate-180" : ""}`}
-            />
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="space-y-4 px-4 pb-4">
-            {detailLine ? (
-              <p className="rounded-md border bg-background px-3 py-2 text-sm leading-relaxed">
-                {detailLine}
-              </p>
-            ) : (
-              <p className="rounded-md border border-dashed bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-                No detail line recorded.
-              </p>
-            )}
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="text-xs capitalize">
-                {poi.type}
-              </Badge>
-              {poi.subtypeLabel && (
-                <Badge variant="outline" className="text-xs">
-                  {poi.subtypeLabel}
-                </Badge>
-              )}
-              {poi.tags.map((tag) => (
-                <Badge key={tag} variant="outline" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-              <OverviewFact
-                icon={Landmark}
-                label="Location"
-                value={
-                  <Link to="/realms/pois/$poiId" params={{ poiId: poi.id }} className="hover:underline">
-                    {poi.name}
-                  </Link>
-                }
-                detail={[
-                  formatTypeLabel(poi),
-                  childPois.length > 0 ? pluralize(childPois.length, "key location") : null,
-                  allServices.length > 0 ? pluralize(allServices.length, "service") : null,
-                ].filter(Boolean).join(" - ")}
-              />
-              <OverviewFact
-                icon={ShieldAlert}
-                label="Situation"
-                value={situationLine}
-                detail={localProblem ?? fallbackNpcProblem}
-              />
-              <OverviewFact
-                icon={UserRound}
-                label={leaderNpc ? "Leader" : "Notable NPC"}
-                value={notableNpc ? (
-                  <Link to="/realms/npcs/$npcId" params={{ npcId: notableNpc.npc.id }} className="hover:underline">
-                    {notableNpc.npc.name}
-                  </Link>
-                ) : "None recorded"}
-                detail={notableNpc ? (
-                  <span>
-                    {notableNpcLocationName && notableNpc.npc.poiId && (
-                      <Link
-                        to="/realms/pois/$poiId"
-                        params={{ poiId: notableNpc.npc.poiId }}
-                        className="hover:underline"
-                      >
-                        At {notableNpcLocationName}
-                      </Link>
-                    )}
-                    {notableNpcDetail && (
-                      <>
-                        {notableNpcLocationName ? " - " : ""}
-                        {notableNpcDetail}
-                      </>
-                    )}
-                  </span>
-                ) : null}
-              />
-              <OverviewFact
-                icon={Sparkles}
-                label="Atmosphere"
-                value={cleanText(poi.mood) ?? "No mood recorded"}
-                detail={cleanText(poi.sensory)}
-              />
-            </div>
-
-            {npcWants.length > 0 && (
-              <div className="space-y-2 rounded-md bg-muted/25 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Local Wants
+          <div className="grid gap-3 px-3 pb-3 xl:grid-cols-[minmax(0,2fr)_minmax(260px,0.85fr)]">
+            <div className="min-w-0 space-y-3">
+              {detailLine ? (
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {detailLine}
                 </p>
-                <div className="grid gap-2 md:grid-cols-3">
-                  {npcWants.map(({ npc, poiName }) => (
-                    <div key={npc.id} className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="hover:underline">
-                          {npc.name}
-                        </Link>
-                      </p>
-                      <p className="line-clamp-2 text-xs text-muted-foreground">{npc.want}</p>
-                      {npc.poiId && (
-                        <p className="mt-1 text-[11px] text-muted-foreground">
-                          <Link to="/realms/pois/$poiId" params={{ poiId: npc.poiId }} className="hover:underline">
-                            {poiName ?? poi.name}
-                          </Link>
-                        </p>
-                      )}
-                    </div>
-                  ))}
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No detail line recorded.
+                </p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge variant="outline" className="text-xs capitalize">
+                  {poi.type}
+                </Badge>
+                <Badge variant="secondary" className="text-xs">
+                  {displaySize}
+                </Badge>
+                {poi.subtypeLabel && (
+                  <Badge variant="outline" className="text-xs">
+                    {poi.subtypeLabel}
+                  </Badge>
+                )}
+                {poi.tags.map((tag) => (
+                  <Badge key={tag} variant="outline" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 space-y-1">
+                    <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                      <ShieldAlert className="size-3.5" />
+                      Looming Problem
+                    </p>
+                    <p className="text-sm leading-relaxed">
+                      {localProblem ?? "No problem recorded."}
+                    </p>
+                  </div>
+                  {onRerollProblem && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void onRerollProblem()}
+                      disabled={isRerollingProblem}
+                      title="Reroll settlement problem"
+                    >
+                      <RefreshCw className={`size-4 ${isRerollingProblem ? "animate-spin" : ""}`} />
+                      Reroll
+                    </Button>
+                  )}
                 </div>
               </div>
-            )}
 
-            <AtAGlancePanel
-              mood={poi.mood}
-              trouble={poi.trouble}
-              factionPresences={factionPresences}
-              npcCount={allNPCs.length}
-              activeEvents={poiEvents.filter((e) => e.isActive).length}
-              paths={paths}
-              currentPoiId={poi.id}
-              traps={poi.traps}
-              onToggleTrapDisarmed={onToggleTrapDisarmed}
-              roomWidth={poi.roomWidth}
-              roomLength={poi.roomLength}
-              treasure={poi.treasure}
-              lightLevel={poi.lightLevel}
-            />
+              <div className="grid gap-2 md:grid-cols-2">
+                <OverviewFact
+                  icon={Landmark}
+                  label="Location"
+                  value={
+                    <Link to="/realms/pois/$poiId" params={{ poiId: poi.id }} className="hover:underline">
+                      {poi.name}
+                    </Link>
+                  }
+                  detail={[
+                    settlementTypeDetail(poi, displaySize),
+                    childPois.length > 0 ? pluralize(childPois.length, "key location") : null,
+                    allServices.length > 0 ? pluralize(allServices.length, "service") : null,
+                  ].filter(Boolean).join(" - ")}
+                />
+                <OverviewFact
+                  icon={Sparkles}
+                  label="Atmosphere"
+                  value={cleanText(poi.mood) ?? "No mood recorded"}
+                  detail={cleanText(poi.sensory)}
+                />
+              </div>
 
+              {npcWants.length > 0 && (
+                <div className="space-y-2 rounded-md bg-muted/20 px-3 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Local Wants
+                  </p>
+                  <div className="grid gap-2 md:grid-cols-3">
+                    {npcWants.map(({ npc, poiName }) => (
+                      <div key={npc.id} className="min-w-0">
+                        <p className="truncate text-sm font-medium">
+                          <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="hover:underline">
+                            {npc.name}
+                          </Link>
+                        </p>
+                        <p className="line-clamp-2 text-xs text-muted-foreground">{npc.want}</p>
+                        {npc.poiId && (
+                          <p className="mt-1 text-[11px] text-muted-foreground">
+                            <Link to="/realms/pois/$poiId" params={{ poiId: npc.poiId }} className="hover:underline">
+                              {poiName ?? poi.name}
+                            </Link>
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <OverviewRoutes paths={paths} currentPoiId={poi.id} />
           </div>
         </CollapsibleContent>
       </div>
@@ -555,7 +619,7 @@ export function SettlementTemplate({
   return (
     <div className="space-y-4">
       {/* Tabs */}
-      <Tabs defaultValue="locations">
+      <Tabs value={selectedTab} onValueChange={handleTabChange}>
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <TabsList variant="line" className="min-w-0 flex-1 justify-start overflow-x-auto">
             <TabsTrigger value="locations">

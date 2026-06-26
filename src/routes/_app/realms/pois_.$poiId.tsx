@@ -22,12 +22,15 @@ import { useContainer } from '~/ui/hooks/useContainer'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { usePOIActions } from '~/ui/hooks/usePOIActions'
 import { executeDeletePOI } from '@application/use-cases/DeletePOI'
+import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
 import { executeGetOrCreateTownMap } from '@application/use-cases/GetOrCreateTownMap'
 import { executeUpdateGameMap } from '@application/use-cases/UpdateGameMap'
 import { executePlacePOIOnMap } from '@application/use-cases/PlacePOIOnMap'
+import { pickSettlementProblem } from '@domain/data/worldgen/settlementProblems'
 import { bucketForSize, pickTownMapForSize, TOWN_MAPS, type TownMap } from '~/maps/townMaps'
 import { extractTownBuildings } from '~/maps/townMapGeometry'
 import { assignPoisToBuildings } from '~/maps/townPoiPlacement'
+import { SeededRandom } from '~/lib/dungeon/SeededRandom'
 
 /** Load a bundled image's natural pixel dimensions. */
 function loadImageSize(url: string): Promise<{ width: number; height: number }> {
@@ -150,6 +153,7 @@ function POIDetailPage() {
   const [editingNPC, setEditingNPC] = useState<NPC | null>(null)
   const [npcEditOpen, setNpcEditOpen] = useState(false)
   const [isGeneratingNPC, setIsGeneratingNPC] = useState(false)
+  const [isRerollingProblem, setIsRerollingProblem] = useState(false)
   const [isPlacingTownBuildings, setIsPlacingTownBuildings] = useState(false)
   const [townMapError, setTownMapError] = useState<string | null>(null)
   const [autoTownMapAttemptKey, setAutoTownMapAttemptKey] = useState<string | null>(null)
@@ -255,6 +259,18 @@ function POIDetailPage() {
       setIsGeneratingNPC(false)
     }
   }
+
+  const handleRerollSettlementProblem = useCallback(async () => {
+    if (!poi) return
+    setIsRerollingProblem(true)
+    try {
+      const rng = new SeededRandom(`${poi.id}:settlement-problem:${Date.now()}`)
+      const trouble = pickSettlementProblem(rng, poi.trouble)
+      await executeUpdatePOI({ ...poi, trouble }, { poiRepo: container.poiRepo })
+    } finally {
+      setIsRerollingProblem(false)
+    }
+  }, [container.poiRepo, poi])
 
   const placeTownBuildings = useCallback(async (options: {
     reassignExistingOnMap: boolean
@@ -586,7 +602,6 @@ function POIDetailPage() {
             childNPCs={childNPCs}
             selectedChildId={selectedChildId ?? null}
             onSelectChild={setSelectedChildId}
-            factionPresences={factionPresences}
             paths={paths}
             rumors={rumors}
             notices={notices}
@@ -605,8 +620,11 @@ function POIDetailPage() {
             onCreateNPC={openCreateNPC}
             onCreateEvent={() => setCreateEventOpen(true)}
             onDeleteEvent={(id) => setDeletingEventId(id)}
-            onToggleTrapDisarmed={actions.handleToggleTrapDisarmed}
             onUpdateNPC={actions.handleUpdateNPC}
+            onRerollProblem={handleRerollSettlementProblem}
+            isRerollingProblem={isRerollingProblem}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
             mapSection={mapSection}
             notesSection={notesSection}
             actionBar={poiActionBar}

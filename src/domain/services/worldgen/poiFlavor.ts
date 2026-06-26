@@ -1,6 +1,7 @@
 import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import type { PoiKind } from '@domain/data/worldgen/poiKinds'
 import { biomeLabel } from '@domain/data/worldgen/biomes'
+import { pickSettlementProblem } from '@domain/data/worldgen/settlementProblems'
 import { pickCairn } from './cairnPick'
 
 // Each POI kind maps to a Cairn type + feature table pair. Cairn has no "ruin"
@@ -25,21 +26,6 @@ export interface PoiFlavor {
   mood: string
   sensory: string
 }
-
-const SETTLEMENT_TROUBLES = [
-  'A nearby road has become unsafe, and merchants are blaming someone inside the settlement.',
-  'Food stores are running short after repeated thefts from granaries and cellars.',
-  'The well water tastes wrong, and several residents are hiding how sick they feel.',
-  'A local faction is pressuring families for coin, labor, or silence.',
-  'A respected resident vanished after asking too many questions.',
-  'An old dispute between two households is close to becoming open violence.',
-  'Strangers arrived with money to spend and questions nobody wants answered.',
-  'Something from the surrounding wilds is testing doors and livestock pens at night.',
-  'A coming festival or market day is exposing grudges that were easy to ignore.',
-  'A religious or civic leader is losing authority, and rivals are moving quickly.',
-  'A recent death has been ruled an accident, but the settlement does not believe it.',
-  'Travelers keep bringing the same warning from different roads.',
-]
 
 const SETTLEMENT_MOODS = [
   'watchful',
@@ -85,7 +71,7 @@ export function buildPoiFlavor(
     tags: [feature],
     description: `${cap(art)} ${lowerType} in the ${where}.`,
     readAloud: `${name} is ${art} ${lowerType} set in the ${where}.`,
-    trouble: isSettlement ? rng.pick(SETTLEMENT_TROUBLES) : '',
+    trouble: isSettlement ? pickSettlementProblem(rng) : '',
     mood: isSettlement ? rng.pick(SETTLEMENT_MOODS) : '',
     sensory: isSettlement ? rng.pick(SETTLEMENT_SENSORY) : '',
   }
