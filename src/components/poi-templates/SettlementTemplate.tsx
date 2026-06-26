@@ -18,7 +18,6 @@ import {
   Users,
   ExternalLink,
   FileText,
-  Lock,
   Columns2,
   Rows2,
   ChevronDown,
@@ -32,8 +31,6 @@ import { NoticeBoard } from "~/components/shared/NoticeBoard";
 import { EncounterTableUI } from "~/components/shared/EncounterTableUI";
 import { ServicesList } from "~/components/shared/ServicesList";
 import { ReadAloudBlock } from "~/components/shared/ReadAloudBlock";
-import ReactMarkdown from "react-markdown";
-import { markdownOptions } from "~/shared/markdown";
 import { AtAGlancePanel } from "~/components/shared/AtAGlancePanel";
 import { POI_TYPE_ICONS } from "@shared/poi-icons";
 import type { POI } from "@domain/entities/POI";
@@ -410,10 +407,6 @@ export function SettlementTemplate({
               <CalendarClock className="size-4" />
               Events ({poiEvents.length})
             </TabsTrigger>
-            <TabsTrigger value="gm-notes">
-              <Lock className="size-4" />
-              GM Notes
-            </TabsTrigger>
             <TabsTrigger value="notes">
               <FileText className="size-4" />
               Notes
@@ -693,19 +686,6 @@ export function SettlementTemplate({
           ) : (
             <p className="text-sm text-muted-foreground">
               No events scheduled.
-            </p>
-          )}
-        </TabsContent>
-
-        {/* GM Notes tab */}
-        <TabsContent value="gm-notes" className="space-y-4 pt-3">
-          {poi.gmNotes ? (
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown {...markdownOptions}>{poi.gmNotes}</ReactMarkdown>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No GM notes recorded.
             </p>
           )}
         </TabsContent>

@@ -320,16 +320,6 @@ function POIEditPage() {
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="edit-gmnotes">GM Notes</Label>
-          <Textarea
-            id="edit-gmnotes"
-            value={form.gmNotes}
-            onChange={(e) => setForm((f) => f && ({ ...f, gmNotes: e.target.value }))}
-            placeholder="Secrets, hidden info..."
-            rows={3}
-          />
-        </div>
-        <div className="space-y-1.5">
           <Label>Services</Label>
           <ServicesList
             services={form.services}

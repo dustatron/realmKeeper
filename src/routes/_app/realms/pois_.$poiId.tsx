@@ -23,8 +23,9 @@ import { useUIStore } from '~/ui/stores/uiStore'
 import { usePOIActions } from '~/ui/hooks/usePOIActions'
 import { executeDeletePOI } from '@application/use-cases/DeletePOI'
 import { executeGetOrCreateTownMap } from '@application/use-cases/GetOrCreateTownMap'
+import { executeUpdateGameMap } from '@application/use-cases/UpdateGameMap'
 import { executePlacePOIOnMap } from '@application/use-cases/PlacePOIOnMap'
-import { pickTownMapForSize } from '~/maps/townMaps'
+import { bucketForSize, pickTownMapForSize, TOWN_MAPS, type TownMap } from '~/maps/townMaps'
 import { extractTownBuildings } from '~/maps/townMapGeometry'
 import { assignPoisToBuildings } from '~/maps/townPoiPlacement'
 
@@ -36,6 +37,27 @@ function loadImageSize(url: string): Promise<{ width: number; height: number }> 
     img.onerror = reject
     img.src = url
   })
+}
+
+function formatTownMapName(id: string): string {
+  return id
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function townMapForImageUrl(imageUrl: string | null | undefined): TownMap | null {
+  if (!imageUrl) return null
+  return TOWN_MAPS.find((map) => map.imageUrl === imageUrl) ?? null
+}
+
+function sortedTownMapsForBucket(bucket: TownMap['bucket']): TownMap[] {
+  return [...TOWN_MAPS].sort((a, b) => (
+    Number(a.bucket !== bucket) - Number(b.bucket !== bucket) ||
+    a.bucket.localeCompare(b.bucket) ||
+    a.id.localeCompare(b.id)
+  ))
 }
 import { executeCreateNPC } from '@application/use-cases/CreateNPC'
 import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
@@ -55,7 +77,6 @@ import { CompassRose } from '~/components/shared/CompassRose'
 import { TreasureSection } from '~/components/shared/TreasureSection'
 import { TrapSection } from '~/components/shared/TrapSection'
 import { DungeonEventsPanel } from '~/components/shared/DungeonEventsPanel'
-import { SessionLog } from '~/components/shared/SessionLog'
 import { CompendiumRefsSection } from '~/components/shared/CompendiumRefsSection'
 import { CreateChildSheet } from '~/components/poi/CreateChildSheet'
 import { CreateEventDialog } from '~/components/poi/CreateEventDialog'
@@ -132,6 +153,16 @@ function POIDetailPage() {
   const [isPlacingTownBuildings, setIsPlacingTownBuildings] = useState(false)
   const [townMapError, setTownMapError] = useState<string | null>(null)
   const [autoTownMapAttemptKey, setAutoTownMapAttemptKey] = useState<string | null>(null)
+  const townMap = poiMaps.find((map) => map.kind === 'town') ?? null
+  const recommendedTownBucket = bucketForSize(children.length)
+  const currentTownMapChoice = useMemo(
+    () => townMapForImageUrl(townMap?.imageUrl),
+    [townMap?.imageUrl],
+  )
+  const townMapOptions = useMemo(
+    () => sortedTownMapsForBucket(recommendedTownBucket),
+    [recommendedTownBucket],
+  )
 
   // Breadcrumb in site header
   useEffect(() => {
@@ -225,20 +256,44 @@ function POIDetailPage() {
     }
   }
 
-  const placeTownBuildings = useCallback(async (options: { reassignExistingOnMap: boolean }) => {
+  const placeTownBuildings = useCallback(async (options: {
+    reassignExistingOnMap: boolean
+    placementSalt?: string
+    replaceTownMap?: boolean
+    townMapId?: string
+  }) => {
     if (!poi) return
 
     setTownMapError(null)
     setIsPlacingTownBuildings(true)
     try {
-      const picked = pickTownMapForSize(poi.id, children.length)
+      const selectedMap = options.townMapId
+        ? TOWN_MAPS.find((map) => map.id === options.townMapId) ?? null
+        : null
+      const existingMap = townMapForImageUrl(townMap?.imageUrl)
+      const picked = selectedMap ?? existingMap ?? pickTownMapForSize(poi.id, children.length)
       if (!picked) throw new Error('No bundled town maps are available.')
 
       const { width, height } = await loadImageSize(picked.imageUrl)
-      const townMap = await executeGetOrCreateTownMap(
+      let activeTownMap = await executeGetOrCreateTownMap(
         { poiId: poi.id, name: poi.name, imageUrl: picked.imageUrl, width, height },
         { gameMapRepo: container.gameMapRepo },
       )
+      const shouldReplaceTownMap = options.replaceTownMap || !activeTownMap.imageUrl || !existingMap
+      const needsMapUpdate = activeTownMap.imageUrl !== picked.imageUrl ||
+        activeTownMap.width !== width ||
+        activeTownMap.height !== height
+      if (shouldReplaceTownMap && needsMapUpdate) {
+        activeTownMap = {
+          ...activeTownMap,
+          imageUrl: picked.imageUrl,
+          width,
+          height,
+          townData: null,
+          updatedAt: Date.now(),
+        }
+        await executeUpdateGameMap(activeTownMap, { gameMapRepo: container.gameMapRepo })
+      }
 
       const response = await fetch(picked.jsonUrl)
       if (!response.ok) throw new Error(`Town geometry failed to load: ${response.status}`)
@@ -249,14 +304,15 @@ function POIDetailPage() {
       const assignments = assignPoisToBuildings({
         pois: children,
         buildings,
-        mapId: townMap.id,
+        mapId: activeTownMap.id,
         imageSize: { width, height },
         reassignExistingOnMap: options.reassignExistingOnMap,
+        placementSalt: options.placementSalt,
       })
 
       await Promise.all(assignments.map((assignment) =>
         executePlacePOIOnMap(
-          { poiId: assignment.poiId, mapId: townMap.id, position: assignment.position },
+          { poiId: assignment.poiId, mapId: activeTownMap.id, position: assignment.position },
           { poiRepo: container.poiRepo },
         ),
       ))
@@ -266,9 +322,7 @@ function POIDetailPage() {
     } finally {
       setIsPlacingTownBuildings(false)
     }
-  }, [children, container.gameMapRepo, container.poiRepo, poi])
-
-  const townMap = poiMaps.find((map) => map.kind === 'town') ?? null
+  }, [children, container.gameMapRepo, container.poiRepo, poi, townMap?.imageUrl])
   const townPlacementKey = useMemo(() => children
     .map((child) => `${child.id}:${child.mapRef ?? ''}:${child.position?.x ?? ''}:${child.position?.y ?? ''}`)
     .sort()
@@ -422,6 +476,77 @@ function POIDetailPage() {
     </>
   )
 
+  const townMapActions = poi.type === 'settlement' ? (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-medium">Town maps</p>
+          <p className="text-xs text-muted-foreground">
+            {children.length} locations - recommended {recommendedTownBucket}
+          </p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => void placeTownBuildings({
+            reassignExistingOnMap: true,
+            placementSalt: `${poi.id}:replace:${Date.now()}`,
+          })}
+          disabled={isPlacingTownBuildings}
+          title="Place child locations on different town-map buildings"
+        >
+          <RefreshCw className={`mr-2 size-4 ${isPlacingTownBuildings ? 'animate-spin' : ''}`} />
+          {isPlacingTownBuildings ? 'Placing...' : 'Re-place Buildings'}
+        </Button>
+      </div>
+
+      <div className="grid max-h-[420px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
+        {townMapOptions.map((map) => {
+          const isCurrent = currentTownMapChoice?.id === map.id
+          const isRecommended = map.bucket === recommendedTownBucket
+          return (
+            <button
+              key={map.id}
+              type="button"
+              className={`group overflow-hidden rounded-md border bg-background text-left transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                isCurrent ? 'border-primary ring-1 ring-primary' : ''
+              }`}
+              onClick={() => void placeTownBuildings({
+                reassignExistingOnMap: true,
+                replaceTownMap: true,
+                townMapId: map.id,
+                placementSalt: `${poi.id}:${map.id}:${Date.now()}`,
+              })}
+              disabled={isPlacingTownBuildings}
+              aria-label={`Use ${formatTownMapName(map.id)} town map`}
+            >
+              <img
+                src={map.imageUrl}
+                alt={formatTownMapName(map.id)}
+                className="h-24 w-full bg-muted object-cover transition-opacity group-disabled:opacity-60"
+              />
+              <span className="flex min-h-16 flex-col gap-2 p-2">
+                <span className="flex items-center justify-between gap-2">
+                  <span className="truncate text-sm font-medium">{formatTownMapName(map.id)}</span>
+                  <Badge variant={isCurrent ? 'default' : 'outline'} className="text-[10px]">
+                    {isCurrent ? 'Current' : map.bucket}
+                  </Badge>
+                </span>
+                <span className="flex flex-wrap gap-1">
+                  {isRecommended && <Badge variant="secondary" className="text-[10px]">Recommended</Badge>}
+                  <Badge variant="outline" className="text-[10px]">
+                    {isCurrent ? 'Re-place' : 'Use Map'}
+                  </Badge>
+                </span>
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  ) : undefined
+
   const renderTemplate = () => {
     if (parentPoi?.type === 'dungeon') {
       return (
@@ -441,7 +566,6 @@ function POIDetailPage() {
           treasureSection={<TreasureSection treasure={poi.treasure ?? []} onUpdate={actions.handleUpdateTreasure} />}
           dungeonEventsPanel={
             <DungeonEventsPanel
-              onLogEntry={actions.handleLogDungeonEvent}
               encounterTable={encounterTable}
               onRollEncounter={actions.handleRollEncounter}
               onSaveEncounterTable={actions.handleSaveEncounterTable}
@@ -518,7 +642,6 @@ function POIDetailPage() {
             compendiumSection={compendiumSection}
             dungeonEventsPanel={
               <DungeonEventsPanel
-                onLogEntry={actions.handleLogDungeonEvent}
                 encounterTable={encounterTable}
                 onRollEncounter={actions.handleRollEncounter}
                 onSaveEncounterTable={actions.handleSaveEncounterTable}
@@ -622,8 +745,6 @@ function POIDetailPage() {
         <TreasureSection treasure={poi.treasure ?? []} onUpdate={actions.handleUpdateTreasure} />
       )}
 
-      <SessionLog log={poi.sessionLog ?? []} onUpdate={actions.handleUpdateSessionLog} />
-
       {/* Dialogs */}
       {poi && <CreateChildSheet open={createChildOpen} onOpenChange={setCreateChildOpen} parentPoi={poi} />}
       {poi && region && (
@@ -656,20 +777,7 @@ function POIDetailPage() {
         onOpenChange={setMapUploadDialogOpen}
         onUpload={actions.handleUploadMap}
         imageGenerators={IMAGE_MAP_GENERATORS}
-        actions={poi.type === 'settlement' ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="w-full justify-center"
-            onClick={() => void placeTownBuildings({ reassignExistingOnMap: true })}
-            disabled={isPlacingTownBuildings}
-            title="Place child locations on different town-map buildings"
-          >
-            <RefreshCw className={`mr-2 size-4 ${isPlacingTownBuildings ? 'animate-spin' : ''}`} />
-            {isPlacingTownBuildings ? 'Placing...' : 'Re-place Buildings'}
-          </Button>
-        ) : undefined}
+        actions={townMapActions}
       />
 
       {editingNPC && (

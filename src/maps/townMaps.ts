@@ -16,7 +16,14 @@ export interface TownMap {
   url: string
 }
 
-const HAMLET_MAP_IDS = new Set(['skybloom_hill'])
+export const HAMLET_TOWN_MAP_IDS = [
+  'skybloom_hill',
+  'purple_market',
+  'greychurch',
+  'grimlight_church',
+] as const
+
+const HAMLET_MAP_IDS = new Set<string>(HAMLET_TOWN_MAP_IDS)
 
 // Vite resolves bundled map assets to hashed URLs at build time.
 const pngModules = import.meta.glob('./city/**/*.png', {

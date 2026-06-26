@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bucketForSize, pickTownMap, pickTownMapForSize, TOWN_MAPS } from './townMaps'
+import { bucketForSize, HAMLET_TOWN_MAP_IDS, pickTownMap, pickTownMapForSize, TOWN_MAPS } from './townMaps'
 
 describe('TOWN_MAPS', () => {
   it('loads paired PNG and JSON assets', () => {
@@ -25,9 +25,15 @@ describe('TOWN_MAPS', () => {
     expect(bucketForSize(17)).toBe('larg')
   })
 
-  it('uses the hamlet map for two-child settlements', () => {
-    expect(pickTownMapForSize('01KW2GB94797GXA304AKHFEVAE', 2)?.id)
-      .toBe('skybloom_hill')
+  it('uses varied low-density hamlet maps for two-child settlements', () => {
+    const pickedIds = Array.from({ length: 20 }, (_value, index) =>
+      pickTownMapForSize(`hamlet-${index}`, 2)?.id,
+    )
+
+    expect(new Set(pickedIds).size).toBeGreaterThan(1)
+    for (const id of pickedIds) {
+      expect(HAMLET_TOWN_MAP_IDS).toContain(id as (typeof HAMLET_TOWN_MAP_IDS)[number])
+    }
   })
 
   it('keeps larger settlements on size buckets', () => {

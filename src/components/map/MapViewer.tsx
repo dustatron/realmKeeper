@@ -159,7 +159,12 @@ export function MapViewer({
   const onRegionClickRef = useRef(onRegionClick)
   onRegionClickRef.current = onRegionClick
   const fitToImageRef = useRef<((duration?: number) => void) | null>(null)
-  const [mapReady, setMapReady] = useState(false)
+  const mapLoadKey = useMemo(
+    () => `${map.id}:${map.imageUrl}:${map.width}:${map.height}`,
+    [map.id, map.imageUrl, map.width, map.height],
+  )
+  const [loadedMapKey, setLoadedMapKey] = useState<string | null>(null)
+  const mapReady = loadedMapKey === mapLoadKey
   const [drawingVertices, setDrawingVertices] = useState<{ x: number; y: number }[]>([])
   const activeHighlightId = selectedPoiId ?? highlightPoiId
 
@@ -192,6 +197,7 @@ export function MapViewer({
   useEffect(() => {
     if (!containerRef.current) return
 
+    setLoadedMapKey(null)
     imageUrlRef.current = map.imageUrl
 
     const [swLng, swLat] = pxToLngLat(0, map.height)
@@ -246,7 +252,7 @@ export function MapViewer({
     mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
 
     mapInstance.on('load', () => {
-      setMapReady(true)
+      setLoadedMapKey(mapLoadKey)
       const fitToImage = (duration = 300) => {
         mapInstance.fitBounds(
           [[swLng, swLat], [neLng, neLat]],
@@ -276,9 +282,9 @@ export function MapViewer({
       mapInstance.remove()
       imageUrlRef.current = null
       fitToImageRef.current = null
-      setMapReady(false)
+      setLoadedMapKey((current) => current === mapLoadKey ? null : current)
     }
-  }, [map.id, map.imageUrl, map.width, map.height, pxToLngLat])
+  }, [map.id, map.imageUrl, map.width, map.height, map.kind, mapLoadKey, pxToLngLat])
 
   // Keep pois in a ref so map click handler always has latest data
   const poisRef = useRef(pois)

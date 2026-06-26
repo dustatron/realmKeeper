@@ -147,7 +147,7 @@ export function CreateEventDialog({ open, onOpenChange, poi, region, deletingEve
               </div>
             </div>
             <div>
-              <Label htmlFor="event-effects">Effects / GM Notes</Label>
+              <Label htmlFor="event-effects">Effects / Notes</Label>
               <Textarea id="event-effects" value={form.effects} onChange={(e) => setForm((f) => ({ ...f, effects: e.target.value }))} placeholder="Mechanical effects, NPC reactions..." rows={2} />
             </div>
             <div>

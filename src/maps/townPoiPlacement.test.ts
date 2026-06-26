@@ -57,7 +57,27 @@ describe('assignPoisToBuildings', () => {
       ],
     })
 
-    expect(assignments.map((a) => a.buildingId)).toEqual(['central-large', 'east', 'west'])
+    const buildingIds = assignments.map((a) => a.buildingId)
+    expect(buildingIds).toEqual(expect.arrayContaining(['east', 'west']))
+    expect(buildingIds.filter((id) => id?.startsWith('central'))).toHaveLength(1)
+  })
+
+  it('prefers edge buildings before central buildings for small assignment sets', () => {
+    const assignments = assignPoisToBuildings({
+      mapId: 'map-1',
+      imageSize: { width: 1000, height: 1000 },
+      pois: [
+        poi({ id: 'p1', name: 'A' }),
+        poi({ id: 'p2', name: 'B' }),
+      ],
+      buildings: [
+        building('central-large', 100, 500, 500),
+        building('north-west', 60, 100, 100),
+        building('south-east', 50, 900, 900),
+      ],
+    })
+
+    expect(assignments.map((a) => a.buildingId)).toEqual(['north-west', 'south-east'])
   })
 
   it('keeps existing placements out of the assignment list', () => {
@@ -137,6 +157,29 @@ describe('assignPoisToBuildings', () => {
     }
 
     expect(assignPoisToBuildings(input)).toEqual(assignPoisToBuildings(input))
+  })
+
+  it('can choose a different spread when given a retry salt', () => {
+    const input = {
+      mapId: 'map-1',
+      imageSize: { width: 1000, height: 1000 },
+      reassignExistingOnMap: true,
+      pois: [
+        poi({ id: 'p1', name: 'A', mapRef: 'map-1', position: { x: 500, y: 500 } }),
+        poi({ id: 'p2', name: 'B', mapRef: 'map-1', position: { x: 520, y: 520 } }),
+      ],
+      buildings: [
+        building('north-west', 100, 100, 100),
+        building('north-east', 100, 900, 100),
+        building('south-east', 100, 900, 900),
+        building('south-west', 100, 100, 900),
+      ],
+    }
+
+    const first = assignPoisToBuildings({ ...input, placementSalt: 'retry-1' })
+    const second = assignPoisToBuildings({ ...input, placementSalt: 'retry-2' })
+
+    expect(first.map((a) => a.buildingId)).not.toEqual(second.map((a) => a.buildingId))
   })
 
   it('uses fallback positions only after buildings run out', () => {

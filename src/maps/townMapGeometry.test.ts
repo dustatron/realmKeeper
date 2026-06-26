@@ -34,6 +34,58 @@ describe('extractTownBuildings', () => {
       .toEqual(extractTownBuildings(greenfair, { width: 2118, height: 1985 }))
   })
 
+  it('places candidates inside building polygons instead of polygon holes', () => {
+    const buildings = extractTownBuildings({
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', id: 'values', generator: 'mfcg' },
+        {
+          type: 'Polygon',
+          id: 'earth',
+          coordinates: [[[0, 0], [100, 0], [100, 100], [0, 100]]],
+        },
+        {
+          type: 'MultiPolygon',
+          id: 'buildings',
+          coordinates: [[
+            [[10, 10], [90, 10], [90, 90], [10, 90]],
+            [[35, 35], [35, 65], [65, 65], [65, 35]],
+          ]],
+        },
+      ],
+    }, { width: 100, height: 100 })
+
+    expect(buildings).toHaveLength(1)
+    expect(buildings[0].centroid.x > 35 && buildings[0].centroid.x < 65).toBe(false)
+    expect(buildings[0].centroid.y > 35 && buildings[0].centroid.y < 65).toBe(false)
+  })
+
+  it('ignores district polygons because they can cover streets and plazas', () => {
+    const buildings = extractTownBuildings({
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', id: 'values', generator: 'mfcg' },
+        {
+          type: 'Polygon',
+          id: 'earth',
+          coordinates: [[[0, 0], [100, 0], [100, 100], [0, 100]]],
+        },
+        {
+          type: 'GeometryCollection',
+          id: 'districts',
+          geometries: [
+            {
+              type: 'Polygon',
+              coordinates: [[[10, 10], [30, 10], [30, 30], [10, 30]]],
+            },
+          ],
+        },
+      ],
+    }, { width: 100, height: 100 })
+
+    expect(buildings).toEqual([])
+  })
+
   it('returns no candidates for invalid input', () => {
     expect(extractTownBuildings({ nope: true }, { width: 100, height: 100 })).toEqual([])
   })

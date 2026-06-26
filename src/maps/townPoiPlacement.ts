@@ -17,6 +17,7 @@ export interface AssignPoisToBuildingsInput {
   mapId: string
   imageSize: { width: number; height: number }
   reassignExistingOnMap?: boolean
+  placementSalt?: string
 }
 
 const IMPORTANT_TYPES = new Set<PoiType>([
@@ -91,6 +92,28 @@ function compareBuildings(a: TownBuildingCandidate, b: TownBuildingCandidate): n
   return b.area - a.area || a.id.localeCompare(b.id)
 }
 
+function hashString(value: string): number {
+  return [...value].reduce((hash, character) => {
+    hash ^= character.charCodeAt(0)
+    return Math.imul(hash, 16777619)
+  }, 2166136261) >>> 0
+}
+
+function centroidForBuildings(buildings: TownBuildingCandidate[]): { x: number; y: number } {
+  const total = buildings.reduce(
+    (acc, building) => ({
+      x: acc.x + building.centroid.x,
+      y: acc.y + building.centroid.y,
+    }),
+    { x: 0, y: 0 },
+  )
+
+  return {
+    x: total.x / buildings.length,
+    y: total.y / buildings.length,
+  }
+}
+
 function spreadCandidatePool(
   buildings: TownBuildingCandidate[],
   assignmentCount: number,
@@ -101,6 +124,55 @@ function spreadCandidatePool(
   return candidates.length >= assignmentCount ? candidates : buildings
 }
 
+function pickFromOrderedBuildings(
+  ordered: TownBuildingCandidate[],
+  assignmentCount: number,
+  offset: number,
+): TownBuildingCandidate[] {
+  const selected: TownBuildingCandidate[] = []
+  const selectedIds = new Set<string>()
+
+  for (let i = 0; i < assignmentCount && selected.length < ordered.length; i += 1) {
+    const targetIndex = Math.floor((offset + (i * ordered.length) / assignmentCount) % ordered.length)
+    const next = ordered
+      .slice(targetIndex)
+      .concat(ordered.slice(0, targetIndex))
+      .find((building) => !selectedIds.has(building.id))
+    if (!next) break
+    selected.push(next)
+    selectedIds.add(next.id)
+  }
+
+  return selected
+}
+
+function selectSaltedSpreadBuildings(
+  buildings: TownBuildingCandidate[],
+  assignmentCount: number,
+  placementSalt: string,
+): TownBuildingCandidate[] {
+  if (assignmentCount <= 0 || buildings.length === 0) return []
+
+  const pool = spreadCandidatePool(buildings, assignmentCount)
+  const poolCenter = centroidForBuildings(pool)
+  const ordered = [...pool].sort((a, b) => (
+    Math.atan2(a.centroid.y - poolCenter.y, a.centroid.x - poolCenter.x) -
+      Math.atan2(b.centroid.y - poolCenter.y, b.centroid.x - poolCenter.x) ||
+    distance(b.centroid, poolCenter) - distance(a.centroid, poolCenter) ||
+    compareBuildings(a, b)
+  ))
+  const offset = hashString(placementSalt) % ordered.length
+  const selected = pickFromOrderedBuildings(ordered, assignmentCount, offset)
+
+  if (selected.length >= assignmentCount) return selected.sort(compareBuildings)
+
+  const selectedIds = new Set(selected.map((building) => building.id))
+  return [
+    ...selected,
+    ...buildings.filter((building) => !selectedIds.has(building.id)),
+  ].slice(0, assignmentCount).sort(compareBuildings)
+}
+
 function selectSpreadBuildings(
   buildings: TownBuildingCandidate[],
   assignmentCount: number,
@@ -108,12 +180,15 @@ function selectSpreadBuildings(
   if (assignmentCount <= 0 || buildings.length === 0) return []
 
   const pool = spreadCandidatePool(buildings, assignmentCount)
+  const poolCenter = centroidForBuildings(pool)
   const selected: TownBuildingCandidate[] = []
   const remaining = new Map(pool.map((building) => [building.id, building]))
 
   while (selected.length < assignmentCount && remaining.size > 0) {
     const next = [...remaining.values()].sort((a, b) => (
-      nearestDistance(b, selected) - nearestDistance(a, selected) ||
+      (selected.length === 0
+        ? distance(b.centroid, poolCenter) - distance(a.centroid, poolCenter)
+        : nearestDistance(b, selected) - nearestDistance(a, selected)) ||
       compareBuildings(a, b)
     ))[0]
     if (!next) break
@@ -121,13 +196,13 @@ function selectSpreadBuildings(
     remaining.delete(next.id)
   }
 
-  if (selected.length >= assignmentCount) return selected
+  if (selected.length >= assignmentCount) return selected.sort(compareBuildings)
 
   const selectedIds = new Set(selected.map((building) => building.id))
   return [
     ...selected,
     ...buildings.filter((building) => !selectedIds.has(building.id)),
-  ].slice(0, assignmentCount)
+  ].slice(0, assignmentCount).sort(compareBuildings)
 }
 
 export function assignPoisToBuildings(input: AssignPoisToBuildingsInput): TownPoiAssignment[] {
@@ -148,7 +223,9 @@ export function assignPoisToBuildings(input: AssignPoisToBuildingsInput): TownPo
   const availableBuildings = alternateBuildings.length >= assignablePois.length
     ? alternateBuildings
     : sortedBuildings
-  const selectedBuildings = selectSpreadBuildings(availableBuildings, assignablePois.length)
+  const selectedBuildings = input.placementSalt
+    ? selectSaltedSpreadBuildings(availableBuildings, assignablePois.length, input.placementSalt)
+    : selectSpreadBuildings(availableBuildings, assignablePois.length)
 
   return assignablePois.map((poi, index) => {
     const building = selectedBuildings[index]
