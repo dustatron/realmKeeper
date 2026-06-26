@@ -234,7 +234,9 @@ export async function executeImportRealm(
     // Pre-v4 exports lack the kind/hex fields → default to an image map.
     const kind = gm.kind ?? 'image'
     const imageUrl =
-      kind === 'hex' ? '' : gm.imageBase64 ? `data:image/png;base64,${gm.imageBase64}` : ''
+      kind === 'hex' || kind === 'town'
+        ? ''
+        : gm.imageBase64 ? `data:image/png;base64,${gm.imageBase64}` : ''
 
     await deps.gameMapRepo.create({
       id: remap(gm.id),
@@ -248,6 +250,10 @@ export async function executeImportRealm(
       hexSize: gm.hexSize ?? null,
       hexOrientation: gm.hexOrientation ?? null,
       hexCells: gm.hexCells ?? undefined,
+      townData: gm.townData ?? null,
+      townPreset: gm.townPreset ?? null,
+      townSeed: gm.townSeed ?? null,
+      townWalled: gm.townWalled ?? null,
       width: gm.width,
       height: gm.height,
       sortOrder: gm.sortOrder,

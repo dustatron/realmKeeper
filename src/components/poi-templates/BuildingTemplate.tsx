@@ -7,7 +7,6 @@ import { Button } from "~/components/ui/button";
 import {
   MapPin,
   Users,
-  Lock,
   Plus,
   FileText,
   Dices,
@@ -132,9 +131,9 @@ export function BuildingTemplate({
             <Dices className="size-4" />
             Encounters
           </TabsTrigger>
-          <TabsTrigger value="secrets">
-            <Lock className="size-4" />
-            GM Notes
+          <TabsTrigger value="events">
+            <CalendarClock className="size-4" />
+            Events ({poiEvents.length})
           </TabsTrigger>
           <TabsTrigger value="notes">
             <FileText className="size-4" />
@@ -246,24 +245,8 @@ export function BuildingTemplate({
           />
         </TabsContent>
 
-        {/* Secrets */}
-        <TabsContent value="secrets" className="space-y-4 pt-3">
-          {poi.gmNotes ? (
-            <div>
-              <h4 className="text-sm font-semibold mb-1">GM Notes</h4>
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown {...markdownOptions}>
-                  {poi.gmNotes}
-                </ReactMarkdown>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No secrets recorded.
-            </p>
-          )}
-
-          {/* Events */}
+        {/* Events */}
+        <TabsContent value="events" className="space-y-4 pt-3">
           <div>
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-semibold flex items-center gap-2">

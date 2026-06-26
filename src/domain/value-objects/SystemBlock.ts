@@ -15,6 +15,12 @@ export interface InventoryItem {
   name: string
   slots: number
   description: string
+  quantity?: number
+  value?: string
+  source?: 'manual' | 'compendium' | 'treasure'
+  compendiumId?: string
+  compendiumKind?: 'magicItem' | 'equipment'
+  compendiumSource?: 'system' | 'custom'
 }
 
 export interface NpcConnection {

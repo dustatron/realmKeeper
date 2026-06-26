@@ -11,7 +11,6 @@ import {
   Dices,
   Plus,
   FileText,
-  Lock,
   ExternalLink,
   CalendarClock,
   Trash2,
@@ -193,9 +192,9 @@ export function GenericTemplate({
             <Navigation className="size-4" />
             Paths ({paths.length})
           </TabsTrigger>
-          <TabsTrigger value="secrets">
-            <Lock className="size-4" />
-            GM Notes
+          <TabsTrigger value="notes">
+            <FileText className="size-4" />
+            Notes
           </TabsTrigger>
         </TabsList>
 
@@ -394,28 +393,14 @@ export function GenericTemplate({
           )}
         </TabsContent>
 
-        {/* Secrets & Notes tab */}
-        <TabsContent value="secrets" className="space-y-4 pt-3">
+        {/* Notes tab */}
+        <TabsContent value="notes" className="space-y-4 pt-3">
           {/* Location Seed */}
           <LocationSeedEditor
             seed={poi.locationSeed}
             poiType={poi.type}
             onChange={onUpdateLocationSeed}
           />
-
-          {/* GM Notes */}
-          {poi.gmNotes && (
-            <details className="rounded-md border p-3" open>
-              <summary className="text-sm font-medium cursor-pointer">
-                GM Notes
-              </summary>
-              <div className="prose prose-sm dark:prose-invert max-w-none mt-2">
-                <ReactMarkdown {...markdownOptions}>
-                  {poi.gmNotes}
-                </ReactMarkdown>
-              </div>
-            </details>
-          )}
 
           {/* Events */}
           <div>
@@ -489,16 +474,7 @@ export function GenericTemplate({
             )}
           </div>
 
-          {/* Notes */}
-          {notesSection && (
-            <div>
-              <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                <FileText className="size-4" />
-                Notes
-              </h4>
-              {notesSection}
-            </div>
-          )}
+          {notesSection}
         </TabsContent>
       </Tabs>
 

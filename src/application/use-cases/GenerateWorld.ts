@@ -42,6 +42,9 @@ export interface GenerateWorldInput {
   poiDensity?: PoiDensity
   factionCount?: number
   loomingThreat?: boolean
+  autoTreasure?: boolean
+  autoMagicItems?: boolean
+  autoMonsters?: boolean
 }
 
 export async function executeGenerateWorld(
@@ -81,10 +84,16 @@ export async function executeGenerateWorld(
     const { gameMap, regions, pois, paths, factions, factionRelationships, npcs, connections, hooks, notices, rumors, worldEvents, poiEvents } = generateWorld(realm.id, input.seed, {
       cols: preset.cols,
       rows: preset.rows,
+      systemId: input.systemId,
       poiDensity: input.poiDensity ?? 'normal',
       factionCount: input.factionCount,
       systemConfig,
       loomingThreat: input.loomingThreat ?? true,
+      realmContent: {
+        treasure: input.autoTreasure ?? false,
+        magicItems: input.autoMagicItems ?? false,
+        monsters: input.autoMonsters ?? false,
+      },
       clock: {
         year: realm.currentYear,
         season: realm.currentSeason,

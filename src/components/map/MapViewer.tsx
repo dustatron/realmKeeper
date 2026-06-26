@@ -24,6 +24,7 @@ import {
   MapPin,
   Maximize,
   Minimize,
+  RotateCcw,
 } from 'lucide-react'
 import { createRoot } from 'react-dom/client'
 
@@ -65,6 +66,7 @@ interface MapViewerProps {
   onPoiDrag?: (poiId: string, position: { x: number; y: number }) => void
   onRegionBoundaryDrawn?: (vertices: { x: number; y: number }[]) => void
   onRegionClick?: (region: Region) => void
+  showResetControl?: boolean
 }
 
 const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }>> = {
@@ -83,13 +85,30 @@ const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }
   other: MapPin,
 }
 
-function MarkerIcon({ type, name, color, hasOwnMaps, showLabel }: { type: PoiType; name: string; color?: string | null; hasOwnMaps?: boolean; showLabel?: boolean }) {
+function MarkerIcon({
+  type,
+  name,
+  color,
+  hasOwnMaps,
+  showLabel,
+  isHighlighted,
+}: {
+  type: PoiType
+  name: string
+  color?: string | null
+  hasOwnMaps?: boolean
+  showLabel?: boolean
+  isHighlighted?: boolean
+}) {
   const Icon = POI_TYPE_ICONS[type] || MapPin
+  const markerColor = isHighlighted ? '#facc15' : color
   return (
     <div className="group relative flex flex-col items-center cursor-pointer" role="button" style={{ touchAction: 'manipulation' }}>
       <div
-        className={`relative flex items-center justify-center size-9 rounded-full shadow-md border-2 border-background hover:scale-110 transition-transform ${color ? '' : 'bg-primary text-primary-foreground'}`}
-        style={color ? { backgroundColor: color, color: '#fff' } : undefined}
+        className={`relative flex items-center justify-center size-9 rounded-full shadow-md border-2 hover:scale-110 transition-transform ${
+          markerColor ? '' : 'border-background bg-primary text-primary-foreground'
+        } ${isHighlighted ? 'scale-110 border-amber-200 ring-2 ring-amber-400' : 'border-background'}`}
+        style={markerColor ? { backgroundColor: markerColor, color: isHighlighted ? '#111827' : '#fff' } : undefined}
       >
         <Icon className="size-4" />
         {hasOwnMaps && (
@@ -123,12 +142,13 @@ export function MapViewer({
   onPoiDrag,
   onRegionBoundaryDrawn,
   onRegionClick,
+  showResetControl = true,
 }: MapViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map())
   const markerRootsRef = useRef<Map<string, ReturnType<typeof createRoot>>>(new Map())
-  const markerDataRef = useRef<Map<string, { type: string; name: string; color: string | null; showLabel: boolean }>>(new Map())
+  const markerDataRef = useRef<Map<string, { type: string; name: string; color: string | null; showLabel: boolean; isHighlighted: boolean }>>(new Map())
   const imageUrlRef = useRef<string | null>(null)
   const onPoiClickRef = useRef(onPoiClick)
   onPoiClickRef.current = onPoiClick
@@ -138,8 +158,15 @@ export function MapViewer({
   onRegionBoundaryDrawnRef.current = onRegionBoundaryDrawn
   const onRegionClickRef = useRef(onRegionClick)
   onRegionClickRef.current = onRegionClick
-  const [mapReady, setMapReady] = useState(false)
+  const fitToImageRef = useRef<((duration?: number) => void) | null>(null)
+  const mapLoadKey = useMemo(
+    () => `${map.id}:${map.imageUrl}:${map.width}:${map.height}`,
+    [map.id, map.imageUrl, map.width, map.height],
+  )
+  const [loadedMapKey, setLoadedMapKey] = useState<string | null>(null)
+  const mapReady = loadedMapKey === mapLoadKey
   const [drawingVertices, setDrawingVertices] = useState<{ x: number; y: number }[]>([])
+  const activeHighlightId = selectedPoiId ?? highlightPoiId
 
   // Convert pixel coords to lng/lat near the equator where Mercator distortion is negligible.
   // Using a tiny range (1°) keeps the image undistorted regardless of aspect ratio.
@@ -170,6 +197,7 @@ export function MapViewer({
   useEffect(() => {
     if (!containerRef.current) return
 
+    setLoadedMapKey(null)
     imageUrlRef.current = map.imageUrl
 
     const [swLng, swLat] = pxToLngLat(0, map.height)
@@ -198,7 +226,7 @@ export function MapViewer({
           {
             id: 'background',
             type: 'background',
-            paint: { 'background-color': hasImage ? '#1a1a2e' : '#0f172a' },
+            paint: { 'background-color': hasImage ? '#1a1a2e' : map.kind === 'town' ? '#e8dcc0' : '#0f172a' },
           },
           ...(hasImage
             ? [
@@ -224,13 +252,14 @@ export function MapViewer({
     mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
 
     mapInstance.on('load', () => {
-      setMapReady(true)
+      setLoadedMapKey(mapLoadKey)
       const fitToImage = (duration = 300) => {
         mapInstance.fitBounds(
           [[swLng, swLat], [neLng, neLat]],
           { padding: 20, duration }
         )
       }
+      fitToImageRef.current = fitToImage
       onReady?.({ zoomToFit: () => fitToImage(300) })
       // Auto-fit on first load when no saved view state
       if (!initialViewState) {
@@ -252,9 +281,10 @@ export function MapViewer({
       markerDataRef.current.clear()
       mapInstance.remove()
       imageUrlRef.current = null
-      setMapReady(false)
+      fitToImageRef.current = null
+      setLoadedMapKey((current) => current === mapLoadKey ? null : current)
     }
-  }, [map.id, map.imageUrl, map.width, map.height, pxToLngLat])
+  }, [map.id, map.imageUrl, map.width, map.height, map.kind, mapLoadKey, pxToLngLat])
 
   // Keep pois in a ref so map click handler always has latest data
   const poisRef = useRef(pois)
@@ -385,12 +415,13 @@ export function MapViewer({
       if (existing) {
         existing.setLngLat([lng, lat])
         existing.setDraggable(mode === 'place-poi')
-        // Re-render if type, name, or color changed
+        const isHighlighted = poi.id === activeHighlightId
+        // Re-render if marker content or selected state changed.
         const prev = markerDataRef.current.get(poi.id)
-        if (prev && (prev.type !== poi.type || prev.name !== poi.name || prev.color !== (poi.markerColor ?? null) || prev.showLabel !== !!showLabels)) {
+        if (prev && (prev.type !== poi.type || prev.name !== poi.name || prev.color !== (poi.markerColor ?? null) || prev.showLabel !== !!showLabels || prev.isHighlighted !== isHighlighted)) {
           const root = markerRootsRef.current.get(poi.id)
-          root?.render(<MarkerIcon type={poi.type} name={poi.name} color={poi.markerColor} showLabel={showLabels} />)
-          markerDataRef.current.set(poi.id, { type: poi.type, name: poi.name, color: poi.markerColor ?? null, showLabel: !!showLabels })
+          root?.render(<MarkerIcon type={poi.type} name={poi.name} color={poi.markerColor} showLabel={showLabels} isHighlighted={isHighlighted} />)
+          markerDataRef.current.set(poi.id, { type: poi.type, name: poi.name, color: poi.markerColor ?? null, showLabel: !!showLabels, isHighlighted })
         }
         return
       }
@@ -399,9 +430,10 @@ export function MapViewer({
       const el = document.createElement('div')
       el.className = 'map-marker-container'
       const root = createRoot(el)
-      root.render(<MarkerIcon type={poi.type} name={poi.name} color={poi.markerColor} showLabel={showLabels} />)
+      const isHighlighted = poi.id === activeHighlightId
+      root.render(<MarkerIcon type={poi.type} name={poi.name} color={poi.markerColor} showLabel={showLabels} isHighlighted={isHighlighted} />)
       markerRootsRef.current.set(poi.id, root)
-      markerDataRef.current.set(poi.id, { type: poi.type, name: poi.name, color: poi.markerColor ?? null, showLabel: !!showLabels })
+      markerDataRef.current.set(poi.id, { type: poi.type, name: poi.name, color: poi.markerColor ?? null, showLabel: !!showLabels, isHighlighted })
 
       const marker = new maplibregl.Marker({
         element: el,
@@ -435,7 +467,7 @@ export function MapViewer({
 
       markersRef.current.set(poi.id, marker)
     })
-  }, [pois, mapReady, mode, showLabels, pxToLngLat, lngLatToPx])
+  }, [activeHighlightId, pois, mapReady, mode, showLabels, pxToLngLat, lngLatToPx])
 
   // Render path lines + watch labels
   useEffect(() => {
@@ -835,7 +867,6 @@ export function MapViewer({
   }, [drawingVertices, mapReady, mode, pxToLngLat])
 
   // Highlight selected or externally highlighted POI
-  const activeHighlightId = selectedPoiId ?? highlightPoiId
   // Track whether we've already centered on the highlightPoiId (don't re-fly on every render)
   const hasCenteredOnHighlightRef = useRef<string | null>(null)
   useEffect(() => {
@@ -878,6 +909,10 @@ export function MapViewer({
     }
   }
 
+  const handleResetView = () => {
+    fitToImageRef.current?.(300)
+  }
+
   // Resize map when entering/exiting fullscreen
   useEffect(() => {
     const instance = mapRef.current
@@ -894,9 +929,23 @@ export function MapViewer({
         variant="secondary"
         className="absolute bottom-2 left-2 size-8 z-10 shadow-md"
         onClick={toggleFullscreen}
+        title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+        aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
       >
         {isFullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
       </Button>
+      {showResetControl && (
+        <Button
+          size="icon"
+          variant="secondary"
+          className="absolute right-2 top-20 size-8 z-10 shadow-md"
+          onClick={handleResetView}
+          title="Reset map view"
+          aria-label="Reset map view"
+        >
+          <RotateCcw className="size-4" />
+        </Button>
+      )}
     </div>
   )
 }

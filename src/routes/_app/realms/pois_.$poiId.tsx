@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
 import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
@@ -22,6 +22,46 @@ import { useContainer } from '~/ui/hooks/useContainer'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { usePOIActions } from '~/ui/hooks/usePOIActions'
 import { executeDeletePOI } from '@application/use-cases/DeletePOI'
+import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
+import { executeGetOrCreateTownMap } from '@application/use-cases/GetOrCreateTownMap'
+import { executeUpdateGameMap } from '@application/use-cases/UpdateGameMap'
+import { executePlacePOIOnMap } from '@application/use-cases/PlacePOIOnMap'
+import { pickSettlementProblem } from '@domain/data/worldgen/settlementProblems'
+import { bucketForSize, pickTownMapForSize, TOWN_MAPS, type TownMap } from '~/maps/townMaps'
+import { extractTownBuildings } from '~/maps/townMapGeometry'
+import { assignPoisToBuildings } from '~/maps/townPoiPlacement'
+import { SeededRandom } from '~/lib/dungeon/SeededRandom'
+
+/** Load a bundled image's natural pixel dimensions. */
+function loadImageSize(url: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight })
+    img.onerror = reject
+    img.src = url
+  })
+}
+
+function formatTownMapName(id: string): string {
+  return id
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function townMapForImageUrl(imageUrl: string | null | undefined): TownMap | null {
+  if (!imageUrl) return null
+  return TOWN_MAPS.find((map) => map.imageUrl === imageUrl) ?? null
+}
+
+function sortedTownMapsForBucket(bucket: TownMap['bucket']): TownMap[] {
+  return [...TOWN_MAPS].sort((a, b) => (
+    Number(a.bucket !== bucket) - Number(b.bucket !== bucket) ||
+    a.bucket.localeCompare(b.bucket) ||
+    a.id.localeCompare(b.id)
+  ))
+}
 import { executeCreateNPC } from '@application/use-cases/CreateNPC'
 import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import { NPCEditSheet } from '~/components/shared/NPCEditSheet'
@@ -40,8 +80,6 @@ import { CompassRose } from '~/components/shared/CompassRose'
 import { TreasureSection } from '~/components/shared/TreasureSection'
 import { TrapSection } from '~/components/shared/TrapSection'
 import { DungeonEventsPanel } from '~/components/shared/DungeonEventsPanel'
-import { SessionLog } from '~/components/shared/SessionLog'
-import { RunModePanel } from '~/components/shared/RunModePanel'
 import { CompendiumRefsSection } from '~/components/shared/CompendiumRefsSection'
 import { CreateChildSheet } from '~/components/poi/CreateChildSheet'
 import { CreateEventDialog } from '~/components/poi/CreateEventDialog'
@@ -56,15 +94,14 @@ import {
   Star,
   CheckCircle2,
   CircleDashed,
-  Swords,
-  Sun,
-  Moon,
-  CloudMoon,
   Wand2,
+  RefreshCw,
 } from 'lucide-react'
 import { POI_TYPE_ICONS } from '@shared/poi-icons'
 import { OPPOSITE_DIRECTION } from '@shared/constants'
+import type { POI } from '@domain/entities/POI'
 import type { NPC } from '@domain/entities/NPC'
+import type { TreasureItem } from '@domain/value-objects/TreasureItem'
 import type { SystemBlock } from '@domain/value-objects/SystemBlock'
 import type { CompassConnection } from '~/components/shared/CompassRose'
 import { newId } from '@shared/ulid'
@@ -110,7 +147,6 @@ function POIDetailPage() {
   const actions = usePOIActions(poi, region, encounterTable, container)
 
   // Local UI state
-  const [runMode, setRunMode] = useState(false)
   const [mapUploadDialogOpen, setMapUploadDialogOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [createChildOpen, setCreateChildOpen] = useState(false)
@@ -119,6 +155,20 @@ function POIDetailPage() {
   const [editingNPC, setEditingNPC] = useState<NPC | null>(null)
   const [npcEditOpen, setNpcEditOpen] = useState(false)
   const [isGeneratingNPC, setIsGeneratingNPC] = useState(false)
+  const [isRerollingProblem, setIsRerollingProblem] = useState(false)
+  const [isPlacingTownBuildings, setIsPlacingTownBuildings] = useState(false)
+  const [townMapError, setTownMapError] = useState<string | null>(null)
+  const [autoTownMapAttemptKey, setAutoTownMapAttemptKey] = useState<string | null>(null)
+  const townMap = poiMaps.find((map) => map.kind === 'town') ?? null
+  const recommendedTownBucket = bucketForSize(children.length)
+  const currentTownMapChoice = useMemo(
+    () => townMapForImageUrl(townMap?.imageUrl),
+    [townMap?.imageUrl],
+  )
+  const townMapOptions = useMemo(
+    () => sortedTownMapsForBucket(recommendedTownBucket),
+    [recommendedTownBucket],
+  )
 
   // Breadcrumb in site header
   useEffect(() => {
@@ -212,6 +262,108 @@ function POIDetailPage() {
     }
   }
 
+  const handleRerollSettlementProblem = useCallback(async () => {
+    if (!poi) return
+    setIsRerollingProblem(true)
+    try {
+      const rng = new SeededRandom(`${poi.id}:settlement-problem:${Date.now()}`)
+      const trouble = pickSettlementProblem(rng, poi.trouble)
+      await executeUpdatePOI({ ...poi, trouble }, { poiRepo: container.poiRepo })
+    } finally {
+      setIsRerollingProblem(false)
+    }
+  }, [container.poiRepo, poi])
+
+  const handleUpdateSettlementTreasure = useCallback(async (location: POI, treasure: TreasureItem[]) => {
+    await executeUpdatePOI({ ...location, treasure }, { poiRepo: container.poiRepo })
+  }, [container.poiRepo])
+
+  const placeTownBuildings = useCallback(async (options: {
+    reassignExistingOnMap: boolean
+    placementSalt?: string
+    replaceTownMap?: boolean
+    townMapId?: string
+  }) => {
+    if (!poi) return
+
+    setTownMapError(null)
+    setIsPlacingTownBuildings(true)
+    try {
+      const selectedMap = options.townMapId
+        ? TOWN_MAPS.find((map) => map.id === options.townMapId) ?? null
+        : null
+      const existingMap = townMapForImageUrl(townMap?.imageUrl)
+      const picked = selectedMap ?? existingMap ?? pickTownMapForSize(poi.id, children.length)
+      if (!picked) throw new Error('No bundled town maps are available.')
+
+      const { width, height } = await loadImageSize(picked.imageUrl)
+      let activeTownMap = await executeGetOrCreateTownMap(
+        { poiId: poi.id, name: poi.name, imageUrl: picked.imageUrl, width, height },
+        { gameMapRepo: container.gameMapRepo },
+      )
+      const shouldReplaceTownMap = options.replaceTownMap || !activeTownMap.imageUrl || !existingMap
+      const needsMapUpdate = activeTownMap.imageUrl !== picked.imageUrl ||
+        activeTownMap.width !== width ||
+        activeTownMap.height !== height
+      if (shouldReplaceTownMap && needsMapUpdate) {
+        activeTownMap = {
+          ...activeTownMap,
+          imageUrl: picked.imageUrl,
+          width,
+          height,
+          townData: null,
+          updatedAt: Date.now(),
+        }
+        await executeUpdateGameMap(activeTownMap, { gameMapRepo: container.gameMapRepo })
+      }
+
+      const response = await fetch(picked.jsonUrl)
+      if (!response.ok) throw new Error(`Town geometry failed to load: ${response.status}`)
+
+      const buildings = extractTownBuildings(await response.json(), { width, height })
+      if (buildings.length === 0) throw new Error('Town geometry has no usable buildings.')
+
+      const assignments = assignPoisToBuildings({
+        pois: children,
+        buildings,
+        mapId: activeTownMap.id,
+        imageSize: { width, height },
+        reassignExistingOnMap: options.reassignExistingOnMap,
+        placementSalt: options.placementSalt,
+      })
+
+      await Promise.all(assignments.map((assignment) =>
+        executePlacePOIOnMap(
+          { poiId: assignment.poiId, mapId: activeTownMap.id, position: assignment.position },
+          { poiRepo: container.poiRepo },
+        ),
+      ))
+
+    } catch (err) {
+      setTownMapError(err instanceof Error ? err.message : 'Town map creation failed.')
+    } finally {
+      setIsPlacingTownBuildings(false)
+    }
+  }, [children, container.gameMapRepo, container.poiRepo, poi, townMap?.imageUrl])
+  const townPlacementKey = useMemo(() => children
+    .map((child) => `${child.id}:${child.mapRef ?? ''}:${child.position?.x ?? ''}:${child.position?.y ?? ''}`)
+    .sort()
+    .join('|'), [children])
+
+  useEffect(() => {
+    if (!poi || poi.type !== 'settlement') return
+    if (isPlacingTownBuildings) return
+
+    const hasUnplacedChildren = children.some((child) => !child.mapRef && !child.position)
+    if (townMap && !hasUnplacedChildren) return
+
+    const attemptKey = `${poi.id}:${townMap?.id ?? 'new'}:${townPlacementKey}`
+    if (autoTownMapAttemptKey === attemptKey) return
+
+    setAutoTownMapAttemptKey(attemptKey)
+    void placeTownBuildings({ reassignExistingOnMap: false })
+  }, [autoTownMapAttemptKey, children, isPlacingTownBuildings, placeTownBuildings, poi, townMap, townPlacementKey])
+
   const compassConnections: CompassConnection[] = useMemo(() => {
     if (!poi) return []
     const conns: CompassConnection[] = []
@@ -234,6 +386,7 @@ function POIDetailPage() {
   const impliedGenerator = poi.type === 'settlement' ? 'mfcg' as const : poi.type === 'dungeon' ? 'opd' as const : null
   // Render whatever generator was actually saved on this POI, regardless of type.
   const activeWatabouGenerator = poi.watabouGenerator ?? impliedGenerator
+  const isSettlementPoi = poi.type === 'settlement'
 
   const notesSection = region ? <NotesPanel ownerType="poi" ownerId={poiId} worldId={region.worldId} /> : null
 
@@ -241,9 +394,12 @@ function POIDetailPage() {
     <MultiMapViewer
       maps={poiMaps}
       onUpload={actions.handleUploadMap}
+      onRequestUpload={() => setMapUploadDialogOpen(true)}
       parentPoiId={poiId}
       highlightPoiId={selectedChildId}
       onPoiSelect={setSelectedChildId}
+      framed={!isSettlementPoi}
+      className={isSettlementPoi ? 'h-[calc(80svh-12.8rem)] min-h-[368px]' : undefined}
     />
   ) : null
 
@@ -294,6 +450,128 @@ function POIDetailPage() {
     />
   )
 
+  const poiHeading = (
+    <span className="mr-auto flex flex-wrap items-center gap-2">
+      <Icon className="size-5" />
+      <span className="font-medium">{poi.name}</span>
+      <Badge variant="outline" className="text-xs">{poi.type}</Badge>
+      {poi.type === 'dungeon' && poi.spatialDungeon && (
+        <>
+          <Badge variant="secondary" className="text-xs capitalize">{poi.spatialDungeon.theme.replace(/_/g, ' ')}</Badge>
+          <Badge variant="secondary" className="text-xs">Depth {poi.spatialDungeon.depth}</Badge>
+          <Badge variant="secondary" className="text-xs capitalize">{poi.spatialDungeon.size}</Badge>
+        </>
+      )}
+    </span>
+  )
+
+  const poiActionBar = (
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => db.pois.update(poi.id, { visited: !poi.visited, updatedAt: Date.now() })}
+        title={poi.visited ? 'Mark as unvisited' : 'Mark as visited'}
+        aria-pressed={poi.visited}
+      >
+        {poi.visited ? <CheckCircle2 className="mr-2 size-4 text-green-500" /> : <CircleDashed className="mr-2 size-4" />}
+        Visited
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => db.pois.update(poi.id, { starred: !poi.starred, updatedAt: Date.now() })} title={poi.starred ? 'Unstar' : 'Star'}>
+        <Star className={`size-4 ${poi.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+      </Button>
+      {poi.type === 'dungeon' && (
+        <Link to="/realms/pois/$poiId/generate-dungeon" params={{ poiId }}>
+          <Button size="sm" variant="outline">
+            <Wand2 className="mr-2 size-4" />
+            {poi.spatialDungeon ? 'Regenerate' : 'Generate'}
+          </Button>
+        </Link>
+      )}
+      <Button size="sm" variant="outline" onClick={() => setMapUploadDialogOpen(true)}>
+        <MapPinned className="mr-2 size-4" />
+        {poiMaps.length > 0 ? 'Edit Map' : 'Add Map'}
+      </Button>
+      <Link to="/realms/pois/$poiId/edit" params={{ poiId }}>
+        <Button size="sm">
+          <Pencil className="mr-2 size-4" />
+          Edit
+        </Button>
+      </Link>
+    </>
+  )
+
+  const townMapActions = poi.type === 'settlement' ? (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-medium">Town maps</p>
+          <p className="text-xs text-muted-foreground">
+            {children.length} locations - recommended {recommendedTownBucket}
+          </p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => void placeTownBuildings({
+            reassignExistingOnMap: true,
+            placementSalt: `${poi.id}:replace:${Date.now()}`,
+          })}
+          disabled={isPlacingTownBuildings}
+          title="Place child locations on different town-map buildings"
+        >
+          <RefreshCw className={`mr-2 size-4 ${isPlacingTownBuildings ? 'animate-spin' : ''}`} />
+          {isPlacingTownBuildings ? 'Placing...' : 'Re-place Buildings'}
+        </Button>
+      </div>
+
+      <div className="grid max-h-[420px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
+        {townMapOptions.map((map) => {
+          const isCurrent = currentTownMapChoice?.id === map.id
+          const isRecommended = map.bucket === recommendedTownBucket
+          return (
+            <button
+              key={map.id}
+              type="button"
+              className={`group overflow-hidden rounded-md border bg-background text-left transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                isCurrent ? 'border-primary ring-1 ring-primary' : ''
+              }`}
+              onClick={() => void placeTownBuildings({
+                reassignExistingOnMap: true,
+                replaceTownMap: true,
+                townMapId: map.id,
+                placementSalt: `${poi.id}:${map.id}:${Date.now()}`,
+              })}
+              disabled={isPlacingTownBuildings}
+              aria-label={`Use ${formatTownMapName(map.id)} town map`}
+            >
+              <img
+                src={map.imageUrl}
+                alt={formatTownMapName(map.id)}
+                className="h-24 w-full bg-muted object-cover transition-opacity group-disabled:opacity-60"
+              />
+              <span className="flex min-h-16 flex-col gap-2 p-2">
+                <span className="flex items-center justify-between gap-2">
+                  <span className="truncate text-sm font-medium">{formatTownMapName(map.id)}</span>
+                  <Badge variant={isCurrent ? 'default' : 'outline'} className="text-[10px]">
+                    {isCurrent ? 'Current' : map.bucket}
+                  </Badge>
+                </span>
+                <span className="flex flex-wrap gap-1">
+                  {isRecommended && <Badge variant="secondary" className="text-[10px]">Recommended</Badge>}
+                  <Badge variant="outline" className="text-[10px]">
+                    {isCurrent ? 'Re-place' : 'Use Map'}
+                  </Badge>
+                </span>
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  ) : undefined
+
   const renderTemplate = () => {
     if (parentPoi?.type === 'dungeon') {
       return (
@@ -313,7 +591,6 @@ function POIDetailPage() {
           treasureSection={<TreasureSection treasure={poi.treasure ?? []} onUpdate={actions.handleUpdateTreasure} />}
           dungeonEventsPanel={
             <DungeonEventsPanel
-              onLogEntry={actions.handleLogDungeonEvent}
               encounterTable={encounterTable}
               onRollEncounter={actions.handleRollEncounter}
               onSaveEncounterTable={actions.handleSaveEncounterTable}
@@ -334,7 +611,6 @@ function POIDetailPage() {
             childNPCs={childNPCs}
             selectedChildId={selectedChildId ?? null}
             onSelectChild={setSelectedChildId}
-            factionPresences={factionPresences}
             paths={paths}
             rumors={rumors}
             notices={notices}
@@ -353,10 +629,15 @@ function POIDetailPage() {
             onCreateNPC={openCreateNPC}
             onCreateEvent={() => setCreateEventOpen(true)}
             onDeleteEvent={(id) => setDeletingEventId(id)}
-            onToggleTrapDisarmed={actions.handleToggleTrapDisarmed}
             onUpdateNPC={actions.handleUpdateNPC}
+            onUpdateTreasure={handleUpdateSettlementTreasure}
+            onRerollProblem={handleRerollSettlementProblem}
+            isRerollingProblem={isRerollingProblem}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
             mapSection={mapSection}
             notesSection={notesSection}
+            actionBar={poiActionBar}
           />
         )
       case 'dungeon':
@@ -389,7 +670,6 @@ function POIDetailPage() {
             compendiumSection={compendiumSection}
             dungeonEventsPanel={
               <DungeonEventsPanel
-                onLogEntry={actions.handleLogDungeonEvent}
                 encounterTable={encounterTable}
                 onRollEncounter={actions.handleRollEncounter}
                 onSaveEncounterTable={actions.handleSaveEncounterTable}
@@ -467,84 +747,31 @@ function POIDetailPage() {
         />
       )}
 
-      {/* Action bar */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="flex items-center gap-2 mr-auto flex-wrap">
-          <Icon className="size-5" />
-          <span className="font-medium">{poi.name}</span>
-          <Badge variant="outline" className="text-xs">{poi.type}</Badge>
-          {poi.type === 'dungeon' && poi.spatialDungeon && (
-            <>
-              <Badge variant="secondary" className="text-xs capitalize">{poi.spatialDungeon.theme.replace(/_/g, ' ')}</Badge>
-              <Badge variant="secondary" className="text-xs">Depth {poi.spatialDungeon.depth}</Badge>
-              <Badge variant="secondary" className="text-xs capitalize">{poi.spatialDungeon.size}</Badge>
-            </>
-          )}
-        </span>
-        <Button size="sm" variant={runMode ? 'default' : 'outline'} onClick={() => setRunMode(!runMode)} title={runMode ? 'Exit run mode' : 'Enter run mode'}>
-          <Swords className="mr-1.5 size-4" />
-          {runMode ? 'Browse' : 'Run'}
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => db.pois.update(poi.id, { visited: !poi.visited, updatedAt: Date.now() })} title={poi.visited ? 'Mark as unvisited' : 'Mark as visited'}>
-          {poi.visited ? <CheckCircle2 className="size-4 text-green-500" /> : <CircleDashed className="size-4" />}
-        </Button>
-        <Button size="sm" variant="outline" onClick={actions.cycleLightLevel} title={`Light: ${poi.lightLevel ?? 'not set'}`}>
-          {poi.lightLevel === 'bright' ? <Sun className="size-4 text-yellow-500" /> :
-           poi.lightLevel === 'dim' ? <CloudMoon className="size-4 text-blue-400" /> :
-           poi.lightLevel === 'dark' ? <Moon className="size-4 text-slate-500" /> :
-           <Sun className="size-4 text-muted-foreground/40" />}
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => db.pois.update(poi.id, { starred: !poi.starred, updatedAt: Date.now() })} title={poi.starred ? 'Unstar' : 'Star'}>
-          <Star className={`size-4 ${poi.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
-        </Button>
-        {poi.type === 'dungeon' && (
-          <Link to="/realms/pois/$poiId/generate-dungeon" params={{ poiId }}>
-            <Button size="sm" variant="outline">
-              <Wand2 className="mr-2 size-4" />
-              {poi.spatialDungeon ? 'Regenerate' : 'Generate'}
-            </Button>
-          </Link>
-        )}
-        <Button size="sm" variant="outline" onClick={() => setMapUploadDialogOpen(true)}>
-          <MapPinned className="mr-2 size-4" />
-          {poiMaps.length > 0 ? 'Edit Map' : 'Add Map'}
-        </Button>
-        <Link to="/realms/pois/$poiId/edit" params={{ poiId }}>
-          <Button size="sm">
-            <Pencil className="mr-2 size-4" />
-            Edit
-          </Button>
-        </Link>
-      </div>
+      {poi.type !== 'settlement' && (
+        <div className="flex flex-wrap items-center gap-2">
+          {poiHeading}
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            {poiActionBar}
+          </div>
+        </div>
+      )}
+
+      {townMapError && (
+        <p className="text-sm text-destructive">{townMapError}</p>
+      )}
 
       {compassConnections.length > 0 && (
         <CompassRose currentRoom={poi} connections={compassConnections} />
       )}
 
-      {runMode ? (
-        <RunModePanel
-          poi={poi}
-          npcs={npcs}
-          paths={paths}
-          onRollEncounter={actions.handleRollEncounter}
-          onUpdateNPC={actions.handleUpdateNPC}
-          onToggleTrapDisarmed={actions.handleToggleTrapDisarmed}
-          onUpdateTreasure={actions.handleUpdateTreasure}
-        />
-      ) : (
-        <>
-          {renderTemplate()}
-          {poi.type !== 'dungeon' && parentPoi?.type !== 'dungeon' && compendiumSection}
-          {poi.type !== 'dungeon' && parentPoi?.type !== 'dungeon' && (
-            <TrapSection traps={poi.traps ?? []} onUpdate={actions.handleUpdateTraps} />
-          )}
-          {poi.type !== 'dungeon' && parentPoi?.type !== 'dungeon' && (
-            <TreasureSection treasure={poi.treasure ?? []} onUpdate={actions.handleUpdateTreasure} />
-          )}
-        </>
+      {renderTemplate()}
+      {poi.type !== 'dungeon' && parentPoi?.type !== 'dungeon' && compendiumSection}
+      {poi.type !== 'dungeon' && parentPoi?.type !== 'dungeon' && (
+        <TrapSection traps={poi.traps ?? []} onUpdate={actions.handleUpdateTraps} />
       )}
-
-      <SessionLog log={poi.sessionLog ?? []} onUpdate={actions.handleUpdateSessionLog} />
+      {poi.type !== 'dungeon' && parentPoi?.type !== 'dungeon' && (
+        <TreasureSection treasure={poi.treasure ?? []} onUpdate={actions.handleUpdateTreasure} />
+      )}
 
       {/* Dialogs */}
       {poi && <CreateChildSheet open={createChildOpen} onOpenChange={setCreateChildOpen} parentPoi={poi} />}
@@ -577,12 +804,8 @@ function POIDetailPage() {
         open={mapUploadDialogOpen}
         onOpenChange={setMapUploadDialogOpen}
         onUpload={actions.handleUploadMap}
-        enableGenerate
-        defaultGenerator={poi.watabouGenerator ?? impliedGenerator ?? undefined}
-        onWatabouImport={actions.handleImportWatabou}
         imageGenerators={IMAGE_MAP_GENERATORS}
-        existingWatabouData={poi.watabouData}
-        existingSeed={poi.watabouSeed}
+        actions={townMapActions}
       />
 
       {editingNPC && (

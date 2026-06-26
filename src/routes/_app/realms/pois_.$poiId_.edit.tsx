@@ -21,7 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select'
-import { ArrowLeft, Trash2 } from 'lucide-react'
+import { ArrowLeft, RefreshCw, Trash2 } from 'lucide-react'
+import { pickSettlementProblem } from '@domain/data/worldgen/settlementProblems'
+import { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { POI_TYPES, type PoiType } from '@shared/constants'
 import type { Service } from '@domain/value-objects/Service'
 
@@ -119,6 +121,16 @@ function POIEditPage() {
     navigate({ to: '/realms/locations/pois' })
   }
 
+  const handleRollProblem = () => {
+    setForm((f) => f && ({
+      ...f,
+      trouble: pickSettlementProblem(
+        new SeededRandom(`${poiId}:edit-problem:${Date.now()}`),
+        f.trouble,
+      ),
+    }))
+  }
+
   if (poi === undefined) {
     return <div className="py-8 text-center text-muted-foreground">Loading...</div>
   }
@@ -174,6 +186,24 @@ function POIEditPage() {
             onChange={(e) => setForm((f) => f && ({ ...f, description: e.target.value }))}
             placeholder="Describe this location..."
             rows={3}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="edit-problem">
+              {form.type === 'settlement' ? 'Looming Problem' : 'Problem'}
+            </Label>
+            <Button type="button" variant="outline" size="sm" onClick={handleRollProblem}>
+              <RefreshCw className="size-3.5" />
+              Roll
+            </Button>
+          </div>
+          <Textarea
+            id="edit-problem"
+            value={form.trouble}
+            onChange={(e) => setForm((f) => f && ({ ...f, trouble: e.target.value }))}
+            placeholder="What is going wrong here..."
+            rows={2}
           />
         </div>
         <div className="space-y-1.5">
@@ -260,15 +290,6 @@ function POIEditPage() {
               placeholder="e.g., 1, 2, -1"
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-trouble">Trouble</Label>
-            <Input
-              id="edit-trouble"
-              value={form.trouble}
-              onChange={(e) => setForm((f) => f && ({ ...f, trouble: e.target.value }))}
-              placeholder="Current tension or conflict..."
-            />
-          </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
@@ -317,16 +338,6 @@ function POIEditPage() {
             value={form.sensory}
             onChange={(e) => setForm((f) => f && ({ ...f, sensory: e.target.value }))}
             placeholder="Sights, sounds, smells..."
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="edit-gmnotes">GM Notes</Label>
-          <Textarea
-            id="edit-gmnotes"
-            value={form.gmNotes}
-            onChange={(e) => setForm((f) => f && ({ ...f, gmNotes: e.target.value }))}
-            placeholder="Secrets, hidden info..."
-            rows={3}
           />
         </div>
         <div className="space-y-1.5">

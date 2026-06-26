@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { generateWorld } from './generateWorld'
 import { DUNGEON_THEMES } from '~/domain/data/worldgen/poiKinds'
+import { settlementProblemTexts } from '@domain/data/worldgen/settlementProblems'
 import { hexLine } from '~/lib/hexmap/hex'
 import { cairnSystemConfig } from '@infrastructure/dexie/seed-system-configs'
 import type { GameMap } from '@domain/entities/GameMap'
@@ -72,6 +73,10 @@ describe('generateWorld', () => {
       expect(s.subtypeLabel).toBeTruthy()
       expect(s.tags.length).toBeGreaterThanOrEqual(1)
       expect(s.readAloud.length).toBeGreaterThan(0)
+      expect(s.trouble.length).toBeGreaterThan(0)
+      expect(settlementProblemTexts).toContain(s.trouble)
+      expect(s.mood.length).toBeGreaterThan(0)
+      expect(s.sensory.length).toBeGreaterThan(0)
     }
   })
 
@@ -362,6 +367,31 @@ describe('generateWorld', () => {
   it('respects an explicit faction count (capped by settlements)', () => {
     const { factions } = generateWorld(REALM, 'seed-a', { cols: 16, rows: 16, factionCount: 3 })
     expect(factions.length).toBe(3)
+  })
+
+  it('can sprinkle treasure, magic items, and monsters across distinct POIs', () => {
+    const { pois } = generateWorld(REALM, 'loot-seed', {
+      cols: 16,
+      rows: 16,
+      poiDensity: 'dense',
+      systemId: 'system-cairn-2e',
+      systemConfig: cairnSystemConfig,
+      realmContent: {
+        treasure: true,
+        magicItems: true,
+        monsters: true,
+      },
+    })
+
+    const treasurePois = pois.filter((p) => p.treasure.length > 0)
+    const magicPois = pois.filter((p) => p.magicItemRefs.length > 0)
+    const monsterPois = pois.filter((p) => p.monsterRefs.length > 0)
+
+    expect(treasurePois.length).toBeGreaterThan(1)
+    expect(magicPois.length).toBeGreaterThan(1)
+    expect(monsterPois.length).toBeGreaterThan(1)
+    expect(magicPois.every((p) => p.treasure.some((t) => t.isMagic && t.compendiumId))).toBe(true)
+    expect(monsterPois.every((p) => p.monsterRefs.every((ref) => ref.quantity && ref.quantity > 0))).toBe(true)
   })
 
   it('faction generation is deterministic for a given seed', () => {

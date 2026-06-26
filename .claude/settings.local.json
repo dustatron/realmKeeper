@@ -117,7 +117,24 @@
       "Bash(tee /tmp/test-output-1.txt)",
       "Bash(tee /tmp/test-output-2.txt)",
       "Bash(rg \"PATH_TYPES|TERRAIN_TYPES|DIRECTIONS\" src/shared/constants* -n -A2)",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Bash(bat --style=plain /Users/dusty/Code/side-projects/realmKeeper2/src/domain/entities/GameMap.ts)",
+      "Bash(zed *)",
+      "Read(//Users/dusty/Code/side-projects/realmKeeper2/src/routes/_app/realms/**)",
+      "Bash(rg -n \"gameMapRepo|poiRepo\" src/ui/hooks/useContainer.ts src/**/container*.ts)",
+      "Bash(pnpm test *)",
+      "Bash(pnpm install *)",
+      "Bash(rg -rl \"POI_TYPES\" /Users/dusty/Code/side-projects/realmKeeper2/src/ --include=\"*.ts\")",
+      "Bash(tee /private/tmp/claude-501/-Users-dusty-Code-side-projects-realmKeeper2/ddee2c03-e95d-441d-bccb-b69cd86f5b0a/scratchpad/test-output.txt)",
+      "Bash(rg -n \"verno|version 36|v36|schema v36|toBe\\\\\\(36\\\\\\)\" src/infrastructure/dexie/*.test.ts)",
+      "Bash(rg -rn \"db.verno\" src)",
+      "Bash(procs --no-header)",
+      "Bash(eza --tree hexroll3-cartographer/src)",
+      "Bash(fd -t d -i '^maps?$|townmap|citymap' . ~/Downloads)",
+      "Bash(cd *)",
+      "Bash(node -e ' *)",
+      "Bash(awk '{print $5, $9}')",
+      "Bash(dust -d 1 src/maps)"
     ]
   }
 }

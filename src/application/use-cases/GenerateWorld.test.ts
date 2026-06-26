@@ -204,6 +204,26 @@ describe('executeGenerateWorld', () => {
     }
   })
 
+  it('persists optional treasure, magic item, and monster sprinkling on overworld POIs', async () => {
+    const { mapId } = await executeGenerateWorld(
+      {
+        name: 'Looted',
+        systemId: 'system-cairn-2e',
+        seed: 'seed-loot',
+        size: 'medium',
+        poiDensity: 'dense',
+        autoTreasure: true,
+        autoMagicItems: true,
+        autoMonsters: true,
+      },
+      deps(),
+    )
+    const pois = await db.pois.where('mapRef').equals(mapId).toArray()
+    expect(pois.filter((p) => p.treasure.length > 0).length).toBeGreaterThan(1)
+    expect(pois.filter((p) => p.magicItemRefs.length > 0).length).toBeGreaterThan(0)
+    expect(pois.filter((p) => p.monsterRefs.length > 0).length).toBeGreaterThan(1)
+  })
+
   it('seeds recurring civic events covering every season', async () => {
     const { realmId } = await executeGenerateWorld(
       { name: 'Civic', systemId: 'system-cairn-2e', seed: 'civic-1', size: 'small' },

@@ -1,4 +1,3 @@
-import { db } from '@infrastructure/dexie/db'
 import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
 import { executeCreateGameMap } from '@application/use-cases/CreateGameMap'
 import { executeCreateRumor } from '@application/use-cases/CreateRumor'
@@ -11,13 +10,11 @@ import { executeRollEncounter } from '@application/use-cases/RollEncounter'
 import { executeCreateEncounterTable } from '@application/use-cases/CreateEncounterTable'
 import { executeUpdateEncounterTable } from '@application/use-cases/UpdateEncounterTable'
 import { executeUpdateNPC } from '@application/use-cases/UpdateNPC'
-import { newId } from '@shared/ulid'
 import type { POI } from '@domain/entities/POI'
 import type { Region } from '@domain/entities/Region'
 import type { NPC } from '@domain/entities/NPC'
 import type { Trap } from '@domain/value-objects/Trap'
 import type { TreasureItem } from '@domain/value-objects/TreasureItem'
-import type { SessionLogEntry } from '@domain/value-objects/SessionLogEntry'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
 import type { CompendiumRef } from '@domain/entities/Compendium'
 import type { Rumor } from '@domain/entities/Rumor'
@@ -121,25 +118,6 @@ export function usePOIActions(poi: POI | null | undefined, region: Region | null
     await executeUpdatePOI({ ...poi, treasure }, { poiRepo: container.poiRepo })
   }
 
-  const handleUpdateSessionLog = async (sessionLog: SessionLogEntry[]) => {
-    if (!poi) return
-    await executeUpdatePOI({ ...poi, sessionLog }, { poiRepo: container.poiRepo })
-  }
-
-  const handleLogDungeonEvent = (text: string) => {
-    if (!poi) return
-    const entry: SessionLogEntry = { id: newId(), text, timestamp: Date.now() }
-    handleUpdateSessionLog([entry, ...(poi.sessionLog ?? [])])
-  }
-
-  const cycleLightLevel = async () => {
-    if (!poi) return
-    const cycle: Array<'bright' | 'dim' | 'dark' | null> = [null, 'bright', 'dim', 'dark']
-    const idx = cycle.indexOf(poi.lightLevel ?? null)
-    const next = cycle[(idx + 1) % cycle.length]
-    await db.pois.update(poi.id, { lightLevel: next, updatedAt: Date.now() })
-  }
-
   const handleUpdateCompendiumRefs = async (refs: { monsterRefs: CompendiumRef[]; magicItemRefs: CompendiumRef[]; spellRefs: CompendiumRef[]; equipmentRefs: CompendiumRef[] }) => {
     if (!poi) return
     await executeUpdatePOI({ ...poi, ...refs }, { poiRepo: container.poiRepo })
@@ -192,9 +170,6 @@ export function usePOIActions(poi: POI | null | undefined, region: Region | null
     handleSaveEncounterTable,
     handleUpdateNPC,
     handleUpdateTreasure,
-    handleUpdateSessionLog,
-    handleLogDungeonEvent,
-    cycleLightLevel,
     handleUpdateCompendiumRefs,
     handleImportWatabou,
     handleClearWatabou,

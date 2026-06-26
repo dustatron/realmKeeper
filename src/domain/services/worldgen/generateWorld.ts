@@ -20,6 +20,7 @@ import { buildDoom, type DoomClock } from './buildDoom'
 import { buildEvents } from './buildEvents'
 import { buildRegionFlavor } from './regionFlavor'
 import { buildPoiFlavor } from './poiFlavor'
+import { sprinkleRealmContent, type RealmContentSprinkleOptions } from './sprinkleRealmContent'
 import type { GameMap, HexCell } from '@domain/entities/GameMap'
 import type { Region } from '@domain/entities/Region'
 import type { POI } from '@domain/entities/POI'
@@ -55,9 +56,11 @@ export function generateWorld(
     hexSize?: number
     poiDensity?: PoiDensity
     factionCount?: number
+    systemId?: string
     systemConfig?: SystemConfig
     clock?: DoomClock
     loomingThreat?: boolean
+    realmContent?: RealmContentSprinkleOptions
   }
 ): {
   gameMap: GameMap
@@ -288,6 +291,9 @@ export function generateWorld(
       type,
       subtypeLabel: flavor.subtypeLabel,
       tags: flavor.tags,
+      trouble: flavor.trouble,
+      mood: flavor.mood,
+      sensory: flavor.sensory,
       // Templates display readAloud (not description), so the flavor read-aloud
       // is what actually surfaces on the POI detail page.
       readAloud: flavor.readAloud,
@@ -553,6 +559,15 @@ export function generateWorld(
     hooks.push(...doom.hooks)
     notices.push(...doom.notices)
     rumors.push(...doom.rumors)
+  }
+
+  if (opts.systemId && opts.realmContent) {
+    sprinkleRealmContent({
+      pois,
+      systemId: opts.systemId,
+      options: opts.realmContent,
+      rng: rng.child('realm-content'),
+    })
   }
 
   return {

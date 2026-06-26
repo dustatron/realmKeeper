@@ -84,18 +84,6 @@ export function DungeonRoomTemplate({
               </ReactMarkdown>
             </div>
           )}
-          {poi.gmNotes && (
-            <details className="rounded-md border p-3">
-              <summary className="text-sm font-medium cursor-pointer">
-                GM Notes
-              </summary>
-              <div className="prose prose-sm dark:prose-invert max-w-none mt-2">
-                <ReactMarkdown {...markdownOptions}>
-                  {poi.gmNotes}
-                </ReactMarkdown>
-              </div>
-            </details>
-          )}
         </Card>
         {/* At A Glance */}
         <AtAGlancePanel

@@ -1,9 +1,8 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, type ReactNode } from 'react'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '~/components/ui/tabs'
-import { ToggleGroup, ToggleGroupItem } from '~/components/ui/toggle-group'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
 import {
   Dialog,
   DialogContent,
@@ -11,36 +10,19 @@ import {
   DialogTitle,
   DialogFooter,
 } from '~/components/ui/dialog'
-import { ImagePlus, Loader2, ExternalLink, FileJson, AlertCircle } from 'lucide-react'
+import { ImagePlus, Loader2, ExternalLink } from 'lucide-react'
 import { useImageUpload } from '~/ui/hooks/useImageUpload'
-import { detectWatabouFormat, type WatabouData } from '~/lib/watabou/parseWatabouExport'
 import type { MapGeneratorLink } from '~/lib/watabou/generators'
-
-function generateSeed() {
-  return Math.floor(Math.random() * 1000000000).toString()
-}
-
-function getGeneratorUrl(generator: 'mfcg' | 'opd', seed: string): string {
-  if (generator === 'mfcg') {
-    return `https://watabou.github.io/city-generator/?seed=${seed}&export=json`
-  }
-  return `https://watabou.github.io/one-page-dungeon/?seed=${seed}&export=json`
-}
 
 interface MapUploadDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onUpload: (data: { name: string; imageUrl: string; width: number; height: number }) => void
   defaultName?: string
-  /** Enables the Generate tab. The user picks City/Dungeon inside the tab. */
-  enableGenerate?: boolean
-  /** Pre-select City (mfcg) or Dungeon (opd) when the POI type implies one. Defaults to City. */
-  defaultGenerator?: 'mfcg' | 'opd'
-  onWatabouImport?: (data: WatabouData, seed: string | null) => void
-  existingWatabouData?: WatabouData | null
-  existingSeed?: string | null
   /** Shows "generate a map" helper links above the image picker (open a Watabou generator, export PNG, upload). */
   imageGenerators?: MapGeneratorLink[]
+  /** Optional actions shown above the upload form. */
+  actions?: ReactNode
 }
 
 export function MapUploadDialog({
@@ -48,12 +30,8 @@ export function MapUploadDialog({
   onOpenChange,
   onUpload,
   defaultName = '',
-  enableGenerate,
-  defaultGenerator,
-  onWatabouImport,
-  existingWatabouData,
-  existingSeed,
   imageGenerators,
+  actions,
 }: MapUploadDialogProps) {
   const [name, setName] = useState(defaultName)
   const [file, setFile] = useState<File | null>(null)
@@ -61,15 +39,6 @@ export function MapUploadDialog({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { upload, uploading, error } = useImageUpload()
-
-  // Generate tab state
-  const [seed, setSeed] = useState(existingSeed ?? '')
-  const [genType, setGenType] = useState<'mfcg' | 'opd'>(defaultGenerator ?? 'mfcg')
-  const [importError, setImportError] = useState<string | null>(null)
-  const [dragOver, setDragOver] = useState(false)
-  const jsonFileRef = useRef<HTMLInputElement>(null)
-
-  const hasGenerateTab = !!enableGenerate && !!onWatabouImport
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
@@ -111,66 +80,14 @@ export function MapUploadDialog({
       setFile(null)
       setDimensions(null)
       setName(defaultName)
-      setImportError(null)
-      setDragOver(false)
     }
     onOpenChange(open)
   }
 
-  // Generate tab handlers
-  const processJsonFile = useCallback((file: File) => {
-    if (!onWatabouImport) return
-    setImportError(null)
-    const reader = new FileReader()
-    reader.onload = () => {
-      try {
-        const json = JSON.parse(reader.result as string)
-        const result = detectWatabouFormat(json)
-        if ('error' in result) {
-          setImportError(result.error)
-          return
-        }
-        if (genType === 'mfcg' && result.data.type !== 'mfcg') {
-          setImportError('Expected city map (MFCG) but got dungeon data.')
-          return
-        }
-        if (genType === 'opd' && result.data.type !== 'opd') {
-          setImportError('Expected dungeon map (OPD) but got city data.')
-          return
-        }
-        onWatabouImport(result.data, result.seed)
-        onOpenChange(false)
-      } catch {
-        setImportError('Failed to parse JSON file.')
-      }
-    }
-    reader.readAsText(file)
-  }, [onWatabouImport, genType, onOpenChange])
-
-  const handleJsonDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(false)
-    const file = e.dataTransfer.files[0]
-    if (file) processJsonFile(file)
-  }, [processJsonFile])
-
-  const handleJsonFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) processJsonFile(file)
-  }, [processJsonFile])
-
-  const handleOpenWatabou = () => {
-    const s = seed || generateSeed()
-    if (!seed) setSeed(s)
-    window.open(getGeneratorUrl(genType, s), '_blank')
-  }
-
-  const generatorLabel = genType === 'mfcg' ? 'City' : 'Dungeon'
-
   const uploadContent = (
     <div className="space-y-4">
       {imageGenerators && imageGenerators.length > 0 && (
-        <div className="rounded-md border bg-muted/40 p-3 space-y-2">
+        <div className="space-y-2 rounded-md border bg-muted/40 p-3">
           <p className="text-sm font-medium">Need a map?</p>
           <p className="text-xs text-muted-foreground">
             Generate one in a Watabou generator, export it as a PNG, then upload it below.
@@ -213,10 +130,10 @@ export function MapUploadDialog({
             <img
               src={previewUrl}
               alt="Map preview"
-              className="w-full max-h-48 object-contain rounded-md border bg-muted"
+              className="max-h-48 w-full rounded-md border bg-muted object-contain"
             />
             <div className="text-xs text-muted-foreground">
-              {dimensions?.width} × {dimensions?.height}px
+              {dimensions?.width} x {dimensions?.height}px
             </div>
             <Button
               variant="outline"
@@ -231,119 +148,42 @@ export function MapUploadDialog({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="mt-2 w-full h-32 border-2 border-dashed rounded-md flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+            className="mt-2 flex h-32 w-full flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed text-muted-foreground transition-colors hover:border-primary hover:text-primary"
           >
             <ImagePlus className="size-8" />
             <span className="text-sm">Click to select an image</span>
           </button>
         )}
-        {error && <p className="text-sm text-destructive mt-1">{error}</p>}
+        {error && <p className="mt-1 text-sm text-destructive">{error}</p>}
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={() => handleClose(false)} disabled={uploading}>
           Cancel
         </Button>
         <Button onClick={handleSubmit} disabled={!file || !name.trim() || uploading}>
-          {uploading ? <><Loader2 className="mr-2 size-4 animate-spin" />Uploading…</> : 'Upload'}
+          {uploading ? <><Loader2 className="mr-2 size-4 animate-spin" />Uploading...</> : 'Upload'}
         </Button>
       </DialogFooter>
     </div>
   )
 
-  const generateContent = hasGenerateTab ? (
-    <div className="space-y-4">
-      <div>
-        <Label>Map Type</Label>
-        <ToggleGroup
-          type="single"
-          value={genType}
-          onValueChange={(v) => { if (v) { setGenType(v as 'mfcg' | 'opd'); setImportError(null) } }}
-          className="mt-1 w-full"
-        >
-          <ToggleGroupItem value="mfcg" className="flex-1">City</ToggleGroupItem>
-          <ToggleGroupItem value="opd" className="flex-1">Dungeon</ToggleGroupItem>
-        </ToggleGroup>
-      </div>
-      <div>
-        <Label htmlFor="watabou-seed">Seed (optional)</Label>
-        <Input
-          id="watabou-seed"
-          value={seed}
-          onChange={(e) => setSeed(e.target.value)}
-          placeholder="Leave empty for random"
-          className="font-mono"
-        />
-      </div>
-
-      <Button size="sm" onClick={handleOpenWatabou} className="w-full">
-        <ExternalLink className="mr-1.5 size-3.5" />
-        Open in Watabou ({generatorLabel})
-      </Button>
-
-      <div className="text-xs text-muted-foreground text-center">
-        Export JSON from Watabou, then import it below
-      </div>
-
-      <div
-        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
-          dragOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-muted-foreground/50'
-        }`}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleJsonDrop}
-        onClick={() => jsonFileRef.current?.click()}
-      >
-        <div className="flex flex-col items-center gap-2">
-          <FileJson className="size-8 text-muted-foreground" />
-          <p className="text-sm font-medium">Drop JSON file here or click to browse</p>
-        </div>
-        <input
-          ref={jsonFileRef}
-          type="file"
-          accept=".json,application/json"
-          className="hidden"
-          onChange={handleJsonFileChange}
-        />
-      </div>
-
-      {importError && (
-        <div className="flex items-start gap-2 text-sm text-destructive">
-          <AlertCircle className="size-4 shrink-0 mt-0.5" />
-          <span>{importError}</span>
-        </div>
-      )}
-
-      {existingWatabouData && (
-        <p className="text-xs text-muted-foreground text-center">
-          A Watabou map is already imported. Importing again will replace it.
-        </p>
-      )}
-
-      <DialogFooter>
-        <Button variant="outline" onClick={() => handleClose(false)}>
-          Cancel
-        </Button>
-      </DialogFooter>
-    </div>
-  ) : null
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent>
+      <DialogContent className={actions ? 'sm:max-w-3xl' : undefined}>
         <DialogHeader>
-          <DialogTitle>{hasGenerateTab ? 'Add Map' : 'Upload Map Image'}</DialogTitle>
+          <DialogTitle>{actions ? 'Edit Map' : 'Upload Map Image'}</DialogTitle>
         </DialogHeader>
-        {hasGenerateTab ? (
-          <Tabs defaultValue="upload">
-            <TabsList className="w-full">
-              <TabsTrigger value="upload" className="flex-1">Upload</TabsTrigger>
-              <TabsTrigger value="generate" className="flex-1">Generate</TabsTrigger>
+        {actions ? (
+          <Tabs defaultValue="maps" className="gap-4">
+            <TabsList className="w-full justify-start">
+              <TabsTrigger value="maps">Map Selection</TabsTrigger>
+              <TabsTrigger value="upload">Upload Map</TabsTrigger>
             </TabsList>
-            <TabsContent value="upload" className="pt-3">
-              {uploadContent}
+            <TabsContent value="maps">
+              {actions}
             </TabsContent>
-            <TabsContent value="generate" className="pt-3">
-              {generateContent}
+            <TabsContent value="upload">
+              {uploadContent}
             </TabsContent>
           </Tabs>
         ) : (

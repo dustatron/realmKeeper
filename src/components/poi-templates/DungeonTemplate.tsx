@@ -499,16 +499,6 @@ function RoomDetailPanel({
         </div>
       )}
 
-      {/* GM Notes */}
-      {room.gmNotes && (
-        <div className="space-y-1">
-          <div className="text-xs font-semibold text-purple-400 uppercase tracking-wide">📋 GM Notes</div>
-          <div className="rounded border border-purple-500/20 bg-purple-500/5 p-2.5 prose prose-xs prose-invert max-w-none text-xs [&_p]:my-1 [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs [&_ul]:my-1 [&_li]:my-0">
-            <ReactMarkdown {...markdownOptions}>{room.gmNotes}</ReactMarkdown>
-          </div>
-        </div>
-      )}
-
       {/* Discoveries */}
       {discoveries && discoveries.length > 0 && (
         <div className="space-y-1.5">
@@ -774,18 +764,6 @@ export function DungeonTemplate({
 
       {/* Read Aloud */}
       <ReadAloudBlock text={poi.readAloud} />
-
-      {/* GM Notes */}
-      {poi.gmNotes && (
-        <details className="rounded-md border p-3">
-          <summary className="text-sm font-medium cursor-pointer">
-            GM Notes
-          </summary>
-          <div className="prose prose-sm dark:prose-invert max-w-none mt-2">
-            <ReactMarkdown {...markdownOptions}>{poi.gmNotes}</ReactMarkdown>
-          </div>
-        </details>
-      )}
 
       {/* Dungeon Lore — shows generated ecology data (above tabs, always visible) */}
       {poi.spatialDungeon?.ecology && (() => {

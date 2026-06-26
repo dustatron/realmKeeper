@@ -16,6 +16,7 @@ import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { TagInput } from '~/components/shared/TagInput'
 import { ImagePicker } from '~/components/shared/ImagePicker'
+import { NPCInventoryEditor, NPCInventoryItemLink } from '~/components/shared/NPCInventoryEditor'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
@@ -33,7 +34,7 @@ import { getAllRaces, NPC_DISPOSITIONS } from '@shared/constants'
 import { rollDisposition } from '@shared/dice'
 import { DispositionBadge } from '~/components/shared/DispositionBadge'
 import type { NPC } from '@domain/entities/NPC'
-import type { SystemBlock, Attack, InventoryItem } from '@domain/value-objects/SystemBlock'
+import type { SystemBlock, Attack } from '@domain/value-objects/SystemBlock'
 import type { Faction } from '@domain/entities/Faction'
 
 export const Route = createFileRoute('/_app/realms/npcs_/$npcId')({
@@ -160,28 +161,6 @@ function NPCDetailPage() {
     if (!editingNPC) return
     updateSystemBlock({
       attacks: editingNPC.systemBlock.attacks.filter((_, i) => i !== index),
-    })
-  }
-
-  const addInventoryItem = () => {
-    if (!editingNPC) return
-    updateSystemBlock({
-      inventory: [...editingNPC.systemBlock.inventory, { name: '', slots: 1, description: '' }],
-    })
-  }
-
-  const updateInventoryItem = (index: number, updates: Partial<InventoryItem>) => {
-    if (!editingNPC) return
-    const inventory = editingNPC.systemBlock.inventory.map((item, i) =>
-      i === index ? { ...item, ...updates } : item
-    )
-    updateSystemBlock({ inventory })
-  }
-
-  const removeInventoryItem = (index: number) => {
-    if (!editingNPC) return
-    updateSystemBlock({
-      inventory: editingNPC.systemBlock.inventory.filter((_, i) => i !== index),
     })
   }
 
@@ -609,45 +588,12 @@ function NPCDetailPage() {
           </div>
 
           {/* Inventory */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Inventory</Label>
-              <Button size="sm" variant="outline" onClick={addInventoryItem}>
-                <Plus className="mr-1 size-3" />
-                Add
-              </Button>
-            </div>
-            {editSb.inventory.map((item, i) => (
-              <Card key={i}>
-                <CardContent className="space-y-2 pt-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <Input
-                      placeholder="Item name"
-                      value={item.name}
-                      onChange={(e) => updateInventoryItem(i, { name: e.target.value })}
-                    />
-                    <Button size="sm" variant="ghost" onClick={() => removeInventoryItem(i)}>
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Input
-                      type="number"
-                      placeholder="Slots"
-                      value={item.slots}
-                      onChange={(e) => updateInventoryItem(i, { slots: parseInt(e.target.value) || 1 })}
-                    />
-                    <Input
-                      className="col-span-2"
-                      placeholder="Description"
-                      value={item.description}
-                      onChange={(e) => updateInventoryItem(i, { description: e.target.value })}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <NPCInventoryEditor
+            inventory={editSb.inventory}
+            onChange={(inventory) => updateSystemBlock({ inventory })}
+            systemId={systemConfig.id}
+            worldId={editingNPC.worldId}
+          />
 
           {/* Abilities */}
           <div className="space-y-1.5">
@@ -1092,7 +1038,10 @@ function NPCDetailPage() {
                   <tbody>
                     {sb.inventory.map((item, idx) => (
                       <tr key={idx} className={idx < sb.inventory.length - 1 ? 'border-b' : ''}>
-                        <td className="p-2 font-medium">{item.name}</td>
+                        <td className="p-2 font-medium">
+                          <NPCInventoryItemLink item={item} className="hover:underline" />
+                          {item.value && <Badge variant="outline" className="ml-2 text-xs">{item.value}</Badge>}
+                        </td>
                         <td className="p-2 text-center">{item.slots}</td>
                         <td className="p-2 text-muted-foreground">{item.description || '—'}</td>
                       </tr>

@@ -11,6 +11,7 @@ import {
   MousePointerClick,
 } from 'lucide-react'
 import type { MapMode } from './MapViewer'
+import type { ReactNode } from 'react'
 
 interface MapToolbarProps {
   mode: MapMode
@@ -25,6 +26,8 @@ interface MapToolbarProps {
   /** When true, clicking markers selects rooms instead of opening popup */
   poiSelectMode?: boolean
   onTogglePoiSelectMode?: () => void
+  /** Optional controls rendered left-aligned on the same toolbar row (e.g. town generation). */
+  leftSlot?: ReactNode
 }
 
 export function MapToolbar({
@@ -39,12 +42,13 @@ export function MapToolbar({
   onZoomToFit,
   poiSelectMode,
   onTogglePoiSelectMode,
+  leftSlot,
 }: MapToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-2 p-2 bg-background/95 backdrop-blur border-b">
-      <div className="mr-auto" />
+    <div className="flex items-center gap-2 overflow-hidden border-b bg-background/95 p-2 backdrop-blur">
+      <div className="mr-auto flex min-w-0 flex-1 items-center gap-2 overflow-hidden">{leftSlot}</div>
 
-      <div className="flex items-center border rounded-md">
+      <div className="flex shrink-0 items-center rounded-md border">
         <Button
           variant={mode === 'view' ? 'secondary' : 'ghost'}
           size="sm"
@@ -88,6 +92,7 @@ export function MapToolbar({
       <Button
         variant={showLabels ? 'secondary' : 'outline'}
         size="sm"
+        className="shrink-0"
         onClick={onToggleLabels}
         title={showLabels ? 'Hide labels' : 'Show labels'}
       >
@@ -98,6 +103,7 @@ export function MapToolbar({
         <Button
           variant={showRegions ? 'secondary' : 'outline'}
           size="sm"
+          className="shrink-0"
           onClick={onToggleRegions}
           title={showRegions ? 'Hide regions' : 'Show regions'}
         >
@@ -109,6 +115,7 @@ export function MapToolbar({
         <Button
           variant={poiSelectMode ? 'secondary' : 'outline'}
           size="sm"
+          className="shrink-0"
           onClick={onTogglePoiSelectMode}
           title={poiSelectMode ? 'Click markers to select rooms' : 'Click markers to inspect/edit'}
         >
@@ -116,11 +123,11 @@ export function MapToolbar({
         </Button>
       )}
 
-      <Button variant="outline" size="sm" onClick={onZoomToFit} title="Zoom to fit">
+      <Button variant="outline" size="sm" className="shrink-0" onClick={onZoomToFit} title="Zoom to fit">
         <Maximize className="size-4" />
       </Button>
 
-      <Button variant="outline" size="sm" onClick={onUpload} title="Replace image">
+      <Button variant="outline" size="sm" className="shrink-0" onClick={onUpload} title="Replace image">
         <Upload className="size-4" />
       </Button>
     </div>

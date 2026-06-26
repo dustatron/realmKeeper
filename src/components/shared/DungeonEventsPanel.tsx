@@ -9,7 +9,6 @@ import type { EncounterTable } from '@domain/entities/EncounterTable'
 import type { RollEncounterResult } from '@application/use-cases/RollEncounter'
 
 interface DungeonEventsPanelProps {
-  onLogEntry: (text: string) => void
   encounterTable?: EncounterTable | null
   onRollEncounter?: () => Promise<RollEncounterResult>
   onSaveEncounterTable?: (entries: Pick<EncounterTable, 'creature' | 'signOmen' | 'loss' | 'npc' | 'discovery' | 'treasure' | 'customSections' | 'disabledCategories'>) => void
@@ -37,7 +36,7 @@ const EVENT_CONFIG: Record<string, { emoji: string; color: string; hint: string 
   Quiet: { emoji: '🟢', color: 'border-green-500/50 bg-green-500/10', hint: 'Nothing stirs... for now' },
 }
 
-export function DungeonEventsPanel({ onLogEntry, encounterTable, onRollEncounter, onSaveEncounterTable }: DungeonEventsPanelProps) {
+export function DungeonEventsPanel({ encounterTable, onRollEncounter, onSaveEncounterTable }: DungeonEventsPanelProps) {
   const [result, setResult] = useState<EventResult | null>(null)
   const [showEncounterTable, setShowEncounterTable] = useState(false)
 
@@ -57,11 +56,6 @@ export function DungeonEventsPanel({ onLogEntry, encounterTable, onRollEncounter
       res.activityRoll = actRoll.diceResult.total
       res.reaction = reactRoll.entry.text
       res.reactionRoll = reactRoll.diceResult.total
-
-      onLogEntry(`🎲 Dungeon Event: Encounter — Activity: ${res.activity} (d20: ${res.activityRoll}), Reaction: ${res.reaction} (2d6: ${res.reactionRoll})`)
-    } else {
-      const config = EVENT_CONFIG[event]
-      onLogEntry(`🎲 Dungeon Event: ${event} (d6: ${res.roll}) — ${config?.hint || event}`)
     }
 
     setResult(res)

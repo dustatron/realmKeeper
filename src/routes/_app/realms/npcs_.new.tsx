@@ -17,6 +17,7 @@ import { NPC_RACES, getAllRaces, type LifeStatus, type MovementStatus } from '@s
 import { newId } from '@shared/ulid'
 import { PageHeader } from '~/components/shared/PageHeader'
 import { TagInput } from '~/components/shared/TagInput'
+import { NPCInventoryEditor } from '~/components/shared/NPCInventoryEditor'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -111,11 +112,6 @@ function NPCNewPage() {
   const updateAttack = (i: number, updates: Partial<Attack>) =>
     setAttacks(attacks.map((a, idx) => (idx === i ? { ...a, ...updates } : a)))
   const removeAttack = (i: number) => setAttacks(attacks.filter((_, idx) => idx !== i))
-
-  const addInventoryItem = () => setInventory([...inventory, { name: '', slots: 1, description: '' }])
-  const updateInventoryItem = (i: number, updates: Partial<InventoryItem>) =>
-    setInventory(inventory.map((item, idx) => (idx === i ? { ...item, ...updates } : item)))
-  const removeInventoryItem = (i: number) => setInventory(inventory.filter((_, idx) => idx !== i))
 
   // Roll a random name from naming tables (respects selected race)
   const handleRollName = async () => {
@@ -554,25 +550,13 @@ function NPCNewPage() {
 
       {/* Inventory */}
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Inventory</CardTitle>
-            <Button size="sm" variant="outline" onClick={addInventoryItem}><Plus className="mr-1 size-3" />Add</Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {inventory.map((item, i) => (
-            <div key={i} className="flex items-start gap-2">
-              <div className="flex-1 space-y-2">
-                <Input placeholder="Item name" value={item.name} onChange={(e) => updateInventoryItem(i, { name: e.target.value })} />
-                <div className="grid grid-cols-3 gap-2">
-                  <Input type="number" placeholder="Slots" value={item.slots} onChange={(e) => updateInventoryItem(i, { slots: parseInt(e.target.value) || 1 })} />
-                  <Input className="col-span-2" placeholder="Description" value={item.description} onChange={(e) => updateInventoryItem(i, { description: e.target.value })} />
-                </div>
-              </div>
-              <Button size="sm" variant="ghost" onClick={() => removeInventoryItem(i)}><Trash2 className="size-4" /></Button>
-            </div>
-          ))}
+        <CardContent className="pt-6">
+          <NPCInventoryEditor
+            inventory={inventory}
+            onChange={setInventory}
+            systemId={systemConfig.id}
+            worldId={activeRealmId}
+          />
         </CardContent>
       </Card>
 
