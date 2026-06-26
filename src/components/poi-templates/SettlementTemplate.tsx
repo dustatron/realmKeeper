@@ -304,6 +304,11 @@ interface SettlementTemplateProps {
   actionBar?: React.ReactNode;
 }
 
+interface TreasureManifestEntry {
+  item: TreasureItem;
+  location: POI;
+}
+
 function pluralize(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`;
 }
@@ -364,9 +369,15 @@ function formatPathTravel(path: ResolvedPath): string {
 function OverviewRoutes({
   paths,
   currentPoiId,
+  treasureManifest,
+  uncollectedTreasure,
+  onToggleTreasure,
 }: {
   paths: ResolvedPath[];
   currentPoiId: string;
+  treasureManifest: TreasureManifestEntry[];
+  uncollectedTreasure: number;
+  onToggleTreasure?: (location: POI, itemId: string) => void;
 }) {
   return (
     <div className="flex min-h-full min-w-0 flex-col gap-2 border-t border-border/60 pt-3 xl:border-l xl:border-t-0 xl:pl-3 xl:pt-0">
@@ -445,6 +456,93 @@ function OverviewRoutes({
         </Table>
       ) : (
         <p className="text-sm text-muted-foreground">No routes recorded.</p>
+      )}
+      {treasureManifest.length > 0 && (
+        <div className="mt-auto space-y-2 border-t border-border/60 pt-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <Gem className="size-3.5" />
+              Treasure Manifest
+            </p>
+            <Badge variant="outline" className="text-xs">
+              {uncollectedTreasure}/{treasureManifest.length} open
+            </Badge>
+          </div>
+          <Table className="table-fixed text-xs">
+            <colgroup>
+              <col className="w-[46%]" />
+              <col className="w-[28%]" />
+              <col className="w-[26%]" />
+            </colgroup>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="h-7 px-0 pr-2">Item</TableHead>
+                <TableHead className="h-7 px-0 pr-2">Location</TableHead>
+                <TableHead className="h-7 px-0 text-right">Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {treasureManifest.map(({ item, location }) => {
+                const itemLabel = (
+                  <>
+                    {item.isMagic && <Sparkles className="size-3.5 shrink-0 text-violet-500" />}
+                    {!item.isMagic && <Gem className="size-3.5 shrink-0 text-emerald-500" />}
+                    <span className={`min-w-0 truncate ${item.collected ? "line-through text-muted-foreground" : ""}`}>
+                      {item.name}
+                      {item.quantity > 1 && ` (×${item.quantity})`}
+                    </span>
+                  </>
+                );
+
+                return (
+                  <TableRow key={`${location.id}:${item.id}`}>
+                    <TableCell className="min-w-0 py-1.5 pl-0 pr-2 align-middle">
+                      {item.isMagic && item.compendiumId ? (
+                        <Link
+                          to="/realms/compendium/magic-items/$itemId"
+                          params={{ itemId: item.compendiumId }}
+                          className="flex min-w-0 items-center gap-1.5 font-medium hover:underline"
+                        >
+                          {itemLabel}
+                        </Link>
+                      ) : (
+                        <span className="flex min-w-0 items-center gap-1.5 font-medium">
+                          {itemLabel}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="min-w-0 py-1.5 pl-0 pr-2 align-middle">
+                      <Link
+                        to="/realms/pois/$poiId"
+                        params={{ poiId: location.id }}
+                        className="block truncate text-muted-foreground hover:text-foreground hover:underline"
+                      >
+                        {location.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="py-1.5 pl-0 pr-0 text-right align-middle">
+                      {onToggleTreasure ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={item.collected ? "secondary" : "outline"}
+                          className="h-7 px-2 text-xs"
+                          onClick={() => onToggleTreasure(location, item.id)}
+                        >
+                          {item.collected ? "Collected" : "Collect"}
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          {item.collected ? "Collected" : "Open"}
+                        </span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </div>
   );
@@ -713,46 +811,6 @@ export function SettlementTemplate({
                 </div>
               )}
 
-              {treasureManifest.length > 0 && (
-                <div className="space-y-2 rounded-md bg-muted/20 px-3 py-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Treasure Manifest
-                  </p>
-                  <div className="max-h-40 space-y-1 overflow-y-auto pr-1">
-                    {treasureManifest.map(({ item, location }) => (
-                      <div
-                        key={`${location.id}:${item.id}`}
-                        className="flex min-w-0 items-center gap-2 rounded-md border bg-background px-2 py-1.5 text-sm"
-                      >
-                        <Gem className="size-3.5 shrink-0 text-emerald-500" />
-                        <span className={`min-w-0 flex-1 truncate ${item.collected ? "line-through text-muted-foreground" : ""}`}>
-                          {item.name}
-                          {item.quantity > 1 && ` (×${item.quantity})`}
-                        </span>
-                        <Link
-                          to="/realms/pois/$poiId"
-                          params={{ poiId: location.id }}
-                          className="max-w-40 truncate text-xs text-muted-foreground hover:text-foreground hover:underline"
-                        >
-                          {location.name}
-                        </Link>
-                        {onUpdateTreasure && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={item.collected ? "secondary" : "outline"}
-                            className="h-7 shrink-0 px-2 text-xs"
-                            onClick={() => handleToggleManifestTreasure(location, item.id)}
-                          >
-                            {item.collected ? "Collected" : "Collect"}
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {npcWants.length > 0 && (
                 <div className="space-y-2 rounded-md bg-muted/20 px-3 py-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -781,7 +839,13 @@ export function SettlementTemplate({
               )}
             </div>
 
-            <OverviewRoutes paths={paths} currentPoiId={poi.id} />
+            <OverviewRoutes
+              paths={paths}
+              currentPoiId={poi.id}
+              treasureManifest={treasureManifest}
+              uncollectedTreasure={uncollectedTreasure}
+              onToggleTreasure={onUpdateTreasure ? handleToggleManifestTreasure : undefined}
+            />
           </div>
         </CollapsibleContent>
       </div>
