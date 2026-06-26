@@ -22,6 +22,7 @@ import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { TagInput } from '~/components/shared/TagInput'
 import { StickyTimeBar } from '~/components/calendar/StickyTimeBar'
 import { DayLogTable } from '~/components/calendar/DayLogTable'
+import { EventTypeBadge } from '~/components/calendar/eventTypeMeta'
 import {
   Dialog,
   DialogContent,
@@ -603,7 +604,7 @@ function CalendarPage() {
                       </TableCell>
                       <TableCell className="text-sm">{getPOIName(event.poiId)}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-xs">{event.type}</Badge>
+                        <EventTypeBadge type={event.type} />
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {formatTriggerDate(event.trigger)}
