@@ -128,7 +128,8 @@
       "Bash(tee /private/tmp/claude-501/-Users-dusty-Code-side-projects-realmKeeper2/ddee2c03-e95d-441d-bccb-b69cd86f5b0a/scratchpad/test-output.txt)",
       "Bash(rg -n \"verno|version 36|v36|schema v36|toBe\\\\\\(36\\\\\\)\" src/infrastructure/dexie/*.test.ts)",
       "Bash(rg -rn \"db.verno\" src)",
-      "Bash(procs --no-header)"
+      "Bash(procs --no-header)",
+      "Bash(eza --tree hexroll3-cartographer/src)"
     ]
   }
 }

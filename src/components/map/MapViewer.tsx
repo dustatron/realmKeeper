@@ -780,14 +780,15 @@ export function MapViewer({
         type: 'line',
         source: srcId,
         filter: ['in', ['get', 'kind'], ['literal', ['road', 'wall', 'river']]],
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
           'line-color': [
             'match', ['get', 'kind'],
-            'wall', COLORS.wall.stroke,
+            'wall', '#5a4a30',
             'river', COLORS.river.stroke,
-            COLORS.road.stroke,
+            '#a8895f', // dirt road, readable on parchment
           ],
-          'line-width': ['match', ['get', 'kind'], 'wall', 3, 'river', 4, 1.5],
+          'line-width': ['match', ['get', 'kind'], 'wall', 4, 'river', 4, 14],
         },
       })
       // Footprint click → resolve poiId → open the POI popup (same as a marker click).

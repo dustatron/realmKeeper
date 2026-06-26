@@ -5,6 +5,8 @@ export interface TownAnchor {
   x: number
   y: number
   type: PoiType
+  /** Facing angle in radians (aligned to the street the building fronts). */
+  angle?: number
 }
 
 export interface TownPreset {

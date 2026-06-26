@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { generateTown } from '~/lib/towngen/generateTown'
-import { collectAnchors } from '~/lib/towngen/collectAnchors'
-import { gridPositions } from '~/lib/towngen/gridPositions'
+import { streetLayout } from '~/lib/towngen/streetLayout'
+import { PRESETS, type TownAnchor } from '~/lib/towngen/presets'
 import { newId } from '@shared/ulid'
 import { useNavigate } from '@tanstack/react-router'
 import { useUIStore } from '~/ui/stores/uiStore'
@@ -291,39 +291,46 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
     }
   }
 
-  const handleRegenerateTown = useCallback(async () => {
-    const preset = gameMap.townPreset ?? 'village'
+  // Regenerate the town. `overrides` lets the preset/wall controls apply their
+  // new value immediately (the gameMap prop hasn't refreshed from Dexie yet).
+  const regenerateTown = useCallback(async (overrides?: { preset?: 'village' | 'city'; walled?: boolean }) => {
+    const preset = overrides?.preset ?? gameMap.townPreset ?? 'village'
+    const walled = overrides?.walled ?? gameMap.townWalled ?? PRESETS[preset].wallDefault
     const seed = gameMap.townSeed ?? newId()
-    // Auto-place any unplaced child buildings into a grid so the whole settlement
-    // appears in one click. Already-placed markers keep their (dragged) positions.
-    const placed = [...poisOnMap]
-    if (unplacedPois.length > 0) {
-      const slots = gridPositions(unplacedPois.length, gameMap.width, gameMap.height)
-      for (let i = 0; i < unplacedPois.length; i++) {
-        const p = unplacedPois[i]
-        const position = slots[i]
-        await executePlacePOIOnMap(
-          { poiId: p.id, mapId: gameMap.id, position },
-          { poiRepo: container.poiRepo },
-        )
-        placed.push({ ...p, position, mapRef: gameMap.id })
-      }
+    // Lay the settlement's child buildings out along a street network, then place
+    // each child POI onto its slot (so markers sit on the footprints). Re-laying
+    // every child each time keeps the town coherent; the seed makes it stable.
+    const children = scopedPois
+    const layout = streetLayout(children.length, gameMap.width, gameMap.height, seed)
+    const anchors: TownAnchor[] = []
+    for (let i = 0; i < children.length; i++) {
+      const c = children[i]
+      const slot = layout.slots[i]
+      if (!slot) break
+      const position = { x: slot.x, y: slot.y }
+      await executePlacePOIOnMap(
+        { poiId: c.id, mapId: gameMap.id, position },
+        { poiRepo: container.poiRepo },
+      )
+      anchors.push({ poiId: c.id, x: slot.x, y: slot.y, type: c.type, angle: slot.angle })
     }
-    const townData = generateTown(collectAnchors(placed), {
+    const townData = generateTown(anchors, {
       preset,
       seed,
-      walled: gameMap.townWalled ?? undefined,
+      walled,
       width: gameMap.width,
       height: gameMap.height,
+      streets: layout.streets,
     })
     await container.gameMapRepo.update({
       ...gameMap,
       townData,
       townPreset: preset,
+      townWalled: walled,
       townSeed: seed,
       updatedAt: Date.now(),
     })
-  }, [gameMap, poisOnMap, unplacedPois, container.poiRepo, container.gameMapRepo])
+  }, [gameMap, scopedPois, container.poiRepo, container.gameMapRepo])
 
   const handleCreatePath = async () => {
     if (!drawPathFrom || !drawPathTo) return
@@ -384,9 +391,7 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
             <>
               <Select
                 value={gameMap.townPreset ?? 'village'}
-                onValueChange={async (v) => {
-                  await container.gameMapRepo.update({ ...gameMap, townPreset: v as 'village' | 'city', updatedAt: Date.now() })
-                }}
+                onValueChange={(v) => regenerateTown({ preset: v as 'village' | 'city' })}
               >
                 <SelectTrigger className="h-8 w-28"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -397,13 +402,15 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
               <Button
                 size="sm"
                 variant="outline"
-                onClick={async () => {
-                  await container.gameMapRepo.update({ ...gameMap, townWalled: !(gameMap.townWalled ?? false), updatedAt: Date.now() })
+                onClick={() => {
+                  const preset = gameMap.townPreset ?? 'village'
+                  const current = gameMap.townWalled ?? PRESETS[preset].wallDefault
+                  regenerateTown({ walled: !current })
                 }}
               >
-                {gameMap.townWalled ? 'Walled: on' : 'Walled: off'}
+                {(gameMap.townWalled ?? PRESETS[gameMap.townPreset ?? 'village'].wallDefault) ? 'Walled: on' : 'Walled: off'}
               </Button>
-              <Button size="sm" onClick={handleRegenerateTown}>
+              <Button size="sm" onClick={() => regenerateTown()}>
                 {gameMap.townData ? 'Regenerate' : 'Generate town'}
               </Button>
             </>

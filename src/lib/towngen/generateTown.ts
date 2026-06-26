@@ -9,6 +9,8 @@ export interface GenerateTownOpts {
   walled?: boolean
   width?: number
   height?: number
+  /** Street centerlines to draw as roads. When provided, no per-building spokes are drawn. */
+  streets?: [number, number][][]
 }
 
 type Pt = [number, number]
@@ -20,24 +22,34 @@ function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v))
 }
 
-/** Axis-aligned rectangle ring centered on (cx,cy). */
-function rectRing(cx: number, cy: number, w: number, h: number, W: number, H: number): Pt[] {
+/** Rotate point p around (cx,cy) by `a` radians. */
+function rotate(px: number, py: number, cx: number, cy: number, a: number): Pt {
+  const dx = px - cx, dy = py - cy
+  const c = Math.cos(a), s = Math.sin(a)
+  return [cx + dx * c - dy * s, cy + dx * s + dy * c]
+}
+
+/** Rectangle ring centered on (cx,cy), rotated by `angle` to face its street. */
+function rectRing(cx: number, cy: number, w: number, h: number, angle: number, W: number, H: number): Pt[] {
   const hw = w / 2, hh = h / 2
-  const ring: Pt[] = [
+  const corners: Pt[] = [
     [cx - hw, cy - hh], [cx + hw, cy - hh],
     [cx + hw, cy + hh], [cx - hw, cy + hh],
   ]
-  const pts = ring.map(([x, y]) => [clamp(x, 0, W), clamp(y, 0, H)] as Pt)
+  const pts = corners.map(([x, y]) => {
+    const [rx, ry] = rotate(x, y, cx, cy, angle)
+    return [clamp(rx, 0, W), clamp(ry, 0, H)] as Pt
+  })
   return [...pts, pts[0]]
 }
 
 /** Octagonal "blob" ring approximating a rounded footprint. */
-function blobRing(cx: number, cy: number, w: number, h: number, rng: SeededRandom, W: number, H: number): Pt[] {
+function blobRing(cx: number, cy: number, w: number, h: number, angle: number, rng: SeededRandom, W: number, H: number): Pt[] {
   const rx = w / 2, ry = h / 2
   const steps = 8
   const ring: Pt[] = []
   for (let i = 0; i < steps; i++) {
-    const a = (i / steps) * Math.PI * 2
+    const a = angle + (i / steps) * Math.PI * 2
     const j = 0.85 + rng.next() * 0.3 // gentle irregularity, deterministic
     ring.push([clamp(cx + Math.cos(a) * rx * j, 0, W), clamp(cy + Math.sin(a) * ry * j, 0, H)])
   }
@@ -103,22 +115,33 @@ export function generateTown(anchors: TownAnchor[], opts: GenerateTownOpts): Wat
   const ex1 = clamp(maxX, 0, W), ey1 = clamp(maxY, 0, H)
   features.push(feature('earth', 'Polygon', [[[ex0, ey0], [ex1, ey0], [ex1, ey1], [ex0, ey1], [ex0, ey0]]]))
 
-  // 2. Footprints — one per anchor, tagged with poiId; properties.id = 'buildings'.
-  const centroid: Pt = [
-    anchors.reduce((s, a) => s + a.x, 0) / anchors.length,
-    anchors.reduce((s, a) => s + a.y, 0) / anchors.length,
-  ]
+  // 2. Roads — the street network the buildings front. Falls back to centroid
+  //    spokes only when no street layout is supplied (e.g. bare anchor lists).
+  if (opts.streets && opts.streets.length > 0) {
+    for (const street of opts.streets) {
+      features.push(feature('roads', 'LineString', street))
+    }
+  } else {
+    const centroid: Pt = [
+      anchors.reduce((s, a) => s + a.x, 0) / anchors.length,
+      anchors.reduce((s, a) => s + a.y, 0) / anchors.length,
+    ]
+    for (const a of anchors) {
+      features.push(feature('roads', 'LineString', [[a.x, a.y], centroid]))
+    }
+  }
+
+  // 3. Footprints — one per anchor, rotated to face its street; tagged with poiId.
   for (const a of anchors) {
     const spec = FOOTPRINT_TABLE[a.type]
     const w = spec.w * preset.footprintScale
     const h = spec.h * preset.footprintScale
+    const angle = a.angle ?? 0
     const ring =
       spec.shape === 'blob'
-        ? blobRing(a.x, a.y, w, h, rng, W, H)
-        : rectRing(a.x, a.y, w, h, W, H)
+        ? blobRing(a.x, a.y, w, h, angle, rng, W, H)
+        : rectRing(a.x, a.y, w, h, angle, W, H)
     features.push(feature('buildings', 'Polygon', [ring], a.poiId))
-    // 3. Road — a spoke from this footprint to the town centroid. Legible, deterministic.
-    features.push(feature('roads', 'LineString', [[a.x, a.y], centroid]))
   }
 
   // 4. Wall — optional, convex hull of footprint anchors offset outward, left open at a gate.
