@@ -860,7 +860,7 @@ function RealmsPage() {
           return (
             <Card
               key={realm.id}
-              className={`relative cursor-pointer transition-shadow hover:shadow-md ${
+              className={`relative cursor-pointer transition-shadow hover:shadow-elevated ${
                 selectMode && selected ? "ring-2 ring-destructive" : ""
               }`}
               onClick={() =>

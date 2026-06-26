@@ -344,7 +344,7 @@ function ColorPicker({
         <Palette className="size-4" style={currentColor ? { color: currentColor } : undefined} />
       </Button>
       {open && (
-        <div className="absolute top-full left-0 z-50 mt-1 rounded-md border bg-popover p-1.5 shadow-md">
+        <div className="absolute top-full left-0 z-50 mt-1 rounded-md border bg-popover p-1.5 shadow-elevated">
           <div className="flex gap-1 flex-wrap w-40">
             {TEXT_COLORS.map((c) => (
               <button

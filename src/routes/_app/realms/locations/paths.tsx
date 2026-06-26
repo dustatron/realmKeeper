@@ -253,7 +253,7 @@ function PathsPage() {
             return (
               <Card
                 key={path.id}
-                className="cursor-pointer transition-shadow hover:shadow-md"
+                className="cursor-pointer transition-shadow hover:shadow-elevated"
                 onClick={() => openEditSheet(path)}
               >
                 <CardHeader>

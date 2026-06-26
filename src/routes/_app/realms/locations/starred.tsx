@@ -132,7 +132,7 @@ function StarredPOIsPage() {
                         params={{ poiId: poi.id }}
                         className="block"
                       >
-                        <Card className="cursor-pointer transition-shadow hover:shadow-md h-full">
+                        <Card className="cursor-pointer transition-shadow hover:shadow-elevated h-full">
                           <CardHeader>
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex items-start gap-2 flex-1">
