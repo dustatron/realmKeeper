@@ -12,10 +12,11 @@
 
 - **Determinism:** worldgen is pure — one `SeededRandom`, never `Date.now()`/`Math.random()` for generation choices. `createdAt`/`updatedAt` use `Date.now()` (matches `buildDoom`).
 - **Package manager:** pnpm only (no npm; `package-lock.json` is gitignored).
-- **Markdown:** text fields render Markdown (not relevant to this slice's plain labels, but don't regress).
 - **Never commit to main** — this work is on branch `feature/seasonal-world-events`.
+- **Commit trailer (required):** every `git commit` message ends with `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` (repo + global convention). The plan's commit steps use a two-`-m` form to include it.
+- **Watches are 1-based.** `advanceDay` (`WorldDate.ts`) resets `watch` to **1** on every day advance, and watches run `1..watchesPerDay`. All date math here is 1-based: see `isEventActiveOn` (Task 5).
 - **POIEventType** values available: `festival, market, ceremony, disaster, siege, weather, migration, political, supernatural, custom` (`src/shared/constants.ts`).
-- **Locked tunables:** festival/market/ceremony `durationWatches` = a full day (= `watchesPerDay`); markets recur annually; per-season target = `clamp(round(settlementCount / 4), 2, 4)`.
+- **Locked tunables:** festival/market/ceremony `durationWatches` = a full day (= `watchesPerDay`); markets recur annually; per-season target = `min(n, max(2, min(4, round(n/4))))` where `n` = settlement count (the `min(n, …)` guard keeps it reachable when there are few settlements).
 
 ---
 
@@ -95,14 +96,14 @@ Expected: PASS, no type errors. (buildSettlement tests still green — same nume
 
 ```bash
 git add src/domain/data/worldgen/settlementSize.ts src/domain/data/worldgen/settlementSize.test.ts src/domain/services/worldgen/buildSettlement.ts
-git commit -m "refactor: shared settlement-size classifier"
+git commit -m "refactor: shared settlement-size classifier" -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
 ---
 
 ### Task 2: Civic event flavor tables
 
-Cairn-style flavor pools for celebration names/descriptions, in the `cairnPick` spirit (static data + a pure helper). Self-contained — no Cairn-table id dependency needed for celebration names (they're not in the Cairn tables), so this is a new small pool module.
+Cairn-style flavor pools for celebration names/descriptions (static data + a pure helper). Self-contained — celebration names aren't in the Cairn tables, so this is a new small pool module.
 
 **Files:**
 - Create: `src/domain/data/worldgen/eventFlavor.ts`
@@ -121,7 +122,7 @@ import { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { buildCivicFlavor } from './eventFlavor'
 
 describe('buildCivicFlavor', () => {
-  it('is deterministic for a seed and names the settlement + season', () => {
+  it('is deterministic for a seed and names the settlement', () => {
     const a = buildCivicFlavor('festival', 'summer', 'Briar', new SeededRandom('s'))
     const b = buildCivicFlavor('festival', 'summer', 'Briar', new SeededRandom('s'))
     expect(a).toEqual(b)
@@ -129,7 +130,7 @@ describe('buildCivicFlavor', () => {
     expect(a.description).toContain('Briar')
   })
 
-  it('produces a market with market-flavored text', () => {
+  it('produces a market with the settlement name', () => {
     const m = buildCivicFlavor('market', 'spring', 'Oakford', new SeededRandom('m'))
     expect(m.name.length).toBeGreaterThan(0)
     expect(m.description).toContain('Oakford')
@@ -193,7 +194,7 @@ Expected: PASS.
 
 ```bash
 git add src/domain/data/worldgen/eventFlavor.ts src/domain/data/worldgen/eventFlavor.test.ts
-git commit -m "feat: civic event flavor tables"
+git commit -m "feat: civic event flavor tables" -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
 ---
@@ -208,7 +209,7 @@ git commit -m "feat: civic event flavor tables"
 - Consumes: `POI` (`@domain/entities/POI`), `POIEvent` (`@domain/entities/POIEvent`), `Season`+`SEASONS` (`@shared/constants`), `SeededRandom`, `settlementSize` (Task 1), `buildCivicFlavor`/`CivicType` (Task 2), `newId` (`@shared/ulid`).
 - Produces: `buildEvents(settlements: POI[], worldId: string, daysPerSeason: number, watchesPerDay: number, rng: SeededRandom): POIEvent[]`
 
-Rules: per-settlement by size — small → `[market]`, medium → `[market, festival]`, large → `[market, festival, ceremony]`. Each event gets a random season + day in `[1, daysPerSeason]`, `trigger.year=null`, `trigger.watch=null`, `recurring:true`, `isActive:false`, `durationWatches=watchesPerDay`, `tags:['civic']`. Then seasonal coverage: `target = clamp(round(settlements.length/4), 2, 4)`; for each season, while fewer than `min(target, settlements.length)` distinct settlements have an event that season, add a `festival` at a settlement not yet celebrating that season.
+Rules: per-settlement by size — small → `[market]`, medium → `[market, festival]`, large → `[market, festival, ceremony]`. Each event gets a random season + day in `[1, daysPerSeason]`, `trigger.year=null`, `trigger.watch=null`, `recurring:true`, `isActive:false`, `durationWatches=watchesPerDay`, `tags:['civic']`. Then seasonal coverage: `target = min(n, max(2, min(4, round(n/4))))`; for each season, while fewer than `target` distinct settlements have an event that season, add a `festival` at a settlement not yet celebrating that season. (A settlement can host events in multiple different seasons.)
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -228,10 +229,8 @@ describe('buildEvents', () => {
     expect(buildEvents([], 'w1', 30, 3, new SeededRandom('x'))).toEqual([])
   })
 
-  it('scales per-settlement civic events by size', () => {
+  it('gives a small settlement exactly one own market (size-scaled)', () => {
     const small = buildEvents([settlement('a', 'Hamlet')], 'w1', 30, 3, new SeededRandom('s'))
-    // a hamlet alone still must satisfy the per-season floor via added festivals,
-    // but its own size-based event is exactly one market.
     expect(small.filter((e) => e.poiId === 'a' && e.type === 'market')).toHaveLength(1)
   })
 
@@ -244,6 +243,7 @@ describe('buildEvents', () => {
     for (const e of events) {
       expect(e.recurring).toBe(true)
       expect(e.trigger.year).toBeNull()
+      expect(e.trigger.watch).toBeNull()
       expect(e.trigger.day).toBeGreaterThanOrEqual(1)
       expect(e.trigger.day).toBeLessThanOrEqual(30)
       expect(e.durationWatches).toBe(4)
@@ -253,10 +253,11 @@ describe('buildEvents', () => {
     }
   })
 
-  it('gives every season at least the floor of celebrations at distinct settlements', () => {
+  it('gives every season the floor of celebrations at distinct settlements', () => {
     const settlements = Array.from({ length: 8 }, (_, i) => settlement(`s${i}`, 'Village'))
     const events = buildEvents(settlements, 'w1', 30, 3, new SeededRandom('cover'))
-    const target = Math.min(8, Math.max(2, Math.min(4, Math.round(8 / 4)))) // 2
+    const n = 8
+    const target = Math.min(n, Math.max(2, Math.min(4, Math.round(n / 4)))) // 2
     for (const season of SEASONS) {
       const distinct = new Set(events.filter((e) => e.trigger.season === season).map((e) => e.poiId))
       expect(distinct.size, `season ${season}`).toBeGreaterThanOrEqual(target)
@@ -275,7 +276,7 @@ describe('buildEvents', () => {
 Run: `pnpm exec vitest run src/domain/services/worldgen/buildEvents.test.ts`
 Expected: FAIL — cannot find module `./buildEvents`.
 
-- [ ] **Step 3: Implement**
+- [ ] **Step 3: Implement (single clean pass — no duplicated loop)**
 
 ```typescript
 // buildEvents.ts
@@ -324,18 +325,7 @@ export function buildEvents(
     }
   }
 
-  // Step 1: per-settlement, scaled by size.
-  for (const poi of settlements) {
-    for (const type of TYPES_BY_SIZE[settlementSize(poi.subtypeLabel)]) {
-      make(poi, type, rng.pick(SEASONS as readonly Season[]))
-      // push happens below via shared collector
-    }
-  }
-  // (collector pattern: make() should push; rewrite make to push and return void,
-  //  OR collect here. Use push:)
-
-  // NOTE: replace the loop above — make() returns the event; push it:
-  events.length = 0
+  // Step 1: per-settlement civic events, scaled by size.
   for (const poi of settlements) {
     for (const type of TYPES_BY_SIZE[settlementSize(poi.subtypeLabel)]) {
       events.push(make(poi, type, rng.pick(SEASONS as readonly Season[])))
@@ -343,7 +333,8 @@ export function buildEvents(
   }
 
   // Step 2: seasonal coverage — ensure each season has `target` distinct settlements.
-  const target = Math.min(settlements.length, Math.max(2, Math.min(4, Math.round(settlements.length / 4))))
+  const n = settlements.length
+  const target = Math.min(n, Math.max(2, Math.min(4, Math.round(n / 4))))
   for (const season of SEASONS) {
     const celebrating = new Set(events.filter((e) => e.trigger.season === season).map((e) => e.poiId))
     const candidates = settlements.filter((p) => !celebrating.has(p.id))
@@ -359,8 +350,6 @@ export function buildEvents(
 }
 ```
 
-> Implementer note: the duplicated loop above is an artifact of the inline note — implement it ONCE as the second (push) form. Delete the first loop and the `events.length = 0` reset; they are shown only to make the push pattern explicit.
-
 - [ ] **Step 4: Run tests, verify they pass**
 
 Run: `pnpm exec vitest run src/domain/services/worldgen/buildEvents.test.ts`
@@ -370,7 +359,7 @@ Expected: PASS (all 5).
 
 ```bash
 git add src/domain/services/worldgen/buildEvents.ts src/domain/services/worldgen/buildEvents.test.ts
-git commit -m "feat: buildEvents — recurring seasonal civic POIEvents"
+git commit -m "feat: buildEvents — recurring seasonal civic POIEvents" -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
 ---
@@ -378,19 +367,35 @@ git commit -m "feat: buildEvents — recurring seasonal civic POIEvents"
 ### Task 4: Compose `buildEvents` into `generateWorld`
 
 **Files:**
-- Modify: `src/domain/services/worldgen/generateWorld.ts` (import + call; add to `poiEvents`)
+- Modify: `src/application/use-cases/GenerateWorld.ts` (pass `watchesPerDay` in the clock literal, ~line 88)
+- Modify: `src/domain/services/worldgen/buildDoom.ts` (add optional `watchesPerDay` to `DoomClock`)
+- Modify: `src/domain/services/worldgen/generateWorld.ts` (import + push civic events into the existing `poiEvents` array)
 - Test: `src/application/use-cases/GenerateWorld.test.ts` (add a case)
 
 **Interfaces:**
 - Consumes: `buildEvents` (Task 3). `generateWorld` already returns `poiEvents` and `executeGenerateWorld` already persists `db.poiEvents.bulkPut(poiEvents)`.
 
-Civic events need no `systemConfig` (no NPCs). Settlements come from `settlementNodes` (built in step 6, always). `daysPerSeason` comes from `opts.clock?.daysPerSeason ?? 30`; `watchesPerDay` is not in `opts` → add it to the clock usage via `opts.clock` is watch-only; use a constant fallback. **Decision:** read `watchesPerDay` from `opts.clock`? It's not there. Add `daysPerSeason` (present) and default `watchesPerDay` to `DEFAULT_WATCHES_PER_DAY` is wrong (varies per realm). Instead pass the realm's `watchesPerDay` through: extend `DoomClock`/opts is overkill. **Simplest:** civic `durationWatches` = full day, and `executeAdvanceDay`'s activation uses a day-granularity match for `watch:null` events (Task 6), so the stored `durationWatches` value only needs to be ≥1 and is not used for day-level events. Set `durationWatches = 1` placeholder is misleading; instead pass `watchesPerDay` from the use-case.
+Notes confirmed against the code:
+- `generateWorld`'s `opts.clock` is optional and is a `DoomClock` (`buildDoom.ts`); it already carries `daysPerSeason`. We add an **optional** `watchesPerDay` so `opts.clock?.watchesPerDay` type-checks without breaking `buildDoom.test.ts` (which constructs a `DoomClock` literal without it).
+- `const poiEvents: POIEvent[] = []` is already declared at `generateWorld.ts:536`, immediately before the doom `if` block (which pushes `...doom.poiEvents`). **Do not move it.** Insert the civic push between that declaration and the doom block; the `return` already includes `poiEvents`.
+- `settlementNodes` (declared ~`:310`, shape `{ poi: POI; q: number; r: number }[]`) is in scope and populated regardless of `systemConfig`, so civic events generate even without NPCs.
 
-Resolution: `generateWorld` already receives `opts.clock` with `daysPerSeason`. Extend the call site (`GenerateWorld.ts`) to also pass `watchesPerDay: realm.watchesPerDay` into `opts.clock`. Add `watchesPerDay` to the `DoomClock`/clock shape used by `generateWorld` (it already has `daysPerSeason`).
+- [ ] **Step 1: Add optional `watchesPerDay` to `DoomClock` and pass it from the use-case**
 
-- [ ] **Step 1: Add `watchesPerDay` to the clock passed in**
+In `src/domain/services/worldgen/buildDoom.ts`, extend `DoomClock` (the new field is **optional**, so existing literals still compile):
 
-In `src/application/use-cases/GenerateWorld.ts`, the `clock` object passed to `generateWorld` (around line 88) — add:
+```typescript
+export interface DoomClock {
+  year: number
+  season: Season
+  day: number
+  watch: number
+  daysPerSeason: number
+  watchesPerDay?: number
+}
+```
+
+In `src/application/use-cases/GenerateWorld.ts`, the `clock` object passed to `generateWorld` (~line 88) — add the `watchesPerDay` line:
 
 ```typescript
       clock: {
@@ -401,19 +406,6 @@ In `src/application/use-cases/GenerateWorld.ts`, the `clock` object passed to `g
         daysPerSeason: realm.daysPerSeason,
         watchesPerDay: realm.watchesPerDay,
       },
-```
-
-In `src/domain/services/worldgen/buildDoom.ts`, extend `DoomClock`:
-
-```typescript
-export interface DoomClock {
-  year: number
-  season: Season
-  day: number
-  watch: number
-  daysPerSeason: number
-  watchesPerDay: number
-}
 ```
 
 - [ ] **Step 2: Write the failing test (in GenerateWorld.test.ts)**
@@ -440,14 +432,20 @@ Expected: FAIL — `civic.length` is 0 (no civic events generated yet).
 
 - [ ] **Step 4: Wire `buildEvents` into `generateWorld`**
 
-In `generateWorld.ts`: add `import { buildEvents } from './buildEvents'`. After the POIs/settlements exist and `poiEvents` is declared (Step 12 region, `const poiEvents: POIEvent[] = []`), MOVE the `poiEvents` declaration up to just after step 8c (or keep at step 11/12 but push before doom). Add:
+In `generateWorld.ts`, add the import near the other worldgen builder imports:
 
 ```typescript
-  // Step 11b: seasonal civic calendar — recurring festivals/markets/ceremonies
-  // at settlements, with every season covered at distinct locations.
+import { buildEvents } from './buildEvents'
+```
+
+Then insert, immediately **after** `const poiEvents: POIEvent[] = []` (line ~536) and **before** the `if (opts.loomingThreat && …)` doom block:
+
+```typescript
+  // Seasonal civic calendar — recurring festivals/markets/ceremonies at
+  // settlements, with every season covered at distinct locations.
   poiEvents.push(
     ...buildEvents(
-      settlementNodes.map((n) => n.poi),
+      settlementNodes.map((node) => node.poi),
       realmId,
       opts.clock?.daysPerSeason ?? 30,
       opts.clock?.watchesPerDay ?? 3,
@@ -456,23 +454,23 @@ In `generateWorld.ts`: add `import { buildEvents } from './buildEvents'`. After 
   )
 ```
 
-Ensure `const poiEvents: POIEvent[] = []` is declared before this push and before the doom block, and still returned.
+Leave the doom block pushing into the same `poiEvents`; leave the `return` unchanged.
 
-- [ ] **Step 5: Run test + full worldgen suite**
+- [ ] **Step 5: Run test + full worldgen suite + typecheck**
 
-Run: `pnpm exec vitest run src/application/use-cases/GenerateWorld.test.ts src/domain/services/worldgen/`
-Expected: PASS, including the new civic case and the existing region-sweep.
+Run: `pnpm exec vitest run src/application/use-cases/GenerateWorld.test.ts src/domain/services/worldgen/ && pnpm exec tsc --noEmit`
+Expected: PASS (new civic case + existing region-sweep + buildDoom tests), no type errors.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add src/domain/services/worldgen/generateWorld.ts src/application/use-cases/GenerateWorld.ts src/domain/services/worldgen/buildDoom.ts src/application/use-cases/GenerateWorld.test.ts
-git commit -m "feat: generate a seasonal civic calendar during worldgen"
+git commit -m "feat: generate a seasonal civic calendar during worldgen" -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
 ---
 
-### Task 5: `isEventActiveOn` date-window helper
+### Task 5: `isEventActiveOn` date-window helper (1-based watches)
 
 The current expiry branch is a no-op (it can't tell when an event activated). A pure window helper makes activation + expiry + annual re-arm computable from the date alone.
 
@@ -484,7 +482,7 @@ The current expiry branch is a no-op (it can't tell when an event activated). A 
 - Consumes: `POIEvent` (`@domain/entities/POIEvent`), `SEASONS`/`Season` (`@shared/constants`).
 - Produces: `isEventActiveOn(evt: POIEvent, dt: { year: number; season: Season; day: number; watch: number }, daysPerSeason: number, watchesPerDay: number): boolean`
 
-Logic: convert to absolute watches. For `trigger.year=null`, anchor the trigger to `dt.year`. `start = abs(triggerYear, trigger.season, trigger.day, trigger.watch ?? 0)`; `end = start + durationWatches`; active iff `start <= abs(dt) < end`.
+Logic (1-based watches — the engine resets watch to 1 each day and watches run 1..wpd): convert to absolute watches using `(watch − 1)` as the in-day offset. A null trigger watch anchors to watch **1** (start of day). For `trigger.year=null`, anchor the trigger to `dt.year`. `start = abs(triggerYear, trigger.season, trigger.day, triggerWatch)`; `end = start + max(1, durationWatches)`; active iff `start <= abs(dt) < end`. With `trigger.watch=null` + `durationWatches=watchesPerDay`, the window is the whole trigger day (watches 1..wpd).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -498,21 +496,21 @@ const evt = (over: Partial<POIEvent>): POIEvent =>
   ({ trigger: { year: null, season: 'summer', day: 10, watch: null }, durationWatches: 3, recurring: true, ...over } as POIEvent)
 
 describe('isEventActiveOn', () => {
-  it('is active on the trigger day for a full-day (watch:null) recurring event', () => {
-    expect(isEventActiveOn(evt({}), { year: 1, season: 'summer', day: 10, watch: 0 }, 30, 3)).toBe(true)
-    expect(isEventActiveOn(evt({}), { year: 1, season: 'summer', day: 10, watch: 2 }, 30, 3)).toBe(true)
+  it('is active across the whole trigger day for a full-day (watch:null) recurring event', () => {
+    expect(isEventActiveOn(evt({}), { year: 1, season: 'summer', day: 10, watch: 1 }, 30, 3)).toBe(true)
+    expect(isEventActiveOn(evt({}), { year: 1, season: 'summer', day: 10, watch: 3 }, 30, 3)).toBe(true)
   })
   it('is inactive the day before and after', () => {
-    expect(isEventActiveOn(evt({}), { year: 1, season: 'summer', day: 9, watch: 2 }, 30, 3)).toBe(false)
-    expect(isEventActiveOn(evt({}), { year: 1, season: 'summer', day: 11, watch: 0 }, 30, 3)).toBe(false)
+    expect(isEventActiveOn(evt({}), { year: 1, season: 'summer', day: 9, watch: 3 }, 30, 3)).toBe(false)
+    expect(isEventActiveOn(evt({}), { year: 1, season: 'summer', day: 11, watch: 1 }, 30, 3)).toBe(false)
   })
   it('re-arms the next year for a recurring (year:null) event', () => {
-    expect(isEventActiveOn(evt({}), { year: 2, season: 'summer', day: 10, watch: 0 }, 30, 3)).toBe(true)
+    expect(isEventActiveOn(evt({}), { year: 2, season: 'summer', day: 10, watch: 1 }, 30, 3)).toBe(true)
   })
   it('a one-time (year set) event is active only that year', () => {
     const one = evt({ trigger: { year: 1, season: 'summer', day: 10, watch: null }, recurring: false })
-    expect(isEventActiveOn(one, { year: 1, season: 'summer', day: 10, watch: 0 }, 30, 3)).toBe(true)
-    expect(isEventActiveOn(one, { year: 2, season: 'summer', day: 10, watch: 0 }, 30, 3)).toBe(false)
+    expect(isEventActiveOn(one, { year: 1, season: 'summer', day: 10, watch: 1 }, 30, 3)).toBe(true)
+    expect(isEventActiveOn(one, { year: 2, season: 'summer', day: 10, watch: 1 }, 30, 3)).toBe(false)
   })
 })
 ```
@@ -531,13 +529,16 @@ import { SEASONS, type Season } from '@shared/constants'
 
 interface DT { year: number; season: Season; day: number; watch: number }
 
+// Absolute watch index. Watches are 1-based (1..watchesPerDay), so the in-day
+// offset is (watch - 1).
 const absWatch = (year: number, season: Season, day: number, watch: number, daysPerSeason: number, watchesPerDay: number): number =>
-  ((((year - 1) * 4 + SEASONS.indexOf(season)) * daysPerSeason + (day - 1)) * watchesPerDay) + watch
+  ((((year - 1) * 4 + SEASONS.indexOf(season)) * daysPerSeason + (day - 1)) * watchesPerDay) + (watch - 1)
 
 export function isEventActiveOn(evt: POIEvent, dt: DT, daysPerSeason: number, watchesPerDay: number): boolean {
   const t = evt.trigger
   const triggerYear = t.year ?? dt.year // recurring: anchor to the current year
-  const start = absWatch(triggerYear, t.season, t.day, t.watch ?? 0, daysPerSeason, watchesPerDay)
+  const triggerWatch = t.watch ?? 1 // null = start of day (1-based)
+  const start = absWatch(triggerYear, t.season, t.day, triggerWatch, daysPerSeason, watchesPerDay)
   const end = start + Math.max(1, evt.durationWatches)
   const nowAbs = absWatch(dt.year, dt.season, dt.day, dt.watch, daysPerSeason, watchesPerDay)
   return nowAbs >= start && nowAbs < end
@@ -553,21 +554,21 @@ Expected: PASS (all 4).
 
 ```bash
 git add src/domain/services/poiEventSchedule.ts src/domain/services/poiEventSchedule.test.ts
-git commit -m "feat: pure POIEvent active-window helper"
+git commit -m "feat: pure POIEvent active-window helper (1-based watches)" -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
 ---
 
 ### Task 6: Activation + expiry in `executeAdvanceDay`
 
-Replace the activate-only loop + no-op expiry stub (`AdvanceClock.ts:166-205`) with window-driven transitions using `isEventActiveOn`.
+Replace the activate-only loop + no-op expiry stub (`AdvanceClock.ts` ~lines 165-205) with window-driven transitions using `isEventActiveOn`.
 
 **Files:**
-- Modify: `src/application/use-cases/AdvanceClock.ts:166-205`
+- Modify: `src/application/use-cases/AdvanceClock.ts` (the `// Check POI events` block, ~165-205; add import)
 - Test: `src/application/use-cases/AdvanceClock.events.test.ts` (new)
 
 **Interfaces:**
-- Consumes: `isEventActiveOn` (Task 5); existing `AdvanceDayDeps.poiEventRepo`, `worldEventRepo`, `realmRepo`.
+- Consumes: `isEventActiveOn` (Task 5); existing `AdvanceDayDeps.poiEventRepo`, `worldEventRepo`, `realmRepo`. `rollDice` comes from `@shared/dice` (signature `(notation: string) => DiceResult`), the same source the calendar uses.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -578,15 +579,18 @@ import { db } from '@infrastructure/dexie/db'
 import { createContainer } from '@infrastructure/container'
 import { executeAdvanceDay } from './AdvanceClock'
 import { newId } from '@shared/ulid'
+import { rollDice } from '@shared/dice'
 import type { Realm } from '@domain/entities/Realm'
-import { parseDiceNotation } from '@shared/dice' // adjust import to the project's dice util
 
 const container = createContainer()
-beforeEach(async () => { await db.open(); await Promise.all(db.tables.filter(t => t.name !== 'systemConfigs').map(t => t.clear())) })
+beforeEach(async () => {
+  await db.open()
+  await Promise.all(db.tables.filter((t) => t.name !== 'systemConfigs').map((t) => t.clear()))
+})
 
 const realm = (over: Partial<Realm> = {}): Realm => ({
   id: newId(), name: 'R', systemId: 'system-cairn-2e', description: '',
-  currentYear: 1, currentSeason: 'summer', currentDay: 9, currentWatch: 0,
+  currentYear: 1, currentSeason: 'summer', currentDay: 9, currentWatch: 1,
   daysPerSeason: 30, daysPerWeek: 7, watchesPerDay: 3, factionTurnTrigger: 'manual',
   completedThroughDay: 0, customRaces: [], raceColors: {}, starredMonsterIds: [],
   starredSpellIds: [], starredMagicItemIds: [], hiddenCompendiumIds: [],
@@ -597,21 +601,23 @@ const deps = () => ({
   realmRepo: container.realmRepo, weatherRepo: container.weatherRepo,
   factionRepo: container.factionRepo, relationshipRepo: container.factionRelationshipRepo,
   npcRepo: container.npcRepo, worldEventRepo: container.worldEventRepo,
-  eventBus: container.eventBus, rollDice: (n: string) => parseDiceNotation(n),
+  eventBus: container.eventBus, rollDice,
   poiEventRepo: container.poiEventRepo,
+})
+
+const civicEvent = (worldId: string, isActive: boolean) => ({
+  id: newId(), poiId: 'p1', worldId, name: 'Festival', description: 'd',
+  type: 'festival' as const, trigger: { year: null, season: 'summer' as const, day: 10, watch: null },
+  recurring: true, durationWatches: 3, isActive, effects: '', tags: ['civic'],
+  createdAt: 0, updatedAt: 0,
 })
 
 describe('executeAdvanceDay POIEvent activation', () => {
   it('activates a recurring civic event on its day and logs a WorldEvent', async () => {
     const r = realm()
     await container.realmRepo.create(r)
-    await container.poiEventRepo.create({
-      id: newId(), poiId: 'p1', worldId: r.id, name: 'Festival', description: 'd',
-      type: 'festival', trigger: { year: null, season: 'summer', day: 10, watch: null },
-      recurring: true, durationWatches: 3, isActive: false, effects: '', tags: ['civic'],
-      createdAt: 0, updatedAt: 0,
-    })
-    await executeAdvanceDay(r.id, deps()) // 9 -> 10
+    await container.poiEventRepo.create(civicEvent(r.id, false))
+    await executeAdvanceDay(r.id, deps()) // day 9 -> 10
 
     const evts = await container.poiEventRepo.getByRealmId(r.id)
     expect(evts[0].isActive).toBe(true)
@@ -622,13 +628,8 @@ describe('executeAdvanceDay POIEvent activation', () => {
   it('deactivates the event once its day has passed', async () => {
     const r = realm({ currentDay: 10 })
     await container.realmRepo.create(r)
-    await container.poiEventRepo.create({
-      id: newId(), poiId: 'p1', worldId: r.id, name: 'Festival', description: 'd',
-      type: 'festival', trigger: { year: null, season: 'summer', day: 10, watch: null },
-      recurring: true, durationWatches: 3, isActive: true, effects: '', tags: ['civic'],
-      createdAt: 0, updatedAt: 0,
-    })
-    await executeAdvanceDay(r.id, deps()) // 10 -> 11
+    await container.poiEventRepo.create(civicEvent(r.id, true))
+    await executeAdvanceDay(r.id, deps()) // day 10 -> 11
 
     const evts = await container.poiEventRepo.getByRealmId(r.id)
     expect(evts[0].isActive).toBe(false)
@@ -636,14 +637,16 @@ describe('executeAdvanceDay POIEvent activation', () => {
 })
 ```
 
-> Implementer note: confirm the dice util import — the calendar passes `rollDice` from `container`; reuse the same source the calendar uses (`src/routes/_app/realms/calendar.tsx` imports `rollDice`). Match that import here.
-
 - [ ] **Step 2: Run test, verify it fails**
 
 Run: `pnpm exec vitest run src/application/use-cases/AdvanceClock.events.test.ts`
-Expected: FAIL — second test fails (no deactivation today); possibly first passes already.
+Expected: FAIL — the deactivation test fails (no expiry today); the activation test may already pass.
 
-- [ ] **Step 3: Replace the POIEvent block (lines 166-205)**
+- [ ] **Step 3: Replace the `// Check POI events` block**
+
+Add at the top of `AdvanceClock.ts`: `import { isEventActiveOn } from '@domain/services/poiEventSchedule'`.
+
+Replace the block from `// Check POI events` through the end of the `// Deactivate expired events` loop with:
 
 ```typescript
   // Activate/deactivate scheduled POI events by date window. A recurring
@@ -676,18 +679,16 @@ Expected: FAIL — second test fails (no deactivation today); possibly first pas
   }
 ```
 
-Add `import { isEventActiveOn } from '@domain/services/poiEventSchedule'` at the top.
-
 - [ ] **Step 4: Run tests, verify they pass**
 
-Run: `pnpm exec vitest run src/application/use-cases/AdvanceClock.events.test.ts && pnpm exec vitest run src/application/use-cases/`
-Expected: PASS (both new cases + existing AdvanceClock tests).
+Run: `pnpm exec vitest run src/application/use-cases/AdvanceClock.events.test.ts`
+Expected: PASS (both cases). (There is no pre-existing `AdvanceClock.test.ts` in the repo; this new file is the only AdvanceClock test.)
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/application/use-cases/AdvanceClock.ts src/application/use-cases/AdvanceClock.events.test.ts
-git commit -m "fix: activate + expire scheduled POI events on advance"
+git commit -m "fix: activate + expire scheduled POI events on advance" -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
 ---
@@ -727,7 +728,7 @@ Expected: no errors; build exit 0.
 
 ```bash
 git add src/routes/_app/realms/calendar.tsx
-git commit -m "fix: wire poiEventRepo so the calendar activates scheduled events"
+git commit -m "fix: wire poiEventRepo so the calendar activates scheduled events" -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
 ---
@@ -736,10 +737,10 @@ git commit -m "fix: wire poiEventRepo so the calendar activates scheduled events
 
 **Files:**
 - Create: `src/components/calendar/eventTypeMeta.tsx`
-- Modify: `src/routes/_app/realms/calendar.tsx:~605` (the `<Badge>{event.type}</Badge>` render)
+- Modify: `src/routes/_app/realms/calendar.tsx:605` (the `<Badge>{event.type}</Badge>` render)
 
 **Interfaces:**
-- Produces: `EVENT_TYPE_META: Record<POIEventType, { icon: LucideIcon; className: string; label: string }>` and a small `<EventTypeBadge type={...} />` component.
+- Produces: `EVENT_TYPE_META: Record<POIEventType, { icon: LucideIcon; className: string; label: string }>` and an `<EventTypeBadge type={...} />` component.
 
 - [ ] **Step 1: Implement the meta map + badge**
 
@@ -779,7 +780,7 @@ export function EventTypeBadge({ type }: { type: POIEventType }) {
 
 - [ ] **Step 2: Use it in the Scheduled Events list**
 
-In `calendar.tsx`, replace `<Badge variant="outline" className="text-xs">{event.type}</Badge>` (around line 605) with `<EventTypeBadge type={event.type} />` and add the import.
+In `calendar.tsx`, add `import { EventTypeBadge } from '~/components/calendar/eventTypeMeta'` and replace `<Badge variant="outline" className="text-xs">{event.type}</Badge>` (line ~605) with `<EventTypeBadge type={event.type} />`.
 
 - [ ] **Step 3: Typecheck + build**
 
@@ -794,7 +795,7 @@ Generate a fresh world, open Calendar → Scheduled Events. Expect civic events 
 
 ```bash
 git add src/components/calendar/eventTypeMeta.tsx src/routes/_app/realms/calendar.tsx
-git commit -m "feat: event-type icons + colors on the calendar"
+git commit -m "feat: event-type icons + colors on the calendar" -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
 ---
@@ -809,5 +810,6 @@ git commit -m "feat: event-type icons + colors on the calendar"
 ## Self-review notes
 
 - **Spec coverage:** civic generation (T2,T3,T4), seasonal coverage rule (T3), size scaling (T1,T3), auto-activation + expiry/re-arm fix (T5,T6,T7), icons/colors (T8). All spec sections mapped.
-- **Type consistency:** `buildEvents(settlements, worldId, daysPerSeason, watchesPerDay, rng)` is consumed with that exact arity in T4; `isEventActiveOn(evt, dt, daysPerSeason, watchesPerDay)` consumed in T6; `EVENT_TYPE_META` keyed by the full `POIEventType` union.
+- **Type consistency:** `buildEvents(settlements, worldId, daysPerSeason, watchesPerDay, rng)` consumed with that exact arity in T4; `isEventActiveOn(evt, dt, daysPerSeason, watchesPerDay)` consumed in T6; `EVENT_TYPE_META` keyed by the full `POIEventType` union.
+- **Watch arithmetic:** 1-based throughout (engine resets watch to 1 each day; watches run 1..wpd). `isEventActiveOn` uses `(watch − 1)` and anchors null trigger watch to 1, so a full-day civic window covers watches 1..wpd and the doom (watch=1, duration≥1) still fires.
 - **Known follow-ups (Slice B/C):** threats/political/natural events, faction links, the events-density knob, ongoing spawn, GM-confirm consequences.
