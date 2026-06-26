@@ -146,8 +146,8 @@ function RealmsPage() {
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // Procedural generation params (shown in the Create dialog when enabled).
-  // `size` and `seed` are live; the rest are scaffolded for future generation
-  // stages (factions, dangers, NPCs, POIs) and don't affect output yet.
+  // All of these are live and feed executeGenerateWorld: size, seed, faction
+  // count, POI density, and the looming-threat toggle.
   const [genEnabled, setGenEnabled] = useState(true);
   const [genSize, setGenSize] = useState<"small" | "medium" | "large">(
     "medium",
@@ -155,12 +155,6 @@ function RealmsPage() {
   const [genSeed, setGenSeed] = useState("");
   const [genAdvancedOpen, setGenAdvancedOpen] = useState(false);
   const [genFactions, setGenFactions] = useState(4);
-  const [genDanger, setGenDanger] = useState<"low" | "medium" | "high">(
-    "medium",
-  );
-  const [genNpcDensity, setGenNpcDensity] = useState<
-    "sparse" | "normal" | "dense"
-  >("normal");
   const [genPoiDensity, setGenPoiDensity] = useState<
     "sparse" | "normal" | "dense"
   >("normal");
@@ -180,6 +174,11 @@ function RealmsPage() {
     setGenSize("medium");
     setGenSeed("");
     setGenAdvancedOpen(false);
+    // Reset the advanced generation knobs too, so a prior world's settings
+    // don't silently carry into the next Create dialog.
+    setGenFactions(4);
+    setGenPoiDensity("normal");
+    setGenLoomingThreat(true);
   };
 
   const handleCreateRealm = async () => {
@@ -574,9 +573,9 @@ function RealmsPage() {
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-3 pt-2">
               <p className="text-xs text-muted-foreground">
-                These tune future generation stages (factions, dangers, NPCs,
-                points of interest). They're saved with your choice but don't
-                change the map yet.
+                Fine-tune what gets generated: how many factions vie for power,
+                how densely the map is dotted with points of interest, and
+                whether a looming threat hangs over the realm.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-1.5">
@@ -594,46 +593,6 @@ function RealmsPage() {
                     }
                     disabled={isCreating}
                   />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="gen-danger" className="text-xs">
-                    Danger level
-                  </Label>
-                  <Select
-                    value={genDanger}
-                    onValueChange={(v) => setGenDanger(v as typeof genDanger)}
-                    disabled={isCreating}
-                  >
-                    <SelectTrigger id="gen-danger">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="gen-npc" className="text-xs">
-                    NPC density
-                  </Label>
-                  <Select
-                    value={genNpcDensity}
-                    onValueChange={(v) =>
-                      setGenNpcDensity(v as typeof genNpcDensity)
-                    }
-                    disabled={isCreating}
-                  >
-                    <SelectTrigger id="gen-npc">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sparse">Sparse</SelectItem>
-                      <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="dense">Dense</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
                 <div className="grid gap-1.5">
                   <Label htmlFor="gen-poi" className="text-xs">
