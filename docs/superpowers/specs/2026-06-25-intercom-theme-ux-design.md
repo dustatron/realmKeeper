@@ -69,7 +69,7 @@ New accent tokens (sparingly used):
 |-------|-----------|
 | `--background` | `#000000` (inverse-canvas) |
 | `--foreground` | `#ffffff` (inverse-ink) |
-| `--card` / `--popover` | `#1e1e1d` (≈ inverse-surface-1 #313130, slightly darker) |
+| `--card` / `--popover` | `#313130` (inverse-surface-1) |
 | `--card-foreground` / `--popover-foreground` | `#ffffff` |
 | `--primary` | `#ffffff` |
 | `--primary-foreground` | `#111111` |
@@ -103,8 +103,8 @@ No pill-round CTAs.
 
 - Self-host **Inter Variable** (woff2) under `public/fonts/`, `@font-face` like
   Geist today; set it as the app sans family in `src/styles/app.css` (replace
-  the Geist sans reference). Keep Geist Mono (or swap to JetBrains Mono — minor,
-  defer).
+  the Geist sans reference). **Keep Geist Mono** — it's already self-hosted, so
+  reusing it adds zero new font work.
 - Apply Intercom's type scale + **negative letter-spacing on display sizes**
   (≈ -0.5px to -2px scaling with size; 0 on body). Body 16px / line-height 1.5.
 - Eyebrows/section labels: sentence case, never all-caps.
@@ -166,16 +166,17 @@ the existing `executeGenerateWorld`/`executeCreateRealm` flow as a full page:
 - Preserve current behavior: generation toggle + params, calendar settings,
   active-realm set + navigate-to-map on success.
 
-### 2c. Dashboard nav de-rainbow
+### 2c. Dashboard nav de-rainbow + consolidate
 
 **Problem:** the entity tab chips (World Map orange, Calendar blue, Factions pink,
 Monsters/Spells/Magic purples, Tables green, Notes blue) are a rainbow that fights
 the restrained Intercom aesthetic; plus two stacked tab rows compete.
 
 **Fix (`src/components/realm/Dashboard.tsx`):** uniform charcoal/ink chips with a
-single active state (ink fill / cream text), icons in ink-muted. Reconsider the
-two-row tab stack — make hierarchy explicit (primary nav vs. Overview/Favorites/
-Settings sub-tabs).
+single active state (ink fill / cream text), icons in ink-muted. **Consolidate the
+two competing tab rows into one clear hierarchy** — a single primary navigation
+treatment, with Overview/Favorites/Settings expressed as a clearly-subordinate
+sub-level (not a second equal-weight row).
 
 ### Slice 2 verification
 
@@ -192,10 +193,12 @@ existing tests; no new generation logic.
 - Restructuring pages beyond the three named in Slice 2.
 - A second display font; JetBrains Mono swap (optional, deferred).
 
-## Unresolved questions
-1. Dark-mode card surface: `#1e1e1d` vs Intercom's literal `#313130` — pick one
-   (contrast vs. fidelity).
-2. Mono font: keep Geist Mono, or swap to JetBrains Mono (the spec's substitute)?
-3. Slice 2 sequencing — all three sub-items in one PR, or POI-detail (2a) on its
-   own since it's the largest/riskiest?
-4. Dashboard two-row tabs — keep both rows (restyled) or consolidate?
+## Resolved decisions
+1. **Dark-mode card surface:** `#313130` (Intercom literal, full fidelity).
+2. **Mono font:** keep Geist Mono (already self-hosted; zero new work).
+3. **Slice 2 sequencing:** all three sub-items (2a/2b/2c) ship in one PR.
+4. **Dashboard tabs:** consolidate the two competing rows into one hierarchy.
+
+## Build order
+Two plans / two PRs: **Slice 1 (Theme) first**, then **Slice 2 (UX)** on the new
+visual baseline.
