@@ -415,40 +415,15 @@ export function SettlementTemplate({
         </TabsList>
 
         {/* Locations & NPCs tab */}
-        <TabsContent value="locations" className="space-y-6 pt-3">
-          {/* Map + Key Locations */}
+        <TabsContent value="locations" className="space-y-4 pt-3">
+          {/* Map spans full width above master-detail, only when one exists */}
+          {mapSection && <div>{mapSection}</div>}
+
           <div
             className={`grid gap-4 ${layout === "columns" ? "md:grid-cols-2" : ""}`}
           >
-            {/* Map — sticky in columns mode */}
-            <div className={layout === "columns" ? "md:sticky md:top-0 md:self-start md:max-h-screen md:overflow-y-auto" : ""}>
-              <div
-                className={
-                  layout === "stacked"
-                    ? "md:h-[90vh] md:[&>*]:h-full md:[&>*]:!flex md:[&>*]:!flex-col md:[&>*>*+*]:!flex-1 md:[&>*>*+*]:!h-auto md:[&>*>*+*]:min-h-0"
-                    : ""
-                }
-              >
-                {mapSection}
-              </div>
-            </div>
-
-            {/* Detail panel + Location list */}
+            {/* LEFT: location list (master) */}
             <div className="space-y-3">
-              {/* Location detail panel */}
-              <div ref={detailPanelRef} />
-              {selectedLocation ? (
-                <LocationDetailPanel
-                  location={selectedLocation}
-                  npcs={npcsByPoiId[selectedLocation.id] ?? []}
-                  onUpdateNPC={onUpdateNPC}
-                />
-              ) : childPois.length > 0 ? (
-                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  Select a location to see details
-                </div>
-              ) : null}
-
               {/* Location list header */}
               <div className="flex justify-between">
                 <h4 className="text-sm font-semibold">Key Locations</h4>
@@ -550,6 +525,22 @@ export function SettlementTemplate({
                 <p className="text-sm text-muted-foreground">
                   No locations yet.
                 </p>
+              )}
+            </div>
+
+            {/* RIGHT: selected location detail */}
+            <div className="space-y-3">
+              <div ref={detailPanelRef} />
+              {selectedLocation ? (
+                <LocationDetailPanel
+                  location={selectedLocation}
+                  npcs={npcsByPoiId[selectedLocation.id] ?? []}
+                  onUpdateNPC={onUpdateNPC}
+                />
+              ) : (
+                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  Select a location to see details
+                </div>
               )}
             </div>
           </div>
