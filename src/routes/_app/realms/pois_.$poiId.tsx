@@ -23,6 +23,17 @@ import { useUIStore } from '~/ui/stores/uiStore'
 import { usePOIActions } from '~/ui/hooks/usePOIActions'
 import { executeDeletePOI } from '@application/use-cases/DeletePOI'
 import { executeGetOrCreateTownMap } from '@application/use-cases/GetOrCreateTownMap'
+import { pickTownMap } from '~/maps/townMaps'
+
+/** Load a bundled image's natural pixel dimensions. */
+function loadImageSize(url: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight })
+    img.onerror = reject
+    img.src = url
+  })
+}
 import { executeCreateNPC } from '@application/use-cases/CreateNPC'
 import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import { NPCEditSheet } from '~/components/shared/NPCEditSheet'
@@ -515,8 +526,11 @@ function POIDetailPage() {
             size="sm"
             variant="outline"
             onClick={async () => {
+              const picked = pickTownMap(poi.id)
+              if (!picked) return
+              const { width, height } = await loadImageSize(picked.url)
               await executeGetOrCreateTownMap(
-                { poiId: poi.id, name: poi.name, width: 1000, height: 1000 },
+                { poiId: poi.id, name: poi.name, imageUrl: picked.url, width, height },
                 { gameMapRepo: container.gameMapRepo },
               )
             }}

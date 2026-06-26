@@ -3,8 +3,6 @@ import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { GameMap } from '@domain/entities/GameMap'
 import { BIOME_COLORS } from '~/lib/hexmap/hexLayout'
-import { buildTownGeoJSON } from './buildTownGeoJSON'
-import { COLORS } from '~/lib/watabou/featureStyle'
 import type { POI } from '@domain/entities/POI'
 import type { Path } from '@domain/entities/Path'
 import type { Region } from '@domain/entities/Region'
@@ -739,69 +737,6 @@ export function MapViewer({
     // away. Re-runs while the same map persists are handled idempotently by the
     // getSource→setData branch above.
   }, [map.kind, map.hexCells, mapReady, pxToLngLat])
-
-  // Render generated-town features for kind:'town' maps.
-  useEffect(() => {
-    const instance = mapRef.current
-    if (!instance || !mapReady) return
-    if (map.kind !== 'town' || !map.townData) return
-
-    const srcId = 'town-features'
-    const fillId = 'town-fill'
-    const lineId = 'town-line'
-    const fc = buildTownGeoJSON(map.townData, (x, y) => pxToLngLat(x, y))
-
-    if (instance.getSource(srcId)) {
-      ;(instance.getSource(srcId) as maplibregl.GeoJSONSource).setData(fc)
-    } else {
-      instance.addSource(srcId, { type: 'geojson', data: fc })
-      // Fills: earth / building / plaza / water (drawn under markers).
-      instance.addLayer({
-        id: fillId,
-        type: 'fill',
-        source: srcId,
-        filter: ['in', ['get', 'kind'], ['literal', ['earth', 'building', 'plaza', 'water', 'farm']]],
-        paint: {
-          'fill-color': [
-            'match', ['get', 'kind'],
-            'earth', COLORS.earth.fill,
-            'building', COLORS.building.fill,
-            'plaza', COLORS.plaza.fill,
-            'water', COLORS.water.fill,
-            'farm', COLORS.farm.fill,
-            '#b8a88a',
-          ],
-          'fill-outline-color': '#6b5c3e',
-        },
-      })
-      // Lines: roads / walls / rivers.
-      instance.addLayer({
-        id: lineId,
-        type: 'line',
-        source: srcId,
-        filter: ['in', ['get', 'kind'], ['literal', ['road', 'wall', 'river']]],
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: {
-          'line-color': [
-            'match', ['get', 'kind'],
-            'wall', '#5a4a30',
-            'river', COLORS.river.stroke,
-            '#a8895f', // dirt road, readable on parchment
-          ],
-          'line-width': ['match', ['get', 'kind'], 'wall', 4, 'river', 4, 14],
-        },
-      })
-      // Footprint click → resolve poiId → open the POI popup (same as a marker click).
-      instance.on('click', fillId, (e) => {
-        const poiId = e.features?.[0]?.properties?.poiId
-        if (!poiId) return
-        const poi = poisRef.current.find((p) => p.id === poiId)
-        if (poi) onPoiClickRef.current?.(poi)
-      })
-      instance.on('mouseenter', fillId, () => { instance.getCanvas().style.cursor = 'pointer' })
-      instance.on('mouseleave', fillId, () => { instance.getCanvas().style.cursor = '' })
-    }
-  }, [map.id, map.kind, map.townData, mapReady, pxToLngLat])
 
   // Render draw-region preview polygon
   useEffect(() => {

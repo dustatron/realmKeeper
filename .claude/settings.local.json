@@ -129,7 +129,12 @@
       "Bash(rg -n \"verno|version 36|v36|schema v36|toBe\\\\\\(36\\\\\\)\" src/infrastructure/dexie/*.test.ts)",
       "Bash(rg -rn \"db.verno\" src)",
       "Bash(procs --no-header)",
-      "Bash(eza --tree hexroll3-cartographer/src)"
+      "Bash(eza --tree hexroll3-cartographer/src)",
+      "Bash(fd -t d -i '^maps?$|townmap|citymap' . ~/Downloads)",
+      "Bash(cd *)",
+      "Bash(node -e ' *)",
+      "Bash(awk '{print $5, $9}')",
+      "Bash(dust -d 1 src/maps)"
     ]
   }
 }

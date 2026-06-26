@@ -1,8 +1,4 @@
 import { useState, useCallback, useRef } from 'react'
-import { generateTown } from '~/lib/towngen/generateTown'
-import { streetLayout } from '~/lib/towngen/streetLayout'
-import { PRESETS, type TownAnchor } from '~/lib/towngen/presets'
-import { newId } from '@shared/ulid'
 import { useNavigate } from '@tanstack/react-router'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useContainer } from '~/ui/hooks/useContainer'
@@ -291,47 +287,6 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
     }
   }
 
-  // Regenerate the town. `overrides` lets the preset/wall controls apply their
-  // new value immediately (the gameMap prop hasn't refreshed from Dexie yet).
-  const regenerateTown = useCallback(async (overrides?: { preset?: 'village' | 'city'; walled?: boolean }) => {
-    const preset = overrides?.preset ?? gameMap.townPreset ?? 'village'
-    const walled = overrides?.walled ?? gameMap.townWalled ?? PRESETS[preset].wallDefault
-    const seed = gameMap.townSeed ?? newId()
-    // Lay the settlement's child buildings out along a street network, then place
-    // each child POI onto its slot (so markers sit on the footprints). Re-laying
-    // every child each time keeps the town coherent; the seed makes it stable.
-    const children = scopedPois
-    const layout = streetLayout(children.length, gameMap.width, gameMap.height, seed)
-    const anchors: TownAnchor[] = []
-    for (let i = 0; i < children.length; i++) {
-      const c = children[i]
-      const slot = layout.slots[i]
-      if (!slot) break
-      const position = { x: slot.x, y: slot.y }
-      await executePlacePOIOnMap(
-        { poiId: c.id, mapId: gameMap.id, position },
-        { poiRepo: container.poiRepo },
-      )
-      anchors.push({ poiId: c.id, x: slot.x, y: slot.y, type: c.type, angle: slot.angle })
-    }
-    const townData = generateTown(anchors, {
-      preset,
-      seed,
-      walled,
-      width: gameMap.width,
-      height: gameMap.height,
-      streets: layout.streets,
-    })
-    await container.gameMapRepo.update({
-      ...gameMap,
-      townData,
-      townPreset: preset,
-      townWalled: walled,
-      townSeed: seed,
-      updatedAt: Date.now(),
-    })
-  }, [gameMap, scopedPois, container.poiRepo, container.gameMapRepo])
-
   const handleCreatePath = async () => {
     if (!drawPathFrom || !drawPathTo) return
     await executeCreatePath(
@@ -386,36 +341,6 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
         onZoomToFit={() => mapHandleRef.current?.zoomToFit()}
         poiSelectMode={onPoiSelect ? poiSelectMode : undefined}
         onTogglePoiSelectMode={onPoiSelect ? () => setPoiSelectMode((v) => !v) : undefined}
-        leftSlot={
-          gameMap.kind === 'town' ? (
-            <>
-              <Select
-                value={gameMap.townPreset ?? 'village'}
-                onValueChange={(v) => regenerateTown({ preset: v as 'village' | 'city' })}
-              >
-                <SelectTrigger className="h-8 w-28"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="village">Village</SelectItem>
-                  <SelectItem value="city">City</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  const preset = gameMap.townPreset ?? 'village'
-                  const current = gameMap.townWalled ?? PRESETS[preset].wallDefault
-                  regenerateTown({ walled: !current })
-                }}
-              >
-                {(gameMap.townWalled ?? PRESETS[gameMap.townPreset ?? 'village'].wallDefault) ? 'Walled: on' : 'Walled: off'}
-              </Button>
-              <Button size="sm" onClick={() => regenerateTown()}>
-                {gameMap.townData ? 'Regenerate' : 'Generate town'}
-              </Button>
-            </>
-          ) : undefined
-        }
       />
 
       <div className="flex-1 relative">
