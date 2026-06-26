@@ -80,45 +80,49 @@ export function MultiMapViewer({
     )
   }
 
+  const mapSwitcher = (
+    <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
+      {maps.map((m, i) => (
+        <span key={m.id} className="flex shrink-0 items-center">
+          <Button
+            variant={i === clampedIndex ? 'secondary' : 'ghost'}
+            size="sm"
+            className={`h-7 max-w-48 text-xs ${onUpload ? 'pr-1' : ''}`}
+            onClick={() => setActiveMapIndex(i)}
+            title={m.name}
+          >
+            <span className="truncate">{m.name}</span>
+          </Button>
+          {onUpload && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-xs text-muted-foreground hover:text-destructive"
+              onClick={(e) => { e.stopPropagation(); setDeletingMapId(m.id) }}
+              title={`Remove ${m.name}`}
+              aria-label={`Remove ${m.name}`}
+            >
+              <X className="size-3" />
+            </Button>
+          )}
+        </span>
+      ))}
+      {onUpload && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 shrink-0 text-xs text-muted-foreground"
+          onClick={() => setUploadDialogOpen(true)}
+        >
+          <Plus className="mr-1 size-3" />
+          Add
+        </Button>
+      )}
+    </div>
+  )
+
   return (
     <div className="overflow-hidden rounded-lg border">
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 px-2 py-1 border-b bg-muted/30">
-        {maps.map((m, i) => (
-          <span key={m.id} className="flex items-center">
-            <Button
-              variant={i === clampedIndex ? 'secondary' : 'ghost'}
-              size="sm"
-              className={`text-xs h-7 ${onUpload ? 'pr-1' : ''}`}
-              onClick={() => setActiveMapIndex(i)}
-            >
-              {m.name}
-            </Button>
-            {onUpload && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                onClick={(e) => { e.stopPropagation(); setDeletingMapId(m.id) }}
-              >
-                <X className="size-3" />
-              </Button>
-            )}
-          </span>
-        ))}
-        {onUpload && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs h-7 text-muted-foreground"
-            onClick={() => setUploadDialogOpen(true)}
-          >
-            <Plus className="size-3 mr-1" />
-            Add
-          </Button>
-        )}
-      </div>
-
       <InteractiveMap
         key={activeMap.id}
         gameMap={activeMap}
@@ -127,6 +131,7 @@ export function MultiMapViewer({
         highlightPoiId={highlightPoiId}
         onPoiSelect={onPoiSelect}
         showResetControl={showResetControl}
+        toolbarLeftSlot={mapSwitcher}
       />
 
       <ConfirmDialog

@@ -39,6 +39,27 @@ describe('assignPoisToBuildings', () => {
     ])
   })
 
+  it('spreads assignments across distant buildings instead of clustering by size', () => {
+    const assignments = assignPoisToBuildings({
+      mapId: 'map-1',
+      imageSize: { width: 1000, height: 1000 },
+      pois: [
+        poi({ id: 'p1', name: 'A' }),
+        poi({ id: 'p2', name: 'B' }),
+        poi({ id: 'p3', name: 'C' }),
+      ],
+      buildings: [
+        building('central-large', 100, 500, 500),
+        building('central-medium', 95, 510, 500),
+        building('central-small', 90, 500, 510),
+        building('east', 80, 900, 500),
+        building('west', 75, 100, 500),
+      ],
+    })
+
+    expect(assignments.map((a) => a.buildingId)).toEqual(['central-large', 'east', 'west'])
+  })
+
   it('keeps existing placements out of the assignment list', () => {
     const assignments = assignPoisToBuildings({
       mapId: 'map-1',
@@ -52,6 +73,22 @@ describe('assignPoisToBuildings', () => {
     })
 
     expect(assignments.map((a) => a.poiId)).toEqual(['new'])
+  })
+
+  it('can reassign existing placements on the same town map', () => {
+    const assignments = assignPoisToBuildings({
+      mapId: 'map-1',
+      imageSize: { width: 1000, height: 1000 },
+      reassignExistingOnMap: true,
+      pois: [
+        poi({ id: 'placed-here', name: 'Placed', mapRef: 'map-1', position: { x: 1, y: 2 } }),
+        poi({ id: 'placed-elsewhere', name: 'Elsewhere', mapRef: 'map-2', position: { x: 3, y: 4 } }),
+        poi({ id: 'new', name: 'New' }),
+      ],
+      buildings: [building('b1', 100, 10, 20), building('b2', 50, 30, 40)],
+    })
+
+    expect(assignments.map((a) => a.poiId)).toEqual(['new', 'placed-here'])
   })
 
   it('gives important POI types the largest buildings', () => {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, type ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useContainer } from '~/ui/hooks/useContainer'
@@ -101,9 +101,20 @@ interface InteractiveMapProps {
   onPoiSelect?: (poiId: string) => void
   /** Show an in-map control that resets pan/zoom to the map image. */
   showResetControl?: boolean
+  /** Optional controls rendered at the left side of the map toolbar. */
+  toolbarLeftSlot?: ReactNode
 }
 
-export function InteractiveMap({ gameMap, className, style, parentPoiId, highlightPoiId, onPoiSelect, showResetControl = true }: InteractiveMapProps) {
+export function InteractiveMap({
+  gameMap,
+  className,
+  style,
+  parentPoiId,
+  highlightPoiId,
+  onPoiSelect,
+  showResetControl = true,
+  toolbarLeftSlot,
+}: InteractiveMapProps) {
   const navigate = useNavigate()
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const container = useContainer()
@@ -343,6 +354,7 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
         onZoomToFit={() => mapHandleRef.current?.zoomToFit()}
         poiSelectMode={onPoiSelect ? poiSelectMode : undefined}
         onTogglePoiSelectMode={onPoiSelect ? () => setPoiSelectMode((v) => !v) : undefined}
+        leftSlot={toolbarLeftSlot}
       />
 
       <div className="flex-1 relative">
