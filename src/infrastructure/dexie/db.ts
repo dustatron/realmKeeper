@@ -24,6 +24,7 @@ import type { CustomCompendiumEntry } from '@domain/entities/CustomCompendiumEnt
 import type { Connection } from '@domain/entities/Connection'
 import type { Hook } from '@domain/entities/Hook'
 import { withHookIdDefault, withGameMapKindDefault } from './migrations/v36-defaults'
+import { withTownDefaults } from './migrations/v37-town-defaults'
 import { seedDatabase } from './seed'
 
 const cloudUrl = import.meta.env.VITE_DEXIE_CLOUD_URL as string | undefined
@@ -632,6 +633,14 @@ db.version(36).stores(storesV36).upgrade(async (tx) => {
   const maps = await tx.table('gameMaps').toArray()
   for (const map of maps) {
     await tx.table('gameMaps').put(withGameMapKindDefault(map))
+  }
+})
+
+// v37: Add town map fields to gameMaps (kind:'town' generated settlement maps)
+db.version(37).stores(storesV36).upgrade(async (tx) => {
+  const maps = await tx.table('gameMaps').toArray()
+  for (const map of maps) {
+    await tx.table('gameMaps').put(withTownDefaults(map))
   }
 })
 

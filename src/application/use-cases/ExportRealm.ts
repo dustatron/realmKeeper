@@ -67,6 +67,10 @@ export interface GameMapExport {
   hexSize: number | null
   hexOrientation: GameMap['hexOrientation']
   hexCells: HexCell[] | null
+  townData?: import('@domain/value-objects/WatabouCityData').WatabouCityData | null
+  townPreset?: 'village' | 'city' | null
+  townSeed?: string | null
+  townWalled?: boolean | null
 }
 
 export interface RealmExport {
@@ -167,6 +171,10 @@ export async function executeExportRealm(
       hexSize: m.hexSize,
       hexOrientation: m.hexOrientation,
       hexCells: m.hexCells ?? null,
+      townData: m.townData ?? null,
+      townPreset: m.townPreset ?? null,
+      townSeed: m.townSeed ?? null,
+      townWalled: m.townWalled ?? null,
     }))
   )
 
