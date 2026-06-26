@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import {
@@ -24,13 +24,16 @@ import {
   ChevronRight,
   Eye,
   ShoppingBag,
+  Sparkles,
+  ShieldAlert,
+  Landmark,
+  UserRound,
 } from "lucide-react";
 import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
 import { RumorList } from "~/components/shared/RumorList";
 import { NoticeBoard } from "~/components/shared/NoticeBoard";
 import { EncounterTableUI } from "~/components/shared/EncounterTableUI";
 import { ServicesList } from "~/components/shared/ServicesList";
-import { ReadAloudBlock } from "~/components/shared/ReadAloudBlock";
 import { AtAGlancePanel } from "~/components/shared/AtAGlancePanel";
 import { POI_TYPE_ICONS } from "@shared/poi-icons";
 import type { POI } from "@domain/entities/POI";
@@ -228,6 +231,42 @@ interface SettlementTemplateProps {
   actionBar?: React.ReactNode;
 }
 
+function pluralize(count: number, singular: string, plural = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function cleanText(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function formatTypeLabel(poi: POI): string {
+  return [poi.subtypeLabel, poi.type].filter(Boolean).join(" ");
+}
+
+function OverviewFact({
+  icon: Icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: typeof Sparkles;
+  label: string;
+  value: ReactNode;
+  detail?: ReactNode;
+}) {
+  return (
+    <div className="min-w-0 rounded-md bg-muted/35 p-3">
+      <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <Icon className="size-3.5" />
+        {label}
+      </div>
+      <div className="truncate text-sm font-medium">{value}</div>
+      {detail && <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{detail}</div>}
+    </div>
+  );
+}
+
 export function SettlementTemplate({
   poi,
   children: childPois,
@@ -303,7 +342,11 @@ export function SettlementTemplate({
     }
   }, [selectedChildId]);
 
-  const [overviewOpen, setOverviewOpen] = useState(false);
+  const [overviewOpen, setOverviewOpen] = useState(true);
+
+  useEffect(() => {
+    setOverviewOpen(true);
+  }, [poi.id]);
 
   const [layout, setLayout] = useState<"columns" | "stacked">(() => {
     try {
@@ -326,6 +369,41 @@ export function SettlementTemplate({
     ...childPois.flatMap((c) => c.services),
   ];
 
+  const detailLine = cleanText(poi.description);
+  const localProblem = cleanText(poi.trouble);
+  const activeEvents = poiEvents.filter((event) => event.isActive);
+  const openRumors = rumors.filter((rumor) => !rumor.isUsed);
+  const openNotices = notices.filter((notice) => !notice.isUsed);
+  const questHookCount = new Set([
+    ...rumors.filter((rumor) => rumor.isQuestHook || rumor.hookId).map((rumor) => rumor.hookId ?? rumor.id),
+    ...notices.filter((notice) => notice.hookId).map((notice) => notice.hookId!),
+  ]).size;
+  const npcWants = allNPCs
+    .filter(({ npc }) => cleanText(npc.want))
+    .slice(0, 3);
+  const fallbackNpcProblem = localProblem || npcWants.length === 0
+    ? null
+    : `${npcWants[0].npc.name}: ${npcWants[0].npc.want}`;
+  const leaderNpc = allNPCs.find(({ npc }) => npc.tags.includes("leader")) ?? null;
+  const notableNpc = leaderNpc ?? allNPCs.find(({ npc }) => npc.starred) ?? allNPCs[0] ?? null;
+  const situationParts = [
+    localProblem ? "local problem" : fallbackNpcProblem ? "local agenda" : null,
+    questHookCount > 0 ? pluralize(questHookCount, "quest hook") : null,
+    openRumors.length > 0 ? pluralize(openRumors.length, "open rumor") : null,
+    openNotices.length > 0 ? pluralize(openNotices.length, "open notice") : null,
+    activeEvents.length > 0 ? pluralize(activeEvents.length, "active event") : null,
+    questHookCount === 0 && npcWants.length > 0 ? `${pluralize(npcWants.length, "NPC want")} visible` : null,
+  ].filter((part): part is string => part !== null);
+  const situationLine = situationParts.length > 0
+    ? situationParts.join(" - ")
+    : "Quiet: no hooks, rumors, notices, or active events recorded.";
+  const notableNpcLocationName = notableNpc?.npc.poiId
+    ? notableNpc.poiName ?? poi.name
+    : null;
+  const notableNpcDetail = notableNpc
+    ? cleanText(notableNpc.npc.want) ?? cleanText(notableNpc.npc.description)
+    : null;
+
   const overviewSection = (
     <Collapsible open={overviewOpen} onOpenChange={setOverviewOpen}>
       <div className="rounded-lg border">
@@ -342,6 +420,16 @@ export function SettlementTemplate({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="space-y-4 px-4 pb-4">
+            {detailLine ? (
+              <p className="rounded-md border bg-background px-3 py-2 text-sm leading-relaxed">
+                {detailLine}
+              </p>
+            ) : (
+              <p className="rounded-md border border-dashed bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+                No detail line recorded.
+              </p>
+            )}
+
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="text-xs capitalize">
                 {poi.type}
@@ -357,6 +445,90 @@ export function SettlementTemplate({
                 </Badge>
               ))}
             </div>
+
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+              <OverviewFact
+                icon={Landmark}
+                label="Location"
+                value={
+                  <Link to="/realms/pois/$poiId" params={{ poiId: poi.id }} className="hover:underline">
+                    {poi.name}
+                  </Link>
+                }
+                detail={[
+                  formatTypeLabel(poi),
+                  childPois.length > 0 ? pluralize(childPois.length, "key location") : null,
+                  allServices.length > 0 ? pluralize(allServices.length, "service") : null,
+                ].filter(Boolean).join(" - ")}
+              />
+              <OverviewFact
+                icon={ShieldAlert}
+                label="Situation"
+                value={situationLine}
+                detail={localProblem ?? fallbackNpcProblem}
+              />
+              <OverviewFact
+                icon={UserRound}
+                label={leaderNpc ? "Leader" : "Notable NPC"}
+                value={notableNpc ? (
+                  <Link to="/realms/npcs/$npcId" params={{ npcId: notableNpc.npc.id }} className="hover:underline">
+                    {notableNpc.npc.name}
+                  </Link>
+                ) : "None recorded"}
+                detail={notableNpc ? (
+                  <span>
+                    {notableNpcLocationName && notableNpc.npc.poiId && (
+                      <Link
+                        to="/realms/pois/$poiId"
+                        params={{ poiId: notableNpc.npc.poiId }}
+                        className="hover:underline"
+                      >
+                        At {notableNpcLocationName}
+                      </Link>
+                    )}
+                    {notableNpcDetail && (
+                      <>
+                        {notableNpcLocationName ? " - " : ""}
+                        {notableNpcDetail}
+                      </>
+                    )}
+                  </span>
+                ) : null}
+              />
+              <OverviewFact
+                icon={Sparkles}
+                label="Atmosphere"
+                value={cleanText(poi.mood) ?? "No mood recorded"}
+                detail={cleanText(poi.sensory)}
+              />
+            </div>
+
+            {npcWants.length > 0 && (
+              <div className="space-y-2 rounded-md bg-muted/25 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Local Wants
+                </p>
+                <div className="grid gap-2 md:grid-cols-3">
+                  {npcWants.map(({ npc, poiName }) => (
+                    <div key={npc.id} className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="hover:underline">
+                          {npc.name}
+                        </Link>
+                      </p>
+                      <p className="line-clamp-2 text-xs text-muted-foreground">{npc.want}</p>
+                      {npc.poiId && (
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          <Link to="/realms/pois/$poiId" params={{ poiId: npc.poiId }} className="hover:underline">
+                            {poiName ?? poi.name}
+                          </Link>
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <AtAGlancePanel
               mood={poi.mood}
@@ -374,7 +546,6 @@ export function SettlementTemplate({
               lightLevel={poi.lightLevel}
             />
 
-            <ReadAloudBlock text={poi.readAloud} />
           </div>
         </CollapsibleContent>
       </div>
@@ -421,9 +592,9 @@ export function SettlementTemplate({
 
         {/* Locations & NPCs tab */}
         <TabsContent value="locations" className="space-y-4 pt-3">
+          {overviewSection}
           {/* Map spans full width above master-detail, only when one exists */}
           {mapSection && <div>{mapSection}</div>}
-          {overviewSection}
 
           <div
             className={`grid gap-4 ${layout === "columns" ? "md:grid-cols-2" : ""}`}

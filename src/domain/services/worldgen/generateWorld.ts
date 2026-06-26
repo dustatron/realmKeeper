@@ -288,6 +288,9 @@ export function generateWorld(
       type,
       subtypeLabel: flavor.subtypeLabel,
       tags: flavor.tags,
+      trouble: flavor.trouble,
+      mood: flavor.mood,
+      sensory: flavor.sensory,
       // Templates display readAloud (not description), so the flavor read-aloud
       // is what actually surfaces on the POI detail page.
       readAloud: flavor.readAloud,

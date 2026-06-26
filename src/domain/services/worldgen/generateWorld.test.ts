@@ -72,6 +72,9 @@ describe('generateWorld', () => {
       expect(s.subtypeLabel).toBeTruthy()
       expect(s.tags.length).toBeGreaterThanOrEqual(1)
       expect(s.readAloud.length).toBeGreaterThan(0)
+      expect(s.trouble.length).toBeGreaterThan(0)
+      expect(s.mood.length).toBeGreaterThan(0)
+      expect(s.sensory.length).toBeGreaterThan(0)
     }
   })
 
