@@ -76,7 +76,7 @@ export function sprinkleRealmContent({
   if (options.treasure) {
     const targets = rng.sample(
       treasurePois,
-      targetCount(treasurePois.length, 0.3, 3, 24),
+      targetCount(treasurePois.length, 0.45, 5, 32),
     )
     for (const poi of targets) {
       poi.treasure = [...poi.treasure, pickTreasureItem(rng.child(`treasure-${poi.id}`))]
@@ -87,7 +87,7 @@ export function sprinkleRealmContent({
     const magicItems = getMagicItemsBySystemId(systemId)
     const targets = rng.sample(
       treasurePois,
-      targetCount(treasurePois.length, 0.1, 2, 8),
+      targetCount(treasurePois.length, 0.18, 3, 12),
     )
     for (const poi of targets) {
       if (magicItems.length === 0) break
@@ -113,7 +113,7 @@ export function sprinkleRealmContent({
     const monsters = getMonstersBySystemId(systemId)
     const targets = rng.sample(
       monsterPois,
-      targetCount(monsterPois.length, 0.35, 3, 24),
+      targetCount(monsterPois.length, 0.45, 5, 32),
     )
     for (const poi of targets) {
       if (monsters.length === 0) break

@@ -99,7 +99,9 @@ import {
 } from 'lucide-react'
 import { POI_TYPE_ICONS } from '@shared/poi-icons'
 import { OPPOSITE_DIRECTION } from '@shared/constants'
+import type { POI } from '@domain/entities/POI'
 import type { NPC } from '@domain/entities/NPC'
+import type { TreasureItem } from '@domain/value-objects/TreasureItem'
 import type { SystemBlock } from '@domain/value-objects/SystemBlock'
 import type { CompassConnection } from '~/components/shared/CompassRose'
 import { newId } from '@shared/ulid'
@@ -272,6 +274,10 @@ function POIDetailPage() {
     }
   }, [container.poiRepo, poi])
 
+  const handleUpdateSettlementTreasure = useCallback(async (location: POI, treasure: TreasureItem[]) => {
+    await executeUpdatePOI({ ...location, treasure }, { poiRepo: container.poiRepo })
+  }, [container.poiRepo])
+
   const placeTownBuildings = useCallback(async (options: {
     reassignExistingOnMap: boolean
     placementSalt?: string
@@ -393,7 +399,7 @@ function POIDetailPage() {
       highlightPoiId={selectedChildId}
       onPoiSelect={setSelectedChildId}
       framed={!isSettlementPoi}
-      className={isSettlementPoi ? 'h-[calc(100svh-16rem)] min-h-[460px]' : undefined}
+      className={isSettlementPoi ? 'h-[calc(80svh-12.8rem)] min-h-[368px]' : undefined}
     />
   ) : null
 
@@ -624,6 +630,7 @@ function POIDetailPage() {
             onCreateEvent={() => setCreateEventOpen(true)}
             onDeleteEvent={(id) => setDeletingEventId(id)}
             onUpdateNPC={actions.handleUpdateNPC}
+            onUpdateTreasure={handleUpdateSettlementTreasure}
             onRerollProblem={handleRerollSettlementProblem}
             isRerollingProblem={isRerollingProblem}
             activeTab={activeTab}
