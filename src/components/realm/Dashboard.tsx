@@ -44,6 +44,14 @@ import { ScrollArea } from "~/components/ui/scroll-area";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
+import {
   Swords,
   Users,
   Scroll,
@@ -54,14 +62,8 @@ import {
   ChevronRight,
   Calendar,
   MapPin,
-  Dices,
   Settings,
   Save,
-  BarChart3,
-  Sword,
-  Wand2,
-  Gem,
-  Cat,
   Star,
   Search,
   Skull,
@@ -500,140 +502,135 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
 
         {/* Favorites Tab */}
         <TabsContent value="favorites">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-            {/* Compendium Favorites */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Star className="size-5 text-amber-500" />
-                  Compendium
-                </CardTitle>
-                <CardDescription>
-                  <Link to="/realms/compendium" className="hover:underline">
-                    Browse compendium →
-                  </Link>
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {starredMonsters.length === 0 && starredSpells.length === 0 && starredMagicItems.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No compendium favorites yet. Star monsters, spells, or magic items in the compendium to see them here.
-                  </p>
-                ) : (
-                  <>
-                    {starredMonsters.length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-                          <Sword className="size-3" /> Monsters
-                        </p>
-                        <div className="space-y-1">
-                          {starredMonsters.map((m) => (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="size-5 text-amber-500" />
+                Favorites
+              </CardTitle>
+              <CardDescription>Starred NPCs, locations, and compendium entries.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {starredNPCs.length === 0 &&
+              starredPOIs.length === 0 &&
+              starredMonsters.length === 0 &&
+              starredSpells.length === 0 &&
+              starredMagicItems.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No favorites yet. Star an NPC, location, or compendium entry to see it here.
+                </p>
+              ) : (
+                <div className="overflow-hidden rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-36">Type</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Detail</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {starredNPCs.map((npc) => (
+                        <TableRow key={`npc:${npc.id}`}>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">NPC</Badge>
+                          </TableCell>
+                          <TableCell>
                             <Link
-                              key={m.id}
-                              to="/realms/compendium"
-                              search={{ tab: "monsters", q: m.name }}
-                              className="flex items-center gap-3 rounded-lg border p-2.5 transition-colors hover:bg-muted/50"
+                              to="/realms/npcs/$npcId"
+                              params={{ npcId: npc.id }}
+                              className="font-medium hover:underline"
                             >
-                              <Sword className="size-4 shrink-0 text-orange-500" />
-                              <span className="flex-1 min-w-0 font-medium truncate text-sm">{m.name}</span>
-                              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                              {npc.name}
                             </Link>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {starredSpells.length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-                          <Wand2 className="size-3" /> Spells
-                        </p>
-                        <div className="space-y-1">
-                          {starredSpells.map((s) => (
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {npc.want || npc.motivation || npc.description || "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {starredPOIs.map((poi) => (
+                        <TableRow key={`poi:${poi.id}`}>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs capitalize">{poi.type}</Badge>
+                          </TableCell>
+                          <TableCell>
                             <Link
-                              key={s.id}
-                              to="/realms/compendium"
-                              search={{ tab: "spells", q: s.name }}
-                              className="flex items-center gap-3 rounded-lg border p-2.5 transition-colors hover:bg-muted/50"
+                              to="/realms/pois/$poiId"
+                              params={{ poiId: poi.id }}
+                              className="font-medium hover:underline"
                             >
-                              <Wand2 className="size-4 shrink-0 text-indigo-500" />
-                              <span className="flex-1 min-w-0 font-medium truncate text-sm">{s.name}</span>
-                              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                              {poi.name}
                             </Link>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {starredMagicItems.length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-                          <Gem className="size-3" /> Magic Items
-                        </p>
-                        <div className="space-y-1">
-                          {starredMagicItems.map((item) => (
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {poi.subtypeLabel || poi.description || "Location"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {starredMonsters.map((monster) => (
+                        <TableRow key={`monster:${monster.id}`}>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">Monster</Badge>
+                          </TableCell>
+                          <TableCell>
                             <Link
-                              key={item.id}
-                              to="/realms/compendium"
-                              search={{ tab: "magic-items", q: item.name }}
-                              className="flex items-center gap-3 rounded-lg border p-2.5 transition-colors hover:bg-muted/50"
+                              to="/realms/compendium/monsters/$monsterId"
+                              params={{ monsterId: monster.id }}
+                              className="font-medium hover:underline"
                             >
-                              <Gem className="size-4 shrink-0 text-purple-500" />
-                              <span className="flex-1 min-w-0 font-medium truncate text-sm">{item.name}</span>
-                              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                              {monster.name}
                             </Link>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Favorite Locations */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="size-5 text-amber-500" />
-                  Locations
-                </CardTitle>
-                <CardDescription>
-                  <Link to="/realms/locations/starred" className="hover:underline">
-                    View all starred →
-                  </Link>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {starredPOIs.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No favorite locations yet. Star a POI to see it here.
-                  </p>
-                ) : (
-                  <div className="space-y-1">
-                    {starredPOIs.map((poi) => (
-                      <Link
-                        key={poi.id}
-                        to="/realms/pois/$poiId"
-                        params={{ poiId: poi.id }}
-                        className="flex items-center gap-3 rounded-lg border p-2.5 transition-colors hover:bg-muted/50"
-                      >
-                        <MapPin className="size-4 shrink-0 text-amber-500" />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate text-sm">{poi.name}</div>
-                          {poi.description && (
-                            <div className="text-xs text-muted-foreground truncate">{poi.description}</div>
-                          )}
-                        </div>
-                        <Badge variant="outline" className="text-xs shrink-0 capitalize">{poi.type}</Badge>
-                        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-          </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {monster.description || "Compendium"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {starredSpells.map((spell) => (
+                        <TableRow key={`spell:${spell.id}`}>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">Spell</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Link
+                              to="/realms/compendium/spells/$spellId"
+                              params={{ spellId: spell.id }}
+                              className="font-medium hover:underline"
+                            >
+                              {spell.name}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {spell.description || "Compendium"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {starredMagicItems.map((item) => (
+                        <TableRow key={`magic:${item.id}`}>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">Magic Item</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Link
+                              to="/realms/compendium/magic-items/$itemId"
+                              params={{ itemId: item.id }}
+                              className="font-medium hover:underline"
+                            >
+                              {item.name}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {item.description || "Compendium"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Settings Tab */}

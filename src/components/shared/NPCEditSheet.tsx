@@ -1,5 +1,5 @@
 import type { NPC } from '@domain/entities/NPC'
-import type { SystemBlock, Attack, InventoryItem } from '@domain/value-objects/SystemBlock'
+import type { SystemBlock, Attack } from '@domain/value-objects/SystemBlock'
 import type { SystemConfig } from '@domain/entities/SystemConfig'
 import type { Faction } from '@domain/entities/Faction'
 import type { Region } from '@domain/entities/Region'
@@ -29,6 +29,7 @@ import { getAllRaces } from '@shared/constants'
 import { Badge } from '~/components/ui/badge'
 import { Plus, Trash2, Sparkles } from 'lucide-react'
 import { ImagePicker } from '~/components/shared/ImagePicker'
+import { NPCInventoryEditor } from '~/components/shared/NPCInventoryEditor'
 
 export interface NPCEditSheetProps {
   npc: NPC
@@ -95,25 +96,6 @@ export function NPCEditSheet({
   const removeAttack = (index: number) => {
     updateSystemBlock({
       attacks: npc.systemBlock.attacks.filter((_, i) => i !== index),
-    })
-  }
-
-  const addInventoryItem = () => {
-    updateSystemBlock({
-      inventory: [...npc.systemBlock.inventory, { name: '', slots: 1, description: '' }],
-    })
-  }
-
-  const updateInventoryItem = (index: number, updates: Partial<InventoryItem>) => {
-    const inventory = npc.systemBlock.inventory.map((item, i) =>
-      i === index ? { ...item, ...updates } : item
-    )
-    updateSystemBlock({ inventory })
-  }
-
-  const removeInventoryItem = (index: number) => {
-    updateSystemBlock({
-      inventory: npc.systemBlock.inventory.filter((_, i) => i !== index),
     })
   }
 
@@ -487,55 +469,12 @@ export function NPCEditSheet({
               </div>
 
               {/* Inventory */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Inventory</Label>
-                  <Button size="sm" variant="outline" onClick={addInventoryItem}>
-                    <Plus className="mr-1 size-3" />
-                    Add
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {npc.systemBlock.inventory.map((item, i) => (
-                    <Card key={i}>
-                      <CardContent className="space-y-2 pt-4">
-                        <div className="flex items-start justify-between gap-2">
-                          <Input
-                            placeholder="Item name"
-                            value={item.name}
-                            onChange={(e) => updateInventoryItem(i, { name: e.target.value })}
-                          />
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => removeInventoryItem(i)}
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <Input
-                            type="number"
-                            placeholder="Slots"
-                            value={item.slots}
-                            onChange={(e) =>
-                              updateInventoryItem(i, { slots: parseInt(e.target.value) || 1 })
-                            }
-                          />
-                          <Input
-                            className="col-span-2"
-                            placeholder="Description"
-                            value={item.description}
-                            onChange={(e) =>
-                              updateInventoryItem(i, { description: e.target.value })
-                            }
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
+              <NPCInventoryEditor
+                inventory={npc.systemBlock.inventory}
+                onChange={(inventory) => updateSystemBlock({ inventory })}
+                systemId={systemConfig?.id}
+                worldId={npc.worldId}
+              />
 
               {/* Abilities */}
               <div className="space-y-2">
