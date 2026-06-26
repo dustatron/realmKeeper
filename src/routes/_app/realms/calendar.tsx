@@ -176,6 +176,7 @@ function CalendarPage() {
     worldEventRepo: container.worldEventRepo,
     eventBus: container.eventBus,
     rollDice,
+    poiEventRepo: container.poiEventRepo,
   }
 
   const handlePrev = () => setPageStartKey((k) => Math.max(day1Key, k - PAGE_SIZE))
