@@ -1,0 +1,103 @@
+import { describe, expect, it } from 'vitest'
+import type { POI } from '@domain/entities/POI'
+import type { PoiType } from '@shared/constants'
+import type { TownBuildingCandidate } from './townMapGeometry'
+import { assignPoisToBuildings } from './townPoiPlacement'
+
+function poi(overrides: Partial<POI>): POI {
+  return {
+    id: 'poi-1',
+    name: 'POI',
+    type: 'building' as PoiType,
+    mapRef: null,
+    position: null,
+    ...overrides,
+  } as POI
+}
+
+function building(id: string, area: number, x: number, y: number): TownBuildingCandidate {
+  return {
+    id,
+    area,
+    centroid: { x, y },
+    bounds: { minX: x - 1, minY: y - 1, maxX: x + 1, maxY: y + 1 },
+  }
+}
+
+describe('assignPoisToBuildings', () => {
+  it('assigns unplaced POIs to unique building centroids', () => {
+    const assignments = assignPoisToBuildings({
+      mapId: 'map-1',
+      imageSize: { width: 1000, height: 1000 },
+      pois: [poi({ id: 'p1', name: 'A' }), poi({ id: 'p2', name: 'B' })],
+      buildings: [building('b1', 100, 10, 20), building('b2', 50, 30, 40)],
+    })
+
+    expect(assignments).toEqual([
+      { poiId: 'p1', position: { x: 10, y: 20 }, source: 'building', buildingId: 'b1' },
+      { poiId: 'p2', position: { x: 30, y: 40 }, source: 'building', buildingId: 'b2' },
+    ])
+  })
+
+  it('keeps existing placements out of the assignment list', () => {
+    const assignments = assignPoisToBuildings({
+      mapId: 'map-1',
+      imageSize: { width: 1000, height: 1000 },
+      pois: [
+        poi({ id: 'placed-here', mapRef: 'map-1', position: { x: 1, y: 2 } }),
+        poi({ id: 'placed-elsewhere', mapRef: 'map-2', position: { x: 3, y: 4 } }),
+        poi({ id: 'new', name: 'New' }),
+      ],
+      buildings: [building('b1', 100, 10, 20)],
+    })
+
+    expect(assignments.map((a) => a.poiId)).toEqual(['new'])
+  })
+
+  it('gives important POI types the largest buildings', () => {
+    const assignments = assignPoisToBuildings({
+      mapId: 'map-1',
+      imageSize: { width: 1000, height: 1000 },
+      pois: [
+        poi({ id: 'shop', name: 'Shop', type: 'building' }),
+        poi({ id: 'temple', name: 'Temple', type: 'shrine' }),
+      ],
+      buildings: [building('small', 10, 10, 10), building('large', 100, 90, 90)],
+    })
+
+    expect(assignments[0]).toMatchObject({
+      poiId: 'temple',
+      buildingId: 'large',
+      position: { x: 90, y: 90 },
+    })
+  })
+
+  it('is deterministic', () => {
+    const input = {
+      mapId: 'map-1',
+      imageSize: { width: 1000, height: 1000 },
+      pois: [poi({ id: 'b', name: 'B' }), poi({ id: 'a', name: 'A' })],
+      buildings: [building('b2', 50, 30, 40), building('b1', 100, 10, 20)],
+    }
+
+    expect(assignPoisToBuildings(input)).toEqual(assignPoisToBuildings(input))
+  })
+
+  it('uses fallback positions only after buildings run out', () => {
+    const assignments = assignPoisToBuildings({
+      mapId: 'map-1',
+      imageSize: { width: 1000, height: 1000 },
+      pois: [
+        poi({ id: 'p1', name: 'A' }),
+        poi({ id: 'p2', name: 'B' }),
+      ],
+      buildings: [building('b1', 100, 10, 20)],
+    })
+
+    expect(assignments.map((a) => a.source)).toEqual(['building', 'fallback'])
+    expect(assignments[1].position.x).toBeGreaterThanOrEqual(0)
+    expect(assignments[1].position.x).toBeLessThanOrEqual(1000)
+    expect(assignments[1].position.y).toBeGreaterThanOrEqual(0)
+    expect(assignments[1].position.y).toBeLessThanOrEqual(1000)
+  })
+})

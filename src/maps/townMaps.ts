@@ -9,21 +9,39 @@ export interface TownMap {
   id: string
   bucket: TownBucket
   /** bundled asset URL for the PNG backdrop */
+  imageUrl: string
+  /** bundled asset URL for the sibling Watabou JSON geometry */
+  jsonUrl: string
+  /** @deprecated use imageUrl */
   url: string
 }
 
-// Vite resolves each PNG to a hashed asset URL at build time.
+// Vite resolves bundled map assets to hashed URLs at build time.
 const pngModules = import.meta.glob('./city/**/*.png', {
   eager: true,
   query: '?url',
   import: 'default',
 }) as Record<string, string>
 
+const jsonModules = import.meta.glob('./city/**/*.json', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+}) as Record<string, string>
+
 export const TOWN_MAPS: TownMap[] = Object.entries(pngModules)
-  .map(([path, url]) => {
+  .map(([path, imageUrl]) => {
     const m = path.match(/city\/(sm|md|larg)\/([^/]+)\.png$/)
     if (!m) return null
-    return { id: m[2], bucket: m[1] as TownBucket, url }
+    const jsonUrl = jsonModules[`./city/${m[1]}/${m[2]}.json`]
+    if (!jsonUrl) return null
+    return {
+      id: m[2],
+      bucket: m[1] as TownBucket,
+      imageUrl,
+      jsonUrl,
+      url: imageUrl,
+    }
   })
   .filter((x): x is TownMap => x !== null)
   .sort((a, b) => a.id.localeCompare(b.id))

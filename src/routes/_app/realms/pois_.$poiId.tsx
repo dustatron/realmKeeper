@@ -23,7 +23,10 @@ import { useUIStore } from '~/ui/stores/uiStore'
 import { usePOIActions } from '~/ui/hooks/usePOIActions'
 import { executeDeletePOI } from '@application/use-cases/DeletePOI'
 import { executeGetOrCreateTownMap } from '@application/use-cases/GetOrCreateTownMap'
-import { pickTownMap } from '~/maps/townMaps'
+import { executePlacePOIOnMap } from '@application/use-cases/PlacePOIOnMap'
+import { bucketForSize, pickTownMap } from '~/maps/townMaps'
+import { extractTownBuildings } from '~/maps/townMapGeometry'
+import { assignPoisToBuildings } from '~/maps/townPoiPlacement'
 
 /** Load a bundled image's natural pixel dimensions. */
 function loadImageSize(url: string): Promise<{ width: number; height: number }> {
@@ -131,6 +134,8 @@ function POIDetailPage() {
   const [editingNPC, setEditingNPC] = useState<NPC | null>(null)
   const [npcEditOpen, setNpcEditOpen] = useState(false)
   const [isGeneratingNPC, setIsGeneratingNPC] = useState(false)
+  const [isCreatingTownMap, setIsCreatingTownMap] = useState(false)
+  const [townMapError, setTownMapError] = useState<string | null>(null)
 
   // Breadcrumb in site header
   useEffect(() => {
@@ -221,6 +226,49 @@ function POIDetailPage() {
       setEditingNPC(generated)
     } finally {
       setIsGeneratingNPC(false)
+    }
+  }
+
+  const handleCreateTownMap = async () => {
+    if (!poi) return
+
+    setTownMapError(null)
+    setIsCreatingTownMap(true)
+    try {
+      const picked = pickTownMap(poi.id, bucketForSize(children.length))
+      if (!picked) throw new Error('No bundled town maps are available.')
+
+      const { width, height } = await loadImageSize(picked.imageUrl)
+      const townMap = await executeGetOrCreateTownMap(
+        { poiId: poi.id, name: poi.name, imageUrl: picked.imageUrl, width, height },
+        { gameMapRepo: container.gameMapRepo },
+      )
+
+      const response = await fetch(picked.jsonUrl)
+      if (!response.ok) throw new Error(`Town geometry failed to load: ${response.status}`)
+
+      const buildings = extractTownBuildings(await response.json(), { width, height })
+      if (buildings.length === 0) throw new Error('Town geometry has no usable buildings.')
+
+      const assignments = assignPoisToBuildings({
+        pois: children,
+        buildings,
+        mapId: townMap.id,
+        imageSize: { width, height },
+      })
+
+      await Promise.all(assignments.map((assignment) =>
+        executePlacePOIOnMap(
+          { poiId: assignment.poiId, mapId: townMap.id, position: assignment.position },
+          { poiRepo: container.poiRepo },
+        ),
+      ))
+
+      navigate({ to: '/realms/maps/$mapId', params: { mapId: townMap.id } })
+    } catch (err) {
+      setTownMapError(err instanceof Error ? err.message : 'Town map creation failed.')
+    } finally {
+      setIsCreatingTownMap(false)
     }
   }
 
@@ -525,18 +573,11 @@ function POIDetailPage() {
           <Button
             size="sm"
             variant="outline"
-            onClick={async () => {
-              const picked = pickTownMap(poi.id)
-              if (!picked) return
-              const { width, height } = await loadImageSize(picked.url)
-              await executeGetOrCreateTownMap(
-                { poiId: poi.id, name: poi.name, imageUrl: picked.url, width, height },
-                { gameMapRepo: container.gameMapRepo },
-              )
-            }}
+            onClick={handleCreateTownMap}
+            disabled={isCreatingTownMap}
           >
             <MapPinned className="mr-2 size-4" />
-            Town Map
+            {isCreatingTownMap ? 'Creating...' : 'Town Map'}
           </Button>
         )}
         <Link to="/realms/pois/$poiId/edit" params={{ poiId }}>
@@ -546,6 +587,10 @@ function POIDetailPage() {
           </Button>
         </Link>
       </div>
+
+      {townMapError && (
+        <p className="text-sm text-destructive">{townMapError}</p>
+      )}
 
       {compassConnections.length > 0 && (
         <CompassRose currentRoom={poi} connections={compassConnections} />

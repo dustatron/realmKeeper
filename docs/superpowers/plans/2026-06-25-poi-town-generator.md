@@ -162,12 +162,12 @@ Rules:
 
 **Steps:**
 
-- [ ] Add `jsonUrl` to `TownMap`.
-- [ ] Load JSON assets with `import.meta.glob('./city/**/*.json', { query: '?url' })`.
-- [ ] Join PNG and JSON by bucket and basename.
-- [ ] Exclude incomplete pairs.
-- [ ] Test that every `TOWN_MAPS` item has both URLs.
-- [ ] Test `pickTownMap(seed)` remains deterministic.
+- [x] Add `jsonUrl` to `TownMap`.
+- [x] Load JSON assets with `import.meta.glob('./city/**/*.json', { query: '?url' })`.
+- [x] Join PNG and JSON by bucket and basename.
+- [x] Exclude incomplete pairs.
+- [x] Test that every `TOWN_MAPS` item has both URLs.
+- [x] Test `pickTownMap(seed)` remains deterministic.
 
 ---
 
@@ -205,13 +205,13 @@ export function extractTownBuildings(rawJson: unknown): TownBuildingCandidate[]
 
 **Steps:**
 
-- [ ] Write tests using one small bundled JSON fixture.
-- [ ] Add coordinate walkers for polygons and multipolygons.
-- [ ] Compute polygon area and centroid.
-- [ ] Build candidate bounds.
-- [ ] Sort by `area desc`, then `id`.
-- [ ] Verify extracted candidate count is not zero.
-- [ ] Verify centroids are finite numbers.
+- [x] Write tests using one small bundled JSON fixture.
+- [x] Add coordinate walkers for polygons and multipolygons.
+- [x] Compute polygon area and centroid.
+- [x] Build candidate bounds.
+- [x] Sort by `area desc`, then `id`.
+- [x] Verify extracted candidate count is not zero.
+- [x] Verify centroids are finite numbers.
 
 ---
 
@@ -247,11 +247,11 @@ export function extractTownBuildings(
 
 **Steps:**
 
-- [ ] Add tests asserting every centroid is inside image bounds.
-- [ ] Add tests against at least one `sm`, `md`, and `larg` map.
-- [ ] Implement bounds scan over all geometries.
-- [ ] Implement source-to-pixel transform.
-- [ ] Apply transform before centroid output.
+- [x] Add tests asserting every centroid is inside image bounds.
+- [x] Add tests against at least one `sm`, `md`, and `larg` map.
+- [x] Implement bounds scan over all geometries.
+- [x] Implement source-to-pixel transform.
+- [x] Apply transform before centroid output.
 
 ---
 
@@ -271,7 +271,13 @@ export function assignPoisToBuildings(input: {
   pois: POI[]
   buildings: TownBuildingCandidate[]
   mapId: string
-}): Array<{ poiId: string; position: { x: number; y: number } }>
+  imageSize: { width: number; height: number }
+}): Array<{
+  poiId: string
+  position: { x: number; y: number }
+  source: 'building' | 'fallback'
+  buildingId?: string
+}>
 ```
 
 **Required behavior:**
@@ -286,11 +292,11 @@ export function assignPoisToBuildings(input: {
 
 **Steps:**
 
-- [ ] Test no duplicate building assignment.
-- [ ] Test output is deterministic.
-- [ ] Test existing placed POIs are skipped.
-- [ ] Test important types prefer larger buildings.
-- [ ] Test fallback only happens when buildings are exhausted.
+- [x] Test no duplicate building assignment.
+- [x] Test output is deterministic.
+- [x] Test existing placed POIs are skipped.
+- [x] Test important types prefer larger buildings.
+- [x] Test fallback only happens when buildings are exhausted.
 
 ---
 
@@ -322,12 +328,12 @@ export function assignPoisToBuildings(input: {
 
 **Steps:**
 
-- [ ] Add loading state for the Town Map button.
-- [ ] Fetch `picked.jsonUrl`.
-- [ ] Parse building candidates.
-- [ ] Assign child POIs.
-- [ ] Persist placements.
-- [ ] Navigate or expose the created town map consistently.
+- [x] Add loading state for the Town Map button.
+- [x] Fetch `picked.jsonUrl`.
+- [x] Parse building candidates.
+- [x] Assign child POIs.
+- [x] Persist placements.
+- [x] Navigate or expose the created town map consistently.
 
 ---
 
