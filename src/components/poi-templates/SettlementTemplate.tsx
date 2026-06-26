@@ -9,6 +9,14 @@ import {
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
+import {
   MapPin,
   MessageSquare,
   Dices,
@@ -286,7 +294,7 @@ function OverviewFact({
 }
 
 function formatPathTravel(path: ResolvedPath): string {
-  const watches = `${path.baseTravelWatches} ${path.baseTravelWatches === 1 ? "watch" : "watches"}`;
+  const watches = `${path.baseTravelWatches}w`;
   return path.hexes != null
     ? `${formatDistance(path.hexes)} - ${watches}`
     : watches;
@@ -300,7 +308,7 @@ function OverviewRoutes({
   currentPoiId: string;
 }) {
   return (
-    <div className="space-y-1.5 rounded-md border bg-muted/20 px-3 py-2">
+    <div className="flex min-h-full min-w-0 flex-col gap-2 border-t border-border/60 pt-3 xl:border-l xl:border-t-0 xl:pl-3 xl:pt-0">
       <div className="flex items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           <MapPin className="size-3.5" />
@@ -313,53 +321,69 @@ function OverviewRoutes({
         )}
       </div>
       {paths.length > 0 ? (
-        <div className="space-y-1">
-          {paths.map((path) => {
-            const isFrom = path.fromPoiId === currentPoiId;
-            const destId = isFrom ? path.toPoiId : path.fromPoiId;
-            const dest = isFrom ? path.toName : path.fromName;
-            const displayDir: Direction | null = path.direction
-              ? (isFrom ? path.direction : OPPOSITE_DIRECTION[path.direction])
-              : null;
-            const description = cleanText(path.description);
-            return (
-              <Link
-                key={path.id}
-                to="/realms/pois/$poiId"
-                params={{ poiId: destId }}
-                className="group block rounded-md border bg-background/70 px-2.5 py-1.5 transition-colors hover:bg-accent"
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  {displayDir ? (
-                    <Badge variant="secondary" className="w-8 shrink-0 justify-center text-xs font-mono">
-                      {displayDir.toUpperCase()}
-                    </Badge>
-                  ) : (
-                    <span className="w-8 shrink-0 text-center text-xs text-muted-foreground">→</span>
-                  )}
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium group-hover:underline">
-                    {dest}
-                  </span>
-                  <Badge variant="outline" className="shrink-0 text-[10px]">
-                    {path.type}
-                  </Badge>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {formatPathTravel(path)}
-                </p>
-                {description && (
-                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                    {description}
-                  </p>
-                )}
-              </Link>
-            );
-          })}
-        </div>
+        <Table className="table-fixed text-xs">
+          <colgroup>
+            <col className="w-[64%]" />
+            <col className="w-[36%]" />
+          </colgroup>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="h-7 px-0 pr-2">Destination</TableHead>
+              <TableHead className="h-7 px-0 text-right">Travel</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paths.map((path) => {
+              const isFrom = path.fromPoiId === currentPoiId;
+              const destId = isFrom ? path.toPoiId : path.fromPoiId;
+              const dest = isFrom ? path.toName : path.fromName;
+              const displayDir: Direction | null = path.direction
+                ? (isFrom ? path.direction : OPPOSITE_DIRECTION[path.direction])
+                : null;
+              const description = cleanText(path.description);
+              return (
+                <TableRow key={path.id}>
+                  <TableCell className="min-w-0 whitespace-normal py-1.5 pl-0 pr-2 align-top">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      {displayDir ? (
+                        <Badge
+                          variant="secondary"
+                          className="w-8 shrink-0 justify-center px-0 text-[10px] font-mono"
+                        >
+                          {displayDir.toUpperCase()}
+                        </Badge>
+                      ) : (
+                        <span className="w-8 shrink-0 text-center text-xs text-muted-foreground">→</span>
+                      )}
+                      <Link
+                        to="/realms/pois/$poiId"
+                        params={{ poiId: destId }}
+                        className="min-w-0 truncate text-sm font-medium hover:underline"
+                      >
+                        {dest}
+                      </Link>
+                      {path.type !== "road" && (
+                        <Badge variant="outline" className="text-[10px]">
+                          {path.type}
+                        </Badge>
+                      )}
+                    </div>
+                    {description && (
+                      <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">
+                        {description}
+                      </p>
+                    )}
+                  </TableCell>
+                  <TableCell className="truncate whitespace-nowrap py-1.5 pl-2 pr-0 text-right align-top text-xs text-muted-foreground">
+                    {formatPathTravel(path)}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       ) : (
-        <p className="rounded-md border border-dashed bg-background/50 px-3 py-2 text-sm text-muted-foreground">
-          No routes recorded.
-        </p>
+        <p className="text-sm text-muted-foreground">No routes recorded.</p>
       )}
     </div>
   );
@@ -489,13 +513,31 @@ export function SettlementTemplate({
     <Collapsible open={overviewOpen} onOpenChange={setOverviewOpen}>
       <div className="rounded-lg border">
         <CollapsibleTrigger asChild>
-          <button className="flex w-full items-center justify-between px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted/50">
-            <span className="flex items-center gap-2">
+          <button className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted/50">
+            <span className="flex shrink-0 items-center gap-2">
               <ChevronRight
                 className={`size-4 text-muted-foreground transition-transform ${overviewOpen ? "rotate-90" : ""}`}
               />
               <Eye className="size-4 text-muted-foreground" />
               Overview
+            </span>
+            <span className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5">
+              <Badge variant="outline" className="text-xs capitalize">
+                {poi.type}
+              </Badge>
+              <Badge variant="secondary" className="text-xs">
+                {displaySize}
+              </Badge>
+              {poi.subtypeLabel && (
+                <Badge variant="outline" className="text-xs">
+                  {poi.subtypeLabel}
+                </Badge>
+              )}
+              {poi.tags.map((tag) => (
+                <Badge key={tag} variant="outline" className="text-xs">
+                  {tag}
+                </Badge>
+              ))}
             </span>
           </button>
         </CollapsibleTrigger>
@@ -511,25 +553,6 @@ export function SettlementTemplate({
                   No detail line recorded.
                 </p>
               )}
-
-              <div className="flex flex-wrap items-center gap-1.5">
-                <Badge variant="outline" className="text-xs capitalize">
-                  {poi.type}
-                </Badge>
-                <Badge variant="secondary" className="text-xs">
-                  {displaySize}
-                </Badge>
-                {poi.subtypeLabel && (
-                  <Badge variant="outline" className="text-xs">
-                    {poi.subtypeLabel}
-                  </Badge>
-                )}
-                {poi.tags.map((tag) => (
-                  <Badge key={tag} variant="outline" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
 
               <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2">
                 <div className="flex items-start justify-between gap-2">
