@@ -204,6 +204,19 @@ describe('executeGenerateWorld', () => {
     }
   })
 
+  it('seeds recurring civic events covering every season', async () => {
+    const { realmId } = await executeGenerateWorld(
+      { name: 'Civic', systemId: 'system-cairn-2e', seed: 'civic-1', size: 'small' },
+      deps(),
+    )
+    const events = await db.poiEvents.where('worldId').equals(realmId).toArray()
+    const civic = events.filter((e) => e.tags.includes('civic'))
+    expect(civic.length).toBeGreaterThan(0)
+    expect(civic.every((e) => e.recurring && e.trigger.year === null)).toBe(true)
+    const seasons = new Set(civic.map((e) => e.trigger.season))
+    expect(seasons.size).toBe(4) // every season represented
+  })
+
   it('is deterministic: same seed + size → same biome layout', async () => {
     const a = await executeGenerateWorld({ name: 'A', systemId: 'system-cairn-2e', seed: 'fixed', size: 'small' }, deps())
     const b = await executeGenerateWorld({ name: 'B', systemId: 'system-cairn-2e', seed: 'fixed', size: 'small' }, deps())
