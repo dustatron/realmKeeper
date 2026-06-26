@@ -1,4 +1,5 @@
 import { advanceClock, type ClockAdvanceUnit } from '@domain/services/ClockEngine'
+import { isEventActiveOn } from '@domain/services/poiEventSchedule'
 import { rollWeather, type WeatherResult } from '@domain/services/WeatherEngine'
 import { rollAllFactionTurns, type FactionTurnSuggestion } from '@domain/services/FactionTurnEngine'
 import { executeConfirmFactionTurn } from './ConfirmFactionTurn'
@@ -162,23 +163,16 @@ export async function executeAdvanceDay(
     factionTurns = await executeFactionTurns(worldId, newDateTime, deps)
   }
 
-  // Check POI events
+  // Activate/deactivate scheduled POI events by date window. A recurring
+  // (year:null) event re-fires each year; a one-time event fires once. Logging
+  // happens only on the inactive -> active transition.
   const poiEventRepo = deps.poiEventRepo
   if (poiEventRepo) {
     const allEvents = await poiEventRepo.getByRealmId(worldId)
-
-    // Activate matching events
     for (const evt of allEvents) {
-      if (evt.isActive) continue
-      const t = evt.trigger
-      const yearMatch = t.year === null || t.year === newDateTime.year
-      const seasonMatch = t.season === newDateTime.season
-      const dayMatch = t.day === newDateTime.day
-      const watchMatch = t.watch === null || t.watch === newDateTime.watch
-
-      if (yearMatch && seasonMatch && dayMatch && watchMatch) {
+      const shouldBeActive = isEventActiveOn(evt, newDateTime, realm.daysPerSeason, realm.watchesPerDay)
+      if (shouldBeActive && !evt.isActive) {
         await poiEventRepo.update({ ...evt, isActive: true })
-        // Create world event
         await deps.worldEventRepo.create({
           id: newId(),
           worldId,
@@ -192,15 +186,9 @@ export async function executeAdvanceDay(
           relatedEntityIds: [evt.id, evt.poiId],
           createdAt: Date.now(),
         })
+      } else if (!shouldBeActive && evt.isActive) {
+        await poiEventRepo.update({ ...evt, isActive: false })
       }
-    }
-
-    // Deactivate expired events
-    for (const evt of allEvents) {
-      if (!evt.isActive) continue
-      // Simple duration check: find when it activated by checking WorldEvents
-      // For now, just check if durationWatches has been exceeded
-      // This is a simplified version - full implementation would track activation time
     }
   }
 

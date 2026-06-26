@@ -91,6 +91,7 @@ export async function executeGenerateWorld(
         day: realm.currentDay,
         watch: realm.currentWatch,
         daysPerSeason: realm.daysPerSeason,
+        watchesPerDay: realm.watchesPerDay,
       },
     })
     await db.gameMaps.put(gameMap)

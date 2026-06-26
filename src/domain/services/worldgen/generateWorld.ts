@@ -17,6 +17,7 @@ import { buildSettlementBuildings } from './buildSettlement'
 import { buildConnections } from './buildConnections'
 import { buildHooks } from './buildHooks'
 import { buildDoom, type DoomClock } from './buildDoom'
+import { buildEvents } from './buildEvents'
 import { buildRegionFlavor } from './regionFlavor'
 import { buildPoiFlavor } from './poiFlavor'
 import type { GameMap, HexCell } from '@domain/entities/GameMap'
@@ -534,6 +535,17 @@ export function generateWorld(
   // hook/notice/rumors join the world's quest projections.
   const worldEvents: WorldEvent[] = []
   const poiEvents: POIEvent[] = []
+  // Seasonal civic calendar — recurring festivals/markets/ceremonies at
+  // settlements, with every season covered at distinct locations.
+  poiEvents.push(
+    ...buildEvents(
+      settlementNodes.map((node) => node.poi),
+      realmId,
+      opts.clock?.daysPerSeason ?? 30,
+      opts.clock?.watchesPerDay ?? 3,
+      rng,
+    ),
+  )
   if (opts.loomingThreat && opts.systemConfig && opts.clock && factions.length > 0) {
     const doom = buildDoom(factions, pois, opts.clock, realmId, rng)
     worldEvents.push(doom.event)

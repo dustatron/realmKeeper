@@ -15,6 +15,7 @@ export interface DoomClock {
   day: number
   watch: number
   daysPerSeason: number
+  watchesPerDay?: number
 }
 
 export interface DoomBundle {
