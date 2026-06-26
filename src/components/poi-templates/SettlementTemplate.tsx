@@ -176,32 +176,51 @@ function LocationDetailContent({
       {location.treasure?.length > 0 && (
         <div className="space-y-1">
           <div className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">💎 Treasure</div>
-          {location.treasure.map((item) => (
-            <div key={item.id} className="flex items-center gap-2 text-sm rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5">
-              <span className={`min-w-0 flex-1 truncate ${item.collected ? "line-through text-muted-foreground" : "text-foreground"}`}>
+          {location.treasure.map((item) => {
+            const treasureLabel = (
+              <>
                 {item.name}
                 {item.quantity > 1 && ` (×${item.quantity})`}
-              </span>
-              {item.value && (
-                <span className="text-xs text-amber-400">{item.value}</span>
-              )}
-              {onUpdateTreasure ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={item.collected ? "secondary" : "outline"}
-                  className="h-7 shrink-0 px-2 text-xs"
-                  onClick={() => handleToggleTreasure(item.id)}
-                >
-                  {item.collected ? "Collected" : "Collect"}
-                </Button>
-              ) : (
-                <span className="ml-auto text-xs shrink-0">
-                  {item.collected ? "✅ collected" : "💰 loot"}
-                </span>
-              )}
-            </div>
-          ))}
+              </>
+            );
+            const treasureLabelClassName = `min-w-0 flex-1 truncate ${
+              item.collected ? "line-through text-muted-foreground" : "text-foreground"
+            }`;
+
+            return (
+              <div key={item.id} className="flex items-center gap-2 text-sm rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5">
+                {item.isMagic && item.compendiumId ? (
+                  <Link
+                    to="/realms/compendium/magic-items/$itemId"
+                    params={{ itemId: item.compendiumId }}
+                    className={`${treasureLabelClassName} hover:underline`}
+                  >
+                    {treasureLabel}
+                  </Link>
+                ) : (
+                  <span className={treasureLabelClassName}>{treasureLabel}</span>
+                )}
+                {item.value && (
+                  <span className="text-xs text-amber-400">{item.value}</span>
+                )}
+                {onUpdateTreasure ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={item.collected ? "secondary" : "outline"}
+                    className="h-7 shrink-0 px-2 text-xs"
+                    onClick={() => handleToggleTreasure(item.id)}
+                  >
+                    {item.collected ? "Collected" : "Collect"}
+                  </Button>
+                ) : (
+                  <span className="ml-auto text-xs shrink-0">
+                    {item.collected ? "✅ collected" : "💰 loot"}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
