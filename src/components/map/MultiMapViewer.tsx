@@ -21,6 +21,8 @@ interface MultiMapViewerProps {
   onPoiSelect?: (poiId: string) => void
   /** Show a reset view button inside the rendered map. */
   showResetControl?: boolean
+  /** Render without the default border frame. Useful for full-page map workspaces. */
+  framed?: boolean
   emptyTitle?: string
   emptyDescription?: string
 }
@@ -34,6 +36,7 @@ export function MultiMapViewer({
   highlightPoiId,
   onPoiSelect,
   showResetControl = true,
+  framed = true,
   emptyTitle = 'No maps yet',
   emptyDescription = 'Upload a map image to get started',
 }: MultiMapViewerProps) {
@@ -125,7 +128,7 @@ export function MultiMapViewer({
   )
 
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <div className={framed ? 'overflow-hidden rounded-lg border' : 'h-full min-h-0 overflow-hidden'}>
       <InteractiveMap
         key={activeMap.id}
         gameMap={activeMap}

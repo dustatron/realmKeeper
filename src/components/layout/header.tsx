@@ -13,24 +13,34 @@ function usePageTitle(): string | null {
   const { location } = useRouterState()
   const { navGroups } = getSidebarData()
   const path = location.pathname
+  const flatItems = navGroups.flatMap((group) => group.items)
 
-  for (const group of navGroups) {
-    for (const item of group.items) {
-      if (isNavCollapsible(item)) {
-        for (const sub of item.items) {
-          if (path === sub.url) return sub.title
-        }
-      } else if (path === item.url || (item.url !== '/realms' && path.startsWith(item.url))) {
-        return item.title
-      }
+  for (const item of flatItems) {
+    if (isNavCollapsible(item)) {
+      const exact = item.items.find((sub) => path === sub.url)
+      if (exact) return exact.title
+    } else if (path === item.url) {
+      return item.title
     }
   }
+
+  const prefixMatch = flatItems
+    .flatMap((item) => {
+      if (isNavCollapsible(item)) {
+        return item.items.map((sub) => ({ title: sub.title, url: sub.url }))
+      }
+      return [{ title: item.title, url: item.url }]
+    })
+    .filter((item) => item.url !== '/realms' && path.startsWith(`${item.url}/`))
+    .sort((a, b) => b.url.length - a.url.length)[0]
+
+  if (prefixMatch) return prefixMatch.title
 
   // Fallback for detail routes
   if (path.startsWith('/realms/pois/')) return 'Locations'
   if (path.startsWith('/realms/npcs/')) return 'NPCs'
   if (path.startsWith('/realms/factions/')) return 'Factions'
-  if (path.startsWith('/realms/maps/')) return 'Maps'
+  if (path.startsWith('/realms/maps/')) return 'All Maps'
   if (path.startsWith('/realms/events/')) return 'Calendar'
 
   return null
