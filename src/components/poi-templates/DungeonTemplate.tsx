@@ -518,7 +518,7 @@ function RoomDetailPanel({
             return (
               <div key={disc.id} className={`rounded border ${colors.border} ${colors.bg} overflow-hidden`}>
                 <button
-                  className="w-full flex items-start gap-2 text-sm px-2 py-1.5 hover:bg-white/5 transition-colors text-left"
+                  className="w-full flex items-start gap-2 text-sm px-2 py-1.5 hover:bg-accent transition-colors text-left"
                   onClick={() => onToggleDiscoveryFound?.(disc.id)}
                 >
                   {/* Found checkbox */}
