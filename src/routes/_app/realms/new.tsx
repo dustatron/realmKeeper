@@ -12,13 +12,13 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Textarea } from "~/components/ui/textarea";
+import { Switch } from "~/components/ui/switch";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/components/ui/collapsible";
-import { Switch } from "~/components/ui/switch";
-import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { ChevronDown, Settings, Wand2 } from "lucide-react";
 import {
   DEFAULT_DAYS_PER_SEASON,
@@ -64,7 +64,6 @@ function NewRealmPage() {
     "medium",
   );
   const [genSeed, setGenSeed] = useState("");
-  const [genAdvancedOpen, setGenAdvancedOpen] = useState(false);
   const [genFactions, setGenFactions] = useState(4);
   const [genPoiDensity, setGenPoiDensity] = useState<
     "sparse" | "normal" | "dense"
@@ -285,81 +284,64 @@ function NewRealmPage() {
               disabled={isCreating}
             />
           </div>
-          <Collapsible open={genAdvancedOpen} onOpenChange={setGenAdvancedOpen}>
-            <CollapsibleTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-between px-0 font-medium"
-                disabled={isCreating}
-              >
-                <span className="flex items-center gap-2">
-                  <Settings className="size-4" />
-                  Advanced
-                </span>
-                <ChevronDown
-                  className={`size-4 transition-transform ${genAdvancedOpen ? "rotate-180" : ""}`}
-                />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 pt-2">
-              <p className="text-xs text-muted-foreground">
-                Fine-tune what gets generated: how many factions vie for power,
-                how densely the map is dotted with points of interest, and
-                whether a looming threat hangs over the realm.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-1.5">
-                  <Label htmlFor="gen-factions" className="text-xs">
-                    Factions
-                  </Label>
-                  <Input
-                    id="gen-factions"
-                    type="number"
-                    min="0"
-                    max="20"
-                    value={genFactions}
-                    onChange={(e) =>
-                      setGenFactions(parseInt(e.target.value) || 0)
-                    }
-                    disabled={isCreating}
-                  />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="gen-poi" className="text-xs">
-                    POI density
-                  </Label>
-                  <Select
-                    value={genPoiDensity}
-                    onValueChange={(v) =>
-                      setGenPoiDensity(v as typeof genPoiDensity)
-                    }
-                    disabled={isCreating}
-                  >
-                    <SelectTrigger id="gen-poi">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sparse">Sparse</SelectItem>
-                      <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="dense">Dense</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="gen-threat" className="text-xs">
-                  Looming threat
+          <div className="space-y-3">
+            <p className="text-xs font-medium">Advanced</p>
+            <p className="text-xs text-muted-foreground">
+              Fine-tune what gets generated: how many factions vie for power,
+              how densely the map is dotted with points of interest, and
+              whether a looming threat hangs over the realm.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1.5">
+                <Label htmlFor="gen-factions" className="text-xs">
+                  Factions
                 </Label>
-                <Switch
-                  id="gen-threat"
-                  checked={genLoomingThreat}
-                  onCheckedChange={setGenLoomingThreat}
+                <Input
+                  id="gen-factions"
+                  type="number"
+                  min="0"
+                  max="20"
+                  value={genFactions}
+                  onChange={(e) =>
+                    setGenFactions(parseInt(e.target.value) || 0)
+                  }
                   disabled={isCreating}
                 />
               </div>
-            </CollapsibleContent>
-          </Collapsible>
+              <div className="grid gap-1.5">
+                <Label htmlFor="gen-poi" className="text-xs">
+                  POI density
+                </Label>
+                <Select
+                  value={genPoiDensity}
+                  onValueChange={(v) =>
+                    setGenPoiDensity(v as typeof genPoiDensity)
+                  }
+                  disabled={isCreating}
+                >
+                  <SelectTrigger id="gen-poi">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sparse">Sparse</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="dense">Dense</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="gen-threat" className="text-xs">
+                Looming threat
+              </Label>
+              <Switch
+                id="gen-threat"
+                checked={genLoomingThreat}
+                onCheckedChange={setGenLoomingThreat}
+                disabled={isCreating}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>
