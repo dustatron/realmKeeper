@@ -1021,11 +1021,11 @@ export function DungeonTemplate({
                   discoveries={getDiscoveriesForRoom(selectedRoom.id)}
                   onToggleDiscoveryFound={(discoveryId) => handleToggleDiscoveryFound(selectedRoom.id, discoveryId)}
                 />
-              ) : (
+              ) : childPois.length > 0 ? (
                 <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
                   Select a room to see details
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
 

@@ -7,7 +7,7 @@ import type { FactionPresence } from '@domain/entities/FactionPresence'
 import type { Trap } from '@domain/value-objects/Trap'
 import type { TreasureItem } from '@domain/value-objects/TreasureItem'
 import type { ResolvedPath } from '~/ui/hooks/useResolvedPaths'
-import { formatTravel } from '~/lib/hexmap/travel'
+import { formatDistance } from '~/lib/hexmap/travel'
 
 interface AtAGlancePanelProps {
   mood?: string
@@ -170,11 +170,11 @@ export function AtAGlancePanel({
                       {path.isLocked ? '🔒' : '🚪'}
                     </span>
                   )}
-                  {path.hexes != null && (
-                    <span className="text-[10px] text-muted-foreground shrink-0 whitespace-nowrap">
-                      {formatTravel(path.hexes)}
-                    </span>
-                  )}
+                  <span className="text-[10px] text-muted-foreground shrink-0 whitespace-nowrap">
+                    {path.hexes != null
+                      ? `${formatDistance(path.hexes)} · ${path.baseTravelWatches} ${path.baseTravelWatches === 1 ? 'watch' : 'watches'}`
+                      : `${path.baseTravelWatches} ${path.baseTravelWatches === 1 ? 'watch' : 'watches'}`}
+                  </span>
                   <Badge variant="outline" className="text-[10px] shrink-0 ml-auto whitespace-nowrap">{path.type}</Badge>
                 </Link>
               )

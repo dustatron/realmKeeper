@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { hexesBetween, formatTravel } from './travel'
+import { hexesBetween, formatDistance } from './travel'
 
 describe('hexesBetween', () => {
   it('returns 1 for two positions one hex apart', () => {
@@ -14,24 +14,16 @@ describe('hexesBetween', () => {
   })
 })
 
-describe('formatTravel', () => {
+describe('formatDistance', () => {
   it('formats 1 hex correctly', () => {
-    expect(formatTravel(1)).toBe('1 hex · 6 mi · 4h')
+    expect(formatDistance(1)).toBe('1 hex · 6 mi')
   })
 
   it('formats 2 hexes correctly', () => {
-    expect(formatTravel(2)).toBe('2 hexes · 12 mi · 1 day')
-  })
-
-  it('formats 3 hexes correctly', () => {
-    expect(formatTravel(3)).toBe('3 hexes · 18 mi · 1 day 4h')
+    expect(formatDistance(2)).toBe('2 hexes · 12 mi')
   })
 
   it('formats 5 hexes correctly', () => {
-    expect(formatTravel(5)).toBe('5 hexes · 30 mi · 2 days 4h')
-  })
-
-  it('formats 4 hexes correctly (exact days, no hours)', () => {
-    expect(formatTravel(4)).toBe('4 hexes · 24 mi · 2 days')
+    expect(formatDistance(5)).toBe('5 hexes · 30 mi')
   })
 })

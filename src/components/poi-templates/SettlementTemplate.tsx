@@ -541,11 +541,11 @@ export function SettlementTemplate({
                   npcs={npcsByPoiId[selectedLocation.id] ?? []}
                   onUpdateNPC={onUpdateNPC}
                 />
-              ) : (
+              ) : childPois.length > 0 ? (
                 <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
                   Select a location to see details
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
 
