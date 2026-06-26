@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { generateTown } from '~/lib/towngen/generateTown'
 import { collectAnchors } from '~/lib/towngen/collectAnchors'
+import { gridPositions } from '~/lib/towngen/gridPositions'
 import { newId } from '@shared/ulid'
 import { useNavigate } from '@tanstack/react-router'
 import { useUIStore } from '~/ui/stores/uiStore'
@@ -293,7 +294,22 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
   const handleRegenerateTown = useCallback(async () => {
     const preset = gameMap.townPreset ?? 'village'
     const seed = gameMap.townSeed ?? newId()
-    const townData = generateTown(collectAnchors(poisOnMap), {
+    // Auto-place any unplaced child buildings into a grid so the whole settlement
+    // appears in one click. Already-placed markers keep their (dragged) positions.
+    const placed = [...poisOnMap]
+    if (unplacedPois.length > 0) {
+      const slots = gridPositions(unplacedPois.length, gameMap.width, gameMap.height)
+      for (let i = 0; i < unplacedPois.length; i++) {
+        const p = unplacedPois[i]
+        const position = slots[i]
+        await executePlacePOIOnMap(
+          { poiId: p.id, mapId: gameMap.id, position },
+          { poiRepo: container.poiRepo },
+        )
+        placed.push({ ...p, position, mapRef: gameMap.id })
+      }
+    }
+    const townData = generateTown(collectAnchors(placed), {
       preset,
       seed,
       walled: gameMap.townWalled ?? undefined,
@@ -307,7 +323,7 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
       townSeed: seed,
       updatedAt: Date.now(),
     })
-  }, [gameMap, poisOnMap, container.gameMapRepo])
+  }, [gameMap, poisOnMap, unplacedPois, container.poiRepo, container.gameMapRepo])
 
   const handleCreatePath = async () => {
     if (!drawPathFrom || !drawPathTo) return

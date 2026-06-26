@@ -200,7 +200,7 @@ export function MapViewer({
           {
             id: 'background',
             type: 'background',
-            paint: { 'background-color': hasImage ? '#1a1a2e' : '#0f172a' },
+            paint: { 'background-color': hasImage ? '#1a1a2e' : map.kind === 'town' ? '#e8dcc0' : '#0f172a' },
           },
           ...(hasImage
             ? [
