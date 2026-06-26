@@ -395,11 +395,11 @@ function NewRealmPage() {
         </div>
 
         <div className="rounded-lg border bg-card p-4">
-          {calendarSettingsSection}
+          {generationSettingsSection}
         </div>
 
         <div className="rounded-lg border bg-card p-4">
-          {generationSettingsSection}
+          {calendarSettingsSection}
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
