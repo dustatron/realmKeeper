@@ -70,7 +70,7 @@ function isSettlementTab(value: string | null | undefined): value is SettlementT
   return SETTLEMENT_TABS.includes(value as SettlementTab);
 }
 
-function LocationDetailPanel({
+function LocationDetailContent({
   location,
   npcs,
   onUpdateNPC,
@@ -79,26 +79,8 @@ function LocationDetailPanel({
   npcs: NPC[];
   onUpdateNPC?: (npc: NPC) => void;
 }) {
-  const LocIcon = POI_TYPE_ICONS[location.type];
   return (
-    <div className="rounded-md border bg-card p-3 space-y-3">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <LocIcon className="size-4 shrink-0 text-muted-foreground" />
-        <Link
-          to="/realms/pois/$poiId"
-          params={{ poiId: location.id }}
-          className="text-sm font-semibold truncate hover:underline"
-        >
-          {location.name}
-        </Link>
-        {location.subtypeLabel && (
-          <Badge variant="secondary" className="text-xs shrink-0">
-            {location.subtypeLabel}
-          </Badge>
-        )}
-      </div>
-
+    <div className="space-y-3">
       {/* Read Aloud */}
       {location.readAloud && (
         <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5">
@@ -195,6 +177,42 @@ function LocationDetailPanel({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function LocationDetailPanel({
+  location,
+  npcs,
+  onUpdateNPC,
+}: {
+  location: POI;
+  npcs: NPC[];
+  onUpdateNPC?: (npc: NPC) => void;
+}) {
+  const LocIcon = POI_TYPE_ICONS[location.type];
+  return (
+    <div className="space-y-3 rounded-md border bg-card p-3">
+      <div className="flex items-center gap-2">
+        <LocIcon className="size-4 shrink-0 text-muted-foreground" />
+        <Link
+          to="/realms/pois/$poiId"
+          params={{ poiId: location.id }}
+          className="truncate text-sm font-semibold hover:underline"
+        >
+          {location.name}
+        </Link>
+        {location.subtypeLabel && (
+          <Badge variant="secondary" className="shrink-0 text-xs">
+            {location.subtypeLabel}
+          </Badge>
+        )}
+      </div>
+      <LocationDetailContent
+        location={location}
+        npcs={npcs}
+        onUpdateNPC={onUpdateNPC}
+      />
     </div>
   );
 }
@@ -733,6 +751,7 @@ export function SettlementTemplate({
                     return (
                       <div
                         key={child.id}
+                        ref={layout === "stacked" && isSelected ? detailPanelRef : undefined}
                         className={`rounded-md border p-2.5 cursor-pointer transition-colors ${
                           isSelected
                             ? "ring-2 ring-primary bg-accent"
@@ -781,6 +800,18 @@ export function SettlementTemplate({
                             </Link>
                           </span>
                         </div>
+                        {layout === "stacked" && isSelected && (
+                          <div
+                            className="mt-3 cursor-default border-t pt-3"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <LocationDetailContent
+                              location={child}
+                              npcs={childNpcList}
+                              onUpdateNPC={onUpdateNPC}
+                            />
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -793,20 +824,22 @@ export function SettlementTemplate({
             </div>
 
             {/* RIGHT: selected location detail */}
-            <div className="space-y-3">
-              <div ref={detailPanelRef} />
-              {selectedLocation ? (
-                <LocationDetailPanel
-                  location={selectedLocation}
-                  npcs={npcsByPoiId[selectedLocation.id] ?? []}
-                  onUpdateNPC={onUpdateNPC}
-                />
-              ) : childPois.length > 0 ? (
-                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  Select a location to see details
-                </div>
-              ) : null}
-            </div>
+            {layout === "columns" && (
+              <div className="space-y-3">
+                <div ref={detailPanelRef} />
+                {selectedLocation ? (
+                  <LocationDetailPanel
+                    location={selectedLocation}
+                    npcs={npcsByPoiId[selectedLocation.id] ?? []}
+                    onUpdateNPC={onUpdateNPC}
+                  />
+                ) : childPois.length > 0 ? (
+                  <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                    Select a location to see details
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
 
           {/* Aggregate Services */}

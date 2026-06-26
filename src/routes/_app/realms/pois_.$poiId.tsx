@@ -380,6 +380,7 @@ function POIDetailPage() {
   const impliedGenerator = poi.type === 'settlement' ? 'mfcg' as const : poi.type === 'dungeon' ? 'opd' as const : null
   // Render whatever generator was actually saved on this POI, regardless of type.
   const activeWatabouGenerator = poi.watabouGenerator ?? impliedGenerator
+  const isSettlementPoi = poi.type === 'settlement'
 
   const notesSection = region ? <NotesPanel ownerType="poi" ownerId={poiId} worldId={region.worldId} /> : null
 
@@ -391,6 +392,8 @@ function POIDetailPage() {
       parentPoiId={poiId}
       highlightPoiId={selectedChildId}
       onPoiSelect={setSelectedChildId}
+      framed={!isSettlementPoi}
+      className={isSettlementPoi ? 'h-[calc(100svh-16rem)] min-h-[460px]' : undefined}
     />
   ) : null
 
