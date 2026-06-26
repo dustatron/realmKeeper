@@ -287,9 +287,9 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
           <div className="space-y-6">
             {/* Looming Doom */}
             {doom && (
-              <Card className="border-destructive/40 bg-destructive/5">
+              <Card className="border-warning/40 bg-card">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-destructive">
+                  <CardTitle className="flex items-center gap-2 text-warning">
                     <Skull className="size-5" />
                     {doom.title}
                   </CardTitle>
