@@ -99,9 +99,11 @@ interface InteractiveMapProps {
   highlightPoiId?: string | null
   /** Called when a POI marker is clicked in view mode (for room selection) */
   onPoiSelect?: (poiId: string) => void
+  /** Show an in-map control that resets pan/zoom to the map image. */
+  showResetControl?: boolean
 }
 
-export function InteractiveMap({ gameMap, className, style, parentPoiId, highlightPoiId, onPoiSelect }: InteractiveMapProps) {
+export function InteractiveMap({ gameMap, className, style, parentPoiId, highlightPoiId, onPoiSelect, showResetControl = true }: InteractiveMapProps) {
   const navigate = useNavigate()
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const container = useContainer()
@@ -362,6 +364,7 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
           onPoiDrag={handlePoiDrag}
           onRegionBoundaryDrawn={handleRegionBoundaryDrawn}
           onRegionClick={setRegionPopup}
+          showResetControl={showResetControl}
         />
       </div>
 

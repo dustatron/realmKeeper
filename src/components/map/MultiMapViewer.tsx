@@ -18,6 +18,8 @@ interface MultiMapViewerProps {
   highlightPoiId?: string | null
   /** Called when a POI marker is clicked (for room selection) */
   onPoiSelect?: (poiId: string) => void
+  /** Show a reset view button inside the rendered map. */
+  showResetControl?: boolean
   emptyTitle?: string
   emptyDescription?: string
 }
@@ -29,6 +31,7 @@ export function MultiMapViewer({
   parentPoiId,
   highlightPoiId,
   onPoiSelect,
+  showResetControl = true,
   emptyTitle = 'No maps yet',
   emptyDescription = 'Upload a map image to get started',
 }: MultiMapViewerProps) {
@@ -123,6 +126,7 @@ export function MultiMapViewer({
         parentPoiId={parentPoiId ?? undefined}
         highlightPoiId={highlightPoiId}
         onPoiSelect={onPoiSelect}
+        showResetControl={showResetControl}
       />
 
       <ConfirmDialog

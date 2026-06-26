@@ -24,6 +24,7 @@ import {
   MapPin,
   Maximize,
   Minimize,
+  RotateCcw,
 } from 'lucide-react'
 import { createRoot } from 'react-dom/client'
 
@@ -65,6 +66,7 @@ interface MapViewerProps {
   onPoiDrag?: (poiId: string, position: { x: number; y: number }) => void
   onRegionBoundaryDrawn?: (vertices: { x: number; y: number }[]) => void
   onRegionClick?: (region: Region) => void
+  showResetControl?: boolean
 }
 
 const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }>> = {
@@ -123,6 +125,7 @@ export function MapViewer({
   onPoiDrag,
   onRegionBoundaryDrawn,
   onRegionClick,
+  showResetControl = true,
 }: MapViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
@@ -138,6 +141,7 @@ export function MapViewer({
   onRegionBoundaryDrawnRef.current = onRegionBoundaryDrawn
   const onRegionClickRef = useRef(onRegionClick)
   onRegionClickRef.current = onRegionClick
+  const fitToImageRef = useRef<((duration?: number) => void) | null>(null)
   const [mapReady, setMapReady] = useState(false)
   const [drawingVertices, setDrawingVertices] = useState<{ x: number; y: number }[]>([])
 
@@ -231,6 +235,7 @@ export function MapViewer({
           { padding: 20, duration }
         )
       }
+      fitToImageRef.current = fitToImage
       onReady?.({ zoomToFit: () => fitToImage(300) })
       // Auto-fit on first load when no saved view state
       if (!initialViewState) {
@@ -252,6 +257,7 @@ export function MapViewer({
       markerDataRef.current.clear()
       mapInstance.remove()
       imageUrlRef.current = null
+      fitToImageRef.current = null
       setMapReady(false)
     }
   }, [map.id, map.imageUrl, map.width, map.height, pxToLngLat])
@@ -878,6 +884,10 @@ export function MapViewer({
     }
   }
 
+  const handleResetView = () => {
+    fitToImageRef.current?.(300)
+  }
+
   // Resize map when entering/exiting fullscreen
   useEffect(() => {
     const instance = mapRef.current
@@ -894,9 +904,23 @@ export function MapViewer({
         variant="secondary"
         className="absolute bottom-2 left-2 size-8 z-10 shadow-md"
         onClick={toggleFullscreen}
+        title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+        aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
       >
         {isFullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
       </Button>
+      {showResetControl && (
+        <Button
+          size="icon"
+          variant="secondary"
+          className="absolute right-2 top-20 size-8 z-10 shadow-md"
+          onClick={handleResetView}
+          title="Reset map view"
+          aria-label="Reset map view"
+        >
+          <RotateCcw className="size-4" />
+        </Button>
+      )}
     </div>
   )
 }

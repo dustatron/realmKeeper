@@ -136,6 +136,7 @@ function POIDetailPage() {
   const [isGeneratingNPC, setIsGeneratingNPC] = useState(false)
   const [isCreatingTownMap, setIsCreatingTownMap] = useState(false)
   const [townMapError, setTownMapError] = useState<string | null>(null)
+  const [townMapMessage, setTownMapMessage] = useState<string | null>(null)
 
   // Breadcrumb in site header
   useEffect(() => {
@@ -233,6 +234,7 @@ function POIDetailPage() {
     if (!poi) return
 
     setTownMapError(null)
+    setTownMapMessage(null)
     setIsCreatingTownMap(true)
     try {
       const picked = pickTownMapForSize(poi.id, children.length)
@@ -264,7 +266,7 @@ function POIDetailPage() {
         ),
       ))
 
-      navigate({ to: '/realms/maps/$mapId', params: { mapId: townMap.id } })
+      setTownMapMessage('Town map ready.')
     } catch (err) {
       setTownMapError(err instanceof Error ? err.message : 'Town map creation failed.')
     } finally {
@@ -590,6 +592,9 @@ function POIDetailPage() {
 
       {townMapError && (
         <p className="text-sm text-destructive">{townMapError}</p>
+      )}
+      {townMapMessage && (
+        <p className="text-sm text-muted-foreground">{townMapMessage}</p>
       )}
 
       {compassConnections.length > 0 && (
