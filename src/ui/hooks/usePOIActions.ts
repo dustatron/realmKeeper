@@ -1,4 +1,3 @@
-import { db } from '@infrastructure/dexie/db'
 import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
 import { executeCreateGameMap } from '@application/use-cases/CreateGameMap'
 import { executeCreateRumor } from '@application/use-cases/CreateRumor'
@@ -132,14 +131,6 @@ export function usePOIActions(poi: POI | null | undefined, region: Region | null
     handleUpdateSessionLog([entry, ...(poi.sessionLog ?? [])])
   }
 
-  const cycleLightLevel = async () => {
-    if (!poi) return
-    const cycle: Array<'bright' | 'dim' | 'dark' | null> = [null, 'bright', 'dim', 'dark']
-    const idx = cycle.indexOf(poi.lightLevel ?? null)
-    const next = cycle[(idx + 1) % cycle.length]
-    await db.pois.update(poi.id, { lightLevel: next, updatedAt: Date.now() })
-  }
-
   const handleUpdateCompendiumRefs = async (refs: { monsterRefs: CompendiumRef[]; magicItemRefs: CompendiumRef[]; spellRefs: CompendiumRef[]; equipmentRefs: CompendiumRef[] }) => {
     if (!poi) return
     await executeUpdatePOI({ ...poi, ...refs }, { poiRepo: container.poiRepo })
@@ -194,7 +185,6 @@ export function usePOIActions(poi: POI | null | undefined, region: Region | null
     handleUpdateTreasure,
     handleUpdateSessionLog,
     handleLogDungeonEvent,
-    cycleLightLevel,
     handleUpdateCompendiumRefs,
     handleImportWatabou,
     handleClearWatabou,

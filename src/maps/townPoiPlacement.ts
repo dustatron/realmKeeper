@@ -28,12 +28,20 @@ const IMPORTANT_TYPES = new Set<PoiType>([
 ])
 
 const MIN_SPREAD_AREA_RATIO = 0.06
+const POSITION_MATCH_TOLERANCE = 1
 
 function shouldAssign(poi: POI, mapId: string, reassignExistingOnMap: boolean): boolean {
   if (poi.mapRef === mapId && poi.position) return reassignExistingOnMap
   if (poi.mapRef && poi.mapRef !== mapId) return false
   if (!poi.mapRef && poi.position) return false
   return true
+}
+
+function hasPositionOnMap(
+  poi: POI,
+  mapId: string,
+): poi is POI & { mapRef: string; position: { x: number; y: number } } {
+  return poi.mapRef === mapId && poi.position !== null
 }
 
 function poiPriority(poi: POI): number {
@@ -65,6 +73,13 @@ function fallbackPosition(
 
 function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {
   return Math.hypot(a.x - b.x, a.y - b.y)
+}
+
+function isSamePosition(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+): boolean {
+  return distance(a, b) <= POSITION_MATCH_TOLERANCE
 }
 
 function nearestDistance(building: TownBuildingCandidate, selected: TownBuildingCandidate[]): number {
@@ -119,7 +134,20 @@ export function assignPoisToBuildings(input: AssignPoisToBuildingsInput): TownPo
   const assignablePois = sortPoisForAssignment(input.pois.filter((poi) =>
     shouldAssign(poi, input.mapId, input.reassignExistingOnMap ?? false),
   ))
-  const availableBuildings = [...input.buildings].sort(compareBuildings)
+  const sortedBuildings = [...input.buildings].sort(compareBuildings)
+  const currentPositions = input.reassignExistingOnMap
+    ? assignablePois
+      .filter((poi) => hasPositionOnMap(poi, input.mapId))
+      .map((poi) => poi.position)
+    : []
+  const alternateBuildings = currentPositions.length > 0
+    ? sortedBuildings.filter((building) =>
+      !currentPositions.some((position) => isSamePosition(building.centroid, position)),
+    )
+    : sortedBuildings
+  const availableBuildings = alternateBuildings.length >= assignablePois.length
+    ? alternateBuildings
+    : sortedBuildings
   const selectedBuildings = selectSpreadBuildings(availableBuildings, assignablePois.length)
 
   return assignablePois.map((poi, index) => {

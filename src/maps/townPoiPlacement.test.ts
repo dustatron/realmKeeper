@@ -91,6 +91,25 @@ describe('assignPoisToBuildings', () => {
     expect(assignments.map((a) => a.poiId)).toEqual(['new', 'placed-here'])
   })
 
+  it('uses different building centroids when reassigning existing placements', () => {
+    const assignments = assignPoisToBuildings({
+      mapId: 'map-1',
+      imageSize: { width: 1000, height: 1000 },
+      reassignExistingOnMap: true,
+      pois: [
+        poi({ id: 'placed-here', mapRef: 'map-1', position: { x: 10, y: 20 } }),
+      ],
+      buildings: [
+        building('current', 100, 10, 20),
+        building('alternate', 90, 100, 120),
+      ],
+    })
+
+    expect(assignments).toEqual([
+      { poiId: 'placed-here', position: { x: 100, y: 120 }, source: 'building', buildingId: 'alternate' },
+    ])
+  })
+
   it('gives important POI types the largest buildings', () => {
     const assignments = assignPoisToBuildings({
       mapId: 'map-1',

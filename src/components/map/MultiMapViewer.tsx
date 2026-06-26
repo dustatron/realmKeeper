@@ -12,6 +12,7 @@ import type { GameMap } from '@domain/entities/GameMap'
 interface MultiMapViewerProps {
   maps: GameMap[]
   onUpload?: (data: { name: string; imageUrl: string; width: number; height: number }) => void
+  onRequestUpload?: () => void
   /** CSS class for the InteractiveMap height */
   className?: string
   parentPoiId?: string | null
@@ -27,6 +28,7 @@ interface MultiMapViewerProps {
 export function MultiMapViewer({
   maps,
   onUpload,
+  onRequestUpload,
   className = 'h-[300px] md:h-[500px]',
   parentPoiId,
   highlightPoiId,
@@ -42,6 +44,7 @@ export function MultiMapViewer({
 
   const clampedIndex = Math.min(activeMapIndex, Math.max(maps.length - 1, 0))
   const activeMap = maps[clampedIndex] ?? null
+  const openUploadDialog = onRequestUpload ?? (() => setUploadDialogOpen(true))
 
   const handleDeleteMap = async () => {
     if (!deletingMapId) return
@@ -63,13 +66,13 @@ export function MultiMapViewer({
           title={emptyTitle}
           description={emptyDescription}
           action={onUpload ? (
-            <Button onClick={() => setUploadDialogOpen(true)}>
+            <Button onClick={openUploadDialog}>
               <Upload className="mr-2 size-4" />
               Upload Map
             </Button>
           ) : undefined}
         />
-        {onUpload && (
+        {onUpload && !onRequestUpload && (
           <MapUploadDialog
             open={uploadDialogOpen}
             onOpenChange={setUploadDialogOpen}
@@ -112,7 +115,7 @@ export function MultiMapViewer({
           variant="ghost"
           size="sm"
           className="h-7 shrink-0 text-xs text-muted-foreground"
-          onClick={() => setUploadDialogOpen(true)}
+          onClick={openUploadDialog}
         >
           <Plus className="mr-1 size-3" />
           Add
@@ -144,7 +147,7 @@ export function MultiMapViewer({
         onConfirm={handleDeleteMap}
       />
 
-      {onUpload && (
+      {onUpload && !onRequestUpload && (
         <MapUploadDialog
           open={uploadDialogOpen}
           onOpenChange={setUploadDialogOpen}

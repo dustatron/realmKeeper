@@ -5,8 +5,7 @@ export interface MapGeneratorLink {
 
 /**
  * Watabou Arcana generators surfaced as "open generator → export PNG → upload" links.
- * These are image-based (we upload the exported PNG); City and One Page Dungeon also have
- * a separate interactive vector path on POIs (see the Generate tab in MapUploadDialog).
+ * These are image-based. We upload the exported PNG and place POIs on top.
  */
 export const IMAGE_MAP_GENERATORS: MapGeneratorLink[] = [
   { label: 'Region (Perilous Shores)', url: 'https://watabou.github.io/perilous-shores/' },
