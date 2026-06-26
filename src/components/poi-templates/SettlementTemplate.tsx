@@ -390,7 +390,11 @@ export function SettlementTemplate({
         <TabsList variant="line" className="w-full">
           <TabsTrigger value="locations">
             <MapPin className="size-4" />
-            Locations & NPCs
+            Locations
+          </TabsTrigger>
+          <TabsTrigger value="denizens">
+            <Users className="size-4" />
+            Denizens{allNPCs.length > 0 ? ` (${allNPCs.length})` : ''}
           </TabsTrigger>
           <TabsTrigger value="rumors">
             <MessageSquare className="size-4" />
@@ -552,8 +556,10 @@ export function SettlementTemplate({
               <ServicesList services={allServices} />
             </div>
           )}
+        </TabsContent>
 
-          {/* NPCs — settlement + child locations */}
+        {/* Denizens tab */}
+        <TabsContent value="denizens" className="space-y-4 pt-3">
           <div>
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-sm font-semibold flex items-center gap-2">
