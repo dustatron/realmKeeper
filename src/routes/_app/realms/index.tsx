@@ -24,21 +24,7 @@ import {
 } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import { Textarea } from "~/components/ui/textarea";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "~/components/ui/collapsible";
-import { Switch } from "~/components/ui/switch";
-import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import {
   LayoutDashboard,
   Plus,
@@ -47,34 +33,21 @@ import {
   Upload,
   Crown,
   Pencil,
-  ChevronDown,
-  Settings,
-  Wand2,
   CheckCircle2,
   Circle,
   ListChecks,
   X,
 } from "lucide-react";
-import {
-  DEFAULT_DAYS_PER_SEASON,
-  DEFAULT_WATCHES_PER_DAY,
-} from "@shared/constants";
 // useRealms replaced by direct useLiveQuery to detect loading vs empty
 import { useSystemConfigs } from "~/ui/hooks/useSystemConfigs";
 import { useContainer } from "~/ui/hooks/useContainer";
 import { useUIStore } from "~/ui/stores/uiStore";
-import { executeCreateRealm } from "@application/use-cases/CreateRealm";
 import { executeDeleteRealm } from "@application/use-cases/DeleteRealm";
 import { executeDeleteRealms } from "@application/use-cases/DeleteRealms";
-import { executeGenerateWorld } from "@application/use-cases/GenerateWorld";
-import { newId } from "@shared/ulid";
 import { executeExportRealm } from "@application/use-cases/ExportRealm";
 import { executeImportRealm } from "@application/use-cases/ImportRealm";
 import { Dashboard } from "~/components/realm/Dashboard";
 import type { RealmExport } from "@application/use-cases/ExportRealm";
-
-// Default rule system for new realms (Cairn 2e ships seeded).
-const DEFAULT_SYSTEM_ID = "system-cairn-2e";
 
 export const Route = createFileRoute("/_app/realms/")({
   component: RealmsPage,
@@ -115,26 +88,10 @@ function RealmsPage() {
     }
   }, [realmsLoaded, activeRealmId, realms, setActiveRealmId]);
 
-  const [showCreate, setShowCreate] = useState(false);
-  const [createName, setCreateName] = useState("");
-  const [createSystem, setCreateSystem] = useState(DEFAULT_SYSTEM_ID);
-  const [createDesc, setCreateDesc] = useState("");
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  const [createWatchesPerDay, setCreateWatchesPerDay] = useState(
-    DEFAULT_WATCHES_PER_DAY,
-  );
-  const [createDaysPerSeason, setCreateDaysPerSeason] = useState(
-    DEFAULT_DAYS_PER_SEASON,
-  );
-  const [createDaysPerWeek, setCreateDaysPerWeek] = useState(7);
-  const [createFactionTurnTrigger, setCreateFactionTurnTrigger] = useState<
-    "day" | "week" | "manual"
-  >("day");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
@@ -144,106 +101,6 @@ function RealmsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-
-  // Procedural generation params (shown in the Create dialog when enabled).
-  // All of these are live and feed executeGenerateWorld: size, seed, faction
-  // count, POI density, and the looming-threat toggle.
-  const [genEnabled, setGenEnabled] = useState(true);
-  const [genSize, setGenSize] = useState<"small" | "medium" | "large">(
-    "medium",
-  );
-  const [genSeed, setGenSeed] = useState("");
-  const [genAdvancedOpen, setGenAdvancedOpen] = useState(false);
-  const [genFactions, setGenFactions] = useState(4);
-  const [genPoiDensity, setGenPoiDensity] = useState<
-    "sparse" | "normal" | "dense"
-  >("normal");
-  const [genLoomingThreat, setGenLoomingThreat] = useState(true);
-
-  const resetCreateForm = () => {
-    setShowCreate(false);
-    setCreateName("");
-    setCreateSystem(DEFAULT_SYSTEM_ID);
-    setCreateDesc("");
-    setCalendarOpen(false);
-    setCreateWatchesPerDay(DEFAULT_WATCHES_PER_DAY);
-    setCreateDaysPerSeason(DEFAULT_DAYS_PER_SEASON);
-    setCreateDaysPerWeek(7);
-    setCreateFactionTurnTrigger("day");
-    setGenEnabled(true);
-    setGenSize("medium");
-    setGenSeed("");
-    setGenAdvancedOpen(false);
-    // Reset the advanced generation knobs too, so a prior world's settings
-    // don't silently carry into the next Create dialog.
-    setGenFactions(4);
-    setGenPoiDensity("normal");
-    setGenLoomingThreat(true);
-  };
-
-  const handleCreateRealm = async () => {
-    if (!createName.trim() || !createSystem) return;
-
-    setIsCreating(true);
-    try {
-      if (genEnabled) {
-        const { realmId, mapId } = await executeGenerateWorld(
-          {
-            name: createName.trim(),
-            systemId: createSystem,
-            description: createDesc.trim(),
-            seed: genSeed.trim() || newId(),
-            size: genSize,
-            watchesPerDay: createWatchesPerDay,
-            daysPerSeason: createDaysPerSeason,
-            daysPerWeek: createDaysPerWeek,
-            factionTurnTrigger: createFactionTurnTrigger,
-            poiDensity: genPoiDensity,
-            factionCount: genFactions,
-            loomingThreat: genLoomingThreat,
-          },
-          {
-            realmRepo: container.realmRepo,
-            factionRepo: container.factionRepo,
-            realmNoteRepo: container.realmNoteRepo,
-            poiRepo: container.poiRepo,
-            npcRepo: container.npcRepo,
-            pathRepo: container.pathRepo,
-            factionPresenceRepo: container.factionPresenceRepo,
-            poiEventRepo: container.poiEventRepo,
-          },
-        );
-        resetCreateForm();
-        setActiveRealmId(realmId);
-        navigate({ to: "/realms/maps/$mapId", params: { mapId } });
-        return;
-      }
-
-      const newRealm = await executeCreateRealm(
-        {
-          name: createName.trim(),
-          systemId: createSystem,
-          description: createDesc.trim(),
-          watchesPerDay: createWatchesPerDay,
-          daysPerSeason: createDaysPerSeason,
-          daysPerWeek: createDaysPerWeek,
-          factionTurnTrigger: createFactionTurnTrigger,
-        },
-        {
-          realmRepo: container.realmRepo,
-          factionRepo: container.factionRepo,
-          realmNoteRepo: container.realmNoteRepo,
-        },
-      );
-
-      setActiveRealmId(newRealm.id);
-      resetCreateForm();
-    } catch (error) {
-      console.error("Failed to create realm:", error);
-    } finally {
-      setIsCreating(false);
-    }
-  };
 
   const handleDeleteRealm = async () => {
     if (!deleteTarget) return;
@@ -403,318 +260,6 @@ function RealmsPage() {
     }
   };
 
-  const calendarSettingsSection = (
-    <Collapsible open={calendarOpen} onOpenChange={setCalendarOpen}>
-      <CollapsibleTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-between px-0 font-medium"
-          disabled={isCreating}
-        >
-          <span className="flex items-center gap-2">
-            <Settings className="size-4" />
-            Calendar Settings
-          </span>
-          <ChevronDown
-            className={`size-4 transition-transform ${calendarOpen ? "rotate-180" : ""}`}
-          />
-        </Button>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="space-y-3 pt-2">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="grid gap-1.5">
-            <Label htmlFor="watches-per-day" className="text-xs">
-              Watches per Day
-            </Label>
-            <Input
-              id="watches-per-day"
-              type="number"
-              min="1"
-              max="12"
-              value={createWatchesPerDay}
-              onChange={(e) =>
-                setCreateWatchesPerDay(
-                  parseInt(e.target.value) || DEFAULT_WATCHES_PER_DAY,
-                )
-              }
-              disabled={isCreating}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="days-per-season" className="text-xs">
-              Days per Season
-            </Label>
-            <Input
-              id="days-per-season"
-              type="number"
-              min="1"
-              max="365"
-              value={createDaysPerSeason}
-              onChange={(e) =>
-                setCreateDaysPerSeason(
-                  parseInt(e.target.value) || DEFAULT_DAYS_PER_SEASON,
-                )
-              }
-              disabled={isCreating}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="days-per-week" className="text-xs">
-              Days per Week
-            </Label>
-            <Input
-              id="days-per-week"
-              type="number"
-              min="1"
-              max="30"
-              value={createDaysPerWeek}
-              onChange={(e) =>
-                setCreateDaysPerWeek(parseInt(e.target.value) || 7)
-              }
-              disabled={isCreating}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="faction-turn-trigger" className="text-xs">
-              Faction Turn Trigger
-            </Label>
-            <Select
-              value={createFactionTurnTrigger}
-              onValueChange={(v) =>
-                setCreateFactionTurnTrigger(
-                  v as typeof createFactionTurnTrigger,
-                )
-              }
-              disabled={isCreating}
-            >
-              <SelectTrigger id="faction-turn-trigger">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="day">Every Day</SelectItem>
-                <SelectItem value="week">Every Week</SelectItem>
-                <SelectItem value="manual">Manual Only</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-
-  const generationSettingsSection = (
-    <div className="space-y-3 rounded-lg border p-3">
-      <div className="flex items-center justify-between">
-        <Label
-          htmlFor="gen-toggle"
-          className="flex items-center gap-2 font-medium"
-        >
-          <Wand2 className="size-4" />
-          Procedurally generate world
-        </Label>
-        <Switch
-          id="gen-toggle"
-          checked={genEnabled}
-          onCheckedChange={setGenEnabled}
-          disabled={isCreating}
-        />
-      </div>
-      {genEnabled && (
-        <div className="space-y-3 pt-1">
-          <p className="text-xs text-muted-foreground">
-            Off creates a blank world. On generates a biome hex map sized to your
-            choice — a starting canvas you can flesh out.
-          </p>
-          <div className="grid gap-1.5">
-            <Label className="text-xs">World size</Label>
-            <ToggleGroup
-              type="single"
-              value={genSize}
-              onValueChange={(v) =>
-                v && setGenSize(v as typeof genSize)
-              }
-              className="justify-start"
-              disabled={isCreating}
-            >
-              <ToggleGroupItem value="small">Small · 8×8</ToggleGroupItem>
-              <ToggleGroupItem value="medium">Medium · 12×12</ToggleGroupItem>
-              <ToggleGroupItem value="large">Large · 16×16</ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="gen-seed" className="text-xs">
-              Seed (optional)
-            </Label>
-            <Input
-              id="gen-seed"
-              placeholder="Leave blank for a random world"
-              value={genSeed}
-              onChange={(e) => setGenSeed(e.target.value)}
-              disabled={isCreating}
-            />
-          </div>
-          <Collapsible open={genAdvancedOpen} onOpenChange={setGenAdvancedOpen}>
-            <CollapsibleTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-between px-0 font-medium"
-                disabled={isCreating}
-              >
-                <span className="flex items-center gap-2">
-                  <Settings className="size-4" />
-                  Advanced
-                </span>
-                <ChevronDown
-                  className={`size-4 transition-transform ${genAdvancedOpen ? "rotate-180" : ""}`}
-                />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 pt-2">
-              <p className="text-xs text-muted-foreground">
-                Fine-tune what gets generated: how many factions vie for power,
-                how densely the map is dotted with points of interest, and
-                whether a looming threat hangs over the realm.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-1.5">
-                  <Label htmlFor="gen-factions" className="text-xs">
-                    Factions
-                  </Label>
-                  <Input
-                    id="gen-factions"
-                    type="number"
-                    min="0"
-                    max="20"
-                    value={genFactions}
-                    onChange={(e) =>
-                      setGenFactions(parseInt(e.target.value) || 0)
-                    }
-                    disabled={isCreating}
-                  />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="gen-poi" className="text-xs">
-                    POI density
-                  </Label>
-                  <Select
-                    value={genPoiDensity}
-                    onValueChange={(v) =>
-                      setGenPoiDensity(v as typeof genPoiDensity)
-                    }
-                    disabled={isCreating}
-                  >
-                    <SelectTrigger id="gen-poi">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sparse">Sparse</SelectItem>
-                      <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="dense">Dense</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="gen-threat" className="text-xs">
-                  Looming threat
-                </Label>
-                <Switch
-                  id="gen-threat"
-                  checked={genLoomingThreat}
-                  onCheckedChange={setGenLoomingThreat}
-                  disabled={isCreating}
-                />
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
-      )}
-    </div>
-  );
-
-  // Single Create-Realm modal, rendered in both the empty-state and the
-  // populated views (only one is mounted at a time). Defined once so the two
-  // entry points never drift (e.g. the generation toggle present in one but not
-  // the other).
-  const createRealmDialog = (
-    <Dialog open={showCreate} onOpenChange={setShowCreate}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create New Realm</DialogTitle>
-          <DialogDescription>
-            Set up a new realm for your campaign.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="realm-name">Name</Label>
-            <Input
-              id="realm-name"
-              placeholder="The Forgotten Realms"
-              value={createName}
-              onChange={(e) => setCreateName(e.target.value)}
-              disabled={isCreating}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="realm-system">System</Label>
-            <Select
-              value={createSystem}
-              onValueChange={setCreateSystem}
-              disabled={isCreating}
-            >
-              <SelectTrigger id="realm-system" className="w-full">
-                <SelectValue placeholder="Select a system" />
-              </SelectTrigger>
-              <SelectContent>
-                {systemConfigs.map((system) => (
-                  <SelectItem key={system.id} value={system.id}>
-                    {system.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="realm-desc">Description (optional)</Label>
-            <Textarea
-              id="realm-desc"
-              placeholder="A high fantasy setting with..."
-              value={createDesc}
-              onChange={(e) => setCreateDesc(e.target.value)}
-              disabled={isCreating}
-            />
-          </div>
-          {calendarSettingsSection}
-          {generationSettingsSection}
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setShowCreate(false)}
-            disabled={isCreating}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleCreateRealm}
-            disabled={!createName.trim() || !createSystem || isCreating}
-          >
-            {isCreating
-              ? genEnabled
-                ? "Generating…"
-                : "Creating..."
-              : genEnabled
-                ? "Generate World"
-                : "Create Realm"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-
   // Wait for the realms query to resolve before deciding what to render —
   // otherwise the "No realms yet" empty state flashes for a frame on every load
   // while useLiveQuery is still pending (rawRealms === undefined).
@@ -753,7 +298,7 @@ function RealmsPage() {
           description="Create your first realm to start building your world."
           action={
             <div className="flex gap-2">
-              <Button onClick={() => setShowCreate(true)}>
+              <Button onClick={() => navigate({ to: "/realms/new" })}>
                 <Plus className="mr-2 size-4" />
                 New Realm
               </Button>
@@ -775,8 +320,6 @@ function RealmsPage() {
             </div>
           }
         />
-
-        {createRealmDialog}
       </div>
     );
   }
@@ -823,7 +366,7 @@ function RealmsPage() {
             </div>
           ) : (
             <div className="flex gap-2">
-              <Button onClick={() => setShowCreate(true)}>
+              <Button onClick={() => navigate({ to: "/realms/new" })}>
                 <Plus className="mr-2 size-4" />
                 New Realm
               </Button>
@@ -860,7 +403,7 @@ function RealmsPage() {
           return (
             <Card
               key={realm.id}
-              className={`relative cursor-pointer transition-shadow hover:shadow-md ${
+              className={`relative cursor-pointer transition-shadow hover:shadow-elevated ${
                 selectMode && selected ? "ring-2 ring-destructive" : ""
               }`}
               onClick={() =>
@@ -941,8 +484,6 @@ function RealmsPage() {
           );
         })}
       </div>
-
-      {createRealmDialog}
 
       <Dialog
         open={editTarget !== null}

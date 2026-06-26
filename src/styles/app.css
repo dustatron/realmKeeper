@@ -13,7 +13,7 @@
   }
   html {
     overflow-x: hidden;
-    font-family: 'Geist', Arial, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+    font-family: 'Inter', Arial, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
     font-feature-settings: "liga" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -23,7 +23,7 @@
     width: 100%;
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-size: 0.9375rem; /* 15px — slightly tighter than 16px default */
+    font-size: 1rem; /* 16px — Intercom body */
     line-height: 1.5;
   }
   code, pre, kbd, samp {
@@ -93,12 +93,8 @@
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.33;
-  background-color: #ebf5ff;
-  color: #0068d6;
-}
-.dark .badge-pill {
-  background-color: #0a1929;
-  color: #5baaf5;
+  background-color: var(--color-secondary);
+  color: var(--color-foreground);
 }
 
 @utility no-scrollbar {

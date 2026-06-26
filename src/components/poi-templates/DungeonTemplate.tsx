@@ -518,7 +518,7 @@ function RoomDetailPanel({
             return (
               <div key={disc.id} className={`rounded border ${colors.border} ${colors.bg} overflow-hidden`}>
                 <button
-                  className="w-full flex items-start gap-2 text-sm px-2 py-1.5 hover:bg-white/5 transition-colors text-left"
+                  className="w-full flex items-start gap-2 text-sm px-2 py-1.5 hover:bg-accent transition-colors text-left"
                   onClick={() => onToggleDiscoveryFound?.(disc.id)}
                 >
                   {/* Found checkbox */}
@@ -871,57 +871,15 @@ export function DungeonTemplate({
             </Button>
           </div>
 
-          {/* Map + Room list */}
+          {/* Map — full width above the grid */}
+          {mapSection && <div>{mapSection}</div>}
+
+          {/* Rooms master–detail grid */}
           <div
             className={`grid gap-4 ${layout === "columns" ? "md:grid-cols-2" : ""}`}
           >
-            {/* Map + Wandering Monsters — sticky in columns mode */}
-            <div className={layout === "columns" ? "md:sticky md:top-0 md:self-start" : ""}>
-              <div
-                className={layout === "stacked"
-                  ? "md:h-[90vh] md:[&>*]:h-full md:[&>*]:!flex md:[&>*]:!flex-col md:[&>*>*+*]:!flex-1 md:[&>*>*+*]:!h-auto md:[&>*>*+*]:min-h-0"
-                  : ""}
-              >
-                {mapSection}
-              </div>
-
-              {/* Wandering Monsters — shown below map in columns mode only */}
-              {layout === "columns" && (
-                <div className="mt-3">
-                  <WanderingMonsterTable
-                    entries={poi.wanderingMonsters ?? []}
-                    onSave={handleSaveWanderingMonsters}
-                    npcs={allNPCs}
-                    poiChildren={childPois}
-                    systemId={systemId}
-                    worldId={worldId}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Detail panel + Room list */}
+            {/* LEFT — Room list */}
             <div className="space-y-3">
-              {/* Room detail panel */}
-              <div ref={detailPanelRef} />
-              {selectedRoom ? (
-                <RoomDetailPanel
-                  room={selectedRoom}
-                  index={selectedRoomIndex}
-                  npcs={npcsByPoiId[selectedRoom.id] ?? []}
-                  onUpdateNPC={onUpdateNPC}
-                  siblings={childPois}
-                  onSelectChild={onSelectChild}
-                  keyLockInfo={keyLockByPoiId.get(selectedRoom.id)}
-                  discoveries={getDiscoveriesForRoom(selectedRoom.id)}
-                  onToggleDiscoveryFound={(discoveryId) => handleToggleDiscoveryFound(selectedRoom.id, discoveryId)}
-                />
-              ) : childPois.length > 0 ? (
-                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  Select a room to see details
-                </div>
-              ) : null}
-
               {/* Room list header */}
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-semibold flex items-center gap-2">
@@ -1048,19 +1006,39 @@ export function DungeonTemplate({
               )}
             </div>
 
-            {/* Wandering Monsters — below room list in stacked mode */}
-            {layout === "stacked" && (
-              <div className="mt-3">
-                <WanderingMonsterTable
-                  entries={poi.wanderingMonsters ?? []}
-                  onSave={handleSaveWanderingMonsters}
-                  npcs={allNPCs}
-                  poiChildren={childPois}
-                  systemId={systemId}
-                  worldId={worldId}
+            {/* RIGHT — Room detail panel */}
+            <div className="space-y-3">
+              <div ref={detailPanelRef} />
+              {selectedRoom ? (
+                <RoomDetailPanel
+                  room={selectedRoom}
+                  index={selectedRoomIndex}
+                  npcs={npcsByPoiId[selectedRoom.id] ?? []}
+                  onUpdateNPC={onUpdateNPC}
+                  siblings={childPois}
+                  onSelectChild={onSelectChild}
+                  keyLockInfo={keyLockByPoiId.get(selectedRoom.id)}
+                  discoveries={getDiscoveriesForRoom(selectedRoom.id)}
+                  onToggleDiscoveryFound={(discoveryId) => handleToggleDiscoveryFound(selectedRoom.id, discoveryId)}
                 />
-              </div>
-            )}
+              ) : childPois.length > 0 ? (
+                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  Select a room to see details
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Wandering Monsters — full width below the grid */}
+          <div>
+            <WanderingMonsterTable
+              entries={poi.wanderingMonsters ?? []}
+              onSave={handleSaveWanderingMonsters}
+              npcs={allNPCs}
+              poiChildren={childPois}
+              systemId={systemId}
+              worldId={worldId}
+            />
           </div>
         </TabsContent>
 

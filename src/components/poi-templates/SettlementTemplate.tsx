@@ -390,7 +390,11 @@ export function SettlementTemplate({
         <TabsList variant="line" className="w-full">
           <TabsTrigger value="locations">
             <MapPin className="size-4" />
-            Locations & NPCs
+            Locations
+          </TabsTrigger>
+          <TabsTrigger value="denizens">
+            <Users className="size-4" />
+            Denizens{allNPCs.length > 0 ? ` (${allNPCs.length})` : ''}
           </TabsTrigger>
           <TabsTrigger value="rumors">
             <MessageSquare className="size-4" />
@@ -415,40 +419,15 @@ export function SettlementTemplate({
         </TabsList>
 
         {/* Locations & NPCs tab */}
-        <TabsContent value="locations" className="space-y-6 pt-3">
-          {/* Map + Key Locations */}
+        <TabsContent value="locations" className="space-y-4 pt-3">
+          {/* Map spans full width above master-detail, only when one exists */}
+          {mapSection && <div>{mapSection}</div>}
+
           <div
             className={`grid gap-4 ${layout === "columns" ? "md:grid-cols-2" : ""}`}
           >
-            {/* Map — sticky in columns mode */}
-            <div className={layout === "columns" ? "md:sticky md:top-0 md:self-start md:max-h-screen md:overflow-y-auto" : ""}>
-              <div
-                className={
-                  layout === "stacked"
-                    ? "md:h-[90vh] md:[&>*]:h-full md:[&>*]:!flex md:[&>*]:!flex-col md:[&>*>*+*]:!flex-1 md:[&>*>*+*]:!h-auto md:[&>*>*+*]:min-h-0"
-                    : ""
-                }
-              >
-                {mapSection}
-              </div>
-            </div>
-
-            {/* Detail panel + Location list */}
+            {/* LEFT: location list (master) */}
             <div className="space-y-3">
-              {/* Location detail panel */}
-              <div ref={detailPanelRef} />
-              {selectedLocation ? (
-                <LocationDetailPanel
-                  location={selectedLocation}
-                  npcs={npcsByPoiId[selectedLocation.id] ?? []}
-                  onUpdateNPC={onUpdateNPC}
-                />
-              ) : childPois.length > 0 ? (
-                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  Select a location to see details
-                </div>
-              ) : null}
-
               {/* Location list header */}
               <div className="flex justify-between">
                 <h4 className="text-sm font-semibold">Key Locations</h4>
@@ -552,6 +531,22 @@ export function SettlementTemplate({
                 </p>
               )}
             </div>
+
+            {/* RIGHT: selected location detail */}
+            <div className="space-y-3">
+              <div ref={detailPanelRef} />
+              {selectedLocation ? (
+                <LocationDetailPanel
+                  location={selectedLocation}
+                  npcs={npcsByPoiId[selectedLocation.id] ?? []}
+                  onUpdateNPC={onUpdateNPC}
+                />
+              ) : childPois.length > 0 ? (
+                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  Select a location to see details
+                </div>
+              ) : null}
+            </div>
           </div>
 
           {/* Aggregate Services */}
@@ -561,8 +556,10 @@ export function SettlementTemplate({
               <ServicesList services={allServices} />
             </div>
           )}
+        </TabsContent>
 
-          {/* NPCs — settlement + child locations */}
+        {/* Denizens tab */}
+        <TabsContent value="denizens" className="space-y-4 pt-3">
           <div>
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-sm font-semibold flex items-center gap-2">

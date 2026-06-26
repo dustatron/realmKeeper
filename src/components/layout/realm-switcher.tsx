@@ -38,8 +38,7 @@ export function RealmSwitcher() {
   }
 
   const handleNewRealm = () => {
-    setActiveRealmId(null)
-    navigate({ to: '/realms' })
+    navigate({ to: '/realms/new' })
   }
 
   const handleManageRealms = () => {
