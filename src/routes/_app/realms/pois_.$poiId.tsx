@@ -22,6 +22,7 @@ import { useContainer } from '~/ui/hooks/useContainer'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { usePOIActions } from '~/ui/hooks/usePOIActions'
 import { executeDeletePOI } from '@application/use-cases/DeletePOI'
+import { executeGetOrCreateTownMap } from '@application/use-cases/GetOrCreateTownMap'
 import { executeCreateNPC } from '@application/use-cases/CreateNPC'
 import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import { NPCEditSheet } from '~/components/shared/NPCEditSheet'
@@ -509,6 +510,21 @@ function POIDetailPage() {
           <MapPinned className="mr-2 size-4" />
           {poiMaps.length > 0 ? 'Edit Map' : 'Add Map'}
         </Button>
+        {poi.type === 'settlement' && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              await executeGetOrCreateTownMap(
+                { poiId: poi.id, name: poi.name, width: 1000, height: 1000 },
+                { gameMapRepo: container.gameMapRepo },
+              )
+            }}
+          >
+            <MapPinned className="mr-2 size-4" />
+            Town Map
+          </Button>
+        )}
         <Link to="/realms/pois/$poiId/edit" params={{ poiId }}>
           <Button size="sm">
             <Pencil className="mr-2 size-4" />
