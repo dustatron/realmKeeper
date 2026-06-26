@@ -354,6 +354,73 @@ function POIDetailPage() {
     />
   )
 
+  const poiHeading = (
+    <span className="mr-auto flex flex-wrap items-center gap-2">
+      <Icon className="size-5" />
+      <span className="font-medium">{poi.name}</span>
+      <Badge variant="outline" className="text-xs">{poi.type}</Badge>
+      {poi.type === 'dungeon' && poi.spatialDungeon && (
+        <>
+          <Badge variant="secondary" className="text-xs capitalize">{poi.spatialDungeon.theme.replace(/_/g, ' ')}</Badge>
+          <Badge variant="secondary" className="text-xs">Depth {poi.spatialDungeon.depth}</Badge>
+          <Badge variant="secondary" className="text-xs capitalize">{poi.spatialDungeon.size}</Badge>
+        </>
+      )}
+    </span>
+  )
+
+  const poiActionBar = (
+    <>
+      <Button size="sm" variant={runMode ? 'default' : 'outline'} onClick={() => setRunMode(!runMode)} title={runMode ? 'Exit run mode' : 'Enter run mode'}>
+        <Swords className="mr-1.5 size-4" />
+        {runMode ? 'Browse' : 'Run'}
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => db.pois.update(poi.id, { visited: !poi.visited, updatedAt: Date.now() })} title={poi.visited ? 'Mark as unvisited' : 'Mark as visited'}>
+        {poi.visited ? <CheckCircle2 className="size-4 text-green-500" /> : <CircleDashed className="size-4" />}
+      </Button>
+      <Button size="sm" variant="outline" onClick={actions.cycleLightLevel} title={`Light: ${poi.lightLevel ?? 'not set'}`}>
+        {poi.lightLevel === 'bright' ? <Sun className="size-4 text-yellow-500" /> :
+         poi.lightLevel === 'dim' ? <CloudMoon className="size-4 text-blue-400" /> :
+         poi.lightLevel === 'dark' ? <Moon className="size-4 text-slate-500" /> :
+         <Sun className="size-4 text-muted-foreground/40" />}
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => db.pois.update(poi.id, { starred: !poi.starred, updatedAt: Date.now() })} title={poi.starred ? 'Unstar' : 'Star'}>
+        <Star className={`size-4 ${poi.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+      </Button>
+      {poi.type === 'dungeon' && (
+        <Link to="/realms/pois/$poiId/generate-dungeon" params={{ poiId }}>
+          <Button size="sm" variant="outline">
+            <Wand2 className="mr-2 size-4" />
+            {poi.spatialDungeon ? 'Regenerate' : 'Generate'}
+          </Button>
+        </Link>
+      )}
+      <Button size="sm" variant="outline" onClick={() => setMapUploadDialogOpen(true)}>
+        <MapPinned className="mr-2 size-4" />
+        {poiMaps.length > 0 ? 'Edit Map' : 'Add Map'}
+      </Button>
+      {poi.type === 'settlement' && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleCreateTownMap}
+          disabled={isCreatingTownMap}
+        >
+          <MapPinned className="mr-2 size-4" />
+          {isCreatingTownMap ? 'Creating...' : 'Town Map'}
+        </Button>
+      )}
+      <Link to="/realms/pois/$poiId/edit" params={{ poiId }}>
+        <Button size="sm">
+          <Pencil className="mr-2 size-4" />
+          Edit
+        </Button>
+      </Link>
+    </>
+  )
+
+  const showTopActionBar = runMode || poi.type !== 'settlement'
+
   const renderTemplate = () => {
     if (parentPoi?.type === 'dungeon') {
       return (
@@ -417,6 +484,7 @@ function POIDetailPage() {
             onUpdateNPC={actions.handleUpdateNPC}
             mapSection={mapSection}
             notesSection={notesSection}
+            actionBar={poiActionBar}
           />
         )
       case 'dungeon':
@@ -527,66 +595,14 @@ function POIDetailPage() {
         />
       )}
 
-      {/* Action bar */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="flex items-center gap-2 mr-auto flex-wrap">
-          <Icon className="size-5" />
-          <span className="font-medium">{poi.name}</span>
-          <Badge variant="outline" className="text-xs">{poi.type}</Badge>
-          {poi.type === 'dungeon' && poi.spatialDungeon && (
-            <>
-              <Badge variant="secondary" className="text-xs capitalize">{poi.spatialDungeon.theme.replace(/_/g, ' ')}</Badge>
-              <Badge variant="secondary" className="text-xs">Depth {poi.spatialDungeon.depth}</Badge>
-              <Badge variant="secondary" className="text-xs capitalize">{poi.spatialDungeon.size}</Badge>
-            </>
-          )}
-        </span>
-        <Button size="sm" variant={runMode ? 'default' : 'outline'} onClick={() => setRunMode(!runMode)} title={runMode ? 'Exit run mode' : 'Enter run mode'}>
-          <Swords className="mr-1.5 size-4" />
-          {runMode ? 'Browse' : 'Run'}
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => db.pois.update(poi.id, { visited: !poi.visited, updatedAt: Date.now() })} title={poi.visited ? 'Mark as unvisited' : 'Mark as visited'}>
-          {poi.visited ? <CheckCircle2 className="size-4 text-green-500" /> : <CircleDashed className="size-4" />}
-        </Button>
-        <Button size="sm" variant="outline" onClick={actions.cycleLightLevel} title={`Light: ${poi.lightLevel ?? 'not set'}`}>
-          {poi.lightLevel === 'bright' ? <Sun className="size-4 text-yellow-500" /> :
-           poi.lightLevel === 'dim' ? <CloudMoon className="size-4 text-blue-400" /> :
-           poi.lightLevel === 'dark' ? <Moon className="size-4 text-slate-500" /> :
-           <Sun className="size-4 text-muted-foreground/40" />}
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => db.pois.update(poi.id, { starred: !poi.starred, updatedAt: Date.now() })} title={poi.starred ? 'Unstar' : 'Star'}>
-          <Star className={`size-4 ${poi.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
-        </Button>
-        {poi.type === 'dungeon' && (
-          <Link to="/realms/pois/$poiId/generate-dungeon" params={{ poiId }}>
-            <Button size="sm" variant="outline">
-              <Wand2 className="mr-2 size-4" />
-              {poi.spatialDungeon ? 'Regenerate' : 'Generate'}
-            </Button>
-          </Link>
-        )}
-        <Button size="sm" variant="outline" onClick={() => setMapUploadDialogOpen(true)}>
-          <MapPinned className="mr-2 size-4" />
-          {poiMaps.length > 0 ? 'Edit Map' : 'Add Map'}
-        </Button>
-        {poi.type === 'settlement' && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleCreateTownMap}
-            disabled={isCreatingTownMap}
-          >
-            <MapPinned className="mr-2 size-4" />
-            {isCreatingTownMap ? 'Creating...' : 'Town Map'}
-          </Button>
-        )}
-        <Link to="/realms/pois/$poiId/edit" params={{ poiId }}>
-          <Button size="sm">
-            <Pencil className="mr-2 size-4" />
-            Edit
-          </Button>
-        </Link>
-      </div>
+      {showTopActionBar && (
+        <div className="flex flex-wrap items-center gap-2">
+          {poi.type !== 'settlement' && poiHeading}
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            {poiActionBar}
+          </div>
+        </div>
+      )}
 
       {townMapError && (
         <p className="text-sm text-destructive">{townMapError}</p>

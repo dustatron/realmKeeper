@@ -228,6 +228,7 @@ interface SettlementTemplateProps {
   onUpdateNPC?: (npc: NPC) => void;
   mapSection: React.ReactNode;
   notesSection?: React.ReactNode;
+  actionBar?: React.ReactNode;
 }
 
 export function SettlementTemplate({
@@ -259,6 +260,7 @@ export function SettlementTemplate({
   onUpdateNPC,
   mapSection,
   notesSection,
+  actionBar,
 }: SettlementTemplateProps) {
   // Group child NPCs by their poiId
   const npcsByPoiId = useMemo(() => {
@@ -386,36 +388,43 @@ export function SettlementTemplate({
     <div className="space-y-4">
       {/* Tabs */}
       <Tabs defaultValue="locations">
-        <TabsList variant="line" className="w-full">
-          <TabsTrigger value="locations">
-            <MapPin className="size-4" />
-            Locations
-          </TabsTrigger>
-          <TabsTrigger value="denizens">
-            <Users className="size-4" />
-            Denizens{allNPCs.length > 0 ? ` (${allNPCs.length})` : ''}
-          </TabsTrigger>
-          <TabsTrigger value="rumors">
-            <MessageSquare className="size-4" />
-            Rumors ({rumors.length + notices.length})
-          </TabsTrigger>
-          <TabsTrigger value="encounters">
-            <Dices className="size-4" />
-            Encounters
-          </TabsTrigger>
-          <TabsTrigger value="events">
-            <CalendarClock className="size-4" />
-            Events ({poiEvents.length})
-          </TabsTrigger>
-          <TabsTrigger value="gm-notes">
-            <Lock className="size-4" />
-            GM Notes
-          </TabsTrigger>
-          <TabsTrigger value="notes">
-            <FileText className="size-4" />
-            Notes
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <TabsList variant="line" className="min-w-0 flex-1 justify-start overflow-x-auto">
+            <TabsTrigger value="locations">
+              <MapPin className="size-4" />
+              Locations
+            </TabsTrigger>
+            <TabsTrigger value="denizens">
+              <Users className="size-4" />
+              Denizens{allNPCs.length > 0 ? ` (${allNPCs.length})` : ''}
+            </TabsTrigger>
+            <TabsTrigger value="rumors">
+              <MessageSquare className="size-4" />
+              Rumors ({rumors.length + notices.length})
+            </TabsTrigger>
+            <TabsTrigger value="encounters">
+              <Dices className="size-4" />
+              Encounters
+            </TabsTrigger>
+            <TabsTrigger value="events">
+              <CalendarClock className="size-4" />
+              Events ({poiEvents.length})
+            </TabsTrigger>
+            <TabsTrigger value="gm-notes">
+              <Lock className="size-4" />
+              GM Notes
+            </TabsTrigger>
+            <TabsTrigger value="notes">
+              <FileText className="size-4" />
+              Notes
+            </TabsTrigger>
+          </TabsList>
+          {actionBar && (
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              {actionBar}
+            </div>
+          )}
+        </div>
 
         {/* Locations & NPCs tab */}
         <TabsContent value="locations" className="space-y-4 pt-3">
