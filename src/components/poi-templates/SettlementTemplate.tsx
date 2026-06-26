@@ -304,7 +304,7 @@ export function SettlementTemplate({
     }
   }, [selectedChildId]);
 
-  const [overviewOpen, setOverviewOpen] = useState(true);
+  const [overviewOpen, setOverviewOpen] = useState(false);
 
   const [layout, setLayout] = useState<"columns" | "stacked">(() => {
     try {
@@ -327,64 +327,63 @@ export function SettlementTemplate({
     ...childPois.flatMap((c) => c.services),
   ];
 
+  const overviewSection = (
+    <Collapsible open={overviewOpen} onOpenChange={setOverviewOpen}>
+      <div className="rounded-lg border">
+        <CollapsibleTrigger asChild>
+          <button className="flex w-full items-center justify-between px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted/50">
+            <span className="flex items-center gap-2">
+              <Eye className="size-4 text-muted-foreground" />
+              Overview
+            </span>
+            <ChevronDown
+              className={`size-4 text-muted-foreground transition-transform ${overviewOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="space-y-4 px-4 pb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="text-xs capitalize">
+                {poi.type}
+              </Badge>
+              {poi.subtypeLabel && (
+                <Badge variant="outline" className="text-xs">
+                  {poi.subtypeLabel}
+                </Badge>
+              )}
+              {poi.tags.map((tag) => (
+                <Badge key={tag} variant="outline" className="text-xs">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+
+            <AtAGlancePanel
+              mood={poi.mood}
+              trouble={poi.trouble}
+              factionPresences={factionPresences}
+              npcCount={allNPCs.length}
+              activeEvents={poiEvents.filter((e) => e.isActive).length}
+              paths={paths}
+              currentPoiId={poi.id}
+              traps={poi.traps}
+              onToggleTrapDisarmed={onToggleTrapDisarmed}
+              roomWidth={poi.roomWidth}
+              roomLength={poi.roomLength}
+              treasure={poi.treasure}
+              lightLevel={poi.lightLevel}
+            />
+
+            <ReadAloudBlock text={poi.readAloud} />
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+
   return (
     <div className="space-y-4">
-      {/* Overview — collapsible */}
-      <Collapsible open={overviewOpen} onOpenChange={setOverviewOpen}>
-        <div className="rounded-lg border">
-          <CollapsibleTrigger asChild>
-            <button className="flex w-full items-center justify-between px-4 py-2.5 text-sm font-medium hover:bg-muted/50 transition-colors">
-              <span className="flex items-center gap-2">
-                <Eye className="size-4 text-muted-foreground" />
-                Overview
-              </span>
-              <ChevronDown
-                className={`size-4 text-muted-foreground transition-transform ${overviewOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="space-y-4 px-4 pb-4">
-              {/* Badges */}
-              {(poi.subtypeLabel || poi.tags.length > 0) && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  {poi.subtypeLabel && (
-                    <Badge variant="outline" className="text-xs">
-                      {poi.subtypeLabel}
-                    </Badge>
-                  )}
-                  {poi.tags.map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-
-              {/* At A Glance */}
-              <AtAGlancePanel
-                mood={poi.mood}
-                trouble={poi.trouble}
-                factionPresences={factionPresences}
-                npcCount={allNPCs.length}
-                activeEvents={poiEvents.filter((e) => e.isActive).length}
-                paths={paths}
-                currentPoiId={poi.id}
-                traps={poi.traps}
-                onToggleTrapDisarmed={onToggleTrapDisarmed}
-                roomWidth={poi.roomWidth}
-                roomLength={poi.roomLength}
-                treasure={poi.treasure}
-                lightLevel={poi.lightLevel}
-              />
-
-              {/* Read Aloud */}
-              <ReadAloudBlock text={poi.readAloud} />
-            </div>
-          </CollapsibleContent>
-        </div>
-      </Collapsible>
-
       {/* Tabs */}
       <Tabs defaultValue="locations">
         <TabsList variant="line" className="w-full">
@@ -422,6 +421,7 @@ export function SettlementTemplate({
         <TabsContent value="locations" className="space-y-4 pt-3">
           {/* Map spans full width above master-detail, only when one exists */}
           {mapSection && <div>{mapSection}</div>}
+          {overviewSection}
 
           <div
             className={`grid gap-4 ${layout === "columns" ? "md:grid-cols-2" : ""}`}
