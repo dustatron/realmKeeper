@@ -4,6 +4,7 @@ import type { POI } from '@domain/entities/POI'
 import type { NPC } from '@domain/entities/NPC'
 import { buildPOI } from './buildPoi'
 import { buildNpc } from './buildNpc'
+import { settlementSize } from '@domain/data/worldgen/settlementSize'
 
 // Re-authored settlement building types. Each becomes a child POI of the
 // settlement with a proprietor living in it.
@@ -24,13 +25,10 @@ const BUILDING_OCCUPATIONS: Record<string, string> = {
   Brewery: 'brewer', Watchtower: 'watch officer',
 }
 
-// Settlement size by Cairn subtype → how many buildings it supports.
-const LARGE = new Set(['City', 'Citadel', 'Fortress', 'Stronghold'])
-const SMALL = new Set(['Hamlet', 'Outpost', 'Farmstead', 'Caravan', 'Commune', 'Villa', 'Prison'])
-
 function buildingCount(subtype: string | null, rng: SeededRandom): number {
-  if (subtype && LARGE.has(subtype)) return rng.between(7, 10)
-  if (subtype && SMALL.has(subtype)) return rng.between(2, 3)
+  const size = settlementSize(subtype)
+  if (size === 'large') return rng.between(7, 10)
+  if (size === 'small') return rng.between(2, 3)
   return rng.between(4, 6)
 }
 
