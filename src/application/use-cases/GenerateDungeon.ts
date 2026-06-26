@@ -305,6 +305,12 @@ export async function executeGenerateDungeon(
   // === 7b. Room creatures — picked from wandering monster table for ecological consistency ===
 
   const dangerChances: Record<string, number> = { low: 0.25, medium: 0.45, deadly: 0.70, very_deadly: 0.90 }
+  // Even a lurking monster wants something — gives every creature NPC a goal.
+  const CREATURE_WANTS = [
+    'guard its lair', 'feed on any intruders', 'protect its hoard',
+    'expand its hunting grounds', 'avenge a slain packmate', 'escape this place',
+    'serve the dungeon’s master', 'drag fresh prey back to its den',
+  ]
   const creatureRng = rng.child('room-creatures')
   const roomsWithNPC = new Set(dungeonNPCs.map((n) => n.roomId))
 
@@ -312,6 +318,13 @@ export async function executeGenerateDungeon(
   const wmPool = wanderingMonsters.filter((e) => e.compendiumId !== null)
   // Fall back to blueprint pool only if wandering table is empty
   const useBlueprintFallback = wmPool.length === 0
+
+  // The faction that holds this dungeon (ecology.currentInhabitants) and the
+  // rooms it controls — those rooms are stocked with that actual creature so the
+  // monsters match the lore ("claimed by the hobgoblin legion").
+  const inhabitantCreature = generated.ecology?.inhabitantCreature
+  const inhabitants = generated.ecology?.currentInhabitants ?? ''
+  const inhabitantRooms = new Set(generated.ecology?.factionInfluence?.[inhabitants] ?? [])
 
   for (const room of generated.rooms) {
     if (room.type === 'entrance' || room.type === 'exit') continue
@@ -321,7 +334,12 @@ export async function executeGenerateDungeon(
     let creatureName: string
     let compendiumId: string | null
 
-    if (!useBlueprintFallback) {
+    if (inhabitantCreature && inhabitantRooms.has(room.id)) {
+      // This room is held by the dungeon's current faction — stock it with them.
+      const resolved = resolveCreature(inhabitantCreature, systemId, creatureRng, room.depth)
+      creatureName = resolved?.name ?? inhabitantCreature
+      compendiumId = resolved?.id ?? null
+    } else if (!useBlueprintFallback) {
       // Pick from the wandering monster table — same creatures that haunt this dungeon
       const wmEntry = creatureRng.pick(wmPool)
       creatureName = wmEntry.name
@@ -350,7 +368,7 @@ export async function executeGenerateDungeon(
       motivation: '',
       appearance: '',
       voice: '',
-      want: '',
+      want: creatureRng.pick(CREATURE_WANTS),
       tags: ['creature', options.theme],
       imageUrl: null,
       systemBlock: compendiumId

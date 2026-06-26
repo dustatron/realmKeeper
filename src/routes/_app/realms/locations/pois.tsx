@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useRegions } from '~/ui/hooks/useRegions'
 import { usePOIs, useRealmPOIs } from '~/ui/hooks/usePOIs'
+import { useNPCs } from '~/ui/hooks/useNPCs'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { executeCreatePOI } from '@application/use-cases/CreatePOI'
 import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
@@ -95,12 +96,12 @@ function POIsPage() {
   const regions = useRegions(activeRealmId)
   const { region: regionParam, sort: sortParam, dir: dirParam } = Route.useSearch()
   const selectedRegionId = regionParam ?? 'all'
-  const sortCol = (sortParam ?? 'name') as 'name' | 'type' | 'region'
+  const sortCol = (sortParam ?? 'name') as 'name' | 'type' | 'region' | 'population'
   const sortDir = (dirParam ?? 'asc') as 'asc' | 'desc'
 
   const setSelectedRegionId = (v: string) =>
     navigate({ to: '/realms/locations/pois', search: { region: v === 'all' ? undefined : v, sort: sortParam, dir: dirParam } })
-  const toggleSort = (col: 'name' | 'type' | 'region') => {
+  const toggleSort = (col: 'name' | 'type' | 'region' | 'population') => {
     if (sortCol === col)
       navigate({ to: '/realms/locations/pois', search: { region: regionParam, sort: sortParam, dir: sortDir === 'asc' ? 'desc' : 'asc' } })
     else
@@ -111,6 +112,26 @@ function POIsPage() {
   const poisByRegion = usePOIs(!isFlat && selectedRegionId !== 'all' ? selectedRegionId : null)
   const allPois = useRealmPOIs(activeRealmId)
   const pois = (selectedRegionId === 'all' || isFlat) ? allPois : poisByRegion
+  const allNpcs = useNPCs(activeRealmId)
+  // Population = NPCs whose poiId points at a location (includes a location's
+  // sub-locations' residents rolled up to the parent).
+  const npcCountByPoi = useMemo(() => {
+    const childToParent: Record<string, string | null> = {}
+    for (const p of allPois) childToParent[p.id] = p.parentPoiId
+    const rootOf = (id: string): string => {
+      let cur = id
+      let guard = 0
+      while (childToParent[cur] && guard++ < 50) cur = childToParent[cur]!
+      return cur
+    }
+    const counts: Record<string, number> = {}
+    for (const n of allNpcs) {
+      if (!n.poiId) continue
+      const root = rootOf(n.poiId)
+      counts[root] = (counts[root] ?? 0) + 1
+    }
+    return counts
+  }, [allNpcs, allPois])
   const container = useContainer()
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -167,13 +188,18 @@ function POIsPage() {
     const regionMap: Record<string, string> = {}
     regions.forEach((r) => { regionMap[r.id] = r.name })
     return [...filtered].sort((a, b) => {
+      if (sortCol === 'population') {
+        const na = npcCountByPoi[a.id] ?? 0
+        const nb = npcCountByPoi[b.id] ?? 0
+        return sortDir === 'asc' ? na - nb : nb - na
+      }
       let va = '', vb = ''
       if (sortCol === 'name') { va = a.name; vb = b.name }
       else if (sortCol === 'type') { va = a.type; vb = b.type }
       else if (sortCol === 'region') { va = regionMap[a.regionId] || ''; vb = regionMap[b.regionId] || '' }
       return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va)
     })
-  }, [pois, searchQuery, isFlat, sortCol, sortDir, regions])
+  }, [pois, searchQuery, isFlat, sortCol, sortDir, regions, npcCountByPoi])
 
   // Get child count for a POI
   const getChildCount = (poiId: string) => {
@@ -406,6 +432,18 @@ function POIsPage() {
                   </button>
                 </th>
                 <th className="text-left px-3 py-2 hidden lg:table-cell font-medium text-muted-foreground">Parent</th>
+                <th className="px-3 py-2 hidden sm:table-cell">
+                  <button
+                    className="flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground transition-colors ml-auto"
+                    onClick={() => toggleSort('population')}
+                    title="Number of NPCs at this location"
+                  >
+                    Pop.
+                    {sortCol === 'population' ? (
+                      sortDir === 'asc' ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />
+                    ) : <ArrowUpDown className="size-3 opacity-40" />}
+                  </button>
+                </th>
                 <th className="w-8 px-3 py-2" />
               </tr>
             </thead>
@@ -455,6 +493,9 @@ function POIsPage() {
                           {parent.name}
                         </Link>
                       ) : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-right text-muted-foreground text-xs tabular-nums hidden sm:table-cell">
+                      {npcCountByPoi[poi.id] ?? 0}
                     </td>
                     <td className="px-3 py-2 text-right">
                       <Link

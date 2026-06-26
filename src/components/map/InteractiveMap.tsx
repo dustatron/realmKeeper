@@ -105,11 +105,15 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
   const navigate = useNavigate()
   const activeRealmId = useUIStore((s) => s.activeRealmId)
   const container = useContainer()
+  // Load realm-scoped data by the MAP's own realm, not the global active realm —
+  // otherwise regions/POIs vanish whenever you view a map whose realm isn't the
+  // active one (e.g. right after generating, or navigating in from elsewhere).
+  const mapRealmId = gameMap.ownerRealmId ?? activeRealmId
   const poisOnMap = usePOIsOnMap(gameMap.id)
   const pathsOnMap = usePathsOnMap(gameMap.id)
-  const allPois = useRealmPOIs(activeRealmId)
+  const allPois = useRealmPOIs(mapRealmId)
   const isRealmMap = !gameMap.ownerPoiId
-  const regions = useRegions(activeRealmId)
+  const regions = useRegions(mapRealmId)
 
   const mapHandleRef = useRef<MapViewerHandle | null>(null)
   const showLabels = useUIStore((s) => s.mapShowLabels)
@@ -402,6 +406,10 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
           await executeUpdateRegion({ ...toRegion, boundary: fromRegion.boundary }, { regionRepo: container.regionRepo })
           await executeUpdateRegion({ ...fromRegion, boundary: null }, { regionRepo: container.regionRepo })
           setRegionPopup(null)
+        }}
+        onNavigateToRegion={(regionId) => {
+          setRegionPopup(null)
+          navigate({ to: '/realms/regions/$regionId', params: { regionId } })
         }}
       />
 
@@ -798,6 +806,7 @@ function RegionPopupDialog({
   onChangeTerrain,
   onDeleteBoundary,
   onReassignBoundary,
+  onNavigateToRegion,
 }: {
   region: Region | null
   allRegions: Region[]
@@ -806,6 +815,7 @@ function RegionPopupDialog({
   onChangeTerrain: (region: Region, terrain: string) => void
   onDeleteBoundary: (region: Region) => void
   onReassignBoundary: (fromRegion: Region, toRegionId: string) => void
+  onNavigateToRegion: (regionId: string) => void
 }) {
   if (!region) return null
 
@@ -819,6 +829,10 @@ function RegionPopupDialog({
           <DialogTitle>{region.name}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          {region.description && (
+            <p className="text-sm text-muted-foreground line-clamp-3">{region.description}</p>
+          )}
+
           {/* Region reassign */}
           {otherRegions.length > 0 && (
             <div>
@@ -881,22 +895,29 @@ function RegionPopupDialog({
             </div>
           </div>
 
-          {/* Delete boundary */}
-          <div>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="w-full"
-              onClick={() => onDeleteBoundary(region)}
-            >
-              <Trash2 className="mr-2 size-4" />
-              Delete Boundary
-            </Button>
-          </div>
         </div>
         <DialogFooter>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="mr-auto"
+            onClick={() => onDeleteBoundary(region)}
+          >
+            <Trash2 className="mr-2 size-4" />
+            Delete Boundary
+          </Button>
           <Button variant="outline" size="sm" onClick={onClose}>
             Close
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              onClose()
+              onNavigateToRegion(region.id)
+            }}
+          >
+            <Eye className="mr-2 size-4" />
+            View Details
           </Button>
         </DialogFooter>
       </DialogContent>

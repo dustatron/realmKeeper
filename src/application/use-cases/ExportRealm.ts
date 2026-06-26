@@ -11,6 +11,8 @@ import type { IPathRepository } from '@application/ports/IPathRepository'
 import type { IFactionPresenceRepository } from '@application/ports/IFactionPresenceRepository'
 import type { IPOIEventRepository } from '@application/ports/IPOIEventRepository'
 import type { IGameMapRepository } from '@application/ports/IGameMapRepository'
+import type { IConnectionRepository } from '@application/ports/IConnectionRepository'
+import type { IHookRepository } from '@application/ports/IHookRepository'
 import type { Realm } from '@domain/entities/Realm'
 import type { Region } from '@domain/entities/Region'
 import type { Faction } from '@domain/entities/Faction'
@@ -23,7 +25,9 @@ import type { POI } from '@domain/entities/POI'
 import type { Path } from '@domain/entities/Path'
 import type { FactionPresence } from '@domain/entities/FactionPresence'
 import type { POIEvent } from '@domain/entities/POIEvent'
-import type { GameMap } from '@domain/entities/GameMap'
+import type { GameMap, HexCell } from '@domain/entities/GameMap'
+import type { Connection } from '@domain/entities/Connection'
+import type { Hook } from '@domain/entities/Hook'
 
 export interface ExportRealmDeps {
   realmRepo: IRealmRepository
@@ -39,6 +43,8 @@ export interface ExportRealmDeps {
   factionPresenceRepo: IFactionPresenceRepository
   poiEventRepo: IPOIEventRepository
   gameMapRepo: IGameMapRepository
+  connectionRepo: IConnectionRepository
+  hookRepo: IHookRepository
 }
 
 export interface GameMapExport {
@@ -52,10 +58,19 @@ export interface GameMapExport {
   sortOrder: number
   createdAt: number
   updatedAt: number
+  // Map shape — generated overworlds are kind:'hex' with no image. Preserving
+  // these lets a hex map survive export/import instead of degrading to a blank
+  // image map.
+  kind: GameMap['kind']
+  hexCols: number | null
+  hexRows: number | null
+  hexSize: number | null
+  hexOrientation: GameMap['hexOrientation']
+  hexCells: HexCell[] | null
 }
 
 export interface RealmExport {
-  version: 3
+  version: 4
   exportedAt: number
   realm: Realm
   regions: Region[]
@@ -70,9 +85,15 @@ export interface RealmExport {
   factionPresences: FactionPresence[]
   poiEvents: POIEvent[]
   gameMaps: GameMapExport[]
+  connections: Connection[]
+  hooks: Hook[]
 }
 
 async function imageUrlToBase64(url: string): Promise<string> {
+  // No image (e.g. a generated hex map has imageUrl='') — nothing to encode.
+  // Without this guard fetch('') resolves to the app's own index.html and the
+  // export stores page HTML as the map image.
+  if (!url) return ''
   // data URL — extract raw base64 directly
   if (url.startsWith('data:')) {
     return url.split(',')[1] ?? ''
@@ -140,11 +161,20 @@ export async function executeExportRealm(
       sortOrder: m.sortOrder,
       createdAt: m.createdAt,
       updatedAt: m.updatedAt,
+      kind: m.kind,
+      hexCols: m.hexCols,
+      hexRows: m.hexRows,
+      hexSize: m.hexSize,
+      hexOrientation: m.hexOrientation,
+      hexCells: m.hexCells ?? null,
     }))
   )
 
+  const connections = await deps.connectionRepo.getByWorld(worldId)
+  const hooks = await deps.hookRepo.getByWorld(worldId)
+
   return {
-    version: 3,
+    version: 4,
     exportedAt: Date.now(),
     realm,
     regions,
@@ -159,5 +189,7 @@ export async function executeExportRealm(
     factionPresences: allPresences.flat(),
     poiEvents,
     gameMaps,
+    connections,
+    hooks,
   }
 }

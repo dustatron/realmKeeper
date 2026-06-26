@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
-import { useNPC } from '~/ui/hooks/useNPCs'
+import { useNPC, useNPCs } from '~/ui/hooks/useNPCs'
+import { useNpcConnections } from '~/ui/hooks/useConnections'
+import { useNpcHooks } from '~/ui/hooks/useHooks'
 import { useFactions } from '~/ui/hooks/useFactions'
 import { useRegion, useRegions } from '~/ui/hooks/useRegions'
 import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
@@ -56,6 +58,9 @@ function NPCDetailPage() {
   const factions = useFactions(activeRealmId)
   const regions = useRegions(activeRealmId)
   const pois = useRealmPOIs(activeRealmId)
+  const allNpcs = useNPCs(activeRealmId)
+  const connections = useNpcConnections(npc?.worldId ?? null, npcId)
+  const hooks = useNpcHooks(npc?.worldId ?? null, npcId)
   const container = useContainer()
 
   // Build POI breadcrumb: walk parentPoiId chain from npc's poi up to root
@@ -927,6 +932,109 @@ function NPCDetailPage() {
 
         {/* Factions */}
         <FactionBlurb factions={factions.filter((f) => npc.factionIds?.includes(f.id))} />
+
+        {/* Connections */}
+        {connections.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Handshake className="size-4" />
+                Connections ({connections.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {connections.map((c) => {
+                const outgoing = c.fromId === npcId
+                const otherId = outgoing ? c.toId : c.fromId
+                const other = allNpcs.find((n) => n.id === otherId)
+                // "serves" is the only directional edge; phrase the inbound side.
+                const verb = outgoing
+                  ? c.label
+                  : c.label === 'serves'
+                    ? 'is served by'
+                    : c.label
+                return (
+                  <div key={c.id} className="flex items-center gap-2 text-sm">
+                    <Badge variant="outline" className="capitalize">{c.kind}</Badge>
+                    <span className="text-muted-foreground">{verb}</span>
+                    {other ? (
+                      <Link
+                        to="/realms/npcs/$npcId"
+                        params={{ npcId: otherId }}
+                        className="font-medium hover:underline"
+                      >
+                        {other.name}
+                      </Link>
+                    ) : (
+                      <span className="font-medium text-muted-foreground">Unknown</span>
+                    )}
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Quests & Hooks */}
+        {hooks.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="size-4" />
+                Quests &amp; Hooks ({hooks.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {hooks.map((h) => (
+                <div key={h.id} className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="capitalize">{h.type.replace(/_/g, ' ')}</Badge>
+                    <Badge variant="secondary">{h.role === 'contact' ? 'Offers' : 'Subject'}</Badge>
+                    <span className="text-sm font-medium">{h.title}</span>
+                  </div>
+                  {h.secret.detail && (
+                    <p className="text-sm italic text-foreground/80 leading-relaxed border-l-2 border-muted pl-3">
+                      {h.secret.detail}
+                    </p>
+                  )}
+                  {h.secret.targetType === 'poi' && (() => {
+                    const target = pois.find((p) => p.id === h.secret.targetId)
+                    return target ? (
+                      <p className="text-xs">
+                        <span className="text-muted-foreground">Location: </span>
+                        <Link
+                          to="/realms/pois/$poiId"
+                          params={{ poiId: target.id }}
+                          className="font-medium hover:underline"
+                        >
+                          {target.name}
+                        </Link>
+                      </p>
+                    ) : null
+                  })()}
+                  {h.secret.targetType === 'npc' && (() => {
+                    const target = allNpcs.find((n) => n.id === h.secret.targetId)
+                    return target ? (
+                      <p className="text-xs">
+                        <span className="text-muted-foreground">Target: </span>
+                        <Link
+                          to="/realms/npcs/$npcId"
+                          params={{ npcId: target.id }}
+                          className="font-medium hover:underline"
+                        >
+                          {target.name}
+                        </Link>
+                      </p>
+                    ) : null
+                  })()}
+                  {h.rewardText && (
+                    <p className="text-xs text-muted-foreground">Reward: {h.rewardText}</p>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Attacks */}
         {sb.attacks.length > 0 && (

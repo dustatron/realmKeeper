@@ -2,6 +2,7 @@ import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { GameMap } from '@domain/entities/GameMap'
+import { BIOME_COLORS } from '~/lib/hexmap/hexLayout'
 import type { POI } from '@domain/entities/POI'
 import type { Path } from '@domain/entities/Path'
 import type { Region } from '@domain/entities/Region'
@@ -174,34 +175,41 @@ export function MapViewer({
     const [swLng, swLat] = pxToLngLat(0, map.height)
     const [neLng, neLat] = pxToLngLat(map.width, 0)
 
+    const hasImage = !!map.imageUrl
     const mapInstance = new maplibregl.Map({
       container: containerRef.current,
       style: {
         version: 8,
-        sources: {
-          'map-image': {
-            type: 'image',
-            url: map.imageUrl,
-            coordinates: [
-              [swLng, neLat], // top-left
-              [neLng, neLat], // top-right
-              [neLng, swLat], // bottom-right
-              [swLng, swLat], // bottom-left
-            ],
-          },
-        },
+        sources: hasImage
+          ? {
+              'map-image': {
+                type: 'image',
+                url: map.imageUrl,
+                coordinates: [
+                  [swLng, neLat], // top-left
+                  [neLng, neLat], // top-right
+                  [neLng, swLat], // bottom-right
+                  [swLng, swLat], // bottom-left
+                ],
+              },
+            }
+          : {},
         layers: [
           {
             id: 'background',
             type: 'background',
-            paint: { 'background-color': '#1a1a2e' },
+            paint: { 'background-color': hasImage ? '#1a1a2e' : '#0f172a' },
           },
-          {
-            id: 'map-image-layer',
-            type: 'raster',
-            source: 'map-image',
-            paint: { 'raster-opacity': 1 },
-          },
+          ...(hasImage
+            ? [
+                {
+                  id: 'map-image-layer',
+                  type: 'raster' as const,
+                  source: 'map-image',
+                  paint: { 'raster-opacity': 1 },
+                },
+              ]
+            : []),
         ],
       },
       center: initialViewState?.center ?? [0, 0],
@@ -666,6 +674,69 @@ export function MapViewer({
       instance.off('mouseleave', 'regions-fill', cursorLeave)
     }
   }, [mapReady, mode])
+
+  // Render hex-grid biome fill for kind:'hex' maps.
+  useEffect(() => {
+    const instance = mapRef.current
+    if (!instance || !mapReady) return
+    if (map.kind !== 'hex' || !map.hexCells || map.hexCells.length === 0) return
+
+    const sourceId = 'hex-cells'
+    const layerId = 'hex-cells-fill'
+    const lineId = 'hex-cells-line'
+
+    const features = map.hexCells.map((cell) => ({
+      type: 'Feature' as const,
+      properties: { color: BIOME_COLORS[cell.biome] },
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: [
+          [...cell.corners.map((c) => pxToLngLat(c.x, c.y)),
+           pxToLngLat(cell.corners[0].x, cell.corners[0].y)],
+        ],
+      },
+    }))
+    const geojson = { type: 'FeatureCollection' as const, features }
+
+    const existing = instance.getSource(sourceId) as maplibregl.GeoJSONSource | undefined
+    if (existing) {
+      existing.setData(geojson as GeoJSON.FeatureCollection)
+    } else {
+      instance.addSource(sourceId, { type: 'geojson', data: geojson as GeoJSON.FeatureCollection })
+      // Insert the biome fill at the BOTTOM (just above the background layer) so
+      // the region fill/outline/labels — added by the region effect — render ON
+      // TOP of the terrain instead of being hidden beneath an 85%-opaque fill.
+      const styleLayers = instance.getStyle().layers
+      const bgIdx = styleLayers.findIndex((l) => l.id === 'background')
+      const beforeId = bgIdx >= 0 ? styleLayers[bgIdx + 1]?.id : undefined
+      instance.addLayer(
+        {
+          id: layerId,
+          type: 'fill',
+          source: sourceId,
+          paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.85 },
+        },
+        beforeId,
+      )
+      instance.addLayer(
+        {
+          id: lineId,
+          type: 'line',
+          source: sourceId,
+          paint: { 'line-color': '#00000033', 'line-width': 1 },
+        },
+        beforeId,
+      )
+    }
+
+    // No teardown cleanup — matches the region/path effects in this file. The
+    // init effect's `mapInstance.remove()` destroys all sources/layers on unmount
+    // or map switch. A cleanup here would call `instance.getLayer(...)` on an
+    // already-removed map (whose internal `.style` is undefined), throwing
+    // "Cannot read properties of undefined (reading 'getLayer')" when navigating
+    // away. Re-runs while the same map persists are handled idempotently by the
+    // getSource→setData branch above.
+  }, [map.kind, map.hexCells, mapReady, pxToLngLat])
 
   // Render draw-region preview polygon
   useEffect(() => {

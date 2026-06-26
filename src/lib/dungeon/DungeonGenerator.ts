@@ -114,8 +114,8 @@ export function generateDungeon(seed: string, options: DungeonGenOptions): Gener
     ecology.historyLayers = historyLayers
   }
 
-  // Generate wandering monster table
-  const wanderingMonsters = generateWanderingMonsters(theme, depth, seed)
+  // Generate wandering monster table, led by the dungeon's current inhabitants
+  const wanderingMonsters = generateWanderingMonsters(theme, depth, seed, ecology.inhabitantCreature)
 
   // Generate dungeon NPCs
   const dungeonNPCs = generateDungeonNPCs(theme, rooms, seed)

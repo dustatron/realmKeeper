@@ -30,6 +30,7 @@ export async function executeCreateNotice(
     type: input.type,
     reward: input.reward ?? '',
     contactNpcId: input.contactNpcId ?? null,
+    hookId: null,
     isUsed: false,
     tags: input.tags ?? [],
     createdAt: now,

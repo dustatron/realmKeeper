@@ -11,6 +11,10 @@ import type { IPathRepository } from '@application/ports/IPathRepository'
 import type { IFactionPresenceRepository } from '@application/ports/IFactionPresenceRepository'
 import type { IPOIEventRepository } from '@application/ports/IPOIEventRepository'
 import type { IGameMapRepository } from '@application/ports/IGameMapRepository'
+import type { IConnectionRepository } from '@application/ports/IConnectionRepository'
+import type { IHookRepository } from '@application/ports/IHookRepository'
+import type { Connection } from '@domain/entities/Connection'
+import type { Hook } from '@domain/entities/Hook'
 import type { RealmExport, GameMapExport } from './ExportRealm'
 import { newId } from '@shared/ulid'
 
@@ -28,22 +32,42 @@ export interface ImportRealmDeps {
   factionPresenceRepo: IFactionPresenceRepository
   poiEventRepo: IPOIEventRepository
   gameMapRepo: IGameMapRepository
+  connectionRepo: IConnectionRepository
+  hookRepo: IHookRepository
 }
 
-// Accept v1, v2, or v3 exports for backward compat
+type LegacyExport = Omit<
+  RealmExport,
+  'version' | 'factionPresences' | 'poiEvents' | 'gameMaps' | 'connections' | 'hooks'
+>
+
+// Accept v1–v4 exports for backward compat. connections/hooks (v4) and
+// gameMaps/factionPresences/poiEvents (v2/v3) are absent from older exports.
 type ImportData =
   | RealmExport
-  | (Omit<RealmExport, 'version' | 'factionPresences' | 'poiEvents' | 'gameMaps'> & {
+  | (LegacyExport & {
+      version: 3
+      factionPresences: RealmExport['factionPresences']
+      poiEvents: RealmExport['poiEvents']
+      gameMaps: RealmExport['gameMaps']
+      connections?: never
+      hooks?: never
+    })
+  | (LegacyExport & {
       version: 2
       factionPresences: RealmExport['factionPresences']
       poiEvents: RealmExport['poiEvents']
       gameMaps?: never
+      connections?: never
+      hooks?: never
     })
-  | (Omit<RealmExport, 'version' | 'factionPresences' | 'poiEvents' | 'gameMaps'> & {
+  | (LegacyExport & {
       version: 1
       factionPresences?: never
       poiEvents?: never
       gameMaps?: never
+      connections?: never
+      hooks?: never
     })
 
 export async function executeImportRealm(
@@ -205,8 +229,12 @@ export async function executeImportRealm(
   // Game maps (v3+)
   const gameMaps: GameMapExport[] = (data as { gameMaps?: GameMapExport[] }).gameMaps ?? []
   for (const gm of gameMaps) {
-    // Convert base64 back to data URL
-    const imageUrl = `data:image/png;base64,${gm.imageBase64}`
+    // Preserve the map's shape. A hex map carries no image (its cells are the
+    // map), so don't fabricate a `data:image/png;base64,undefined` URL for it.
+    // Pre-v4 exports lack the kind/hex fields → default to an image map.
+    const kind = gm.kind ?? 'image'
+    const imageUrl =
+      kind === 'hex' ? '' : gm.imageBase64 ? `data:image/png;base64,${gm.imageBase64}` : ''
 
     await deps.gameMapRepo.create({
       id: remap(gm.id),
@@ -214,11 +242,44 @@ export async function executeImportRealm(
       ownerRealmId: gm.ownerRealmId ? remap(gm.ownerRealmId) : null,
       ownerPoiId: gm.ownerPoiId ? remap(gm.ownerPoiId) : null,
       imageUrl,
+      kind,
+      hexCols: gm.hexCols ?? null,
+      hexRows: gm.hexRows ?? null,
+      hexSize: gm.hexSize ?? null,
+      hexOrientation: gm.hexOrientation ?? null,
+      hexCells: gm.hexCells ?? undefined,
       width: gm.width,
       height: gm.height,
       sortOrder: gm.sortOrder,
       createdAt: gm.createdAt,
       updatedAt: gm.updatedAt,
+    })
+  }
+
+  // Hooks (v4+) — quest secrets. Import before connections, which may point at a
+  // hook via hookId.
+  const hooks: Hook[] = (data as { hooks?: Hook[] }).hooks ?? []
+  for (const h of hooks) {
+    await deps.hookRepo.create({
+      ...h,
+      id: remap(h.id),
+      worldId,
+      contactNpcId: h.contactNpcId ? remap(h.contactNpcId) : null,
+      secret: { ...h.secret, targetId: remap(h.secret.targetId) },
+    })
+  }
+
+  // Connections (v4+) — NPC↔NPC/faction/POI ties. from/to/contact ids reference
+  // already-imported entities, so remap resolves to their new ids.
+  const connections: Connection[] = (data as { connections?: Connection[] }).connections ?? []
+  for (const c of connections) {
+    await deps.connectionRepo.create({
+      ...c,
+      id: remap(c.id),
+      worldId,
+      fromId: remap(c.fromId),
+      toId: remap(c.toId),
+      hookId: c.hookId ? remap(c.hookId) : null,
     })
   }
 

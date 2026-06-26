@@ -19,6 +19,8 @@ import { NoticeRepository } from '@infrastructure/dexie/repositories/NoticeRepos
 import { EncounterTableRepository } from '@infrastructure/dexie/repositories/EncounterTableRepository'
 import { EntityNoteRepository } from '@infrastructure/dexie/repositories/EntityNoteRepository'
 import { CustomCompendiumRepository } from '@infrastructure/dexie/repositories/CustomCompendiumRepository'
+import { ConnectionRepository } from '@infrastructure/dexie/repositories/ConnectionRepository'
+import { HookRepository } from '@infrastructure/dexie/repositories/HookRepository'
 import { EventBus } from '@infrastructure/event-bus/EventBus'
 
 export function createContainer() {
@@ -44,6 +46,8 @@ export function createContainer() {
     encounterTableRepo: new EncounterTableRepository(),
     entityNoteRepo: new EntityNoteRepository(),
     customCompendiumRepo: new CustomCompendiumRepository(),
+    connectionRepo: new ConnectionRepository(),
+    hookRepo: new HookRepository(),
     eventBus: new EventBus(),
   } as const
 }

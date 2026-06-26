@@ -76,6 +76,27 @@ const ROOM_ACTIVITY_HINTS: Record<string, CreatureActivity[]> = {
   loot_storage: ['guarding'],
 }
 
+// Maps a creature keyword in the "current inhabitants" phrase to a compendium
+// creature slug, so the dungeon's rooms/wandering monsters can be the faction
+// that actually holds it. Order matters: 'hobgoblin' must precede 'goblin'.
+const INHABITANT_CREATURES: [string, string][] = [
+  ['hobgoblin', 'Hobgoblin'], ['bugbear', 'Bugbear'], ['goblin', 'Goblin'],
+  ['kobold', 'Kobold'], ['orc', 'Orc'], ['troll', 'Troll'], ['ogre', 'Ogre'],
+  ['gnoll', 'Gnoll'], ['duergar', 'Duergar'], ['derro', 'Derro'],
+  ['wererat', 'Wererat'], ['sahuagin', 'Sahuagin'], ['merfolk', 'Merfolk'],
+  ['mummy', 'Mummy'], ['ghoul', 'Ghoul'], ['ghast', 'Ghast'],
+  ['vampire', 'Vampire Spawn'], ['skeleton', 'Skeleton'], ['zombie', 'Zombie'],
+  ['otyugh', 'Otyugh'], ['hag', 'Hag'], ['demon', 'Demon, Dretch'],
+  ['cultist', 'Cultist'], ['bandit', 'Bandit'], ['pirate', 'Pirate'],
+  ['spider', 'Spider, Giant'],
+]
+
+function inhabitantCreatureOf(phrase: string): string | undefined {
+  const lower = phrase.toLowerCase()
+  for (const [kw, slug] of INHABITANT_CREATURES) if (lower.includes(kw)) return slug
+  return undefined
+}
+
 export function generateDungeonEcology(theme: DungeonTheme, rooms: SpatialRoom[], seed: string): DungeonEcology {
   const rng = new SeededRandom(`${seed}-ecology`)
   const builderCulture = rng.pick(BUILDER_CULTURES[theme] ?? ['unknown builders'])
@@ -107,7 +128,9 @@ export function generateDungeonEcology(theme: DungeonTheme, rooms: SpatialRoom[]
   const primaryRooms = rooms.filter((r) => r.type !== 'entrance').map((r) => r.id)
   if (primaryRooms.length > 0) factionInfluence[currentInhabitants] = primaryRooms
 
-  return { builderCulture, currentInhabitants, history, factionInfluence }
+  const inhabitantCreature = inhabitantCreatureOf(currentInhabitants)
+
+  return { builderCulture, currentInhabitants, inhabitantCreature, history, factionInfluence }
 }
 
 function selectWeightedActivity(rng: SeededRandom, dist: Record<CreatureActivity, number>): CreatureActivity {

@@ -37,6 +37,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/components/ui/collapsible";
+import { Switch } from "~/components/ui/switch";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import {
   LayoutDashboard,
   Plus,
@@ -47,6 +49,11 @@ import {
   Pencil,
   ChevronDown,
   Settings,
+  Wand2,
+  CheckCircle2,
+  Circle,
+  ListChecks,
+  X,
 } from "lucide-react";
 import {
   DEFAULT_DAYS_PER_SEASON,
@@ -58,10 +65,16 @@ import { useContainer } from "~/ui/hooks/useContainer";
 import { useUIStore } from "~/ui/stores/uiStore";
 import { executeCreateRealm } from "@application/use-cases/CreateRealm";
 import { executeDeleteRealm } from "@application/use-cases/DeleteRealm";
+import { executeDeleteRealms } from "@application/use-cases/DeleteRealms";
+import { executeGenerateWorld } from "@application/use-cases/GenerateWorld";
+import { newId } from "@shared/ulid";
 import { executeExportRealm } from "@application/use-cases/ExportRealm";
 import { executeImportRealm } from "@application/use-cases/ImportRealm";
 import { Dashboard } from "~/components/realm/Dashboard";
 import type { RealmExport } from "@application/use-cases/ExportRealm";
+
+// Default rule system for new realms (Cairn 2e ships seeded).
+const DEFAULT_SYSTEM_ID = "system-cairn-2e";
 
 export const Route = createFileRoute("/_app/realms/")({
   component: RealmsPage,
@@ -81,20 +94,30 @@ function RealmsPage() {
   const activeRealmId = useUIStore((state) => state.activeRealmId);
   const { tab } = Route.useSearch();
 
-  // Clear stale activeRealmId if the realm no longer exists in DB (e.g. DB was deleted)
+  // Clear stale activeRealmId if the realm no longer exists in DB (e.g. DB was
+  // deleted). The `realms` live query can briefly lag a just-created realm, so
+  // confirm against the DB before clearing — otherwise we'd null the active
+  // realm immediately after generating a world (the race that left a freshly
+  // generated realm showing "No Realm").
   useEffect(() => {
     if (
       realmsLoaded &&
       activeRealmId &&
       !realms.some((r) => r.id === activeRealmId)
     ) {
-      setActiveRealmId(null);
+      let cancelled = false;
+      db.worlds.get(activeRealmId).then((world) => {
+        if (!cancelled && !world) setActiveRealmId(null);
+      });
+      return () => {
+        cancelled = true;
+      };
     }
   }, [realmsLoaded, activeRealmId, realms, setActiveRealmId]);
 
   const [showCreate, setShowCreate] = useState(false);
   const [createName, setCreateName] = useState("");
-  const [createSystem, setCreateSystem] = useState("");
+  const [createSystem, setCreateSystem] = useState(DEFAULT_SYSTEM_ID);
   const [createDesc, setCreateDesc] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [createWatchesPerDay, setCreateWatchesPerDay] = useState(
@@ -115,11 +138,87 @@ function RealmsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
+  // Bulk-delete selection mode: lets a GM clear out several realms (e.g.
+  // throwaway test worlds) at once instead of one card at a time.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  // Procedural generation params (shown in the Create dialog when enabled).
+  // All of these are live and feed executeGenerateWorld: size, seed, faction
+  // count, POI density, and the looming-threat toggle.
+  const [genEnabled, setGenEnabled] = useState(true);
+  const [genSize, setGenSize] = useState<"small" | "medium" | "large">(
+    "medium",
+  );
+  const [genSeed, setGenSeed] = useState("");
+  const [genAdvancedOpen, setGenAdvancedOpen] = useState(false);
+  const [genFactions, setGenFactions] = useState(4);
+  const [genPoiDensity, setGenPoiDensity] = useState<
+    "sparse" | "normal" | "dense"
+  >("normal");
+  const [genLoomingThreat, setGenLoomingThreat] = useState(true);
+
+  const resetCreateForm = () => {
+    setShowCreate(false);
+    setCreateName("");
+    setCreateSystem(DEFAULT_SYSTEM_ID);
+    setCreateDesc("");
+    setCalendarOpen(false);
+    setCreateWatchesPerDay(DEFAULT_WATCHES_PER_DAY);
+    setCreateDaysPerSeason(DEFAULT_DAYS_PER_SEASON);
+    setCreateDaysPerWeek(7);
+    setCreateFactionTurnTrigger("day");
+    setGenEnabled(true);
+    setGenSize("medium");
+    setGenSeed("");
+    setGenAdvancedOpen(false);
+    // Reset the advanced generation knobs too, so a prior world's settings
+    // don't silently carry into the next Create dialog.
+    setGenFactions(4);
+    setGenPoiDensity("normal");
+    setGenLoomingThreat(true);
+  };
+
   const handleCreateRealm = async () => {
     if (!createName.trim() || !createSystem) return;
 
     setIsCreating(true);
     try {
+      if (genEnabled) {
+        const { realmId, mapId } = await executeGenerateWorld(
+          {
+            name: createName.trim(),
+            systemId: createSystem,
+            description: createDesc.trim(),
+            seed: genSeed.trim() || newId(),
+            size: genSize,
+            watchesPerDay: createWatchesPerDay,
+            daysPerSeason: createDaysPerSeason,
+            daysPerWeek: createDaysPerWeek,
+            factionTurnTrigger: createFactionTurnTrigger,
+            poiDensity: genPoiDensity,
+            factionCount: genFactions,
+            loomingThreat: genLoomingThreat,
+          },
+          {
+            realmRepo: container.realmRepo,
+            factionRepo: container.factionRepo,
+            realmNoteRepo: container.realmNoteRepo,
+            poiRepo: container.poiRepo,
+            npcRepo: container.npcRepo,
+            pathRepo: container.pathRepo,
+            factionPresenceRepo: container.factionPresenceRepo,
+            poiEventRepo: container.poiEventRepo,
+          },
+        );
+        resetCreateForm();
+        setActiveRealmId(realmId);
+        navigate({ to: "/realms/maps/$mapId", params: { mapId } });
+        return;
+      }
+
       const newRealm = await executeCreateRealm(
         {
           name: createName.trim(),
@@ -138,15 +237,7 @@ function RealmsPage() {
       );
 
       setActiveRealmId(newRealm.id);
-      setShowCreate(false);
-      setCreateName("");
-      setCreateSystem("");
-      setCreateDesc("");
-      setCalendarOpen(false);
-      setCreateWatchesPerDay(DEFAULT_WATCHES_PER_DAY);
-      setCreateDaysPerSeason(DEFAULT_DAYS_PER_SEASON);
-      setCreateDaysPerWeek(7);
-      setCreateFactionTurnTrigger("day");
+      resetCreateForm();
     } catch (error) {
       console.error("Failed to create realm:", error);
     } finally {
@@ -170,6 +261,40 @@ function RealmsPage() {
     }
   };
 
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelected = (worldId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(worldId)) next.delete(worldId);
+      else next.add(worldId);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      await executeDeleteRealms([...selectedIds], {
+        realmRepo: container.realmRepo,
+      });
+      // Clear the active realm if it was among those deleted.
+      if (activeRealmId && selectedIds.has(activeRealmId)) {
+        setActiveRealmId(null);
+      }
+      setShowBulkDelete(false);
+      exitSelectMode();
+    } catch (error) {
+      console.error("Failed to delete realms:", error);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const handleExportRealm = async (worldId: string) => {
     try {
       const data = await executeExportRealm(worldId, {
@@ -186,6 +311,8 @@ function RealmsPage() {
         factionPresenceRepo: container.factionPresenceRepo,
         poiEventRepo: container.poiEventRepo,
         gameMapRepo: container.gameMapRepo,
+        connectionRepo: container.connectionRepo,
+        hookRepo: container.hookRepo,
       });
 
       if (!data) return;
@@ -230,6 +357,8 @@ function RealmsPage() {
         factionPresenceRepo: container.factionPresenceRepo,
         poiEventRepo: container.poiEventRepo,
         gameMapRepo: container.gameMapRepo,
+        connectionRepo: container.connectionRepo,
+        hookRepo: container.hookRepo,
       });
 
       setActiveRealmId(newRealmId);
@@ -374,6 +503,225 @@ function RealmsPage() {
     </Collapsible>
   );
 
+  const generationSettingsSection = (
+    <div className="space-y-3 rounded-lg border p-3">
+      <div className="flex items-center justify-between">
+        <Label
+          htmlFor="gen-toggle"
+          className="flex items-center gap-2 font-medium"
+        >
+          <Wand2 className="size-4" />
+          Procedurally generate world
+        </Label>
+        <Switch
+          id="gen-toggle"
+          checked={genEnabled}
+          onCheckedChange={setGenEnabled}
+          disabled={isCreating}
+        />
+      </div>
+      {genEnabled && (
+        <div className="space-y-3 pt-1">
+          <p className="text-xs text-muted-foreground">
+            Off creates a blank world. On generates a biome hex map sized to your
+            choice — a starting canvas you can flesh out.
+          </p>
+          <div className="grid gap-1.5">
+            <Label className="text-xs">World size</Label>
+            <ToggleGroup
+              type="single"
+              value={genSize}
+              onValueChange={(v) =>
+                v && setGenSize(v as typeof genSize)
+              }
+              className="justify-start"
+              disabled={isCreating}
+            >
+              <ToggleGroupItem value="small">Small · 8×8</ToggleGroupItem>
+              <ToggleGroupItem value="medium">Medium · 12×12</ToggleGroupItem>
+              <ToggleGroupItem value="large">Large · 16×16</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="gen-seed" className="text-xs">
+              Seed (optional)
+            </Label>
+            <Input
+              id="gen-seed"
+              placeholder="Leave blank for a random world"
+              value={genSeed}
+              onChange={(e) => setGenSeed(e.target.value)}
+              disabled={isCreating}
+            />
+          </div>
+          <Collapsible open={genAdvancedOpen} onOpenChange={setGenAdvancedOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-between px-0 font-medium"
+                disabled={isCreating}
+              >
+                <span className="flex items-center gap-2">
+                  <Settings className="size-4" />
+                  Advanced
+                </span>
+                <ChevronDown
+                  className={`size-4 transition-transform ${genAdvancedOpen ? "rotate-180" : ""}`}
+                />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 pt-2">
+              <p className="text-xs text-muted-foreground">
+                Fine-tune what gets generated: how many factions vie for power,
+                how densely the map is dotted with points of interest, and
+                whether a looming threat hangs over the realm.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="gen-factions" className="text-xs">
+                    Factions
+                  </Label>
+                  <Input
+                    id="gen-factions"
+                    type="number"
+                    min="0"
+                    max="20"
+                    value={genFactions}
+                    onChange={(e) =>
+                      setGenFactions(parseInt(e.target.value) || 0)
+                    }
+                    disabled={isCreating}
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="gen-poi" className="text-xs">
+                    POI density
+                  </Label>
+                  <Select
+                    value={genPoiDensity}
+                    onValueChange={(v) =>
+                      setGenPoiDensity(v as typeof genPoiDensity)
+                    }
+                    disabled={isCreating}
+                  >
+                    <SelectTrigger id="gen-poi">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sparse">Sparse</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
+                      <SelectItem value="dense">Dense</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="gen-threat" className="text-xs">
+                  Looming threat
+                </Label>
+                <Switch
+                  id="gen-threat"
+                  checked={genLoomingThreat}
+                  onCheckedChange={setGenLoomingThreat}
+                  disabled={isCreating}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+      )}
+    </div>
+  );
+
+  // Single Create-Realm modal, rendered in both the empty-state and the
+  // populated views (only one is mounted at a time). Defined once so the two
+  // entry points never drift (e.g. the generation toggle present in one but not
+  // the other).
+  const createRealmDialog = (
+    <Dialog open={showCreate} onOpenChange={setShowCreate}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create New Realm</DialogTitle>
+          <DialogDescription>
+            Set up a new realm for your campaign.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="realm-name">Name</Label>
+            <Input
+              id="realm-name"
+              placeholder="The Forgotten Realms"
+              value={createName}
+              onChange={(e) => setCreateName(e.target.value)}
+              disabled={isCreating}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="realm-system">System</Label>
+            <Select
+              value={createSystem}
+              onValueChange={setCreateSystem}
+              disabled={isCreating}
+            >
+              <SelectTrigger id="realm-system" className="w-full">
+                <SelectValue placeholder="Select a system" />
+              </SelectTrigger>
+              <SelectContent>
+                {systemConfigs.map((system) => (
+                  <SelectItem key={system.id} value={system.id}>
+                    {system.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="realm-desc">Description (optional)</Label>
+            <Textarea
+              id="realm-desc"
+              placeholder="A high fantasy setting with..."
+              value={createDesc}
+              onChange={(e) => setCreateDesc(e.target.value)}
+              disabled={isCreating}
+            />
+          </div>
+          {calendarSettingsSection}
+          {generationSettingsSection}
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setShowCreate(false)}
+            disabled={isCreating}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreateRealm}
+            disabled={!createName.trim() || !createSystem || isCreating}
+          >
+            {isCreating
+              ? genEnabled
+                ? "Generating…"
+                : "Creating..."
+              : genEnabled
+                ? "Generate World"
+                : "Create Realm"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  // Wait for the realms query to resolve before deciding what to render —
+  // otherwise the "No realms yet" empty state flashes for a frame on every load
+  // while useLiveQuery is still pending (rawRealms === undefined).
+  if (!realmsLoaded) {
+    return null;
+  }
+
   // Show dashboard when a realm is active and confirmed to exist
   if (
     activeRealmId &&
@@ -428,73 +776,7 @@ function RealmsPage() {
           }
         />
 
-        <Dialog open={showCreate} onOpenChange={setShowCreate}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Realm</DialogTitle>
-              <DialogDescription>
-                Set up a new realm for your campaign.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="realm-name">Name</Label>
-                <Input
-                  id="realm-name"
-                  placeholder="The Forgotten Realms"
-                  value={createName}
-                  onChange={(e) => setCreateName(e.target.value)}
-                  disabled={isCreating}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="realm-system">System</Label>
-                <Select
-                  value={createSystem}
-                  onValueChange={setCreateSystem}
-                  disabled={isCreating}
-                >
-                  <SelectTrigger id="realm-system" className="w-full">
-                    <SelectValue placeholder="Select a system" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {systemConfigs.map((system) => (
-                      <SelectItem key={system.id} value={system.id}>
-                        {system.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="realm-desc">Description (optional)</Label>
-                <Textarea
-                  id="realm-desc"
-                  placeholder="A high fantasy setting with..."
-                  value={createDesc}
-                  onChange={(e) => setCreateDesc(e.target.value)}
-                  disabled={isCreating}
-                />
-              </div>
-              {calendarSettingsSection}
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowCreate(false)}
-                disabled={isCreating}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreateRealm}
-                disabled={!createName.trim() || !createSystem || isCreating}
-              >
-                {isCreating ? "Creating..." : "Create Realm"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {createRealmDialog}
       </div>
     );
   }
@@ -505,39 +787,97 @@ function RealmsPage() {
         title="Realms"
         description="Select or create a realm."
         actions={
-          <div className="flex gap-2">
-            <Button onClick={() => setShowCreate(true)}>
-              <Plus className="mr-2 size-4" />
-              New Realm
-            </Button>
-            <label htmlFor="import-realm-header">
-              <Button variant="outline" asChild>
-                <span>
-                  <Upload className="mr-2 size-4" />
-                  Import
-                </span>
+          selectMode ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {selectedIds.size} selected
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setSelectedIds(
+                    selectedIds.size === realms.length
+                      ? new Set()
+                      : new Set(realms.map((r) => r.id)),
+                  )
+                }
+              >
+                {selectedIds.size === realms.length
+                  ? "Clear all"
+                  : "Select all"}
               </Button>
-            </label>
-            <input
-              id="import-realm-header"
-              type="file"
-              accept="application/json"
-              className="hidden"
-              onChange={handleImportRealm}
-            />
-          </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={selectedIds.size === 0}
+                onClick={() => setShowBulkDelete(true)}
+              >
+                <Trash2 className="mr-2 size-4" />
+                Delete ({selectedIds.size})
+              </Button>
+              <Button variant="ghost" size="sm" onClick={exitSelectMode}>
+                <X className="mr-2 size-4" />
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Button onClick={() => setShowCreate(true)}>
+                <Plus className="mr-2 size-4" />
+                New Realm
+              </Button>
+              {realms.length > 1 && (
+                <Button variant="outline" onClick={() => setSelectMode(true)}>
+                  <ListChecks className="mr-2 size-4" />
+                  Select
+                </Button>
+              )}
+              <label htmlFor="import-realm-header">
+                <Button variant="outline" asChild>
+                  <span>
+                    <Upload className="mr-2 size-4" />
+                    Import
+                  </span>
+                </Button>
+              </label>
+              <input
+                id="import-realm-header"
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={handleImportRealm}
+              />
+            </div>
+          )
         }
       />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {realms.map((realm) => {
           const system = systemConfigs.find((s) => s.id === realm.systemId);
+          const selected = selectedIds.has(realm.id);
           return (
             <Card
               key={realm.id}
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => handleRealmClick(realm.id)}
+              className={`relative cursor-pointer transition-shadow hover:shadow-md ${
+                selectMode && selected ? "ring-2 ring-destructive" : ""
+              }`}
+              onClick={() =>
+                selectMode
+                  ? toggleSelected(realm.id)
+                  : handleRealmClick(realm.id)
+              }
             >
+              {selectMode && (
+                <div className="absolute right-3 top-3 text-muted-foreground">
+                  {selected ? (
+                    <CheckCircle2 className="size-5 text-destructive" />
+                  ) : (
+                    <Circle className="size-5" />
+                  )}
+                </div>
+              )}
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
@@ -560,113 +900,49 @@ function RealmsPage() {
                   </p>
                 </CardContent>
               )}
-              <CardFooter className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openEditRealm(realm.id);
-                  }}
-                >
-                  <Pencil className="mr-2 size-3" />
-                  Edit
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleExportRealm(realm.id);
-                  }}
-                >
-                  <Download className="mr-2 size-3" />
-                  Export
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteTarget(realm.id);
-                  }}
-                >
-                  <Trash2 className="mr-2 size-3" />
-                  Delete
-                </Button>
-              </CardFooter>
+              {!selectMode && (
+                <CardFooter className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditRealm(realm.id);
+                    }}
+                  >
+                    <Pencil className="mr-2 size-3" />
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleExportRealm(realm.id);
+                    }}
+                  >
+                    <Download className="mr-2 size-3" />
+                    Export
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteTarget(realm.id);
+                    }}
+                  >
+                    <Trash2 className="mr-2 size-3" />
+                    Delete
+                  </Button>
+                </CardFooter>
+              )}
             </Card>
           );
         })}
       </div>
 
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Realm</DialogTitle>
-            <DialogDescription>
-              Set up a new realm for your campaign.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="realm-name">Name</Label>
-              <Input
-                id="realm-name"
-                placeholder="The Forgotten Realms"
-                value={createName}
-                onChange={(e) => setCreateName(e.target.value)}
-                disabled={isCreating}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="realm-system">System</Label>
-              <Select
-                value={createSystem}
-                onValueChange={setCreateSystem}
-                disabled={isCreating}
-              >
-                <SelectTrigger id="realm-system" className="w-full">
-                  <SelectValue placeholder="Select a system" />
-                </SelectTrigger>
-                <SelectContent>
-                  {systemConfigs.map((system) => (
-                    <SelectItem key={system.id} value={system.id}>
-                      {system.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="realm-desc">Description (optional)</Label>
-              <Textarea
-                id="realm-desc"
-                placeholder="A high fantasy setting with..."
-                value={createDesc}
-                onChange={(e) => setCreateDesc(e.target.value)}
-                disabled={isCreating}
-              />
-            </div>
-            {calendarSettingsSection}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowCreate(false)}
-              disabled={isCreating}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateRealm}
-              disabled={!createName.trim() || !createSystem || isCreating}
-            >
-              {isCreating ? "Creating..." : "Create Realm"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {createRealmDialog}
 
       <Dialog
         open={editTarget !== null}
@@ -723,6 +999,16 @@ function RealmsPage() {
         confirmLabel={isDeleting ? "Deleting..." : "Delete"}
         variant="destructive"
         onConfirm={handleDeleteRealm}
+      />
+
+      <ConfirmDialog
+        open={showBulkDelete}
+        onOpenChange={(open) => !open && setShowBulkDelete(false)}
+        title={`Delete ${selectedIds.size} Realm${selectedIds.size === 1 ? "" : "s"}`}
+        description={`Are you sure you want to delete ${selectedIds.size} realm${selectedIds.size === 1 ? "" : "s"}? This action cannot be undone and will remove all associated data.`}
+        confirmLabel={isBulkDeleting ? "Deleting..." : "Delete"}
+        variant="destructive"
+        onConfirm={handleBulkDelete}
       />
     </div>
   );

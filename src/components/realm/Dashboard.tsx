@@ -4,9 +4,14 @@ import { useUIStore } from "~/ui/stores/uiStore";
 import { useActiveRealm } from "~/ui/hooks/useActiveRealm";
 import { useTimeline } from "~/ui/hooks/useTimeline";
 import { useRecentWeather } from "~/ui/hooks/useWeather";
-import { useRecentVisitedPOIs, useStarredPOIs } from "~/ui/hooks/usePOIs";
+import { useRecentVisitedPOIs, useStarredPOIs, useRealmPOIs } from "~/ui/hooks/usePOIs";
 import { useStarredNPCs } from "~/ui/hooks/useNPCs";
+import { useRegions } from "~/ui/hooks/useRegions";
 import { useContainer } from "~/ui/hooks/useContainer";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@infrastructure/dexie/db";
+import { executeAdvanceDay, type AdvanceDayDeps } from "@application/use-cases/AdvanceClock";
+import { rollDice } from "@shared/dice";
 import {
   getMonstersBySystemId,
   getSpellsBySystemId,
@@ -59,6 +64,8 @@ import {
   Cat,
   Star,
   Search,
+  Skull,
+  FastForward,
 } from "lucide-react";
 import type { Season } from "@shared/constants";
 import { QuickLinksBar } from "./QuickLinksBar";
@@ -112,6 +119,36 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
   const recentEvents = useTimeline(worldId, 5);
   const recentWeather = useRecentWeather(worldId, 3);
   const recentPOIs = useRecentVisitedPOIs(worldId, 5);
+  const regions = useRegions(worldId);
+  const allPois = useRealmPOIs(worldId);
+  // "Sites" = top-level overworld locations (settlements, dungeons, ruins, …).
+  const siteCount = allPois.filter((p) => p.parentPoiId == null && p.mapRef).length;
+  const doom = useLiveQuery(
+    async () => {
+      const events = await db.worldEvents.toArray();
+      return events.find((e) => e.worldId === worldId && e.type === "doom") ?? null;
+    },
+    [worldId],
+  );
+  const [advancing, setAdvancing] = useState(false);
+  const handleAdvanceDay = async () => {
+    setAdvancing(true);
+    try {
+      const advanceDeps: AdvanceDayDeps = {
+        realmRepo: container.realmRepo,
+        weatherRepo: container.weatherRepo,
+        factionRepo: container.factionRepo,
+        relationshipRepo: container.factionRelationshipRepo,
+        npcRepo: container.npcRepo,
+        worldEventRepo: container.worldEventRepo,
+        eventBus: container.eventBus,
+        rollDice,
+      };
+      await executeAdvanceDay(worldId, advanceDeps);
+    } finally {
+      setAdvancing(false);
+    }
+  };
   const starredPOIs = useStarredPOIs(worldId);
   const starredNPCs = useStarredNPCs(worldId);
   const starredMonsterIds = realm?.starredMonsterIds ?? [];
@@ -195,10 +232,9 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
     setTimeout(() => setSettingsSaved(false), 2000);
   };
 
+  // World Stats is merged into Overview; old links fall through to overview.
   const activeTab =
-    tab === "world-stats" || tab === "settings" || tab === "favorites"
-      ? tab
-      : "overview";
+    tab === "settings" || tab === "favorites" ? tab : "overview";
 
   return (
     <div className="space-y-4 p-6">
@@ -213,6 +249,10 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
             <p className="text-muted-foreground mt-1">{realm.description}</p>
           )}
         </div>
+        <Button onClick={handleAdvanceDay} disabled={advancing} className="shrink-0">
+          <FastForward className="mr-2 size-4" />
+          {advancing ? "Advancing…" : "Advance Day"}
+        </Button>
       </div>
 
       <button
@@ -236,19 +276,182 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
             <Star className="size-4" />
             Favorites
           </TabsTrigger>
-          <TabsTrigger value="world-stats">
-            <BarChart3 className="size-4" />
-            World Stats
-          </TabsTrigger>
           <TabsTrigger value="settings">
             <Settings className="size-4" />
             Settings
           </TabsTrigger>
         </TabsList>
 
-        {/* Overview Tab */}
+        {/* Overview Tab (world stats + doom merged in) */}
         <TabsContent value="overview">
           <div className="space-y-6">
+            {/* Looming Doom */}
+            {doom && (
+              <Card className="border-destructive/40 bg-destructive/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-destructive">
+                    <Skull className="size-5" />
+                    {doom.title}
+                  </CardTitle>
+                  <CardDescription className="flex items-center gap-1.5">
+                    <Calendar className="size-3.5" />
+                    Foretold for{" "}
+                    {formatWorldDateTime({
+                      year: doom.year,
+                      season: doom.season,
+                      day: doom.day,
+                      watch: doom.watch,
+                    })}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{doom.description}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Stats Grid */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                    <Calendar className="size-4" />
+                    Current Date
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Badge className={SEASON_COLORS[realm.currentSeason]}>
+                    {realm.currentSeason.charAt(0).toUpperCase() + realm.currentSeason.slice(1)}
+                  </Badge>
+                  <div className="text-2xl font-bold mt-2">Year {realm.currentYear}</div>
+                  <div className="text-sm text-muted-foreground">
+                    Day {realm.currentDay} • Watch {realm.currentWatch}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                    <MapPin className="size-4" />
+                    Sites
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{siteCount}</div>
+                  <div className="text-sm text-muted-foreground">Locations on the map</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                    <Compass className="size-4" />
+                    Regions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{regions.length}</div>
+                  <div className="text-sm text-muted-foreground">Mapped regions</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                    <Swords className="size-4" />
+                    Factions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{data.factionCount}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {data.activeFactions.length} active
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                    <Users className="size-4" />
+                    NPCs
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{data.npcCount}</div>
+                  <div className="text-sm text-muted-foreground">Total characters</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                    <CloudRain className="size-4" />
+                    Weather
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {latestWeather ? (
+                    <>
+                      <div className="text-2xl font-bold capitalize">{latestWeather.condition}</div>
+                      <Badge
+                        className={
+                          WEATHER_SEVERITY_COLORS[latestWeather.severity] ||
+                          WEATHER_SEVERITY_COLORS.clear
+                        }
+                      >
+                        {latestWeather.severity}
+                      </Badge>
+                    </>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">No weather data</div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recent Events */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Scroll className="size-5" />
+                  Recent Events
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {recentEvents.length === 0 ? (
+                  <div className="text-sm text-muted-foreground text-center py-6">
+                    No events yet. Your realm's story begins now.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {recentEvents.map((event) => (
+                      <div key={event.id} className="flex gap-3 pb-4 border-b last:border-0 last:pb-0">
+                        <Badge className={EVENT_TYPE_COLORS[event.type] || EVENT_TYPE_COLORS.other}>
+                          {event.type}
+                        </Badge>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium">{event.title}</div>
+                          {event.description && (
+                            <div className="text-sm text-muted-foreground mt-1">{event.description}</div>
+                          )}
+                          <div className="text-xs text-muted-foreground mt-2">
+                            {formatWorldDateTime({
+                              year: event.year,
+                              season: event.season,
+                              day: event.day,
+                              watch: event.watch,
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Recently Visited POIs */}
             {recentPOIs.length > 0 && (
               <Card>
@@ -430,187 +633,6 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
               </CardContent>
             </Card>
 
-          </div>
-        </TabsContent>
-
-        {/* World Stats Tab */}
-        <TabsContent value="world-stats">
-          <div className="space-y-6">
-            {/* Stats Grid */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {/* Current Date Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                    <Calendar className="size-4" />
-                    Current Date
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <Badge className={SEASON_COLORS[realm.currentSeason]}>
-                      {realm.currentSeason.charAt(0).toUpperCase() +
-                        realm.currentSeason.slice(1)}
-                    </Badge>
-                    <div className="text-2xl font-bold">
-                      Year {realm.currentYear}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Day {realm.currentDay} • Watch {realm.currentWatch}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Factions Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                    <Swords className="size-4" />
-                    Factions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="text-2xl font-bold">
-                      {data.factionCount}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {data.activeFactions.length} active
-                    </div>
-                    {data.activeFactions.length > 0 && (
-                      <ScrollArea className="h-16">
-                        <div className="flex flex-wrap gap-1">
-                          {data.activeFactions.slice(0, 5).map((faction) => (
-                            <Badge
-                              key={faction.id}
-                              variant="outline"
-                              className="text-xs"
-                            >
-                              {faction.name}
-                            </Badge>
-                          ))}
-                          {data.activeFactions.length > 5 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{data.activeFactions.length - 5} more
-                            </Badge>
-                          )}
-                        </div>
-                      </ScrollArea>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* NPCs Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                    <Users className="size-4" />
-                    NPCs
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="text-2xl font-bold">{data.npcCount}</div>
-                    <div className="text-sm text-muted-foreground">
-                      Total characters
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Weather Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                    <CloudRain className="size-4" />
-                    Weather
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {latestWeather ? (
-                      <>
-                        <div className="text-2xl font-bold capitalize">
-                          {latestWeather.condition}
-                        </div>
-                        <Badge
-                          className={
-                            WEATHER_SEVERITY_COLORS[latestWeather.severity] ||
-                            WEATHER_SEVERITY_COLORS.clear
-                          }
-                        >
-                          {latestWeather.severity}
-                        </Badge>
-                      </>
-                    ) : (
-                      <div className="text-sm text-muted-foreground">
-                        No weather data
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Recent Events */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Scroll className="size-5" />
-                  Recent Events
-                </CardTitle>
-                <CardDescription>
-                  Latest happenings in your realm
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {recentEvents.length === 0 ? (
-                  <div className="text-sm text-muted-foreground text-center py-8">
-                    No events yet. Your realm's story begins now.
-                  </div>
-                ) : (
-                  <ScrollArea className="h-96">
-                    <div className="space-y-4">
-                      {recentEvents.map((event) => (
-                        <div
-                          key={event.id}
-                          className="flex gap-3 pb-4 border-b last:border-0 last:pb-0"
-                        >
-                          <div className="shrink-0">
-                            <Badge
-                              className={
-                                EVENT_TYPE_COLORS[event.type] ||
-                                EVENT_TYPE_COLORS.other
-                              }
-                            >
-                              {event.type}
-                            </Badge>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium">{event.title}</div>
-                            {event.description && (
-                              <div className="text-sm text-muted-foreground mt-1">
-                                {event.description}
-                              </div>
-                            )}
-                            <div className="text-xs text-muted-foreground mt-2">
-                              {formatWorldDateTime({
-                                year: event.year,
-                                season: event.season,
-                                day: event.day,
-                                watch: event.watch,
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                )}
-              </CardContent>
-            </Card>
           </div>
         </TabsContent>
 

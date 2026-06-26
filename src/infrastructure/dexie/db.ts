@@ -21,6 +21,9 @@ import type { Notice } from '@domain/entities/Notice'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
 import type { EntityNote } from '@domain/entities/EntityNote'
 import type { CustomCompendiumEntry } from '@domain/entities/CustomCompendiumEntry'
+import type { Connection } from '@domain/entities/Connection'
+import type { Hook } from '@domain/entities/Hook'
+import { withHookIdDefault, withGameMapKindDefault } from './migrations/v36-defaults'
 import { seedDatabase } from './seed'
 
 const cloudUrl = import.meta.env.VITE_DEXIE_CLOUD_URL as string | undefined
@@ -51,6 +54,8 @@ type AppDB = Omit<Dexie, 'realms'> & {
   encounterTables: EntityTable<EncounterTable, 'id'>
   entityNotes: EntityTable<EntityNote, 'id'>
   customCompendiumEntries: EntityTable<CustomCompendiumEntry, 'id'>
+  connections: EntityTable<Connection, 'id'>
+  hooks: EntityTable<Hook, 'id'>
 }
 
 const db = new Dexie('RealmKeeperDB', {
@@ -603,6 +608,30 @@ db.version(35).stores(storesV26).upgrade(async (tx) => {
     if (poi.spatialDungeon === undefined) {
       await tx.table('pois').put({ ...poi, spatialDungeon: null, dungeonGenOptions: null })
     }
+  }
+})
+
+const storesV36 = {
+  ...storesV26,
+  connections: 'id, worldId, fromId, toId, hookId, [worldId+fromId], [worldId+toId]',
+  hooks: 'id, worldId, status, contactNpcId',
+  notices: 'id, poiId, regionId, worldId, type, isUsed, hookId',
+  rumors: 'id, poiId, regionId, worldId, isUsed, hookId',
+  gameMaps: 'id, ownerRealmId, ownerPoiId, kind',
+}
+
+// v36: narrative graph (connections) + quest aggregate (hooks);
+// backfill hookId on notices/rumors and kind on gameMaps.
+db.version(36).stores(storesV36).upgrade(async (tx) => {
+  for (const table of ['notices', 'rumors']) {
+    const rows = await tx.table(table).toArray()
+    for (const row of rows) {
+      await tx.table(table).put(withHookIdDefault(row))
+    }
+  }
+  const maps = await tx.table('gameMaps').toArray()
+  for (const map of maps) {
+    await tx.table('gameMaps').put(withGameMapKindDefault(map))
   }
 })
 

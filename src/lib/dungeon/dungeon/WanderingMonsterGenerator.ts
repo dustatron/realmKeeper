@@ -26,7 +26,12 @@ const COUNT_BY_DEPTH: Record<number, string[]> = {
   4: ['1d6', '2d4', '2d6'],
 }
 
-export function generateWanderingMonsters(theme: DungeonTheme, dungeonDepth: number, seed: string): GeneratorWanderingMonsterTable {
+export function generateWanderingMonsters(
+  theme: DungeonTheme,
+  dungeonDepth: number,
+  seed: string,
+  inhabitantCreature?: string,
+): GeneratorWanderingMonsterTable {
   const rng = new SeededRandom(`${seed}-wandering`)
   const creaturePool = getBlueprint(theme).creaturePool
   const entries: GeneratorWanderingMonsterEntry[] = []
@@ -42,7 +47,9 @@ export function generateWanderingMonsters(theme: DungeonTheme, dungeonDepth: num
   let activityIdx = 0
 
   for (let i = 0; i < entryCount; i++) {
-    const creature = rng.pick(creaturePool)
+    // The dungeon's current inhabitants are the most common wandering encounter,
+    // so they lead the table (highest weight); the rest are theme-pool intruders.
+    const creature = inhabitantCreature && i === 0 ? inhabitantCreature : rng.pick(creaturePool)
     const countOptions = COUNT_BY_DEPTH[effectiveDepth] ?? COUNT_BY_DEPTH[0]
     const count = rng.pick(countOptions)
     const activity = mixedPool[activityIdx % mixedPool.length]

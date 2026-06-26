@@ -108,7 +108,16 @@
       "Bash(rg -rn \"interface WeightedTable|type WeightedTable|WeightedTable<\" src/lib/dungeon/)",
       "Bash(sed -n '/export interface WeightedTable/,/^}/p' src/lib/dungeon/SeededRandom.ts)",
       "Bash(sed -n '/export function createWeightedTable/,/^}/p' src/lib/dungeon/SeededRandom.ts)",
-      "Bash(git -C . log --oneline -8)"
+      "Bash(git -C . log --oneline -8)",
+      "Bash(npm test *)",
+      "Bash(git -C /Users/dusty/Code/side-projects/realmKeeper add package.json package-lock.json vitest.config.ts src/test/setup.ts)",
+      "Bash(git -C /Users/dusty/Code/side-projects/realmKeeper status)",
+      "Bash(git -C /Users/dusty/Code/side-projects/realmKeeper add package.json vitest.config.ts src/test/setup.ts)",
+      "Bash(git -C /Users/dusty/Code/side-projects/realmKeeper commit -m ' *)",
+      "Bash(tee /tmp/test-output-1.txt)",
+      "Bash(tee /tmp/test-output-2.txt)",
+      "Bash(rg \"PATH_TYPES|TERRAIN_TYPES|DIRECTIONS\" src/shared/constants* -n -A2)",
+      "Bash(npx vitest *)"
     ]
   }
 }
