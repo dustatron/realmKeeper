@@ -16,6 +16,8 @@ export interface TownMap {
   url: string
 }
 
+const HAMLET_MAP_IDS = new Set(['skybloom_hill'])
+
 // Vite resolves bundled map assets to hashed URLs at build time.
 const pngModules = import.meta.glob('./city/**/*.png', {
   eager: true,
@@ -53,15 +55,34 @@ export function bucketForSize(childCount: number): TownBucket {
   return 'larg'
 }
 
-/** Deterministically pick a town map from a seed (falls back across buckets). */
-export function pickTownMap(seed: string, bucket?: TownBucket): TownMap | null {
-  const pool = (bucket ? TOWN_MAPS.filter((m) => m.bucket === bucket) : TOWN_MAPS)
-  const list = pool.length > 0 ? pool : TOWN_MAPS
-  if (list.length === 0) return null
+function seededIndex(seed: string, length: number): number {
   let h = 2166136261
   for (let i = 0; i < seed.length; i++) {
     h ^= seed.charCodeAt(i)
     h = Math.imul(h, 16777619)
   }
-  return list[(h >>> 0) % list.length]
+  return (h >>> 0) % length
+}
+
+function pickFromMaps(seed: string, maps: TownMap[]): TownMap | null {
+  if (maps.length === 0) return null
+  return maps[seededIndex(seed, maps.length)]
+}
+
+/** Deterministically pick a town map from a seed (falls back across buckets). */
+export function pickTownMap(seed: string, bucket?: TownBucket): TownMap | null {
+  const pool = bucket ? TOWN_MAPS.filter((m) => m.bucket === bucket) : TOWN_MAPS
+  const list = pool.length > 0 ? pool : TOWN_MAPS
+  return pickFromMaps(seed, list)
+}
+
+/** Pick a town map scaled for the number of child locations. */
+export function pickTownMapForSize(seed: string, childCount: number): TownMap | null {
+  if (childCount <= 2) {
+    const hamletMaps = TOWN_MAPS.filter((m) => HAMLET_MAP_IDS.has(m.id))
+    const picked = pickFromMaps(seed, hamletMaps)
+    if (picked) return picked
+  }
+
+  return pickTownMap(seed, bucketForSize(childCount))
 }

@@ -24,7 +24,7 @@ import { usePOIActions } from '~/ui/hooks/usePOIActions'
 import { executeDeletePOI } from '@application/use-cases/DeletePOI'
 import { executeGetOrCreateTownMap } from '@application/use-cases/GetOrCreateTownMap'
 import { executePlacePOIOnMap } from '@application/use-cases/PlacePOIOnMap'
-import { bucketForSize, pickTownMap } from '~/maps/townMaps'
+import { pickTownMapForSize } from '~/maps/townMaps'
 import { extractTownBuildings } from '~/maps/townMapGeometry'
 import { assignPoisToBuildings } from '~/maps/townPoiPlacement'
 
@@ -235,7 +235,7 @@ function POIDetailPage() {
     setTownMapError(null)
     setIsCreatingTownMap(true)
     try {
-      const picked = pickTownMap(poi.id, bucketForSize(children.length))
+      const picked = pickTownMapForSize(poi.id, children.length)
       if (!picked) throw new Error('No bundled town maps are available.')
 
       const { width, height } = await loadImageSize(picked.imageUrl)

@@ -80,6 +80,8 @@ It stores actual image dimensions in `width` and `height`.
 
 Town maps are image-backed.
 They are not imageless generated canvases.
+Very small settlements should prefer sparse small-map assets.
+For 0-2 child locations, use the curated hamlet map pool first.
 
 ### C. Building Geometry
 
@@ -311,6 +313,7 @@ export function assignPoisToBuildings(input: {
 **Required behavior:**
 
 - Pick a bundled town map.
+- Prefer sparse small-map assets for 0-2 child POIs.
 - Load PNG dimensions.
 - Create or reuse `kind:'town'` map.
 - Fetch and parse matching JSON.

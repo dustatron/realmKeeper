@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bucketForSize, pickTownMap, TOWN_MAPS } from './townMaps'
+import { bucketForSize, pickTownMap, pickTownMapForSize, TOWN_MAPS } from './townMaps'
 
 describe('TOWN_MAPS', () => {
   it('loads paired PNG and JSON assets', () => {
@@ -23,5 +23,15 @@ describe('TOWN_MAPS', () => {
     expect(bucketForSize(9)).toBe('md')
     expect(bucketForSize(16)).toBe('md')
     expect(bucketForSize(17)).toBe('larg')
+  })
+
+  it('uses the hamlet map for two-child settlements', () => {
+    expect(pickTownMapForSize('01KW2GB94797GXA304AKHFEVAE', 2)?.id)
+      .toBe('skybloom_hill')
+  })
+
+  it('keeps larger settlements on size buckets', () => {
+    expect(pickTownMapForSize('riverbend', 9)?.bucket).toBe('md')
+    expect(pickTownMapForSize('riverbend', 17)?.bucket).toBe('larg')
   })
 })
