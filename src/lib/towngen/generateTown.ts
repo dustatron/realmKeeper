@@ -27,7 +27,8 @@ function rectRing(cx: number, cy: number, w: number, h: number, W: number, H: nu
     [cx - hw, cy - hh], [cx + hw, cy - hh],
     [cx + hw, cy + hh], [cx - hw, cy + hh],
   ]
-  return ring.map(([x, y]) => [clamp(x, 0, W), clamp(y, 0, H)] as Pt).concat([[clamp(cx - hw, 0, W), clamp(cy - hh, 0, H)]])
+  const pts = ring.map(([x, y]) => [clamp(x, 0, W), clamp(y, 0, H)] as Pt)
+  return [...pts, pts[0]]
 }
 
 /** Octagonal "blob" ring approximating a rounded footprint. */
@@ -40,7 +41,7 @@ function blobRing(cx: number, cy: number, w: number, h: number, rng: SeededRando
     const j = 0.85 + rng.next() * 0.3 // gentle irregularity, deterministic
     ring.push([clamp(cx + Math.cos(a) * rx * j, 0, W), clamp(cy + Math.sin(a) * ry * j, 0, H)])
   }
-  ring.push(ring[0])
+  ring.push([ring[0][0], ring[0][1]] as Pt)
   return ring
 }
 

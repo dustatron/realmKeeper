@@ -65,4 +65,10 @@ describe('generateTown', () => {
     expect(buildingFeatures(data)).toHaveLength(0)
     expect(data.features.every((f) => f.properties.id === 'earth')).toBe(true)
   })
+
+  it('emits one road spoke per anchor', () => {
+    const roads = generateTown(anchors, base).features.filter((f) => f.properties.id === 'roads')
+    expect(roads).toHaveLength(3)
+    expect(roads[0].geometry.type).toBe('LineString')
+  })
 })
