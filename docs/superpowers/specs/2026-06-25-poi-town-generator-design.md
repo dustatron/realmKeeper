@@ -43,7 +43,7 @@ map, swappable for a custom upload.
 | Point placement | GM **manually places** a point/marker per building. |
 | Fidelity | **Schematic / clean** — footprints + simple roads + optional wall. |
 | Scope | **Both** village & city, via a **preset** that tunes density/wall/roads. |
-| Default behavior | Every settlement **auto-gets** a town map; user can **replace** it. |
+| Default behavior | Settlement **lazily gets** a town map on first map-tab open; user can **replace** it. (Revised from auto-on-create — see §A.) |
 | Footprint shapes | **Rect + rounded-blob mix**, keyed to POI type. |
 | Walls | Preset default (village off / city on) **+ manual override toggle**. |
 
@@ -56,20 +56,34 @@ systems that already exist.
 
 - A settlement POI owns a `GameMap` (`ownerPoiId = settlement`) — the existing
   owner relationship.
-- Extend `GameMap`:
-  - `kind: 'image' | 'hex' | 'town'` (add `'town'`).
-  - `townData: WatabouCityData | null` — generated feature array, in the
-    **existing MFCG shape** so `parseWatabouExport` and `WatabouCityRenderer`
-    already understand it. No new format.
+- Extend `GameMap` (this is a **coordinated change**, not a one-liner — `kind`
+  is switched on in several places):
+  - `kind: 'image' | 'hex' | 'town'` (add `'town'`). Must update in lockstep:
+    the `GameMap.kind` union (`GameMap.ts:17`), `executeCreateGameMap`
+    (hardcodes `kind:'image'`, `CreateGameMap.ts:26`), the export/import shape
+    (`ExportRealm.ts:64`, `ImportRealm.ts:235`), and every renderer that
+    switches on `kind`.
+  - `townData: WatabouCityData | null` — generated feature array. We **reuse the
+    MFCG feature *shape*** (so `WatabouCityRenderer` can statically render it),
+    but we **construct it directly and never round-trip it through
+    `parseWatabouExport`** (see §C/§D for why that claim was wrong).
   - `townPreset: 'village' | 'city' | null`, `townSeed: string | null`,
     `townWalled: boolean | null` (override; null = preset default).
+  - `imageUrl` is required-but-empty (`''`) and `width`/`height` define the
+    **pixel canvas** the town is generated into (see §C — this matters).
 - Dexie migration: additive fields, default `kind` stays `'image'` for existing
   rows; new fields default null. No backfill needed.
 
-**Auto-create + replace:** when a settlement POI is created, also create its
-empty `kind:'town'` GameMap (parchment canvas, no `townData` yet). "Replace map"
-swaps it to an uploaded `kind:'image'` map. Generation is the default, never
-forced — an empty town map is valid and just shows the canvas + any pins.
+**Lazy-create + replace (revised — NOT auto-on-POI-creation):** Do **not**
+create the town map inside `executeCreatePOI`. That hook is wrong: import
+bypasses it (`ImportRealm.ts:183`, giving interactive-vs-imported settlements
+different shapes), it fires on overworld click-to-create (orphan blank maps),
+and it clutters exports. Instead, a **`getOrCreateTownMap(poiId)`** use-case
+materializes the `kind:'town'` GameMap on **first open of the settlement's map
+tab** — matching the existing lazy `mapSection` pattern (`pois_.$poiId.tsx:275`),
+and creating consistently for both interactive and imported settlements.
+"Replace map" swaps it to an uploaded `kind:'image'` map. An empty town map is
+valid and just shows the canvas + any pins.
 
 ### B. Anchors = child POIs (reuses existing placement)
 
@@ -91,13 +105,26 @@ generateTown(
 ```
 
 Pure, deterministic (seeded PRNG; no `Date.now`/`Math.random` — seed-derived).
-Same anchors + seed ⇒ identical town. Steps:
+Same anchors + seed ⇒ identical town.
+
+**Coordinate space (critical):** the generator emits in **POI pixel space** —
+top-left origin, x-right, **y-down**, bounded by `0..map.width × 0..map.height`,
+the exact frame `POI.position {x,y}` lives in. It does **not** emit
+origin-centered MFCG coords. This is what makes footprints share a frame with
+the markers; §D then transforms them through `pxToLngLat` like every other
+MapLibre layer.
+
+Steps:
 
 1. **Footprints** — one per anchor, shape/size from `FOOTPRINT_TABLE[type]`
    (rect for house/building/settlement, rounded-blob for shrine/temple-ish
-   types, sized small→large). Each footprint feature carries
-   `properties.id = poiId` so it round-trips back to its POI. Footprints nudge
-   apart on overlap (simple separation pass).
+   types, sized small→large). Each footprint feature sets
+   **`properties.id` to a real MFCG kind string** (e.g. `'buildings'`) so
+   `classifyFeature` (`WatabouCityRenderer.tsx:14-33`) colors it correctly, and
+   carries the owning POI id in a **separate `properties.poiId`**. (`properties.id`
+   is load-bearing for classification — a ULID there misclassifies `Polygon`
+   footprints as `plaza`.) Footprints nudge apart on overlap (simple separation
+   pass).
 2. **Roads** — connect each footprint to its nearest neighbor / a derived spine.
    Emitted as `LineString` features classed `road`. Legible, not terrain-aware.
 3. **Wall + towers + gate** — if walled (override ?? preset default), a
@@ -111,15 +138,22 @@ the generator as plain data — easy to tune, unit-tested.
 
 ### D. Render & interaction (MapLibre)
 
-- `MapViewer` gains a `kind:'town'` background path: feed `townData.features`
-  as a GeoJSON source with **fill layers** (earth/building/plaza/water) and
-  **line layers** (road/wall/river), reusing the `COLORS` palette already in
-  `WatabouCityRenderer`. Pins/markers/labels render on top exactly as today.
+- `MapViewer` gains a `kind:'town'` background path: build a GeoJSON
+  FeatureCollection from `townData.features` where **every coordinate is first
+  run through `pxToLngLat`** (mirroring the path layer at `MapViewer.tsx:457`),
+  then add **fill layers** (earth/building/plaza/water) and **line layers**
+  (road/wall/river), reusing the `COLORS` palette from `WatabouCityRenderer`.
+  Skipping the transform is the documented coordinate-mismatch failure — do not
+  feed raw feature coords to the source. Pins/markers/labels render on top as today.
 - **Footprint click → POI:** a MapLibre click handler on the building fill layer
-  reads `properties.id` and opens the existing POI popup — the same popup a
-  marker click opens. Building and pin are one thing.
+  reads **`properties.poiId`** (not `properties.id`) and opens the existing POI
+  popup — the same popup a marker click opens. Building and pin are one thing.
 - The standalone settlement detail view can keep using `WatabouCityRenderer`
-  over the same `townData` for a static read-only render (no new work).
+  over the same `townData` for a static read-only render (it auto-fits any
+  coordinate range, so pixel-space data renders fine). Note: that renderer has
+  **no click wiring today** — footprint→POI interaction lives only on the
+  MapViewer surface; the detail view stays static (clickable detail-view
+  footprints would be new work, out of MVP scope).
 
 ### E. Generate / Regenerate UX
 
@@ -132,15 +166,18 @@ the generator as plain data — easy to tune, unit-tested.
 ## Data Flow
 
 ```
-GM places child POIs (markers) ──> anchors {poiId,x,y,type}
+open settlement map tab ──> getOrCreateTownMap(poiId)  [lazy, not on POI create]
+                                        │
+GM places child POIs (markers) ──> anchors {poiId,x,y,type}   (POI pixel space)
                                         │
                        [Generate] ─> generateTown(anchors, preset, seed, walled)
-                                        │
+                                        │           (emits in POI pixel space;
+                                        │            properties.id=kind, properties.poiId=ULID)
                                  WatabouCityData ──> GameMap.townData (Dexie)
                                         │
-                    MapViewer: GeoJSON fill/line layers + markers on top
+            MapViewer: coords → pxToLngLat → GeoJSON fill/line layers + markers on top
                                         │
-              click footprint ─(properties.id)─> POI popup (existing)
+              click footprint ─(properties.poiId)─> POI popup (existing)
 ```
 
 ## Error / Edge Handling
@@ -159,12 +196,14 @@ GM places child POIs (markers) ──> anchors {poiId,x,y,type}
 ## Testing
 
 - **Unit (Vitest), Unit C:** determinism (same input ⇒ deep-equal output);
-  footprint count == anchor count; every footprint carries its `poiId`; preset
-  toggles wall presence; separation resolves trivial overlaps; empty-anchor case.
+  footprint count == anchor count; every footprint carries `properties.poiId`
+  AND a valid kind string in `properties.id`; all coords within
+  `0..width × 0..height` (pixel-space guarantee); preset toggles wall presence;
+  separation resolves trivial overlaps; empty-anchor case.
 - **Footprint table:** each POI type maps to a shape within expected size bounds.
-- **Render smoke:** `townData` round-trips through `parseWatabouExport` /
-  `WatabouCityRenderer` without throwing (shared-format guarantee).
-- **Interaction (component):** footprint click resolves `properties.id` to the
+- **Classification:** `classifyFeature` returns `'building'` for every emitted
+  footprint (guards the `properties.id`-vs-`poiId` regression).
+- **Interaction (component):** footprint click resolves `properties.poiId` to the
   right POI popup.
 
 ## File Touch List (anticipated)
@@ -173,10 +212,15 @@ GM places child POIs (markers) ──> anchors {poiId,x,y,type}
 - `src/lib/towngen/generateTown.test.ts` (new)
 - `src/domain/entities/GameMap.ts` (add `'town'`, `townData`, `townPreset`,
   `townSeed`, `townWalled`)
+- `src/application/use-cases/CreateGameMap.ts` (kind no longer hardcoded
+  `'image'`) and `src/application/use-cases/GetOrCreateTownMap.ts` (new, lazy)
+- `ExportRealm.ts` / `ImportRealm.ts` (`kind:'town'` + new fields in the
+  export/import shape)
 - Dexie schema + migration (additive)
-- `src/components/map/MapViewer.tsx` (town background layers + footprint click)
+- `src/components/map/MapViewer.tsx` (town background layers via `pxToLngLat` +
+  footprint click reading `properties.poiId`)
 - `src/components/map/MapToolbar.tsx` + `InteractiveMap.tsx` (Generate/preset UI)
-- Settlement POI create flow (auto-create town GameMap)
+- `src/routes/_app/realms/locations/pois_.$poiId.tsx` (map-tab lazy create hook)
 
 ## Open Questions
 
