@@ -11,6 +11,7 @@ import {
   MousePointerClick,
 } from 'lucide-react'
 import type { MapMode } from './MapViewer'
+import type { ReactNode } from 'react'
 
 interface MapToolbarProps {
   mode: MapMode
@@ -25,6 +26,8 @@ interface MapToolbarProps {
   /** When true, clicking markers selects rooms instead of opening popup */
   poiSelectMode?: boolean
   onTogglePoiSelectMode?: () => void
+  /** Optional controls rendered left-aligned on the same toolbar row (e.g. town generation). */
+  leftSlot?: ReactNode
 }
 
 export function MapToolbar({
@@ -39,10 +42,11 @@ export function MapToolbar({
   onZoomToFit,
   poiSelectMode,
   onTogglePoiSelectMode,
+  leftSlot,
 }: MapToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2 p-2 bg-background/95 backdrop-blur border-b">
-      <div className="mr-auto" />
+      <div className="mr-auto flex items-center gap-2">{leftSlot}</div>
 
       <div className="flex items-center border rounded-md">
         <Button

@@ -363,36 +363,37 @@ export function InteractiveMap({ gameMap, className, style, parentPoiId, highlig
         onZoomToFit={() => mapHandleRef.current?.zoomToFit()}
         poiSelectMode={onPoiSelect ? poiSelectMode : undefined}
         onTogglePoiSelectMode={onPoiSelect ? () => setPoiSelectMode((v) => !v) : undefined}
+        leftSlot={
+          gameMap.kind === 'town' ? (
+            <>
+              <Select
+                value={gameMap.townPreset ?? 'village'}
+                onValueChange={async (v) => {
+                  await container.gameMapRepo.update({ ...gameMap, townPreset: v as 'village' | 'city', updatedAt: Date.now() })
+                }}
+              >
+                <SelectTrigger className="h-8 w-28"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="village">Village</SelectItem>
+                  <SelectItem value="city">City</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  await container.gameMapRepo.update({ ...gameMap, townWalled: !(gameMap.townWalled ?? false), updatedAt: Date.now() })
+                }}
+              >
+                {gameMap.townWalled ? 'Walled: on' : 'Walled: off'}
+              </Button>
+              <Button size="sm" onClick={handleRegenerateTown}>
+                {gameMap.townData ? 'Regenerate' : 'Generate town'}
+              </Button>
+            </>
+          ) : undefined
+        }
       />
-
-      {gameMap.kind === 'town' && (
-        <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-muted/30">
-          <Select
-            value={gameMap.townPreset ?? 'village'}
-            onValueChange={async (v) => {
-              await container.gameMapRepo.update({ ...gameMap, townPreset: v as 'village' | 'city', updatedAt: Date.now() })
-            }}
-          >
-            <SelectTrigger className="h-8 w-28"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="village">Village</SelectItem>
-              <SelectItem value="city">City</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={async () => {
-              await container.gameMapRepo.update({ ...gameMap, townWalled: !(gameMap.townWalled ?? false), updatedAt: Date.now() })
-            }}
-          >
-            {gameMap.townWalled ? 'Walled: on' : 'Walled: off'}
-          </Button>
-          <Button size="sm" onClick={handleRegenerateTown}>
-            {gameMap.townData ? 'Regenerate' : 'Generate town'}
-          </Button>
-        </div>
-      )}
 
       <div className="flex-1 relative">
         <MapViewer
