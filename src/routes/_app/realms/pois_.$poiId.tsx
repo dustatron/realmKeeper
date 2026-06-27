@@ -18,6 +18,8 @@ import { useFactions } from '~/ui/hooks/useFactions'
 import { useRumorsByPoi } from '~/ui/hooks/useRumors'
 import { useNoticesByPoi } from '~/ui/hooks/useNotices'
 import { useEncounterTable } from '~/ui/hooks/useEncounterTable'
+import { useRegenerateRuin } from '~/ui/hooks/useRegenerateRuin'
+import { useRegenerateLandmark } from '~/ui/hooks/useRegenerateLandmark'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { usePOIActions } from '~/ui/hooks/usePOIActions'
@@ -139,6 +141,8 @@ function POIDetailPage() {
   const regions = useRegions(realm?.id ?? null)
   const allPois = useRealmPOIs(realm?.id ?? null)
   const container = useContainer()
+  const regenerateRuin = useRegenerateRuin()
+  const regenerateLandmark = useRegenerateLandmark()
   const setHeaderTitle = useUIStore((s) => s.setHeaderTitle)
 
   const parentPoi = usePOI(poi?.parentPoiId ?? null)
@@ -154,6 +158,7 @@ function POIDetailPage() {
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null)
   const [editingNPC, setEditingNPC] = useState<NPC | null>(null)
   const [npcEditOpen, setNpcEditOpen] = useState(false)
+  const [isRegenerating, setIsRegenerating] = useState(false)
   const [isGeneratingNPC, setIsGeneratingNPC] = useState(false)
   const [isRerollingProblem, setIsRerollingProblem] = useState(false)
   const [isPlacingTownBuildings, setIsPlacingTownBuildings] = useState(false)
@@ -487,6 +492,25 @@ function POIDetailPage() {
             {poi.spatialDungeon ? 'Regenerate' : 'Generate'}
           </Button>
         </Link>
+      )}
+      {(poi.type === 'ruin' || poi.type === 'landmark') && (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isRegenerating}
+          onClick={async () => {
+            setIsRegenerating(true)
+            try {
+              if (poi.type === 'ruin') await regenerateRuin(poi.id)
+              else await regenerateLandmark(poi.id)
+            } finally {
+              setIsRegenerating(false)
+            }
+          }}
+        >
+          <Wand2 className="mr-2 size-4" />
+          {(poi.type === 'ruin' ? poi.ruinSite : poi.landmarkLore) ? 'Regenerate' : 'Generate'}
+        </Button>
       )}
       <Button size="sm" variant="outline" onClick={() => setMapUploadDialogOpen(true)}>
         <MapPinned className="mr-2 size-4" />
