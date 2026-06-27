@@ -21,20 +21,22 @@ export interface RollEncounterResult {
 }
 
 /** Build the ordered list of active sections for a given encounter table (or defaults). */
-export function getActiveSections(table: EncounterTable | null): Array<{ label: string; entries: string[] }> {
+export function getActiveSections(
+  table: EncounterTable | null,
+): Array<{ category: string; label: string; entries: string[]; isCustom: boolean }> {
   const disabled = new Set(table?.disabledCategories ?? [])
-  const sections: Array<{ label: string; entries: string[] }> = []
+  const sections: Array<{ category: string; label: string; entries: string[]; isCustom: boolean }> = []
 
   for (const cat of ENCOUNTER_CATEGORIES) {
     if (disabled.has(cat)) continue
     const entries = table?.[cat]?.length ? table[cat] : [...DEFAULT_ENCOUNTER_ENTRIES[cat]]
-    sections.push({ label: CATEGORY_LABELS[cat], entries })
+    sections.push({ category: cat, label: CATEGORY_LABELS[cat], entries, isCustom: false })
   }
 
   if (table?.customSections) {
     for (const cs of table.customSections) {
       if (cs.entries.length > 0) {
-        sections.push({ label: cs.name, entries: cs.entries })
+        sections.push({ category: cs.id, label: cs.name, entries: cs.entries, isCustom: true })
       }
     }
   }

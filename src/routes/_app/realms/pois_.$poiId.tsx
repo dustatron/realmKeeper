@@ -144,7 +144,7 @@ function POIDetailPage() {
   const parentPoi = usePOI(poi?.parentPoiId ?? null)
   const parentMaps = usePOIMaps(poi?.parentPoiId ?? null)
 
-  const actions = usePOIActions(poi, region, encounterTable, container)
+  const actions = usePOIActions(poi, region, encounterTable, container, systemConfig)
 
   // Local UI state
   const [mapUploadDialogOpen, setMapUploadDialogOpen] = useState(false)
@@ -624,6 +624,8 @@ function POIDetailPage() {
             onCreateNotice={actions.handleCreateNotice}
             onDeleteNotice={actions.handleDeleteNotice}
             onRollEncounter={actions.handleRollEncounter}
+            onRollCascade={actions.handleEncounterCascade}
+            onSaveEncounterNpc={actions.handleSaveEncounterNpc}
             onSaveEncounterTable={actions.handleSaveEncounterTable}
             onCreateChild={() => setCreateChildOpen(true)}
             onCreateNPC={openCreateNPC}
@@ -644,6 +646,7 @@ function POIDetailPage() {
         return (
           <DungeonTemplate
             poi={poi}
+            actionBar={poiActionBar}
             children={children}
             npcs={npcs}
             childNPCs={childNPCs}
@@ -652,6 +655,8 @@ function POIDetailPage() {
             poiEvents={poiEvents}
             encounterTable={encounterTable}
             onRollEncounter={actions.handleRollEncounter}
+            onRollCascade={actions.handleEncounterCascade}
+            onSaveEncounterNpc={actions.handleSaveEncounterNpc}
             onSaveEncounterTable={actions.handleSaveEncounterTable}
             onCreateChild={() => setCreateChildOpen(true)}
             onCreateNPC={openCreateNPC}
@@ -689,6 +694,8 @@ function POIDetailPage() {
             poiEvents={poiEvents}
             encounterTable={encounterTable}
             onRollEncounter={actions.handleRollEncounter}
+            onRollCascade={actions.handleEncounterCascade}
+            onSaveEncounterNpc={actions.handleSaveEncounterNpc}
             onSaveEncounterTable={actions.handleSaveEncounterTable}
             onCreateChild={() => setCreateChildOpen(true)}
             onCreateNPC={openCreateNPC}
@@ -714,6 +721,8 @@ function POIDetailPage() {
             encounterTable={encounterTable}
             rumors={rumors}
             onRollEncounter={actions.handleRollEncounter}
+            onRollCascade={actions.handleEncounterCascade}
+            onSaveEncounterNpc={actions.handleSaveEncounterNpc}
             onSaveEncounterTable={actions.handleSaveEncounterTable}
             onCreateRumor={actions.handleCreateRumor}
             onToggleRumorUsed={actions.handleToggleRumorUsed}
@@ -747,7 +756,7 @@ function POIDetailPage() {
         />
       )}
 
-      {poi.type !== 'settlement' && (
+      {poi.type !== 'settlement' && poi.type !== 'dungeon' && (
         <div className="flex flex-wrap items-center gap-2">
           {poiHeading}
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">

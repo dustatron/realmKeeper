@@ -19,7 +19,7 @@ import { ServicesList } from "~/components/shared/ServicesList";
 import { ReadAloudBlock } from "~/components/shared/ReadAloudBlock";
 import { SensoryBlock } from "~/components/shared/SensoryBlock";
 import { AtAGlancePanel } from "~/components/shared/AtAGlancePanel";
-import { EncounterTableUI } from "~/components/shared/EncounterTableUI";
+import { EncounterCascade } from "~/components/shared/EncounterCascade";
 import type { POI } from "@domain/entities/POI";
 import type { NPC } from "@domain/entities/NPC";
 import type { FactionPresence } from "@domain/entities/FactionPresence";
@@ -27,6 +27,8 @@ import type { ResolvedPath } from "~/ui/hooks/useResolvedPaths";
 import type { POIEvent } from "@domain/entities/POIEvent";
 import type { EncounterTable } from "@domain/entities/EncounterTable";
 import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
+import type { CascadeAction } from "@application/use-cases/RollEncounterCascade";
+import type { EncounterRollResult } from "@domain/value-objects/EncounterRollResult";
 
 interface BuildingTemplateProps {
   poi: POI;
@@ -37,6 +39,8 @@ interface BuildingTemplateProps {
   poiEvents: POIEvent[];
   encounterTable: EncounterTable | null | undefined;
   onRollEncounter: () => Promise<RollEncounterResult>;
+  onRollCascade: (action: CascadeAction) => Promise<EncounterRollResult>;
+  onSaveEncounterNpc?: () => Promise<void>;
   onSaveEncounterTable?: (
     entries: Pick<
       EncounterTable,
@@ -63,6 +67,8 @@ export function BuildingTemplate({
   poiEvents,
   encounterTable,
   onRollEncounter,
+  onRollCascade,
+  onSaveEncounterNpc,
   onSaveEncounterTable,
   onCreateChild,
   onCreateNPC,
@@ -238,10 +244,12 @@ export function BuildingTemplate({
 
         {/* Encounters */}
         <TabsContent value="encounters" className="pt-3">
-          <EncounterTableUI
+          <EncounterCascade
             table={encounterTable}
+            onRollCascade={onRollCascade}
+            onSaveNpc={onSaveEncounterNpc}
+            onSaveTable={onSaveEncounterTable}
             onRoll={onRollEncounter}
-            onSave={onSaveEncounterTable}
           />
         </TabsContent>
 

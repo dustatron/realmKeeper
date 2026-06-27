@@ -24,7 +24,7 @@ import { SensoryBlock } from "~/components/shared/SensoryBlock";
 import { ReadAloudBlock } from "~/components/shared/ReadAloudBlock";
 import { AtAGlancePanel } from "~/components/shared/AtAGlancePanel";
 import { LocationSeedEditor } from "~/components/shared/LocationSeedEditor";
-import { EncounterTableUI } from "~/components/shared/EncounterTableUI";
+import { EncounterCascade } from "~/components/shared/EncounterCascade";
 import { RumorList } from "~/components/shared/RumorList";
 import { ServicesList } from "~/components/shared/ServicesList";
 import { PathCard } from "~/components/shared/PathCard";
@@ -39,6 +39,8 @@ import type { EncounterTable } from "@domain/entities/EncounterTable";
 import type { Rumor } from "@domain/entities/Rumor";
 import type { LocationSeed } from "@domain/value-objects/LocationSeed";
 import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
+import type { CascadeAction } from "@application/use-cases/RollEncounterCascade";
+import type { EncounterRollResult } from "@domain/value-objects/EncounterRollResult";
 
 interface GenericTemplateProps {
   poi: POI;
@@ -52,6 +54,8 @@ interface GenericTemplateProps {
   encounterTable: EncounterTable | null | undefined;
   rumors: Rumor[];
   onRollEncounter: () => Promise<RollEncounterResult>;
+  onRollCascade: (action: CascadeAction) => Promise<EncounterRollResult>;
+  onSaveEncounterNpc?: () => Promise<void>;
   onSaveEncounterTable?: (
     entries: Pick<
       EncounterTable,
@@ -90,6 +94,8 @@ export function GenericTemplate({
   encounterTable,
   rumors,
   onRollEncounter,
+  onRollCascade,
+  onSaveEncounterNpc,
   onSaveEncounterTable,
   onCreateRumor,
   onToggleRumorUsed,
@@ -361,10 +367,12 @@ export function GenericTemplate({
 
         {/* Encounters tab */}
         <TabsContent value="encounters" className="space-y-6 pt-3">
-          <EncounterTableUI
+          <EncounterCascade
             table={encounterTable}
+            onRollCascade={onRollCascade}
+            onSaveNpc={onSaveEncounterNpc}
+            onSaveTable={onSaveEncounterTable}
             onRoll={onRollEncounter}
-            onSave={onSaveEncounterTable}
           />
           {poi.type === "ruin" && (
             <RumorList

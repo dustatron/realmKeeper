@@ -19,9 +19,16 @@ import { executeCreatePOIEvent } from '@application/use-cases/CreatePOIEvent'
 import { executeRollEncounter } from '@application/use-cases/RollEncounter'
 import { executeCreateEncounterTable } from '@application/use-cases/CreateEncounterTable'
 import { executeUpdateEncounterTable } from '@application/use-cases/UpdateEncounterTable'
+import {
+  executeEncounterCascade,
+  type CascadeAction,
+  type CascadeContext,
+  type CascadeUseCaseDeps,
+} from '@application/use-cases/RollEncounterCascade'
 import { useEncounterTable } from '~/ui/hooks/useEncounterTable'
-import { EncounterTableUI } from '~/components/shared/EncounterTableUI'
+import { EncounterCascade } from '~/components/shared/EncounterCascade'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
+import type { EncounterRollResult } from '@domain/value-objects/EncounterRollResult'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { TagInput } from '~/components/shared/TagInput'
 import { NotesPanel } from '~/components/shared/NotesPanel'
@@ -321,6 +328,30 @@ function RegionDetailPage() {
         { encounterTableRepo: container.encounterTableRepo }
       )
     }
+  }
+
+  // Lazily create a persistable region-owned encounter-table row when none
+  // exists, so the cascade's lastResult can be saved. Mirrors the POI hook.
+  const handleEncounterCascade = async (action: CascadeAction): Promise<EncounterRollResult> => {
+    if (!region || !systemConfig) throw new Error('Missing context for encounter cascade')
+    const table = encounterTable
+      ? encounterTable
+      : await executeCreateEncounterTable(
+          { ownerRegionId: region.id, worldId: region.worldId },
+          { encounterTableRepo: container.encounterTableRepo }
+        )
+    const ctx: CascadeContext = {
+      table,
+      poiId: null,
+      regionId: region.id,
+      worldId: region.worldId,
+      systemConfig,
+    }
+    const deps: CascadeUseCaseDeps = {
+      encounterTableRepo: container.encounterTableRepo,
+      tableRepo: container.tableRepo,
+    }
+    return executeEncounterCascade(action, ctx, deps)
   }
 
   if (region === undefined) {
@@ -652,10 +683,11 @@ function RegionDetailPage() {
 
         {/* Encounters tab */}
         <TabsContent value="encounters" className="space-y-6 pt-3">
-          <EncounterTableUI
+          <EncounterCascade
             table={encounterTable}
+            onRollCascade={handleEncounterCascade}
+            onSaveTable={handleSaveEncounterTable}
             onRoll={handleRollEncounter}
-            onSave={handleSaveEncounterTable}
           />
         </TabsContent>
 

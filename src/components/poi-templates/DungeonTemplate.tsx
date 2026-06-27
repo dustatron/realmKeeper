@@ -31,12 +31,17 @@ import {
   Minus,
   Lock,
   KeyRound,
+  Eye,
 } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "~/components/ui/collapsible";
 import { DispositionBadge } from "~/components/shared/DispositionBadge";
 import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
 import { FactionChip } from "~/components/shared/FactionChip";
-import { EncounterTableUI } from "~/components/shared/EncounterTableUI";
-import { ReadAloudBlock } from "~/components/shared/ReadAloudBlock";
+import { EncounterCascade } from "~/components/shared/EncounterCascade";
 import { AtAGlancePanel } from "~/components/shared/AtAGlancePanel";
 import { WanderingMonsterTable } from "~/components/shared/WanderingMonsterTable";
 import { db } from "@infrastructure/dexie/db";
@@ -50,6 +55,8 @@ import type { ResolvedPath } from "~/ui/hooks/useResolvedPaths";
 import type { POIEvent } from "@domain/entities/POIEvent";
 import type { KeyLockPair, Discovery, DiscoveryType, SpatialRoom } from "~/lib/dungeon/types";
 import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
+import type { CascadeAction } from "@application/use-cases/RollEncounterCascade";
+import type { EncounterRollResult } from "@domain/value-objects/EncounterRollResult";
 
 const DISCOVERY_ICONS: Record<DiscoveryType, string> = {
   document: '\u{1F4C4}',
@@ -564,6 +571,8 @@ interface DungeonTemplateProps {
   poiEvents: POIEvent[];
   encounterTable: EncounterTable | null | undefined;
   onRollEncounter: () => Promise<RollEncounterResult>;
+  onRollCascade: (action: CascadeAction) => Promise<EncounterRollResult>;
+  onSaveEncounterNpc?: () => Promise<void>;
   onSaveEncounterTable?: (
     entries: Pick<
       EncounterTable,
@@ -585,6 +594,8 @@ interface DungeonTemplateProps {
   notesSection?: React.ReactNode;
   compendiumSection?: React.ReactNode;
   dungeonEventsPanel?: React.ReactNode;
+  /** Action buttons (Visited / Regenerate / Add Map / Edit), rendered on the tab row */
+  actionBar?: React.ReactNode;
   /** System ID for bestiary search */
   systemId?: string | null;
   /** World ID for custom compendium entries */
@@ -601,6 +612,8 @@ export function DungeonTemplate({
   poiEvents,
   encounterTable,
   onRollEncounter,
+  onRollCascade,
+  onSaveEncounterNpc,
   onSaveEncounterTable,
   onCreateChild,
   onCreateNPC,
@@ -616,6 +629,7 @@ export function DungeonTemplate({
   notesSection,
   compendiumSection,
   dungeonEventsPanel,
+  actionBar,
   systemId,
   worldId,
 }: DungeonTemplateProps) {
@@ -695,6 +709,8 @@ export function DungeonTemplate({
     }
   }, [selectedChildId]);
 
+  const [overviewOpen, setOverviewOpen] = useState(true);
+
   const [layout, setLayout] = useState<"columns" | "stacked">(() => {
     try {
       const saved = localStorage.getItem("dungeon-layout");
@@ -751,103 +767,178 @@ export function DungeonTemplate({
 
   return (
     <div className="space-y-4">
-      {/* Header — only non-duplicate tags (dungeon type + mood shown in At A Glance) */}
-      {poi.tags.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          {poi.tags.map((tag) => (
-            <Badge key={tag} variant="outline" className="text-xs">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-      )}
-
-      {/* Read Aloud */}
-      <ReadAloudBlock text={poi.readAloud} />
-
-      {/* Dungeon Lore — shows generated ecology data (above tabs, always visible) */}
-      {poi.spatialDungeon?.ecology && (() => {
-        const { builderCulture, currentInhabitants, history, historyLayers } = poi.spatialDungeon.ecology
-        if (!builderCulture && !currentInhabitants && !history) return null
-        return (
-          <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs">🏚</span>
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dungeon Lore</span>
-            </div>
-            {history && (
-              <p className="text-sm italic text-foreground">{history}</p>
-            )}
-            <div className="flex gap-4 text-xs text-muted-foreground">
-              {builderCulture && (
-                <span>Built by: <span className="text-foreground font-medium capitalize">{builderCulture}</span></span>
-              )}
-              {currentInhabitants && (
-                <span>Inhabitants: <span className="text-foreground font-medium capitalize">{currentInhabitants}</span></span>
-              )}
-            </div>
-            {historyLayers && historyLayers.length > 0 && (
-              <div className="space-y-1 pt-1 border-t border-border">
-                <span className="text-xs text-muted-foreground uppercase tracking-wide">History Layers</span>
-                {historyLayers.map((layer, i) => (
-                  <div key={i} className="text-xs">
-                    <span className="font-medium text-foreground capitalize">{layer.builders}</span>
-                    <span className="text-muted-foreground ml-1">({layer.era})</span>
-                    {layer.fate && <p className="text-muted-foreground italic ml-2">{layer.fate}</p>}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )
-      })()}
-
       {/* Tabs */}
       <Tabs value={activeTab ?? "rooms"} onValueChange={onTabChange}>
-        <TabsList variant="line" className="w-full">
-          <TabsTrigger value="rooms">
-            <MapPin className="size-4" />
-            Rooms ({childPois.length})
-          </TabsTrigger>
-          <TabsTrigger value="denizens">
-            <Users className="size-4" />
-            Denizens{allNPCs.length > 0 ? ` (${allNPCs.length})` : ''}
-          </TabsTrigger>
-          <TabsTrigger value="encounters">
-            <Dices className="size-4" />
-            Encounters
-          </TabsTrigger>
-          <TabsTrigger value="notes">
-            <FileText className="size-4" />
-            Notes
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <TabsList variant="line" className="min-w-0 flex-1 justify-start overflow-x-auto">
+            <TabsTrigger value="rooms">
+              <MapPin className="size-4" />
+              Rooms ({childPois.length})
+            </TabsTrigger>
+            <TabsTrigger value="denizens">
+              <Users className="size-4" />
+              Denizens{allNPCs.length > 0 ? ` (${allNPCs.length})` : ''}
+            </TabsTrigger>
+            <TabsTrigger value="encounters">
+              <Dices className="size-4" />
+              Encounters
+            </TabsTrigger>
+            <TabsTrigger value="notes">
+              <FileText className="size-4" />
+              Notes
+            </TabsTrigger>
+          </TabsList>
+          {actionBar && (
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              {actionBar}
+            </div>
+          )}
+        </div>
 
         {/* Rooms tab */}
         <TabsContent value="rooms" className="space-y-4 pt-3">
-          {/* Layout toggle — hidden on mobile (always stacked) */}
-          <div className="hidden md:flex justify-end">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                updateLayout(layout === "columns" ? "stacked" : "columns")
-              }
-              className="gap-1.5"
-            >
-              {layout === "columns" ? (
-                <>
-                  <Rows2 className="size-4" />
-                  Stacked
-                </>
-              ) : (
-                <>
-                  <Columns2 className="size-4" />
-                  Columns
-                </>
-              )}
-            </Button>
-          </div>
+          {/* Overview — description + dungeon lore (collapsible, like settlement) */}
+          {(() => {
+            const ecology = poi.spatialDungeon?.ecology;
+            const hasLore = !!(
+              ecology &&
+              (ecology.builderCulture ||
+                ecology.currentInhabitants ||
+                ecology.history ||
+                (ecology.historyLayers?.length ?? 0) > 0)
+            );
+            const description = poi.description?.trim();
+            const readAloud = poi.readAloud?.trim();
+            // Generated POIs often duplicate read-aloud + description; hide the
+            // description when it largely repeats the read-aloud.
+            const wordsOf = (s: string) => new Set(s.toLowerCase().match(/[a-z0-9]+/g) ?? []);
+            const isRedundant = (a: string, b: string) => {
+              const wa = wordsOf(a);
+              const wb = wordsOf(b);
+              const [small, big] = wa.size <= wb.size ? [wa, wb] : [wb, wa];
+              if (small.size === 0) return true;
+              let overlap = 0;
+              small.forEach((w) => { if (big.has(w)) overlap++; });
+              return overlap / small.size >= 0.7;
+            };
+            const showDescription = !!description && (!readAloud || !isRedundant(description, readAloud));
+            const hasMeta =
+              !!poi.spatialDungeon || !!poi.subtypeLabel || poi.floor != null || poi.tags.length > 0;
+            if (!showDescription && !hasLore && !readAloud && !hasMeta) return null;
+            return (
+              <Collapsible open={overviewOpen} onOpenChange={setOverviewOpen}>
+                <div className="rounded-lg border">
+                  <CollapsibleTrigger asChild>
+                    <button className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted/50">
+                      <span className="flex items-center gap-2">
+                        <ChevronRight
+                          className={`size-4 text-muted-foreground transition-transform ${overviewOpen ? "rotate-90" : ""}`}
+                        />
+                        <Eye className="size-4 text-muted-foreground" />
+                        Overview
+                      </span>
+                      <span className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5">
+                        <Badge variant="outline" className="text-xs">
+                          {poi.type}
+                        </Badge>
+                        {poi.spatialDungeon && (
+                          <>
+                            <Badge variant="secondary" className="text-xs capitalize">
+                              {poi.spatialDungeon.theme.replace(/_/g, " ")}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              Depth {poi.spatialDungeon.depth}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs capitalize">
+                              {poi.spatialDungeon.size}
+                            </Badge>
+                          </>
+                        )}
+                        {poi.subtypeLabel && (
+                          <Badge variant="secondary" className="text-xs capitalize">
+                            {poi.subtypeLabel}
+                          </Badge>
+                        )}
+                        {poi.floor != null && (
+                          <Badge variant="outline" className="text-xs">
+                            F{poi.floor}
+                          </Badge>
+                        )}
+                        {poi.tags.map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </span>
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="space-y-3 px-4 pb-3">
+                      {readAloud && (
+                        <p className="whitespace-pre-wrap text-sm italic leading-relaxed text-foreground">
+                          {poi.readAloud}
+                        </p>
+                      )}
+                      {showDescription && (
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                          {description}
+                        </p>
+                      )}
+                      {hasLore && ecology && (
+                        <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs">🏚</span>
+                            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              Dungeon Lore
+                            </span>
+                          </div>
+                          {ecology.history && (
+                            <p className="text-sm italic text-foreground">{ecology.history}</p>
+                          )}
+                          <div className="flex gap-4 text-xs text-muted-foreground">
+                            {ecology.builderCulture && (
+                              <span>
+                                Built by:{" "}
+                                <span className="font-medium capitalize text-foreground">
+                                  {ecology.builderCulture}
+                                </span>
+                              </span>
+                            )}
+                            {ecology.currentInhabitants && (
+                              <span>
+                                Inhabitants:{" "}
+                                <span className="font-medium capitalize text-foreground">
+                                  {ecology.currentInhabitants}
+                                </span>
+                              </span>
+                            )}
+                          </div>
+                          {ecology.historyLayers && ecology.historyLayers.length > 0 && (
+                            <div className="space-y-1 border-t border-border pt-1">
+                              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                                History Layers
+                              </span>
+                              {ecology.historyLayers.map((layer, i) => (
+                                <div key={i} className="text-xs">
+                                  <span className="font-medium capitalize text-foreground">
+                                    {layer.builders}
+                                  </span>
+                                  <span className="ml-1 text-muted-foreground">({layer.era})</span>
+                                  {layer.fate && (
+                                    <p className="ml-2 italic text-muted-foreground">{layer.fate}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
+            );
+          })()}
 
           {/* Map — full width above the grid */}
           {mapSection && <div>{mapSection}</div>}
@@ -868,10 +959,38 @@ export function DungeonTemplate({
                     </Badge>
                   )}
                 </h4>
-                <Button size="sm" variant="outline" onClick={onCreateChild}>
-                  <Plus className="mr-1.5 size-3.5" />
-                  Add Room
-                </Button>
+                <div className="flex items-center gap-2">
+                  {/* Add Room creates a list-only room with no spatial placement or
+                      connection — only offer it when there's no spatial map. With a
+                      map, rooms are created + connected in the map's edit mode. */}
+                  {!poi.spatialDungeon && (
+                    <Button size="sm" variant="outline" onClick={onCreateChild}>
+                      <Plus className="mr-1.5 size-3.5" />
+                      Add Room
+                    </Button>
+                  )}
+                  {/* Layout toggle — hidden on mobile (always stacked) */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      updateLayout(layout === "columns" ? "stacked" : "columns")
+                    }
+                    className="hidden md:flex gap-1.5"
+                  >
+                    {layout === "columns" ? (
+                      <>
+                        <Rows2 className="size-4" />
+                        Stacked
+                      </>
+                    ) : (
+                      <>
+                        <Columns2 className="size-4" />
+                        Columns
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
 
               {/* Compact room cards */}
@@ -973,38 +1092,62 @@ export function DungeonTemplate({
                             </Link>
                           </span>
                         </div>
+
+                        {/* Inline detail (stacked mode only) */}
+                        {layout === "stacked" && isSelected && (
+                          <div
+                            className="mt-2.5 pt-2.5 border-t cursor-default"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <RoomDetailPanel
+                              room={child}
+                              index={idx}
+                              npcs={childNpcList}
+                              onUpdateNPC={onUpdateNPC}
+                              siblings={childPois}
+                              onSelectChild={onSelectChild}
+                              keyLockInfo={roomKL}
+                              discoveries={roomDiscoveries}
+                              onToggleDiscoveryFound={(discoveryId) => handleToggleDiscoveryFound(child.id, discoveryId)}
+                            />
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No rooms mapped yet.
+                  {poi.spatialDungeon
+                    ? "No rooms yet. Use the map's edit mode to add and connect rooms."
+                    : "No rooms mapped yet."}
                 </p>
               )}
             </div>
 
-            {/* RIGHT — Room detail panel */}
-            <div className="space-y-3">
-              <div ref={detailPanelRef} />
-              {selectedRoom ? (
-                <RoomDetailPanel
-                  room={selectedRoom}
-                  index={selectedRoomIndex}
-                  npcs={npcsByPoiId[selectedRoom.id] ?? []}
-                  onUpdateNPC={onUpdateNPC}
-                  siblings={childPois}
-                  onSelectChild={onSelectChild}
-                  keyLockInfo={keyLockByPoiId.get(selectedRoom.id)}
-                  discoveries={getDiscoveriesForRoom(selectedRoom.id)}
-                  onToggleDiscoveryFound={(discoveryId) => handleToggleDiscoveryFound(selectedRoom.id, discoveryId)}
-                />
-              ) : childPois.length > 0 ? (
-                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  Select a room to see details
-                </div>
-              ) : null}
-            </div>
+            {/* RIGHT — Room detail panel (columns mode only; stacked renders inline in the card) */}
+            {layout === "columns" && (
+              <div className="space-y-3">
+                <div ref={detailPanelRef} />
+                {selectedRoom ? (
+                  <RoomDetailPanel
+                    room={selectedRoom}
+                    index={selectedRoomIndex}
+                    npcs={npcsByPoiId[selectedRoom.id] ?? []}
+                    onUpdateNPC={onUpdateNPC}
+                    siblings={childPois}
+                    onSelectChild={onSelectChild}
+                    keyLockInfo={keyLockByPoiId.get(selectedRoom.id)}
+                    discoveries={getDiscoveriesForRoom(selectedRoom.id)}
+                    onToggleDiscoveryFound={(discoveryId) => handleToggleDiscoveryFound(selectedRoom.id, discoveryId)}
+                  />
+                ) : childPois.length > 0 ? (
+                  <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                    Select a room to see details
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
 
           {/* Wandering Monsters — full width below the grid */}
@@ -1016,6 +1159,10 @@ export function DungeonTemplate({
               poiChildren={childPois}
               systemId={systemId}
               worldId={worldId}
+              encounterChance={poi.encounterChance}
+              onSaveEncounterChance={(n) =>
+                db.pois.update(poi.id, { encounterChance: n, updatedAt: Date.now() })
+              }
             />
           </div>
         </TabsContent>
@@ -1302,10 +1449,12 @@ export function DungeonTemplate({
 
         {/* Encounters tab */}
         <TabsContent value="encounters" className="pt-3">
-          <EncounterTableUI
+          <EncounterCascade
             table={encounterTable}
+            onRollCascade={onRollCascade}
+            onSaveNpc={onSaveEncounterNpc}
+            onSaveTable={onSaveEncounterTable}
             onRoll={onRollEncounter}
-            onSave={onSaveEncounterTable}
           />
         </TabsContent>
 
