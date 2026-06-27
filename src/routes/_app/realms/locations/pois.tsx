@@ -339,45 +339,41 @@ function POIsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <Select
-            value={selectedRegionId}
-            onValueChange={(value) => setSelectedRegionId(value)}
-          >
-            <SelectTrigger id="region-select" className="w-36 shrink-0">
-              <SelectValue placeholder="All Regions" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Regions</SelectItem>
-              <SelectItem value="flat">Flat List</SelectItem>
-              {regions.map((region) => (
-                <SelectItem key={region.id} value={region.id}>
-                  {region.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search POIs..."
-              className="pl-9"
-            />
-          </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          value={selectedRegionId}
+          onValueChange={(value) => setSelectedRegionId(value)}
+        >
+          <SelectTrigger id="region-select" className="w-36 shrink-0">
+            <SelectValue placeholder="All Regions" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Regions</SelectItem>
+            <SelectItem value="flat">Flat List</SelectItem>
+            {regions.map((region) => (
+              <SelectItem key={region.id} value={region.id}>
+                {region.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="relative flex-1 min-w-[12rem]">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search POIs..."
+            className="pl-9"
+          />
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="flex-1 sm:flex-none" onClick={handleGenerateDungeon} disabled={regions.length === 0}>
-            <Wand2 className="mr-2 size-4" />
-            Generate Dungeon
-          </Button>
-          <Button className="flex-1 sm:flex-none" onClick={() => openCreateDialog()}>
-            <Plus className="mr-2 size-4" />
-            New POI
-          </Button>
-        </div>
+        <Button variant="outline" className="shrink-0" onClick={handleGenerateDungeon} disabled={regions.length === 0}>
+          <Wand2 className="mr-2 size-4" />
+          Generate Dungeon
+        </Button>
+        <Button className="shrink-0" onClick={() => openCreateDialog()}>
+          <Plus className="mr-2 size-4" />
+          New POI
+        </Button>
       </div>
 
       {/* Unified sortable table */}
