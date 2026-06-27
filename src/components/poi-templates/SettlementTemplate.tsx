@@ -41,7 +41,7 @@ import {
 import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
 import { RumorList } from "~/components/shared/RumorList";
 import { NoticeBoard } from "~/components/shared/NoticeBoard";
-import { EncounterTableUI } from "~/components/shared/EncounterTableUI";
+import { EncounterCascade } from "~/components/shared/EncounterCascade";
 import { ServicesList } from "~/components/shared/ServicesList";
 import { POI_TYPE_ICONS } from "@shared/poi-icons";
 import { settlementSize } from "@domain/data/worldgen/settlementSize";
@@ -57,6 +57,8 @@ import type { GameMap } from "@domain/entities/GameMap";
 import type { TreasureItem } from "@domain/value-objects/TreasureItem";
 import { OPPOSITE_DIRECTION, type Direction, type NoticeType } from "@shared/constants";
 import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
+import type { CascadeAction } from "@application/use-cases/RollEncounterCascade";
+import type { EncounterRollResult } from "@domain/value-objects/EncounterRollResult";
 
 type SettlementTab = "locations" | "denizens" | "rumors" | "encounters" | "events" | "notes";
 
@@ -295,6 +297,8 @@ interface SettlementTemplateProps {
   }) => void;
   onDeleteNotice: (id: string) => void;
   onRollEncounter: () => Promise<RollEncounterResult>;
+  onRollCascade: (action: CascadeAction) => Promise<EncounterRollResult>;
+  onSaveEncounterNpc?: () => Promise<void>;
   onSaveEncounterTable?: (
     entries: Pick<
       EncounterTable,
@@ -586,6 +590,8 @@ export function SettlementTemplate({
   onCreateNotice,
   onDeleteNotice,
   onRollEncounter,
+  onRollCascade,
+  onSaveEncounterNpc,
   onSaveEncounterTable,
   onCreateChild,
   onCreateNPC,
@@ -1135,10 +1141,12 @@ export function SettlementTemplate({
 
         {/* Encounters tab */}
         <TabsContent value="encounters" className="pt-3">
-          <EncounterTableUI
+          <EncounterCascade
             table={encounterTable}
+            onRollCascade={onRollCascade}
+            onSaveNpc={onSaveEncounterNpc}
+            onSaveTable={onSaveEncounterTable}
             onRoll={onRollEncounter}
-            onSave={onSaveEncounterTable}
           />
         </TabsContent>
 

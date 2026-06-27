@@ -134,7 +134,14 @@
       "Bash(cd *)",
       "Bash(node -e ' *)",
       "Bash(awk '{print $5, $9}')",
-      "Bash(dust -d 1 src/maps)"
+      "Bash(dust -d 1 src/maps)",
+      "Bash(pnpm exec *)",
+      "Bash(rg -rln \"wanderingMonsters:\" src/)",
+      "Bash(rg -rn \"spatialDungeon:\" src/)",
+      "Bash(rg -rln \"starred: false\\\\|starred: \" src/)",
+      "Read(//Users/dusty/Code/side-projects/hexbinder/**)",
+      "Bash(wc -l src/components/encounter-table/*.tsx src/components/encounter-table/*.ts src/data/encounters/*.ts src/generators/EncounterGenerator.ts src/generators/HexEncounterGenerator.ts src/generators/NPCGenerator.ts src/generators/DwellingGenerator.ts src/lib/terrain-variants.ts src/lib/npc-stats.ts)",
+      "Bash(rg -rn \"Disposition\" src/shared/ src/domain/value-objects/)"
     ]
   }
 }

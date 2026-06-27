@@ -624,6 +624,8 @@ function POIDetailPage() {
             onCreateNotice={actions.handleCreateNotice}
             onDeleteNotice={actions.handleDeleteNotice}
             onRollEncounter={actions.handleRollEncounter}
+            onRollCascade={actions.handleEncounterCascade}
+            onSaveEncounterNpc={actions.handleSaveEncounterNpc}
             onSaveEncounterTable={actions.handleSaveEncounterTable}
             onCreateChild={() => setCreateChildOpen(true)}
             onCreateNPC={openCreateNPC}
@@ -691,6 +693,8 @@ function POIDetailPage() {
             poiEvents={poiEvents}
             encounterTable={encounterTable}
             onRollEncounter={actions.handleRollEncounter}
+            onRollCascade={actions.handleEncounterCascade}
+            onSaveEncounterNpc={actions.handleSaveEncounterNpc}
             onSaveEncounterTable={actions.handleSaveEncounterTable}
             onCreateChild={() => setCreateChildOpen(true)}
             onCreateNPC={openCreateNPC}
@@ -716,6 +720,8 @@ function POIDetailPage() {
             encounterTable={encounterTable}
             rumors={rumors}
             onRollEncounter={actions.handleRollEncounter}
+            onRollCascade={actions.handleEncounterCascade}
+            onSaveEncounterNpc={actions.handleSaveEncounterNpc}
             onSaveEncounterTable={actions.handleSaveEncounterTable}
             onCreateRumor={actions.handleCreateRumor}
             onToggleRumorUsed={actions.handleToggleRumorUsed}
