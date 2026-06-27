@@ -57,6 +57,7 @@ export function buildPOI(input: BuildPOIInput): POI {
     visited: false,
     lightLevel: null,
     wanderingMonsters: [],
+    encounterChance: null,
     watabouSeed: null,
     watabouGenerator: null,
     watabouData: null,

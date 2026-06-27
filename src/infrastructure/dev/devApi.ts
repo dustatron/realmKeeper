@@ -277,6 +277,7 @@ const pois = {
       visited: data.visited ?? false,
       lightLevel: data.lightLevel ?? null,
       wanderingMonsters: data.wanderingMonsters ?? [],
+      encounterChance: data.encounterChance ?? null,
       watabouSeed: data.watabouSeed ?? null,
       watabouGenerator: data.watabouGenerator ?? null,
       watabouData: data.watabouData ?? null,

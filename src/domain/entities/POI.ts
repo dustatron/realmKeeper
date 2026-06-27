@@ -42,6 +42,8 @@ export interface POI {
   visited: boolean
   lightLevel: 'bright' | 'dim' | 'dark' | null
   wanderingMonsters: WanderingMonsterEntry[]
+  /** Encounter-check chance denominator: roll 1dN, encounter on a 1. null = default (6). */
+  encounterChance: number | null
   watabouSeed: string | null
   watabouGenerator: 'mfcg' | 'opd' | null
   watabouData: WatabouCityData | WatabouDungeonData | null

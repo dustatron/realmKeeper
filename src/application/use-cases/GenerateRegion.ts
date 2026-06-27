@@ -71,6 +71,7 @@ function makePoi(regionId: string, name: string, type: PoiType, description: str
     visited: false,
     lightLevel: null,
     wanderingMonsters: [],
+    encounterChance: null,
     watabouSeed: null,
     watabouGenerator: null,
     watabouData: null,

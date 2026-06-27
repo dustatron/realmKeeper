@@ -680,6 +680,7 @@ db.pois.hook('reading', (poi) => {
     spellRefs: [],
     equipmentRefs: [],
     wanderingMonsters: [],
+    encounterChance: null,
     watabouSeed: null,
     watabouGenerator: null,
     watabouData: null,
