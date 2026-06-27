@@ -2,7 +2,7 @@ import { newId } from '@shared/ulid'
 import type { TreasureItem } from '@domain/value-objects/TreasureItem'
 import type { SpatialRoom } from './types'
 import type { SeededRandom } from './SeededRandom'
-import { pickWeapon, pickGear, pickSpellScroll, pickMagicItem } from './compendium-utils'
+import { pickWeapon, pickGear, pickSpellScroll, pickMagicItem } from '~/lib/worldgen/compendium-utils'
 
 const COIN_TREASURE: Record<string, { name: string; value: string }[]> = {
   poor:     [{ name: 'Handful of copper pieces', value: '1d6 cp' }, { name: 'Tarnished silver coins', value: '2d6 sp' }],

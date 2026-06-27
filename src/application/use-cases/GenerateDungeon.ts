@@ -12,7 +12,7 @@ import type { DungeonGenOptions } from '~/lib/dungeon/types'
 import { generateDungeon } from '~/lib/dungeon/DungeonGenerator'
 import { getBlueprint } from '~/lib/dungeon/dungeon/DungeonBlueprints'
 import { generateRoomTreasure, generateMagicItems, generateSpellScrolls, generateWeapons, generateGear } from '~/lib/dungeon/treasure-gen'
-import { resolveCreature, systemBlockFromMonster, fallbackSystemBlock, getMonsterDescription } from '~/lib/dungeon/compendium-utils'
+import { resolveCreature, systemBlockFromMonster, fallbackSystemBlock, getMonsterDescription } from '~/lib/worldgen/compendium-utils'
 import { generateNPCName } from '~/lib/dungeon/npc-names'
 import { executeDeletePOIWithChildren } from './DeletePOIWithChildren'
 import type { IFactionPresenceRepository } from '@application/ports/IFactionPresenceRepository'
@@ -275,7 +275,7 @@ export async function executeGenerateDungeon(
   const wmRng = rng.child('wandering-resolve')
   // First pass: resolve all creatures
   const wanderingMonsters: WanderingMonsterEntry[] = (generated.wanderingMonsters?.entries ?? []).map((e) => {
-    const resolved = resolveCreature(e.creatureType, systemId, wmRng, generated.depth)
+    const resolved = resolveCreature(e.creatureType, systemId, wmRng, { depth: generated.depth })
     return {
       name: resolved?.name ?? e.creatureType,
       creatureType: e.creatureType,
@@ -295,7 +295,7 @@ export async function executeGenerateDungeon(
       continue
     }
     // This entry is a duplicate — find an unseen creature
-    const resolved = resolveCreature(`dedup-${entry.creatureType}-${seenIds.size}`, systemId, dedupRng, generated.depth)
+    const resolved = resolveCreature(`dedup-${entry.creatureType}-${seenIds.size}`, systemId, dedupRng, { depth: generated.depth })
     if (resolved && !seenIds.has(resolved.id)) {
       entry.name = resolved.name
       entry.compendiumId = resolved.id
@@ -337,7 +337,7 @@ export async function executeGenerateDungeon(
 
     if (inhabitantCreature && inhabitantRooms.has(room.id)) {
       // This room is held by the dungeon's current faction — stock it with them.
-      const resolved = resolveCreature(inhabitantCreature, systemId, creatureRng, room.depth)
+      const resolved = resolveCreature(inhabitantCreature, systemId, creatureRng, { depth: room.depth })
       creatureName = resolved?.name ?? inhabitantCreature
       compendiumId = resolved?.id ?? null
     } else if (!useBlueprintFallback) {
@@ -347,7 +347,7 @@ export async function executeGenerateDungeon(
       compendiumId = wmEntry.compendiumId
     } else {
       const creatureSlug = creatureRng.pick(getBlueprint(options.theme).creaturePool)
-      const resolved = resolveCreature(creatureSlug, systemId, creatureRng, room.depth)
+      const resolved = resolveCreature(creatureSlug, systemId, creatureRng, { depth: room.depth })
       creatureName = resolved?.name ?? creatureSlug
       compendiumId = resolved?.id ?? null
     }
