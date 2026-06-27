@@ -2,6 +2,7 @@ import { db } from '@infrastructure/dexie/db'
 import { executeCreateRealm } from '@application/use-cases/CreateRealm'
 import { executeGenerateDungeon, type GenerateDungeonDeps } from '@application/use-cases/GenerateDungeon'
 import { executeGenerateLandmark } from '@application/use-cases/GenerateLandmark'
+import { executeGenerateRuin } from '@application/use-cases/GenerateRuin'
 import { generateWorld } from '@domain/services/worldgen/generateWorld'
 import type { PoiDensity } from '@domain/services/worldgen/generateWorld'
 import type { POI } from '@domain/entities/POI'
@@ -21,6 +22,7 @@ export interface GenerateWorldDeps extends GenerateDungeonDeps {
 // stubs that generate on first open. Keeps world-gen time/volume bounded.
 const PREGEN_DUNGEON_CAP = 10
 const PREGEN_LANDMARK_CAP = 12
+const PREGEN_RUIN_CAP = 8
 
 export type WorldSize = 'small' | 'medium' | 'large'
 
@@ -62,6 +64,7 @@ export async function executeGenerateWorld(
   // generator reads the committed POI). Captured inside the transaction.
   let dungeonStubs: POI[] = []
   let landmarkStubs: POI[] = []
+  let ruinStubs: POI[] = []
 
   // Load the realm's system config up front (outside the transaction) so world
   // generation can roll system-correct NPC stat blocks. Generation degrades
@@ -125,6 +128,7 @@ export async function executeGenerateWorld(
     mapId = gameMap.id
     dungeonStubs = pois.filter((p) => p.type === 'dungeon' && p.dungeonGenOptions != null)
     landmarkStubs = pois.filter((p) => p.type === 'landmark')
+    ruinStubs = pois.filter((p) => p.type === 'ruin')
   })
 
   // Pre-generate dungeons (rooms, monsters, treasure, paths) up to the cap, so
@@ -149,6 +153,16 @@ export async function executeGenerateWorld(
     await executeGenerateLandmark(
       { poiId: stub.id, seed: `${input.seed}-landmark-${stub.id}` },
       { poiRepo: deps.poiRepo, regionRepo: deps.regionRepo },
+    )
+  }
+
+  // Pre-generate ruins (areas, occupants, loot) up to the cap. A shared
+  // usedHistory Set keeps area names distinct across ruins in the same world.
+  const usedHistory = new Set<string>()
+  for (const stub of ruinStubs.slice(0, PREGEN_RUIN_CAP)) {
+    await executeGenerateRuin(
+      { poiId: stub.id, worldId: realmId, systemId: input.systemId, seed: `${input.seed}-ruin-${stub.id}`, usedHistory },
+      { poiRepo: deps.poiRepo, npcRepo: deps.npcRepo, regionRepo: deps.regionRepo }
     )
   }
 
