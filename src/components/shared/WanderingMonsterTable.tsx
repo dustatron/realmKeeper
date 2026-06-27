@@ -105,10 +105,10 @@ export function WanderingMonsterTable({
     )
     if (checkTimer.current) clearTimeout(checkTimer.current)
     if (triggered) {
-      setCheckResult(`🎲 ${roll}/${chance} — Encounter! Rolling…`)
+      setCheckResult(`🎲 Rolled ${roll} (1 in ${chance}) — Encounter! Rolling…`)
       handleRoll()
     } else {
-      setCheckResult(`🎲 ${roll}/${chance} — No encounter`)
+      setCheckResult(`🎲 Rolled ${roll} (1 in ${chance}) — No encounter`)
     }
     checkTimer.current = setTimeout(() => setCheckResult(null), 4000)
   }, [encounterChance, handleRoll])
@@ -134,6 +134,11 @@ export function WanderingMonsterTable({
             </Badge>
           )}
         </h4>
+        {checkResult && (
+          <span className="flex-1 text-center text-sm font-semibold text-red-400 truncate px-2">
+            {checkResult}
+          </span>
+        )}
         <div className="flex items-center gap-1.5">
           <Button
             size="sm"
@@ -183,9 +188,6 @@ export function WanderingMonsterTable({
           )}
         </div>
       </div>
-      {checkResult && (
-        <p className="mb-2 text-xs text-red-400">{checkResult}</p>
-      )}
 
       {dieSize > 0 ? (
         <div className="overflow-hidden rounded border border-border">
