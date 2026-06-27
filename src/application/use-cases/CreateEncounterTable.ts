@@ -35,6 +35,7 @@ export async function executeCreateEncounterTable(
     treasure: input.treasure ?? [],
     customSections: input.customSections ?? [],
     disabledCategories: input.disabledCategories ?? [],
+    lastResult: null,
     createdAt: now,
     updatedAt: now,
   }
