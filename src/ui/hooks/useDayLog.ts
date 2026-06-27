@@ -4,6 +4,7 @@ import { useAllWeather } from './useWeather'
 import { useAllEvents } from './useTimeline'
 import { useActiveRealm } from './useActiveRealm'
 import { toDayKey, fromDayKey, dayKeyRange } from '@domain/value-objects/DayKey'
+import { moonPhase, type MoonPhase } from '@domain/value-objects/Moon'
 import { db } from '@infrastructure/dexie/db'
 import type { WeatherHistory } from '@domain/entities/WeatherHistory'
 import type { WorldEvent } from '@domain/entities/WorldEvent'
@@ -21,6 +22,7 @@ export interface DayLogEntry {
   events: WorldEvent[]
   gmNotes: WorldEvent[]
   scheduledEvents: POIEvent[]
+  moonPhase: MoonPhase
   isCurrentDay: boolean
   isFuture: boolean
   isCompleted: boolean
@@ -123,6 +125,7 @@ export function useDayLog(
         events: eventMap.get(dk) ?? [],
         gmNotes: gmNoteMap.get(dk) ?? [],
         scheduledEvents: [...scheduled, ...recurringMatches],
+        moonPhase: moonPhase(dk - day1Key + 1, realm.moonCycleLength),
         isCurrentDay: dk === currentDayKey,
         isFuture: dk > currentDayKey,
         isCompleted: dk <= completedThrough,

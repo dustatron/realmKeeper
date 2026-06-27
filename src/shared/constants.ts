@@ -7,6 +7,9 @@ export const DEFAULT_WATCHES_PER_DAY = 3
 
 export const DEFAULT_DAYS_PER_SEASON = 30
 
+// Length of a full lunar cycle in days (new moon → new moon).
+export const DEFAULT_MOON_CYCLE_LENGTH = 28
+
 export const RELATIONSHIP_SCALE = {
   '-6': 'Blood Feud',
   '-5': 'Hatred',

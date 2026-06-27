@@ -3,6 +3,9 @@ import { Link } from '@tanstack/react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ChevronRight, Cloud, CalendarClock } from 'lucide-react'
 import { db } from '@infrastructure/dexie/db'
+import { campaignDayOf } from '@domain/value-objects/DayKey'
+import { moonPhase } from '@domain/value-objects/Moon'
+import { MoonGlyph } from '~/components/calendar/MoonGlyph'
 import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { useCurrentWeather } from '~/ui/hooks/useWeather'
@@ -82,6 +85,10 @@ export function HeaderClock() {
   }
 
   const season = realm.currentSeason.charAt(0).toUpperCase() + realm.currentSeason.slice(1)
+  const moon = moonPhase(
+    campaignDayOf(realm.currentYear, realm.currentSeason, realm.currentDay, realm.daysPerSeason),
+    realm.moonCycleLength
+  )
 
   return (
     <div className="flex items-center gap-1.5">
@@ -110,6 +117,10 @@ export function HeaderClock() {
         {realm.currentWatch}/{realm.watchesPerDay}
         <ChevronRight className="size-3 text-muted-foreground" />
       </button>
+
+      <span className="inline-flex items-center h-7 px-0.5" title={`Moon: ${moon.name}`}>
+        <MoonGlyph fraction={moon.fraction} size={15} />
+      </span>
 
       {weather && (
         <span

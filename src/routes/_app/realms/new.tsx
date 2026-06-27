@@ -19,7 +19,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/components/ui/collapsible";
-import { ChevronDown, Gem, Settings, Skull, Sparkles, Wand2 } from "lucide-react";
+import {
+  ChevronDown,
+  Gem,
+  Settings,
+  Skull,
+  Sparkles,
+  Wand2,
+} from "lucide-react";
 import {
   DEFAULT_DAYS_PER_SEASON,
   DEFAULT_WATCHES_PER_DAY,
@@ -32,6 +39,12 @@ import { executeGenerateWorld } from "@application/use-cases/GenerateWorld";
 import { newId } from "@shared/ulid";
 
 const DEFAULT_SYSTEM_ID = "system-cairn-2e";
+const SHADOWDARK_SYSTEM_ID = "system-shadowdark";
+
+// Shadowdark runs on a 4-watch day; everything else uses the global default.
+function defaultWatchesForSystem(systemId: string): number {
+  return systemId === SHADOWDARK_SYSTEM_ID ? 4 : DEFAULT_WATCHES_PER_DAY;
+}
 
 export const Route = createFileRoute("/_app/realms/new")({
   component: NewRealmPage,
@@ -46,7 +59,7 @@ function NewRealmPage() {
   const [createName, setCreateName] = useState("");
   const [createSystem, setCreateSystem] = useState(DEFAULT_SYSTEM_ID);
   const [createDesc, setCreateDesc] = useState("");
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(true);
   const [createWatchesPerDay, setCreateWatchesPerDay] = useState(
     DEFAULT_WATCHES_PER_DAY,
   );
@@ -54,9 +67,18 @@ function NewRealmPage() {
     DEFAULT_DAYS_PER_SEASON,
   );
   const [createDaysPerWeek, setCreateDaysPerWeek] = useState(7);
-  const [createFactionTurnTrigger, setCreateFactionTurnTrigger] = useState<
-    "day" | "week" | "manual"
-  >("day");
+  const FactionTiggerOptionValues = {
+    day: "day",
+    week: "week",
+    manual: "manual",
+  } as const;
+
+  type FactionTriggersOptions =
+    (typeof FactionTiggerOptionValues)[keyof typeof FactionTiggerOptionValues];
+
+  const [createFactionTurnTrigger, setCreateFactionTurnTrigger] =
+    useState<FactionTriggersOptions>(FactionTiggerOptionValues.week);
+  const [watchesTouched, setWatchesTouched] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   const [genEnabled, setGenEnabled] = useState(true);
@@ -169,11 +191,12 @@ function NewRealmPage() {
               min="1"
               max="12"
               value={createWatchesPerDay}
-              onChange={(e) =>
+              onChange={(e) => {
+                setWatchesTouched(true);
                 setCreateWatchesPerDay(
                   parseInt(e.target.value) || DEFAULT_WATCHES_PER_DAY,
-                )
-              }
+                );
+              }}
               disabled={isCreating}
             />
           </div>
@@ -218,9 +241,7 @@ function NewRealmPage() {
             <Select
               value={createFactionTurnTrigger}
               onValueChange={(v) =>
-                setCreateFactionTurnTrigger(
-                  v as typeof createFactionTurnTrigger,
-                )
+                setCreateFactionTurnTrigger(v as "day" | "week" | "manual")
               }
               disabled={isCreating}
             >
@@ -259,17 +280,15 @@ function NewRealmPage() {
       {genEnabled && (
         <div className="space-y-3 pt-1">
           <p className="text-xs text-muted-foreground">
-            Off creates a blank world. On generates a biome hex map sized to your
-            choice — a starting canvas you can flesh out.
+            Off creates a blank world. On generates a biome hex map sized to
+            your choice — a starting canvas you can flesh out.
           </p>
           <div className="grid gap-1.5">
             <Label className="text-xs">World size</Label>
             <ToggleGroup
               type="single"
               value={genSize}
-              onValueChange={(v) =>
-                v && setGenSize(v as typeof genSize)
-              }
+              onValueChange={(v) => v && setGenSize(v as typeof genSize)}
               className="justify-start"
               disabled={isCreating}
             >
@@ -294,8 +313,8 @@ function NewRealmPage() {
             <p className="text-xs font-medium">Advanced</p>
             <p className="text-xs text-muted-foreground">
               Fine-tune what gets generated: how many factions vie for power,
-              how densely the map is dotted with points of interest, and
-              whether a looming threat hangs over the realm.
+              how densely the map is dotted with points of interest, and whether
+              a looming threat hangs over the realm.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1.5">
@@ -351,7 +370,10 @@ function NewRealmPage() {
               <p className="text-xs font-medium">Realm content</p>
               <div className="grid gap-2">
                 <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="gen-treasure" className="flex items-center gap-2 text-xs">
+                  <Label
+                    htmlFor="gen-treasure"
+                    className="flex items-center gap-2 text-xs"
+                  >
                     <Gem className="size-3.5" />
                     Auto add treasure
                   </Label>
@@ -363,7 +385,10 @@ function NewRealmPage() {
                   />
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="gen-magic-items" className="flex items-center gap-2 text-xs">
+                  <Label
+                    htmlFor="gen-magic-items"
+                    className="flex items-center gap-2 text-xs"
+                  >
                     <Sparkles className="size-3.5" />
                     Sprinkle magic items
                   </Label>
@@ -375,7 +400,10 @@ function NewRealmPage() {
                   />
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="gen-monsters" className="flex items-center gap-2 text-xs">
+                  <Label
+                    htmlFor="gen-monsters"
+                    className="flex items-center gap-2 text-xs"
+                  >
                     <Skull className="size-3.5" />
                     Sprinkle monsters
                   </Label>
@@ -404,7 +432,7 @@ function NewRealmPage() {
             <Label htmlFor="realm-name">Name</Label>
             <Input
               id="realm-name"
-              placeholder="The Forgotten Realms"
+              placeholder="Name your realm"
               value={createName}
               onChange={(e) => setCreateName(e.target.value)}
               disabled={isCreating}
@@ -414,7 +442,13 @@ function NewRealmPage() {
             <Label htmlFor="realm-system">System</Label>
             <Select
               value={createSystem}
-              onValueChange={setCreateSystem}
+              onValueChange={(v) => {
+                setCreateSystem(v);
+                // Apply the system's default watch count unless the user has
+                // already set one manually (Shadowdark → 4).
+                if (!watchesTouched)
+                  setCreateWatchesPerDay(defaultWatchesForSystem(v));
+              }}
               disabled={isCreating}
             >
               <SelectTrigger id="realm-system" className="w-full">

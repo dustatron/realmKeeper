@@ -15,7 +15,7 @@ beforeEach(async () => {
 const realm = (over: Partial<Realm> = {}): Realm => ({
   id: newId(), name: 'R', systemId: 'system-cairn-2e', description: '',
   currentYear: 1, currentSeason: 'summer', currentDay: 9, currentWatch: 1,
-  daysPerSeason: 30, daysPerWeek: 7, watchesPerDay: 3, factionTurnTrigger: 'manual',
+  daysPerSeason: 30, daysPerWeek: 7, watchesPerDay: 3, moonCycleLength: 28, factionTurnTrigger: 'manual',
   completedThroughDay: 0, customRaces: [], raceColors: {}, starredMonsterIds: [],
   starredSpellIds: [], starredMagicItemIds: [], hiddenCompendiumIds: [],
   createdAt: 0, updatedAt: 0, ...over,

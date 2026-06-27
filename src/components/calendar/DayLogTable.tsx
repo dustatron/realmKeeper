@@ -91,6 +91,7 @@ export function DayLogTable({
             <TableHead className="w-8">x</TableHead>
             <TableHead className="w-3">Day</TableHead>
             <TableHead className="w-3">Weather</TableHead>
+            <TableHead className="w-3">Moon</TableHead>
             <TableHead className="w-20">Faction</TableHead>
             <TableHead className="w-20">Events</TableHead>
             <TableHead>Notes</TableHead>

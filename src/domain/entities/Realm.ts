@@ -12,6 +12,7 @@ export interface Realm {
   daysPerSeason: number
   daysPerWeek: number
   watchesPerDay: number
+  moonCycleLength: number
   factionTurnTrigger: 'day' | 'week' | 'manual'
   completedThroughDay: number
   customRaces: string[]

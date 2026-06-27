@@ -654,6 +654,7 @@ db.worlds.hook('reading', (realm) => {
     starredSpellIds: [],
     starredMagicItemIds: [],
     hiddenCompendiumIds: [],
+    moonCycleLength: 28,
   }
   for (const [key, val] of Object.entries(defaults)) {
     if (rec[key] === undefined) {
