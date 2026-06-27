@@ -317,7 +317,6 @@ function FactionsPage() {
   if (!activeRealmId) {
     return (
       <div>
-        <PageHeader title="Factions" description="Manage factions and their relationships." />
         <EmptyState icon={Swords} title="Select a realm first" />
       </div>
     )
@@ -326,7 +325,6 @@ function FactionsPage() {
   if (factions.length === 0) {
     return (
       <div>
-        <PageHeader title="Factions" description="Manage factions and their relationships." />
         <EmptyState
           icon={Swords}
           title="No factions yet"
@@ -350,10 +348,8 @@ function FactionsPage() {
   }
 
   return (
-    <div>
+    <div className="-mt-3">
       <PageHeader
-        title="Factions"
-        description="Manage factions and their relationships."
         actions={
           <div className="flex gap-2">
             <Button onClick={handleGenerateFaction} variant="outline" disabled={isGenerating}>
