@@ -35,6 +35,14 @@ dungeon. Seed discoverable treasure across the living world.
    is magic (`TreasureItem.isMagic` / `InventoryItem.compendiumKind === 'magicItem'`).
    B1 guarantees ≥1 notable find per region (when any density > off) and one per
    non-party faction.
+7. **Monsters & guardians:** convert the existing `autoMonsters` boolean to a
+   third density knob (`worldMonsterDensity`, same `off|sparse|moderate|frequent`).
+   The general monster sprinkle becomes **tier-aware** (picks monsters
+   appropriate to the region's tier, not purely random). Additionally, a
+   **guardian rule**: a POI that receives a `notable` find, in a `tough`/`perilous`
+   region, has a weighted chance to also get a **tier-scaled high-level guardian**
+   monster ref — the good loot is defended. (NPC-held finds need no guardian — the
+   NPC is the threat.)
 
 ## Constraints discovered
 
@@ -100,6 +108,7 @@ back `undefined`, treated as not-notable).
 ```ts
 worldMagicDensity?: LootDensity     // default 'moderate'  (replaces autoMagicItems)
 worldTreasureDensity?: LootDensity  // default 'moderate'  (replaces autoTreasure)
+worldMonsterDensity?: LootDensity   // default 'moderate'  (replaces autoMonsters)
 ```
 
 ```ts
@@ -110,10 +119,10 @@ const LOOT_DENSITY: Record<LootDensity, number> = {
 ```
 
 `RealmContentSprinkleOptions` becomes
-`{ treasureDensity?: LootDensity; magicDensity?: LootDensity; monsters?: boolean }`
-(the `monsters` boolean is unchanged / out of scope). `off` ≡ the old `false`.
-Two `Select`s in `src/routes/_app/realms/new.tsx` **replace** the existing
-`autoTreasure`/`autoMagicItems` checkboxes (mirror the `poiDensity` Select),
+`{ treasureDensity?: LootDensity; magicDensity?: LootDensity; monsterDensity?: LootDensity }`.
+`off` ≡ the old `false`. **Three** `Select`s in `src/routes/_app/realms/new.tsx`
+**replace** the existing `autoTreasure`/`autoMagicItems`/`autoMonsters` checkboxes
+(mirror the `poiDensity` Select),
 threaded through `executeGenerateWorld` into `generateWorld()` opts and on into
 the evolved `sprinkleRealmContent`. Every `executeGenerateWorld` caller (form +
 tests) updates to the new fields.
@@ -134,16 +143,16 @@ interface SprinkleRealmContentInput {
   options: {             // RealmContentSprinkleOptions
     treasureDensity?: LootDensity
     magicDensity?: LootDensity
-    monsters?: boolean
+    monsterDensity?: LootDensity
   }
   rng: SeededRandom
 }
 ```
 
 Keep the existing magic-item `TreasureItem` construction + `magicItemRefs` and the
-monster-ref logic. Replace the global POI sampling with the per-region,
-tier-scaled algorithm below, and add NPC + faction handling. The `monsters`
-branch is unchanged.
+monster-ref mechanism (`poi.monsterRefs`). Replace the global POI sampling with
+the per-region, tier-scaled algorithm below, and add NPC + faction handling, the
+monster-density + tier-aware picks, and the guardian rule.
 
 Algorithm:
 1. **Eligible holders.** POIs: exclude `type === 'dungeon' | 'ruin'` and any POI
@@ -166,7 +175,19 @@ Algorithm:
    `leaderNpcId` set). This guarantee is independent of region budgets — every
    non-party faction always gets exactly one. (If a faction has neither HQ nor
    leader, skip it and log.)
-4. All randomness via the passed `SeededRandom`; flags (`notable`, `isMagic` /
+4. **Monsters (tier-aware).** When `monsterDensity !== 'off'`, sprinkle monster
+   refs onto monster-eligible POIs as today, but scale count by
+   `LOOT_DENSITY[monsterDensity] × tier` and pick monsters **appropriate to the
+   region tier** (filter the compendium to a level/HP band for `easy`/`tough`/
+   `perilous`) rather than fully random.
+5. **Guardian rule.** A POI that received a `notable` find AND sits in a `tough`
+   or `perilous` region has a weighted chance (e.g. perilous ~0.75, tough ~0.4)
+   to also get a **guardian**: one tier-scaled HIGH-level monster ref (picked
+   from the upper level/HP band for the tier via a `pickGuardianMonster(systemId,
+   tier, rng)` helper). Independent of `monsterDensity` (a notable prize is
+   defended even in low-monster worlds) — but skipped if `monsterDensity === 'off'`
+   to honor a no-monster world. NPC-held finds get no guardian (the NPC is the threat).
+6. All randomness via the passed `SeededRandom`; flags (`notable`, `isMagic` /
    `compendiumKind`) set so B2 can find pointable items.
 
 Base constants (`baseTreasure`, `baseMagic`) are tuned in the plan; defaults aim
@@ -204,6 +225,11 @@ same densities → same placement.
   - Magic resolves for BOTH `system-cairn-2e` and `system-shadowdark`.
   - Magic items carry `isMagic`/`compendiumKind:'magicItem'`; the pointable-find
     seam (`notable || magic`) holds.
+  - Monster density scales monster-ref counts; `monsterDensity:'off'` → no monster
+    refs added; tier-aware picks stay within the tier's level/HP band.
+  - Guardian: a notable-find POI in a `perilous` region reliably gets a high-level
+    guardian ref (across seeds); an `easy`-region notable find gets none; no
+    guardians when `monsterDensity:'off'`.
 - Integration: a generated world (via `executeGenerateWorld`) has seeded treasure
   on non-dungeon POIs and some NPCs, and a great item per faction; dungeon/ruin
   loot is unchanged.
