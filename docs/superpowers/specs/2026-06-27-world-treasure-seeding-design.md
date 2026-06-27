@@ -24,8 +24,11 @@ dungeon. Seed discoverable treasure across the living world.
 2. **Every non-party faction is guaranteed one "great" find** — a notable magic
    item (or notable treasure if magic is off) placed at its HQ POI (preferred) or
    leader NPC, flagged `notable`. Party faction excluded.
-3. **Per-region distribution:** every region gets discoverable items + treasure,
-   scaled by region tier (tougher biomes → richer).
+3. **Per-region distribution:** every region gets coverage of **each enabled
+   kind** — for any kind whose density `!== 'off'`, that region is guaranteed
+   ≥1: ≥1 treasure (if treasure on), ≥1 magic item (if magic on), and ≥1
+   **high-level monster** (if monsters on). Counts beyond the guaranteed one
+   scale by region tier (tougher biomes → richer/more).
 4. **Two density controls** in the create-realm form: independent **magic-item
    density** and **treasure density**, each `off | sparse | moderate | frequent`
    (default `moderate`). `off` seeds none of that kind.
@@ -166,20 +169,24 @@ Algorithm:
      `InventoryItem`).
    - `magicCount = round(baseMagic × LOOT_DENSITY[magicDensity] × tier)` magic
      items (`pickMagicItem`), placed on a few eligible holders.
-   - **Guarantee:** if `magicDensity !== 'off' || treasureDensity !== 'off'`, the
-     region gets **≥1 `notable` find** (a magic item if magic on, else a notable
-     treasure).
+   - **Per-kind guarantee (the core of "each region has stuff"):** for every kind
+     whose density `!== 'off'`, the region gets at least one — `max(1, count)`
+     treasures (if treasure on) and `max(1, count)` magic items (if magic on).
+   - **Notable guarantee:** the region gets **≥1 `notable` find** (a magic item if
+     magic on, else a notable treasure) for the B2 seam.
 3. **Faction great items.** For each non-party faction, place one **notable great
    item** (magic if `magicDensity !== 'off'`, else a notable treasure) at its HQ
    POI treasure (if `headquartersPoiId` set) or on its leader NPC inventory (if
    `leaderNpcId` set). This guarantee is independent of region budgets — every
    non-party faction always gets exactly one. (If a faction has neither HQ nor
    leader, skip it and log.)
-4. **Monsters (tier-aware).** When `monsterDensity !== 'off'`, sprinkle monster
-   refs onto monster-eligible POIs as today, but scale count by
-   `LOOT_DENSITY[monsterDensity] × tier` and pick monsters **appropriate to the
-   region tier** (filter the compendium to a level/HP band for `easy`/`tough`/
-   `perilous`) rather than fully random.
+4. **Monsters (tier-aware, per-region guaranteed).** When
+   `monsterDensity !== 'off'`, sprinkle monster refs onto monster-eligible POIs,
+   count `max(1, round(baseMonster × LOOT_DENSITY[monsterDensity] × tier))` so
+   **every region gets ≥1**, and pick monsters **appropriate to the region tier**
+   (filter the compendium to a level/HP band for `easy`/`tough`/`perilous`). The
+   region's guaranteed monster is a **high-level** pick (upper band for the tier)
+   so each region has a real threat, not just vermin.
 5. **Guardian rule.** A POI that received a `notable` find AND sits in a `tough`
    or `perilous` region has a weighted chance (e.g. perilous ~0.75, tough ~0.4)
    to also get a **guardian**: one tier-scaled HIGH-level monster ref (picked
