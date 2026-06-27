@@ -686,6 +686,9 @@ db.pois.hook('reading', (poi) => {
     watabouData: null,
     spatialDungeon: null,
     dungeonGenOptions: null,
+    ruinSite: null,
+    landmarkLore: null,
+    poiGenOptions: null,
   }
   for (const [key, val] of Object.entries(defaults)) {
     if (rec[key] === undefined) {

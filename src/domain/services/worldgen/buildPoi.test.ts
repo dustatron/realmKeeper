@@ -7,3 +7,12 @@ describe('buildPOI', () => {
     expect(poi.encounterChance).toBeNull()
   })
 })
+
+describe('buildPOI new fields', () => {
+  it('defaults ruinSite, landmarkLore, poiGenOptions to null', () => {
+    const poi = buildPOI({ regionId: 'r', name: 'X', type: 'ruin' })
+    expect(poi.ruinSite).toBeNull()
+    expect(poi.landmarkLore).toBeNull()
+    expect(poi.poiGenOptions).toBeNull()
+  })
+})
