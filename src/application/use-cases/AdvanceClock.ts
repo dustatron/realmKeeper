@@ -13,7 +13,7 @@ import type { INPCRepository } from '@application/ports/INPCRepository'
 import type { IWorldEventRepository } from '@application/ports/IWorldEventRepository'
 import type { IPOIEventRepository } from '@application/ports/IPOIEventRepository'
 import type { IEventBus } from '@application/ports/IEventBus'
-import { advanceDay, type WorldDateTime } from '@domain/value-objects/WorldDate'
+import { advanceDay, advanceWatch, type WorldDateTime } from '@domain/value-objects/WorldDate'
 import type { DiceResult } from '@shared/dice'
 import { newId } from '@shared/ulid'
 
@@ -213,6 +213,44 @@ export async function executeAdvanceDay(
   )
 
   return { previousDateTime: current, newDateTime, weather, factionTurns }
+}
+
+/**
+ * Advance by 1 watch. Mid-day this just bumps the watch (no rolls). Crossing
+ * the final watch of the day rolls into the next day with full day effects
+ * (weather, faction turns, POI events) by delegating to executeAdvanceDay.
+ * Returns the new datetime, or null if the realm is missing.
+ */
+export async function executeAdvanceWatch(
+  worldId: string,
+  deps: AdvanceDayDeps
+): Promise<WorldDateTime | null> {
+  const realm = await deps.realmRepo.getById(worldId)
+  if (!realm) return null
+
+  // Final watch of the day → roll over into the next day with full effects.
+  if (realm.currentWatch >= realm.watchesPerDay) {
+    const result = await executeAdvanceDay(worldId, deps)
+    return result?.newDateTime ?? null
+  }
+
+  const current: WorldDateTime = {
+    year: realm.currentYear,
+    season: realm.currentSeason,
+    day: realm.currentDay,
+    watch: realm.currentWatch,
+  }
+  const newDateTime = advanceWatch(current, realm.daysPerSeason, realm.watchesPerDay)
+
+  await deps.realmRepo.update({
+    ...realm,
+    currentWatch: newDateTime.watch,
+    updatedAt: Date.now(),
+  })
+
+  deps.eventBus.publish(createClockAdvancedEvent(worldId, 'watch', current, newDateTime, []))
+
+  return newDateTime
 }
 
 /** Roll + apply faction turns for the current date. Used for week-triggered turns. */
