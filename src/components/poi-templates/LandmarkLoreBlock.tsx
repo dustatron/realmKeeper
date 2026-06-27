@@ -22,7 +22,7 @@ export function LandmarkLoreBlock({ lore }: { lore: LandmarkLore }) {
       )}
       <Row label="Legend" text={lore.legend} />
       <Row label="Truth" text={lore.truth} />
-      <Row label="Interaction" text={`${lore.interactionTrigger} ${lore.interactionEffect}`} />
+      <Row label="Interaction" text={`${lore.interactionTrigger} ${lore.interactionEffect}`.trim()} />
       <Row label="Secret" text={lore.secret} />
       <Row label="Quest" text={lore.questHook} />
     </div>

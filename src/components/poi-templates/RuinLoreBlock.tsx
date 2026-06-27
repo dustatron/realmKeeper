@@ -11,7 +11,7 @@ export function RuinLoreBlock({ site }: { site: RuinSite }) {
       <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
         <span>Built by: <span className="font-medium capitalize text-foreground">{site.builderCulture}</span></span>
         <span>Era: <span className="font-medium text-foreground">{site.era}</span></span>
-        <span>State: <span className="font-medium capitalize text-foreground">{site.currentState.replace('-', ' ')}</span></span>
+        <span>State: <span className="font-medium capitalize text-foreground">{site.currentState.replace(/-/g, ' ')}</span></span>
       </div>
       {site.hook && (
         <p className="border-t border-border pt-1 text-sm text-foreground">
