@@ -112,6 +112,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
   const [settingsDaysPerSeason, setSettingsDaysPerSeason] = useState(30);
   const [settingsDaysPerWeek, setSettingsDaysPerWeek] = useState(7);
   const [settingsWatchesPerDay, setSettingsWatchesPerDay] = useState(3);
+  const [settingsMoonCycleLength, setSettingsMoonCycleLength] = useState(28);
   const [settingsFactionTurnTrigger, setSettingsFactionTurnTrigger] = useState<
     "day" | "week" | "manual"
   >("day");
@@ -178,6 +179,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
       setSettingsDaysPerSeason(realm.daysPerSeason);
       setSettingsDaysPerWeek(realm.daysPerWeek);
       setSettingsWatchesPerDay(realm.watchesPerDay);
+      setSettingsMoonCycleLength(realm.moonCycleLength);
       setSettingsFactionTurnTrigger(realm.factionTurnTrigger);
     }
   }, [realm?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -227,6 +229,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
       daysPerSeason: clamp(settingsDaysPerSeason, 10, 90),
       daysPerWeek: clamp(settingsDaysPerWeek, 5, 10),
       watchesPerDay: clamp(settingsWatchesPerDay, 2, 6),
+      moonCycleLength: clamp(settingsMoonCycleLength, 1, 99),
       factionTurnTrigger: settingsFactionTurnTrigger,
       updatedAt: Date.now(),
     });
@@ -649,7 +652,8 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                     </Label>
                     <Input
                       id="settingsDaysPerSeason"
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       min={10}
                       max={90}
                       value={settingsDaysPerSeason}
@@ -665,7 +669,8 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                     <Label htmlFor="settingsDaysPerWeek">Days per week</Label>
                     <Input
                       id="settingsDaysPerWeek"
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       min={5}
                       max={10}
                       value={settingsDaysPerWeek}
@@ -683,7 +688,8 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                     </Label>
                     <Input
                       id="settingsWatchesPerDay"
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       min={2}
                       max={6}
                       value={settingsWatchesPerDay}
@@ -692,6 +698,25 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                       }
                     />
                     <p className="text-xs text-muted-foreground">2 &ndash; 6</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="settingsMoonCycleLength">
+                      Moon cycle (days)
+                    </Label>
+                    <Input
+                      id="settingsMoonCycleLength"
+                      type="text"
+                      inputMode="numeric"
+                      min={1}
+                      max={99}
+                      value={settingsMoonCycleLength}
+                      onChange={(e) =>
+                        setSettingsMoonCycleLength(Number(e.target.value))
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Days from new moon to new moon
+                    </p>
                   </div>
                 </div>
               </CardContent>

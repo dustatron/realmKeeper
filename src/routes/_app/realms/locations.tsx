@@ -1,5 +1,4 @@
 import { createFileRoute, Link, Outlet, useRouterState } from '@tanstack/react-router'
-import { PageHeader } from '~/components/shared/PageHeader'
 import { Tabs, TabsList, TabsTrigger } from '~/components/ui/tabs'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useStarredPOIs } from '~/ui/hooks/usePOIs'
@@ -21,8 +20,7 @@ function LocationsLayout() {
         : 'regions'
 
   return (
-    <div className="space-y-4">
-      <PageHeader title="Locations" />
+    <div className="space-y-4 -mt-3">
       <Tabs value={activeTab}>
         <TabsList>
           <TabsTrigger value="pois" asChild>

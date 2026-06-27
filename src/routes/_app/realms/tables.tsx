@@ -7,7 +7,6 @@ import { executeRollOnTable, type RollOnTableDeps } from '@application/use-cases
 import { rollDice } from '@shared/dice'
 import type { TableDef, TableSet, TableEntry } from '@domain/entities/TableDef'
 import type { RollHistory } from '@domain/entities/RollHistory'
-import { PageHeader } from '~/components/shared/PageHeader'
 import { EmptyState } from '~/components/shared/EmptyState'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
@@ -55,7 +54,6 @@ function TablesPage() {
   if (tableSets.length === 0) {
     return (
       <div>
-        <PageHeader title="Random Tables" description="Browse and roll on random tables." />
         <EmptyState icon={TableProperties} title="No tables loaded" />
       </div>
     )
@@ -63,8 +61,6 @@ function TablesPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title="Random Tables" description="Browse and roll on random tables." />
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Table Browser */}
         <Card className="lg:col-span-1">

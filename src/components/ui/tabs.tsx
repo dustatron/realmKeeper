@@ -33,14 +33,14 @@ const tabsListVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "line",
     },
   }
 )
 
 function TabsList({
   className,
-  variant = "default",
+  variant = "line",
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List> &
   VariantProps<typeof tabsListVariants>) {
