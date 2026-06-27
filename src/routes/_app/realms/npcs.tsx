@@ -59,7 +59,6 @@ function NPCsPage() {
   if (!activeRealmId) {
     return (
       <div>
-        <PageHeader title="NPCs" description="Create and manage non-player characters." />
         <EmptyState
           icon={Users}
           title="No realm selected"
@@ -70,10 +69,8 @@ function NPCsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 -mt-3">
       <PageHeader
-        title="NPCs"
-        description="Create and manage non-player characters."
         actions={
           <Link to="/realms/npcs/new">
             <Button>
