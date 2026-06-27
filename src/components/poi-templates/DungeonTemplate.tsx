@@ -799,7 +799,20 @@ export function DungeonTemplate({
             );
             const description = poi.description?.trim();
             const readAloud = poi.readAloud?.trim();
-            if (!description && !hasLore && !readAloud && poi.tags.length === 0) return null;
+            // Generated POIs often duplicate read-aloud + description; hide the
+            // description when it largely repeats the read-aloud.
+            const wordsOf = (s: string) => new Set(s.toLowerCase().match(/[a-z0-9]+/g) ?? []);
+            const isRedundant = (a: string, b: string) => {
+              const wa = wordsOf(a);
+              const wb = wordsOf(b);
+              const [small, big] = wa.size <= wb.size ? [wa, wb] : [wb, wa];
+              if (small.size === 0) return true;
+              let overlap = 0;
+              small.forEach((w) => { if (big.has(w)) overlap++; });
+              return overlap / small.size >= 0.7;
+            };
+            const showDescription = !!description && (!readAloud || !isRedundant(description, readAloud));
+            if (!showDescription && !hasLore && !readAloud && poi.tags.length === 0) return null;
             return (
               <Collapsible open={overviewOpen} onOpenChange={setOverviewOpen}>
                 <div className="rounded-lg border">
@@ -838,7 +851,7 @@ export function DungeonTemplate({
                           {poi.readAloud}
                         </p>
                       )}
-                      {description && (
+                      {showDescription && (
                         <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
                           {description}
                         </p>
