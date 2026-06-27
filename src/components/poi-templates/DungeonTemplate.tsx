@@ -776,9 +776,6 @@ export function DungeonTemplate({
         </div>
       )}
 
-      {/* Read Aloud */}
-      <ReadAloudBlock text={poi.readAloud} />
-
       {/* Tabs */}
       <Tabs value={activeTab ?? "rooms"} onValueChange={onTabChange}>
         <TabsList variant="line" className="w-full">
@@ -813,7 +810,8 @@ export function DungeonTemplate({
                 (ecology.historyLayers?.length ?? 0) > 0)
             );
             const description = poi.description?.trim();
-            if (!description && !hasLore) return null;
+            const readAloud = poi.readAloud?.trim();
+            if (!description && !hasLore && !readAloud) return null;
             return (
               <Collapsible open={overviewOpen} onOpenChange={setOverviewOpen}>
                 <div className="rounded-lg border">
@@ -842,6 +840,7 @@ export function DungeonTemplate({
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="space-y-3 px-4 pb-3">
+                      {readAloud && <ReadAloudBlock text={poi.readAloud} />}
                       {description && (
                         <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
                           {description}
