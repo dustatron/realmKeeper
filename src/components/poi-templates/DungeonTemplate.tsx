@@ -31,7 +31,13 @@ import {
   Minus,
   Lock,
   KeyRound,
+  Eye,
 } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "~/components/ui/collapsible";
 import { DispositionBadge } from "~/components/shared/DispositionBadge";
 import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
 import { FactionChip } from "~/components/shared/FactionChip";
@@ -701,6 +707,8 @@ export function DungeonTemplate({
     }
   }, [selectedChildId]);
 
+  const [overviewOpen, setOverviewOpen] = useState(true);
+
   const [layout, setLayout] = useState<"columns" | "stacked">(() => {
     try {
       const saved = localStorage.getItem("dungeon-layout");
@@ -771,43 +779,6 @@ export function DungeonTemplate({
       {/* Read Aloud */}
       <ReadAloudBlock text={poi.readAloud} />
 
-      {/* Dungeon Lore — shows generated ecology data (above tabs, always visible) */}
-      {poi.spatialDungeon?.ecology && (() => {
-        const { builderCulture, currentInhabitants, history, historyLayers } = poi.spatialDungeon.ecology
-        if (!builderCulture && !currentInhabitants && !history) return null
-        return (
-          <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs">🏚</span>
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dungeon Lore</span>
-            </div>
-            {history && (
-              <p className="text-sm italic text-foreground">{history}</p>
-            )}
-            <div className="flex gap-4 text-xs text-muted-foreground">
-              {builderCulture && (
-                <span>Built by: <span className="text-foreground font-medium capitalize">{builderCulture}</span></span>
-              )}
-              {currentInhabitants && (
-                <span>Inhabitants: <span className="text-foreground font-medium capitalize">{currentInhabitants}</span></span>
-              )}
-            </div>
-            {historyLayers && historyLayers.length > 0 && (
-              <div className="space-y-1 pt-1 border-t border-border">
-                <span className="text-xs text-muted-foreground uppercase tracking-wide">History Layers</span>
-                {historyLayers.map((layer, i) => (
-                  <div key={i} className="text-xs">
-                    <span className="font-medium text-foreground capitalize">{layer.builders}</span>
-                    <span className="text-muted-foreground ml-1">({layer.era})</span>
-                    {layer.fate && <p className="text-muted-foreground italic ml-2">{layer.fate}</p>}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )
-      })()}
-
       {/* Tabs */}
       <Tabs value={activeTab ?? "rooms"} onValueChange={onTabChange}>
         <TabsList variant="line" className="w-full">
@@ -831,6 +802,107 @@ export function DungeonTemplate({
 
         {/* Rooms tab */}
         <TabsContent value="rooms" className="space-y-4 pt-3">
+          {/* Overview — description + dungeon lore (collapsible, like settlement) */}
+          {(() => {
+            const ecology = poi.spatialDungeon?.ecology;
+            const hasLore = !!(
+              ecology &&
+              (ecology.builderCulture ||
+                ecology.currentInhabitants ||
+                ecology.history ||
+                (ecology.historyLayers?.length ?? 0) > 0)
+            );
+            const description = poi.description?.trim();
+            if (!description && !hasLore) return null;
+            return (
+              <Collapsible open={overviewOpen} onOpenChange={setOverviewOpen}>
+                <div className="rounded-lg border">
+                  <CollapsibleTrigger asChild>
+                    <button className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted/50">
+                      <span className="flex items-center gap-2">
+                        <ChevronRight
+                          className={`size-4 text-muted-foreground transition-transform ${overviewOpen ? "rotate-90" : ""}`}
+                        />
+                        <Eye className="size-4 text-muted-foreground" />
+                        Overview
+                      </span>
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        {poi.subtypeLabel && (
+                          <Badge variant="secondary" className="text-xs capitalize">
+                            {poi.subtypeLabel}
+                          </Badge>
+                        )}
+                        {poi.floor != null && (
+                          <Badge variant="outline" className="text-xs">
+                            F{poi.floor}
+                          </Badge>
+                        )}
+                      </span>
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="space-y-3 px-4 pb-3">
+                      {description && (
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                          {description}
+                        </p>
+                      )}
+                      {hasLore && ecology && (
+                        <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs">🏚</span>
+                            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              Dungeon Lore
+                            </span>
+                          </div>
+                          {ecology.history && (
+                            <p className="text-sm italic text-foreground">{ecology.history}</p>
+                          )}
+                          <div className="flex gap-4 text-xs text-muted-foreground">
+                            {ecology.builderCulture && (
+                              <span>
+                                Built by:{" "}
+                                <span className="font-medium capitalize text-foreground">
+                                  {ecology.builderCulture}
+                                </span>
+                              </span>
+                            )}
+                            {ecology.currentInhabitants && (
+                              <span>
+                                Inhabitants:{" "}
+                                <span className="font-medium capitalize text-foreground">
+                                  {ecology.currentInhabitants}
+                                </span>
+                              </span>
+                            )}
+                          </div>
+                          {ecology.historyLayers && ecology.historyLayers.length > 0 && (
+                            <div className="space-y-1 border-t border-border pt-1">
+                              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                                History Layers
+                              </span>
+                              {ecology.historyLayers.map((layer, i) => (
+                                <div key={i} className="text-xs">
+                                  <span className="font-medium capitalize text-foreground">
+                                    {layer.builders}
+                                  </span>
+                                  <span className="ml-1 text-muted-foreground">({layer.era})</span>
+                                  {layer.fate && (
+                                    <p className="ml-2 italic text-muted-foreground">{layer.fate}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
+            );
+          })()}
+
           {/* Map — full width above the grid */}
           {mapSection && <div>{mapSection}</div>}
 
