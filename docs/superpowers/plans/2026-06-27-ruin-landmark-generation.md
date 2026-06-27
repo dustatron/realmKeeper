@@ -1683,7 +1683,7 @@ git commit -m "feat: generateRuinSite pure plan generator"
 - Test: `src/application/use-cases/GenerateRuin.test.ts`
 
 **Interfaces:**
-- Consumes: `generateRuinSite` (Task 16), `resolveCreature` (Task 1), `generateTreasureItems` (Task 2), `ruinCreatureLevel` (Task 14), `biomeTier` (Task 9), `bulkCreate` (Task 8).
+- Consumes: `generateRuinSite` (Task 16), `resolveCreature` (Task 1), `buildCreatureNpc` (shared NPC factory — `@domain/services/worldgen/npcFactory`, added by the shared-NPC-factory bugfix), `generateTreasureItems` (Task 2), `ruinCreatureLevel` (Task 14), `biomeTier` (Task 9), `bulkCreate` (Task 8).
 - Produces: `executeGenerateRuin(input: { poiId: string; worldId: string; systemId: string; seed: string; usedHistory?: Set<string> }, deps: { poiRepo: IPOIRepository; npcRepo: INPCRepository; regionRepo: IRegionRepository }): Promise<void>`.
 
 Behavior: load POI + region biome → tier; wipe prior ruin NPCs (`npcRepo.getByPoiId` → `delete`); generate plan; resolve occupants to NPCs (bulkCreate), record ids into area `OccupantGroup.npcIds`; resolve loot to `TreasureItem[]` tagged with `areaIndex`, mark one `notable`; concatenate into `poi.treasure`; set `ruinSite.notablePrizeItemId`; save `ruinSite` + `poiGenOptions.seed`.
@@ -1757,12 +1757,17 @@ import type { NPC } from '@domain/entities/NPC'
 import type { TreasureItem } from '@domain/value-objects/TreasureItem'
 import type { RuinSite, RuinArea, OccupantGroup } from '@domain/entities/RuinSite'
 import { SeededRandom } from '~/lib/dungeon/SeededRandom'
-import { newId } from '@shared/ulid'
 import { biomeTier } from '@domain/services/worldgen/regionFlavor'
-import { resolveCreature, fallbackSystemBlock, systemBlockFromMonster, getMonsterDescription } from '~/lib/worldgen/compendium-utils'
+import { resolveCreature } from '~/lib/worldgen/compendium-utils'
+import { buildCreatureNpc } from '@domain/services/worldgen/npcFactory'
 import { generateTreasureItems } from '~/lib/worldgen/treasure-gen'
 import { generateRuinSite } from '~/lib/ruin/RuinGenerator'
 import { ruinCreatureLevel } from '~/lib/ruin/ruinCreaturePools'
+
+// NOTE: occupant NPCs are built with the SHARED `buildCreatureNpc` factory
+// (created by the shared-NPC-factory bugfix). Do not hand-roll NPC object
+// literals here. `newId` is no longer needed in this file (the factory mints
+// ids; treasure ids come from generateTreasureItems).
 
 export interface GenerateRuinInput {
   poiId: string; worldId: string; systemId: string; seed: string
@@ -1799,17 +1804,23 @@ export async function executeGenerateRuin(input: GenerateRuinInput, deps: Genera
       for (let i = 0; i < spec.count; i++) {
         const slug = spec.slugs[i % spec.slugs.length]
         const resolved = resolveCreature(slug, input.systemId, rng, { levelCap })
-        const npc: NPC = {
-          id: newId(), worldId: input.worldId,
+        // Use the SHARED creature builder (src/domain/services/worldgen/npcFactory.ts)
+        // so ruin occupants get the same appearance/stat-block treatment as dungeon
+        // creatures (appearance from the bestiary description). Do NOT hand-build the
+        // NPC literal here — that is exactly the divergence the shared factory removes.
+        const npc = buildCreatureNpc({
+          worldId: input.worldId,
+          regionId: poi.regionId,
+          poiId: poi.id,
+          systemId: input.systemId,
+          compendiumId: resolved?.id ?? null,
           name: resolved?.name ?? slug.replace(/_/g, ' '),
-          factionIds: [], regionId: poi.regionId, poiId: poi.id,
-          lifeStatus: 'alive', movementStatus: 'present',
-          description: [resolved ? getMonsterDescription(resolved.id) : '', `Activity: ${spec.activity}.`].filter(Boolean).join('\n\n'),
-          traits: [], motivation: '', appearance: '', voice: '', want: '',
-          tags: ['creature', 'ruin'], imageUrl: null,
-          systemBlock: resolved ? systemBlockFromMonster(resolved.id) : fallbackSystemBlock(1, 'medium', input.systemId),
-          disposition: 'hostile', starred: false, createdAt: now, updatedAt: now,
-        }
+          activity: spec.activity,
+          depth: levelCap,
+          dangerLevel: 'medium',
+          disposition: 'hostile',
+          tags: ['creature', 'ruin'],
+        }, rng)
         newNpcs.push(npc)
         npcIds.push(npc.id)
       }
