@@ -7,6 +7,18 @@ export const LANDMARK_LEGENDS = [
   'travelers whisper it shows the face of your true love',
   'the dead are said to gather here on the longest night',
   "it is told the stones move a finger's width each year",
+  'they say a sleeper lies beneath, and must never be woken',
+  'old wives warn that what you bury here comes back changed',
+  'sailors swear it sings before a storm rolls in',
+  'the faithful say a saint ascended from this very spot',
+  'hunters claim no animal will set foot within the ring',
+  'they say it grants true dreams, and steals a year of life for each',
+  'the village blames it for every child born under a bad star',
+  'they say a king hid his crown here and his conscience with it',
+  'travelers leave coins so it will let them pass unharmed',
+  'it is said to mark the exact center of the world',
+  'they say two lovers are buried beneath, still holding hands',
+  'the old road-songs name it the last honest place in the realm',
 ] as const
 
 export const LANDMARK_TRUTHS = [
@@ -18,6 +30,18 @@ export const LANDMARK_TRUTHS = [
   'it is a prison, and the lock is failing',
   'it is a map, if you know how to stand',
   'it is a grave marker for a war everyone agreed to forget',
+  'it is a relay in a network whose other points are long lost',
+  'it is the last work of a dying art, and no one can repeat it',
+  'it is a calendar that still keeps perfect time',
+  'it is a door that only opens for those it was keyed to, all now dead',
+  'it is feeding on something, slowly, and has been for centuries',
+  'it is a monument to a crime the victors rewrote as a triumph',
+  'it is alive, in a slow and patient way that has nothing to do with us',
+  'it is a warning, and the thing it warns of is still coming',
+  'it was put here to be forgotten, and almost succeeded',
+  'it remembers every word ever spoken beside it',
+  'it is a seed, and the conditions for it to grow are nearly met',
+  'it is the anchor of a promise no one alive agreed to keep',
 ] as const
 
 export const LANDMARK_SECRETS = [
@@ -29,6 +53,18 @@ export const LANDMARK_SECRETS = [
   'a true word, spoken aloud, reveals a chamber',
   'a forgotten ledger names who built it and why',
   'a small door, child-sized, leads somewhere it should not',
+  'a face is hidden in the carving, watching the entrance',
+  'a hairline seam marks a panel that swings inward',
+  'a constellation is mapped on the underside, pointing elsewhere',
+  'a body was sealed inside, with something clutched in its hands',
+  'a second inscription lies beneath the first, in an older tongue',
+  'a cavity holds a vial that has not yet dried out',
+  'the shadow it casts at noon falls on a buried marker',
+  'a loose stone conceals a niche packed with old coin',
+  'a melody, hummed correctly, makes one wall ring hollow',
+  'a tally of names continues where no living hand could reach',
+  'rainwater pools to reveal letters cut too shallow to see dry',
+  'a compartment holds half a map; the other half is far away',
 ] as const
 
 export const LANDMARK_TRIGGERS = [
@@ -40,6 +76,16 @@ export const LANDMARK_TRIGGERS = [
   "When the moon's light strikes it",
   'When you climb to its highest point',
   'When you read the inscription aloud',
+  'When you weep before it',
+  'When you press your ear to the stone',
+  'When you pour out wine or water at its base',
+  'When two people clasp hands across it',
+  'When you stay past nightfall',
+  'When you carve your name beside the others',
+  'When you answer its riddle truthfully',
+  'When you take something from it',
+  'When you arrive at dawn, alone',
+  'When you speak the name of the dead here',
 ] as const
 
 export const LANDMARK_EFFECTS = [
@@ -51,6 +97,16 @@ export const LANDMARK_EFFECTS = [
   'nothing happens — but you are never quite watched the same again',
   'you glimpse the place as it was at its height',
   'a warning, wordless and cold, of something coming',
+  'you hear, just once, the voice of someone you have lost',
+  'a small wound or ailment quietly closes over',
+  'you are shown a face you will later meet',
+  'a single true name is whispered into your mind',
+  'you feel watched for days, by something patient and far off',
+  'an object you carry is subtly, permanently changed',
+  'you dream that night of the place as it will be',
+  'a debt of luck is opened — paid back, with interest, at the worst time',
+  'a door somewhere else, that you have never seen, unlocks',
+  'you understand one thing you were never meant to know',
 ] as const
 
 export const LANDMARK_QUEST_HOOKS = [
@@ -62,4 +118,12 @@ export const LANDMARK_QUEST_HOOKS = [
   'the true word is written in a book held by a distant cult',
   'the secret chamber holds half of a thing; the other half is elsewhere',
   'pilgrims will pay well for proof of what is real here',
+  'a scholar in the capital would ruin themselves to see this',
+  'the warning names a date, and it is nearly here',
+  'whoever defaced it did so recently, and is not far',
+  'the buried map points to where the builders fled',
+  'a child in a nearby village has begun speaking its words in their sleep',
+  'something has started leaving offerings of its own',
+  'the effect followed you home, and will not fade on its own',
+  'a faction is quietly buying up the land all around it',
 ] as const

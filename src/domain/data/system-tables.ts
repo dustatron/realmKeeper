@@ -3,13 +3,14 @@ import { cairnTableSets, cairnTableDefs } from './cairn-tables'
 import { shadowdarkTableSets, shadowdarkTableDefs } from './shadowdark-tables'
 import { treasureTableSets, treasureTableDefs } from './treasure-tables'
 import { settlementProblemTableSets, settlementProblemTableDefs } from './worldgen/settlementProblems'
+import { ruinLandmarkTableSets, ruinLandmarkTableDefs } from './ruin-landmark-tables'
 
 // ---------------------------------------------------------------------------
 // Aggregate all system tables (add more systems here later)
 // ---------------------------------------------------------------------------
 
-const allSystemSets: TableSet[] = [...cairnTableSets, ...shadowdarkTableSets, ...treasureTableSets, ...settlementProblemTableSets]
-const allSystemDefs: TableDef[] = [...cairnTableDefs, ...shadowdarkTableDefs, ...treasureTableDefs, ...settlementProblemTableDefs]
+const allSystemSets: TableSet[] = [...cairnTableSets, ...shadowdarkTableSets, ...treasureTableSets, ...settlementProblemTableSets, ...ruinLandmarkTableSets]
+const allSystemDefs: TableDef[] = [...cairnTableDefs, ...shadowdarkTableDefs, ...treasureTableDefs, ...settlementProblemTableDefs, ...ruinLandmarkTableDefs]
 
 // Pre-built lookup maps for O(1) access
 const defById = new Map<string, TableDef>(allSystemDefs.map((d) => [d.id, d]))
