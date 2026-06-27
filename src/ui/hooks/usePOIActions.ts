@@ -10,12 +10,22 @@ import { executeRollEncounter } from '@application/use-cases/RollEncounter'
 import { executeCreateEncounterTable } from '@application/use-cases/CreateEncounterTable'
 import { executeUpdateEncounterTable } from '@application/use-cases/UpdateEncounterTable'
 import { executeUpdateNPC } from '@application/use-cases/UpdateNPC'
+import { executeCreateNPC } from '@application/use-cases/CreateNPC'
+import {
+  executeEncounterCascade,
+  type CascadeAction,
+  type CascadeContext,
+  type CascadeUseCaseDeps,
+} from '@application/use-cases/RollEncounterCascade'
+import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import type { POI } from '@domain/entities/POI'
 import type { Region } from '@domain/entities/Region'
 import type { NPC } from '@domain/entities/NPC'
 import type { Trap } from '@domain/value-objects/Trap'
 import type { TreasureItem } from '@domain/value-objects/TreasureItem'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
+import type { SystemConfig } from '@domain/entities/SystemConfig'
+import type { EncounterRollResult } from '@domain/value-objects/EncounterRollResult'
 import type { CompendiumRef } from '@domain/entities/Compendium'
 import type { Rumor } from '@domain/entities/Rumor'
 import type { Notice } from '@domain/entities/Notice'
@@ -33,9 +43,10 @@ type Container = {
   noticeRepo: Parameters<typeof executeCreateNotice>[1]['noticeRepo']
   encounterTableRepo: Parameters<typeof executeCreateEncounterTable>[1]['encounterTableRepo']
   npcRepo: Parameters<typeof executeUpdateNPC>[1]['npcRepo']
+  tableRepo: Parameters<typeof executeGenerateNPC>[1]['tableRepo']
 }
 
-export function usePOIActions(poi: POI | null | undefined, region: Region | null | undefined, encounterTable: EncounterTable | null | undefined, container: Container) {
+export function usePOIActions(poi: POI | null | undefined, region: Region | null | undefined, encounterTable: EncounterTable | null | undefined, container: Container, systemConfig: SystemConfig | null | undefined) {
   const handleUpdateTraps = async (traps: Trap[]) => {
     if (!poi) return
     await executeUpdatePOI({ ...poi, traps }, { poiRepo: container.poiRepo })
@@ -109,6 +120,46 @@ export function usePOIActions(poi: POI | null | undefined, region: Region | null
     }
   }
 
+  // Lazily create a persistable encounter-table row for this POI when none exists,
+  // so the cascade's lastResult can be saved. An empty row is fine — getActiveSections
+  // falls back to default entries per category.
+  const ensureEncounterTableForPoi = async (p: POI, r: Region): Promise<EncounterTable> => {
+    if (encounterTable) return encounterTable
+    return executeCreateEncounterTable(
+      { ownerPoiId: p.id, worldId: r.worldId },
+      { encounterTableRepo: container.encounterTableRepo }
+    )
+  }
+
+  const handleEncounterCascade = async (action: CascadeAction): Promise<EncounterRollResult> => {
+    if (!poi || !region || !systemConfig) throw new Error('Missing context for encounter cascade')
+    const table = await ensureEncounterTableForPoi(poi, region)
+    const ctx: CascadeContext = {
+      table,
+      poiId: poi.id,
+      regionId: poi.regionId,
+      worldId: region.worldId,
+      systemConfig,
+    }
+    const deps: CascadeUseCaseDeps = {
+      encounterTableRepo: container.encounterTableRepo,
+      tableRepo: container.tableRepo,
+    }
+    return executeEncounterCascade(action, ctx, deps)
+  }
+
+  const handleSaveEncounterNpc = async (): Promise<void> => {
+    const result = encounterTable?.lastResult
+    if (!poi || !result?.npc || result.npcSavedId) return
+    const npc = { ...result.npc, poiId: poi.id }
+    await executeCreateNPC(npc, { npcRepo: container.npcRepo })
+    await container.encounterTableRepo.update({
+      ...encounterTable!,
+      lastResult: { ...result, npcSavedId: npc.id },
+      updatedAt: Date.now(),
+    })
+  }
+
   const handleUpdateNPC = async (npc: NPC) => {
     await executeUpdateNPC(npc, { npcRepo: container.npcRepo })
   }
@@ -168,6 +219,8 @@ export function usePOIActions(poi: POI | null | undefined, region: Region | null
     handleDeleteNotice,
     handleRollEncounter,
     handleSaveEncounterTable,
+    handleEncounterCascade,
+    handleSaveEncounterNpc,
     handleUpdateNPC,
     handleUpdateTreasure,
     handleUpdateCompendiumRefs,

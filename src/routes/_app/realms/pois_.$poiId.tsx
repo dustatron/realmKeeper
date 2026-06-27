@@ -144,7 +144,7 @@ function POIDetailPage() {
   const parentPoi = usePOI(poi?.parentPoiId ?? null)
   const parentMaps = usePOIMaps(poi?.parentPoiId ?? null)
 
-  const actions = usePOIActions(poi, region, encounterTable, container)
+  const actions = usePOIActions(poi, region, encounterTable, container, systemConfig)
 
   // Local UI state
   const [mapUploadDialogOpen, setMapUploadDialogOpen] = useState(false)
