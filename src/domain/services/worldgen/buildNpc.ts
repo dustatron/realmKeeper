@@ -10,6 +10,7 @@ import { newId } from '@shared/ulid'
 import { pickCairn } from './cairnPick'
 import { makeSeededDice } from './seededDice'
 import { pickNpcWant } from '@domain/data/worldgen/npcWants'
+import { buildHumanoidFlavor } from './npcFactory'
 
 export type NpcRole = 'leader' | 'agent' | 'inhabitant'
 
@@ -55,21 +56,9 @@ export function buildNpc(
   const name = [firstName, surname].filter(Boolean).join(' ') || 'Unnamed'
 
   // --- Flavor (Cairn character traits) ---
-  const physique = pickCairn(rng, 'table-cairn-trait-physique')
-  const skin = pickCairn(rng, 'table-cairn-trait-skin')
-  const hair = pickCairn(rng, 'table-cairn-trait-hair')
-  const face = pickCairn(rng, 'table-cairn-trait-face')
-  const speech = pickCairn(rng, 'table-cairn-trait-speech')
-  const clothing = pickCairn(rng, 'table-cairn-trait-clothing')
-  const virtue = pickCairn(rng, 'table-cairn-trait-virtue')
-  const vice = pickCairn(rng, 'table-cairn-trait-vice')
-
-  // The Cairn trait values are bare adjectives, so weave them into prose that
-  // reads naturally ("Wears frumpy clothes", not "Wears frumpy").
-  const hairDesc = hair === 'Bald' ? 'a bald head' : `${hair.toLowerCase()} hair`
-  const appearance =
-    `${physique}, with ${skin.toLowerCase()} skin, ${hairDesc}, and ${face.toLowerCase()} features. ` +
-    `Wears ${clothing.toLowerCase()} clothes.`
+  // Consumed in exact order (physique, skin, hair, face, speech, clothing, virtue, vice)
+  // so seeded worldgen output is unchanged.
+  const flavor = buildHumanoidFlavor(rng)
 
   // --- SystemBlock (rolled for the realm's actual system) ---
   const block = buildDefaultSystemBlock(systemConfig)
@@ -96,11 +85,11 @@ export function buildNpc(
     poiId: input.poiId ?? null,
     lifeStatus: 'alive',
     movementStatus: 'present',
-    description: `${article} ${race} ${roleLabel} — ${virtue.toLowerCase()} but ${vice.toLowerCase()}.`,
-    traits: [virtue, vice],
-    motivation: virtue,
-    appearance,
-    voice: speech,
+    description: `${article} ${race} ${roleLabel} — ${flavor.traits[0].toLowerCase()} but ${flavor.traits[1].toLowerCase()}.`,
+    traits: flavor.traits,
+    motivation: flavor.motivation,
+    appearance: flavor.appearance,
+    voice: flavor.voice,
     // Faction NPCs carry their agenda goal; everyone else gets a want from the
     // NPC wants table (a favor to ask the party, or a personal pursuit), so
     // every NPC is a potential quest-giver.
