@@ -1346,8 +1346,6 @@ export function DungeonTemplate({
             onSaveNpc={onSaveEncounterNpc}
             onSaveTable={onSaveEncounterTable}
             onRoll={onRollEncounter}
-            systemId={systemId}
-            worldId={worldId}
           />
         </TabsContent>
 

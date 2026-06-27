@@ -21,7 +21,7 @@ export interface EncounterTable {
   customSections: CustomEncounterSection[]
   disabledCategories: EncounterCategory[]
   /** Last rolled cascade result (persisted so it survives reloads). */
-  lastResult: EncounterRollResult | null
+  lastResult?: EncounterRollResult | null
   createdAt: number
   updatedAt: number
 }

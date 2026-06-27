@@ -29,8 +29,6 @@ interface EncounterCascadeProps {
   onSaveNpc?: () => Promise<void>;
   onSaveTable?: (entries: SavePayload) => void;
   onRoll: () => Promise<RollEncounterResult>;
-  systemId?: string | null;
-  worldId?: string | null;
 }
 
 /** Build a one-line summary of the persisted result for the banner. */
@@ -62,9 +60,10 @@ export function EncounterCascade({
     }
   };
 
-  // The hit section (master roll lands on sections[masterRoll - 1]).
+  // Resolve hit section by category identity so it stays correct if the GM
+  // edits tables (disables/reorders sections) after rolling.
   const hitSection = lastResult
-    ? sections[lastResult.masterRoll - 1]
+    ? sections.find(s => s.category === lastResult.category)
     : undefined;
 
   return (
@@ -175,7 +174,7 @@ export function EncounterCascade({
               <tbody>
                 {sections.map((section, i) => {
                   const isHit = lastResult
-                    ? i === lastResult.masterRoll - 1
+                    ? section.category === lastResult.category
                     : false;
                   return (
                     <tr
