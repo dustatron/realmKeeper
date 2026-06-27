@@ -652,6 +652,8 @@ function POIDetailPage() {
             poiEvents={poiEvents}
             encounterTable={encounterTable}
             onRollEncounter={actions.handleRollEncounter}
+            onRollCascade={actions.handleEncounterCascade}
+            onSaveEncounterNpc={actions.handleSaveEncounterNpc}
             onSaveEncounterTable={actions.handleSaveEncounterTable}
             onCreateChild={() => setCreateChildOpen(true)}
             onCreateNPC={openCreateNPC}

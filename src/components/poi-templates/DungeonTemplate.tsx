@@ -35,7 +35,7 @@ import {
 import { DispositionBadge } from "~/components/shared/DispositionBadge";
 import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
 import { FactionChip } from "~/components/shared/FactionChip";
-import { EncounterTableUI } from "~/components/shared/EncounterTableUI";
+import { EncounterCascade } from "~/components/shared/EncounterCascade";
 import { ReadAloudBlock } from "~/components/shared/ReadAloudBlock";
 import { AtAGlancePanel } from "~/components/shared/AtAGlancePanel";
 import { WanderingMonsterTable } from "~/components/shared/WanderingMonsterTable";
@@ -50,6 +50,8 @@ import type { ResolvedPath } from "~/ui/hooks/useResolvedPaths";
 import type { POIEvent } from "@domain/entities/POIEvent";
 import type { KeyLockPair, Discovery, DiscoveryType, SpatialRoom } from "~/lib/dungeon/types";
 import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
+import type { CascadeAction } from "@application/use-cases/RollEncounterCascade";
+import type { EncounterRollResult } from "@domain/value-objects/EncounterRollResult";
 
 const DISCOVERY_ICONS: Record<DiscoveryType, string> = {
   document: '\u{1F4C4}',
@@ -564,6 +566,8 @@ interface DungeonTemplateProps {
   poiEvents: POIEvent[];
   encounterTable: EncounterTable | null | undefined;
   onRollEncounter: () => Promise<RollEncounterResult>;
+  onRollCascade: (action: CascadeAction) => Promise<EncounterRollResult>;
+  onSaveEncounterNpc?: () => Promise<void>;
   onSaveEncounterTable?: (
     entries: Pick<
       EncounterTable,
@@ -601,6 +605,8 @@ export function DungeonTemplate({
   poiEvents,
   encounterTable,
   onRollEncounter,
+  onRollCascade,
+  onSaveEncounterNpc,
   onSaveEncounterTable,
   onCreateChild,
   onCreateNPC,
@@ -1334,10 +1340,14 @@ export function DungeonTemplate({
 
         {/* Encounters tab */}
         <TabsContent value="encounters" className="pt-3">
-          <EncounterTableUI
+          <EncounterCascade
             table={encounterTable}
+            onRollCascade={onRollCascade}
+            onSaveNpc={onSaveEncounterNpc}
+            onSaveTable={onSaveEncounterTable}
             onRoll={onRollEncounter}
-            onSave={onSaveEncounterTable}
+            systemId={systemId}
+            worldId={worldId}
           />
         </TabsContent>
 
