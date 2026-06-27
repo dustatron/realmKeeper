@@ -54,18 +54,19 @@ describe('executeGenerateRuin', () => {
   })
 
   it('regen wipes prior occupant NPCs (no dupes)', async () => {
-    const first = await seedRuin('system-shadowdark')
+    // 'ruin-occupants' + mountains is proven to produce occupants, so there is
+    // something to wipe (guards against a vacuous test).
+    const first = await seedRuin('system-shadowdark', 'ruin-occupants')
     const priorNpcs = await db.npcs.where('poiId').equals(first.id).toArray()
     const priorIds = new Set(priorNpcs.map((n) => n.id))
+    expect(priorIds.size).toBeGreaterThan(0)
     await executeGenerateRuin({ poiId: first.id, worldId: 'w', systemId: 'system-shadowdark', seed: 'ruin-2' }, deps())
     const afterNpcs = await db.npcs.where('poiId').equals(first.id).toArray()
     const afterIds = afterNpcs.map((n) => n.id)
-    // None of the prior NPC ids survive: old occupants truly wiped
+    // None of the prior NPC ids survive: old occupants truly wiped (not additive)
     for (const id of priorIds) {
       expect(afterIds).not.toContain(id)
     }
-    // Count only reflects the latest generation (not additive)
-    expect(afterNpcs.length).toBeGreaterThanOrEqual(0)
   })
 
   it('magic notable prize is reachable (~60% chance per ruin)', async () => {
