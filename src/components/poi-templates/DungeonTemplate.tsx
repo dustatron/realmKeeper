@@ -825,30 +825,6 @@ export function DungeonTemplate({
 
         {/* Rooms tab */}
         <TabsContent value="rooms" className="space-y-4 pt-3">
-          {/* Layout toggle — hidden on mobile (always stacked) */}
-          <div className="hidden md:flex justify-end">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                updateLayout(layout === "columns" ? "stacked" : "columns")
-              }
-              className="gap-1.5"
-            >
-              {layout === "columns" ? (
-                <>
-                  <Rows2 className="size-4" />
-                  Stacked
-                </>
-              ) : (
-                <>
-                  <Columns2 className="size-4" />
-                  Columns
-                </>
-              )}
-            </Button>
-          </div>
-
           {/* Map — full width above the grid */}
           {mapSection && <div>{mapSection}</div>}
 
@@ -868,10 +844,38 @@ export function DungeonTemplate({
                     </Badge>
                   )}
                 </h4>
-                <Button size="sm" variant="outline" onClick={onCreateChild}>
-                  <Plus className="mr-1.5 size-3.5" />
-                  Add Room
-                </Button>
+                <div className="flex items-center gap-2">
+                  {/* Add Room creates a list-only room with no spatial placement or
+                      connection — only offer it when there's no spatial map. With a
+                      map, rooms are created + connected in the map's edit mode. */}
+                  {!poi.spatialDungeon && (
+                    <Button size="sm" variant="outline" onClick={onCreateChild}>
+                      <Plus className="mr-1.5 size-3.5" />
+                      Add Room
+                    </Button>
+                  )}
+                  {/* Layout toggle — hidden on mobile (always stacked) */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      updateLayout(layout === "columns" ? "stacked" : "columns")
+                    }
+                    className="hidden md:flex gap-1.5"
+                  >
+                    {layout === "columns" ? (
+                      <>
+                        <Rows2 className="size-4" />
+                        Stacked
+                      </>
+                    ) : (
+                      <>
+                        <Columns2 className="size-4" />
+                        Columns
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
 
               {/* Compact room cards */}
@@ -973,38 +977,62 @@ export function DungeonTemplate({
                             </Link>
                           </span>
                         </div>
+
+                        {/* Inline detail (stacked mode only) */}
+                        {layout === "stacked" && isSelected && (
+                          <div
+                            className="mt-2.5 pt-2.5 border-t cursor-default"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <RoomDetailPanel
+                              room={child}
+                              index={idx}
+                              npcs={childNpcList}
+                              onUpdateNPC={onUpdateNPC}
+                              siblings={childPois}
+                              onSelectChild={onSelectChild}
+                              keyLockInfo={roomKL}
+                              discoveries={roomDiscoveries}
+                              onToggleDiscoveryFound={(discoveryId) => handleToggleDiscoveryFound(child.id, discoveryId)}
+                            />
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No rooms mapped yet.
+                  {poi.spatialDungeon
+                    ? "No rooms yet. Use the map's edit mode to add and connect rooms."
+                    : "No rooms mapped yet."}
                 </p>
               )}
             </div>
 
-            {/* RIGHT — Room detail panel */}
-            <div className="space-y-3">
-              <div ref={detailPanelRef} />
-              {selectedRoom ? (
-                <RoomDetailPanel
-                  room={selectedRoom}
-                  index={selectedRoomIndex}
-                  npcs={npcsByPoiId[selectedRoom.id] ?? []}
-                  onUpdateNPC={onUpdateNPC}
-                  siblings={childPois}
-                  onSelectChild={onSelectChild}
-                  keyLockInfo={keyLockByPoiId.get(selectedRoom.id)}
-                  discoveries={getDiscoveriesForRoom(selectedRoom.id)}
-                  onToggleDiscoveryFound={(discoveryId) => handleToggleDiscoveryFound(selectedRoom.id, discoveryId)}
-                />
-              ) : childPois.length > 0 ? (
-                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  Select a room to see details
-                </div>
-              ) : null}
-            </div>
+            {/* RIGHT — Room detail panel (columns mode only; stacked renders inline in the card) */}
+            {layout === "columns" && (
+              <div className="space-y-3">
+                <div ref={detailPanelRef} />
+                {selectedRoom ? (
+                  <RoomDetailPanel
+                    room={selectedRoom}
+                    index={selectedRoomIndex}
+                    npcs={npcsByPoiId[selectedRoom.id] ?? []}
+                    onUpdateNPC={onUpdateNPC}
+                    siblings={childPois}
+                    onSelectChild={onSelectChild}
+                    keyLockInfo={keyLockByPoiId.get(selectedRoom.id)}
+                    discoveries={getDiscoveriesForRoom(selectedRoom.id)}
+                    onToggleDiscoveryFound={(discoveryId) => handleToggleDiscoveryFound(selectedRoom.id, discoveryId)}
+                  />
+                ) : childPois.length > 0 ? (
+                  <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                    Select a room to see details
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
 
           {/* Wandering Monsters — full width below the grid */}
