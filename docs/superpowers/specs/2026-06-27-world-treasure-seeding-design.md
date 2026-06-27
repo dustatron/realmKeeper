@@ -57,6 +57,17 @@ dungeon. Seed discoverable treasure across the living world.
 - POIs/NPCs/regions/factions are all built in the **pure** `generateWorld()`
   phase, before persistence — the natural place to seed (ruin/dungeon loot is a
   separate post-transaction pass and is untouched here).
+- **An existing seeder already does ~half of this:**
+  `src/domain/services/worldgen/sprinkleRealmContent.ts` (`sprinkleRealmContent`)
+  already samples POIs and adds treasure + magic-item `TreasureItem`s
+  (`isMagic` + `magicItemRefs`) and monster refs, gated by
+  `RealmContentSprinkleOptions { treasure?, magicItems?, monsters? }` (booleans),
+  wired into `generateWorld()` and fed by the form's `autoTreasure`/
+  `autoMagicItems`. **B1 evolves this function** rather than adding a parallel
+  one (avoid two divergent seeders). Gaps to add: NPC holders, per-region +
+  tier scaling, the faction guarantee, `notable` flagging, the two density
+  knobs (replacing the booleans), and excluding ruin/dungeon POIs (their own
+  generators already loot them — sprinkle currently double-loots them).
 
 ## Data model
 
@@ -83,11 +94,12 @@ back `undefined`, treated as not-notable).
 
 ## Config (create-realm form)
 
-Add to `GenerateWorldInput` (`src/application/use-cases/GenerateWorld.ts`):
+**Replace** the existing on/off booleans `autoTreasure`/`autoMagicItems` (on
+`GenerateWorldInput` and `RealmContentSprinkleOptions`) with two density enums:
 
 ```ts
-worldMagicDensity?: LootDensity     // default 'moderate'
-worldTreasureDensity?: LootDensity  // default 'moderate'
+worldMagicDensity?: LootDensity     // default 'moderate'  (replaces autoMagicItems)
+worldTreasureDensity?: LootDensity  // default 'moderate'  (replaces autoTreasure)
 ```
 
 ```ts
@@ -97,28 +109,41 @@ const LOOT_DENSITY: Record<LootDensity, number> = {
 }
 ```
 
-Two `Select`s in `src/routes/_app/realms/new.tsx` (mirroring the existing
-`poiDensity` Select), threaded through `executeGenerateWorld` into
-`generateWorld()` opts and on into `seedWorldTreasure`.
+`RealmContentSprinkleOptions` becomes
+`{ treasureDensity?: LootDensity; magicDensity?: LootDensity; monsters?: boolean }`
+(the `monsters` boolean is unchanged / out of scope). `off` ≡ the old `false`.
+Two `Select`s in `src/routes/_app/realms/new.tsx` **replace** the existing
+`autoTreasure`/`autoMagicItems` checkboxes (mirror the `poiDensity` Select),
+threaded through `executeGenerateWorld` into `generateWorld()` opts and on into
+the evolved `sprinkleRealmContent`. Every `executeGenerateWorld` caller (form +
+tests) updates to the new fields.
 
 ## Generation
 
-New pure module `src/domain/services/worldgen/seedTreasure.ts`:
+**Evolve** the existing `src/domain/services/worldgen/sprinkleRealmContent.ts`
+(keep the export name `sprinkleRealmContent`; the spec's `seedWorldTreasure` IS
+this evolved function). New input shape:
 
 ```ts
-export function seedWorldTreasure(
-  input: {
-    regions: Region[]
-    pois: POI[]            // mutated in place (or returned updated)
-    npcs: NPC[]            // mutated in place (or returned updated)
-    factions: Faction[]
-    systemId: string
-    magicDensity: LootDensity
-    treasureDensity: LootDensity
-  },
-  rng: SeededRandom,
-): void   // decorates poi.treasure and npc.systemBlock.inventory
+interface SprinkleRealmContentInput {
+  pois: POI[]            // mutated in place
+  npcs: NPC[]            // mutated in place (NEW)
+  regions: Region[]      // NEW — for per-region grouping + tier
+  factions: Faction[]    // NEW — for the great-item guarantee
+  systemId: string
+  options: {             // RealmContentSprinkleOptions
+    treasureDensity?: LootDensity
+    magicDensity?: LootDensity
+    monsters?: boolean
+  }
+  rng: SeededRandom
+}
 ```
+
+Keep the existing magic-item `TreasureItem` construction + `magicItemRefs` and the
+monster-ref logic. Replace the global POI sampling with the per-region,
+tier-scaled algorithm below, and add NPC + faction handling. The `monsters`
+branch is unchanged.
 
 Algorithm:
 1. **Eligible holders.** POIs: exclude `type === 'dungeon' | 'ruin'` and any POI
@@ -150,11 +175,11 @@ notable find, magic rarer than treasure.
 
 ### Where it runs
 
-Inside the pure `generateWorld()` (`src/domain/services/worldgen/generateWorld.ts`),
-after POIs, NPCs, regions, and factions are built and before the return — same
-phase as `buildHooks`. Threaded a `systemId` + the two densities via opts.
-Determinism preserved (single seeded `rng` stream; call `seedWorldTreasure` at a
-fixed point in the sequence).
+The evolved `sprinkleRealmContent` is ALREADY called inside the pure
+`generateWorld()` (`src/domain/services/worldgen/generateWorld.ts`, the
+`opts.realmContent` block after the doom step). Extend that call to pass `npcs`,
+`regions`, and `factions`, and feed the two densities. Determinism preserved
+(single seeded `rng` stream; the call site is unchanged in position).
 
 ## Determinism
 
@@ -165,7 +190,7 @@ same densities → same placement.
 
 ## Testing
 
-- Unit (`seedTreasure.test.ts`, fixed seed):
+- Unit (`sprinkleRealmContent.test.ts`, fixed seed — extend if it exists):
   - Deterministic (`toEqual` across two runs).
   - `off`/`off` → no items seeded anywhere; faction guarantee still places a
     notable treasure for each non-party faction (the "MUST have a great item"
