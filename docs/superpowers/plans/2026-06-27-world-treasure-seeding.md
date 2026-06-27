@@ -20,6 +20,35 @@
 - **Pointable-find seam (for B2):** a find is pointable if `notable === true` OR magic (`TreasureItem.isMagic` / `InventoryItem.compendiumKind === 'magicItem'`).
 - Use existing path aliases (`@domain/...`, `@application/...`, `~/lib/...`, `@shared/...`).
 
+## Amendments (adversarial review — BINDING on every task)
+
+- **A1 — terrain typing.** `Region.terrain` is `string`, NOT `Biome`. NEVER call
+  `biomeTier(region.terrain)` directly. Use `tierForTerrain(terrain: string): Tier`
+  (added in Task 1) which casts + falls back to `'easy'` for unknown terrain.
+- **A2 — no god-function, no dead path.** `sprinkleRealmContent` ORCHESTRATES;
+  the real logic lives in extracted helpers in
+  `src/domain/services/worldgen/seedTreasureHelpers.ts` (`seedRegionLoot`,
+  `seedFactionGreatItems`, `seedRegionMonsters`). Do **NOT** build a "flat /
+  no-regions fallback" path — `sprinkleRealmContent` requires `regions` (and
+  `npcs`/`factions`); callers always pass them (Task 8). Each helper is a pure,
+  separately unit-tested function.
+- **A3 — real tests.** Per-region guarantees are asserted PER REGION (loop the
+  regions, assert each), not via a global `> 0`. The guardian (chance-based) is
+  asserted by looping fixed seeds until it fires on a perilous notable POI, then
+  asserting the guardian ref is present — never left unverified.
+- **A5 — defensive inventory.** Read NPC inventory as `(n.systemBlock.inventory ?? [])`.
+- **Magic uniqueness (from D, accepted).** Magic items are UNIQUE across a realm.
+  Build ONE realm-wide shuffled pool of the system's magic items
+  (`rng.shuffle(getMagicItemsBySystemId(systemId))`) and a `takeMagic()` that
+  POPs the next unused entry. ALL magic placements (region loot, NPC, faction
+  great items) draw from this single pool — never the same compendium id twice.
+  When the pool is exhausted: a magic placement that exists to satisfy a
+  guarantee (per-region notable, faction great item) falls back to a **notable
+  treasure**; an "extra" (count > 1) magic placement is simply skipped.
+- **A4 — accepted.** Magic selection is NOT tier-scaled (these compendia don't
+  level magic items); magic is random-but-unique. Treasure counts and monsters
+  remain tier-scaled.
+
 ---
 
 ## File Structure
@@ -35,15 +64,16 @@
 
 ---
 
-### Task 1: `LootDensity` type + `InventoryItem.notable`
+### Task 1: `LootDensity` type + `InventoryItem.notable` + `tierForTerrain`
 
 **Files:**
 - Create: `src/domain/services/worldgen/lootDensity.ts`
 - Modify: `src/domain/value-objects/SystemBlock.ts`
+- Modify: `src/domain/services/worldgen/regionFlavor.ts` (add `tierForTerrain`)
 - Test: `src/domain/services/worldgen/lootDensity.test.ts`
 
 **Interfaces:**
-- Produces: `type LootDensity = 'off'|'sparse'|'moderate'|'frequent'`; `LOOT_DENSITY: Record<LootDensity, number>` = `{off:0, sparse:0.5, moderate:1, frequent:2}`. `InventoryItem` gains `notable?: boolean`.
+- Produces: `type LootDensity = 'off'|'sparse'|'moderate'|'frequent'`; `LOOT_DENSITY: Record<LootDensity, number>` = `{off:0, sparse:0.5, moderate:1, frequent:2}`. `InventoryItem` gains `notable?: boolean`. `tierForTerrain(terrain: string): Tier` — A1 guard around `biomeTier` (casts; falls back to `'easy'` for unknown terrain).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -89,17 +119,37 @@ In `src/domain/value-objects/SystemBlock.ts`, add to the `InventoryItem` interfa
   notable?: boolean
 ```
 
+In `src/domain/services/worldgen/regionFlavor.ts`, add the A1 guard (it already exports `Tier`, `biomeTier`, and has `BIOME_TIER` over `Biome`):
+
+```ts
+import type { Biome } from '@domain/data/worldgen/biomes' // if not already imported
+const VALID_BIOMES = new Set<string>(Object.keys(BIOME_TIER))
+export function tierForTerrain(terrain: string): Tier {
+  return VALID_BIOMES.has(terrain) ? BIOME_TIER[terrain as Biome] : 'easy'
+}
+```
+
+Add a test to `lootDensity.test.ts` (or `regionFlavor.tier.test.ts`):
+
+```ts
+import { tierForTerrain } from './regionFlavor'
+it('tierForTerrain maps biomes and falls back to easy', () => {
+  expect(tierForTerrain('mountains')).toBe('perilous')
+  expect(tierForTerrain('not-a-biome')).toBe('easy')
+})
+```
+
 - [ ] **Step 4: Run to verify it passes**
 
-Run: `pnpm test src/domain/services/worldgen/lootDensity.test.ts`
+Run: `pnpm test src/domain/services/worldgen/lootDensity.test.ts src/domain/services/worldgen/regionFlavor.tier.test.ts`
 Expected: PASS.
 Run: `pnpm build` → clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/domain/services/worldgen/lootDensity.ts src/domain/services/worldgen/lootDensity.test.ts src/domain/value-objects/SystemBlock.ts
-git commit -m "feat: LootDensity type + InventoryItem.notable"
+git add src/domain/services/worldgen/lootDensity.ts src/domain/services/worldgen/lootDensity.test.ts src/domain/value-objects/SystemBlock.ts src/domain/services/worldgen/regionFlavor.ts src/domain/services/worldgen/regionFlavor.tier.test.ts
+git commit -m "feat: LootDensity, InventoryItem.notable, tierForTerrain (A1 guard)"
 ```
 
 ---
@@ -387,9 +437,23 @@ it('every region gets >=1 treasure and >=1 notable when densities on', () => {
 Run: `pnpm test src/domain/services/worldgen/sprinkleRealmContent.test.ts -t "every region"`
 Expected: FAIL (global sampling, no per-region guarantee; dungeon may get treasure).
 
-- [ ] **Step 3: Implement per-region seeding**
+- [ ] **Step 3: Implement per-region seeding (extracted helper + unique magic pool)**
 
-Update `TREASURE_POI_TYPES` to exclude `dungeon` and `ruin`. Add a parent-dungeon guard helper. Replace the treasure+magic branches with a per-region loop when `regions` is supplied (fall back to the flat behavior when not). Concretely:
+Per amendment A2, put this logic in a new `src/domain/services/worldgen/seedTreasureHelpers.ts` as `seedRegionLoot(...)`, called from `sprinkleRealmContent`'s per-region loop; **delete the transitional global sampling added in Task 3** (no flat fallback). Per the magic-uniqueness amendment, magic is drawn from ONE realm-wide pool. Per A1, use `tierForTerrain`, not `biomeTier(region.terrain)`.
+
+Build the shared pool once in `sprinkleRealmContent` and pass a `takeMagic` to the helpers:
+
+```ts
+import { getMagicItemsBySystemId } from '@domain/data/compendium'
+// in sprinkleRealmContent, before the region loop:
+const magicPool = input.rng.shuffle(getMagicItemsBySystemId(input.systemId))
+let magicIdx = 0
+const takeMagic = (): { id: string; name: string; description: string } | null =>
+  magicIdx < magicPool.length ? (() => { const m = magicPool[magicIdx++]; return { id: m.id, name: m.name, description: m.description } })() : null
+// takeMagic() returns null when exhausted → caller falls back to a notable treasure (guarantee) or skips (extra).
+```
+
+`TREASURE_POI_TYPES` excludes `dungeon` and `ruin`. Add a parent-dungeon guard helper. The per-region loop (in `seedRegionLoot`), using `takeMagic()` for magic and `tierForTerrain(region.terrain)` for tier:
 
 ```ts
 const TREASURE_POI_TYPES = new Set<PoiType>(['building','camp','fortification','landmark','natural','shrine'])
@@ -411,18 +475,23 @@ for (const p of elig) { const a = byRegion.get(p.regionId) ?? []; a.push(p); byR
 for (const region of input.regions) {
   const holders = byRegion.get(region.id) ?? []
   if (holders.length === 0) continue
-  const tier = TIER_FACTOR[biomeTier(region.terrain)]
+  const tier = TIER_FACTOR[tierForTerrain(region.terrain)]
   const rrng = input.rng.child(`region-${region.id}`)
   let regionHasNotable = false
 
   if (magicMult > 0) {
     const count = Math.max(1, Math.round(BASE_MAGIC * magicMult * tier))
     for (let i = 0; i < count; i++) {
+      const picked = takeMagic()              // unique across the realm; null when exhausted
+      if (!picked) {
+        // Guarantee slot (first item) falls back to a notable treasure; extras are skipped.
+        if (i === 0 && !regionHasNotable) { const t = pickTreasureItem(rrng); t.notable = true; rrng.pick(holders).treasure.push(t); regionHasNotable = true }
+        continue
+      }
       const holder = rrng.pick(holders)
-      const picked = pickMagicItem(input.systemId, rrng) // see note below
       const notable = !regionHasNotable
-      holder.treasure = [...holder.treasure, { id: newId(), name: picked?.name ?? 'Strange Relic', description: picked?.description ?? '', value: 'priceless', quantity: 1, collected: false, isMagic: true, ...(picked?.id ? { compendiumId: picked.id } : {}), notable }]
-      if (picked?.id && !holder.magicItemRefs.some((r) => r.id === picked.id)) holder.magicItemRefs = [...holder.magicItemRefs, { id: picked.id }]
+      holder.treasure = [...holder.treasure, { id: newId(), name: picked.name, description: picked.description, value: 'priceless', quantity: 1, collected: false, isMagic: true, compendiumId: picked.id, notable }]
+      if (!holder.magicItemRefs.some((r) => r.id === picked.id)) holder.magicItemRefs = [...holder.magicItemRefs, { id: picked.id }]
       regionHasNotable = true
     }
   }
