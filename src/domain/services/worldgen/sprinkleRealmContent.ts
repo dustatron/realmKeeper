@@ -6,11 +6,15 @@ import type { TableDef } from '@domain/entities/TableDef'
 import type { PoiType } from '@shared/constants'
 import { newId } from '@shared/ulid'
 import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
+import { LOOT_DENSITY, type LootDensity } from './lootDensity'
+import type { NPC } from '@domain/entities/NPC'
+import type { Region } from '@domain/entities/Region'
+import type { Faction } from '@domain/entities/Faction'
 
 export interface RealmContentSprinkleOptions {
-  treasure?: boolean
-  magicItems?: boolean
-  monsters?: boolean
+  treasureDensity?: LootDensity
+  magicDensity?: LootDensity
+  monsterDensity?: LootDensity
 }
 
 interface SprinkleRealmContentInput {
@@ -18,6 +22,9 @@ interface SprinkleRealmContentInput {
   systemId: string
   options: RealmContentSprinkleOptions
   rng: SeededRandom
+  npcs?: NPC[]       // used from Task 4 onward
+  regions?: Region[] // used from Task 4 onward
+  factions?: Faction[] // used from Task 6 onward
 }
 
 const TREASURE_POI_TYPES = new Set<PoiType>([
@@ -73,21 +80,23 @@ export function sprinkleRealmContent({
   const treasurePois = pois.filter((poi) => TREASURE_POI_TYPES.has(poi.type))
   const monsterPois = pois.filter((poi) => MONSTER_POI_TYPES.has(poi.type))
 
-  if (options.treasure) {
+  const treasureMult = LOOT_DENSITY[options.treasureDensity ?? 'off']
+  if (treasureMult > 0) {
     const targets = rng.sample(
       treasurePois,
-      targetCount(treasurePois.length, 0.45, 5, 32),
+      targetCount(treasurePois.length, 0.45 * treasureMult, 1, 64),
     )
     for (const poi of targets) {
       poi.treasure = [...poi.treasure, pickTreasureItem(rng.child(`treasure-${poi.id}`))]
     }
   }
 
-  if (options.magicItems) {
+  const magicMult = LOOT_DENSITY[options.magicDensity ?? 'off']
+  if (magicMult > 0) {
     const magicItems = getMagicItemsBySystemId(systemId)
     const targets = rng.sample(
       treasurePois,
-      targetCount(treasurePois.length, 0.18, 3, 12),
+      targetCount(treasurePois.length, 0.18 * magicMult, 1, 24),
     )
     for (const poi of targets) {
       if (magicItems.length === 0) break
@@ -109,11 +118,12 @@ export function sprinkleRealmContent({
     }
   }
 
-  if (options.monsters) {
+  const monsterMult = LOOT_DENSITY[options.monsterDensity ?? 'off']
+  if (monsterMult > 0) {
     const monsters = getMonstersBySystemId(systemId)
     const targets = rng.sample(
       monsterPois,
-      targetCount(monsterPois.length, 0.45, 5, 32),
+      targetCount(monsterPois.length, 0.45 * monsterMult, 1, 64),
     )
     for (const poi of targets) {
       if (monsters.length === 0) break

@@ -93,9 +93,9 @@ function NewRealmPage() {
             poiDensity: genPoiDensity,
             factionCount: genFactions,
             loomingThreat: genLoomingThreat,
-            autoTreasure: genAutoTreasure,
-            autoMagicItems: genAutoMagicItems,
-            autoMonsters: genAutoMonsters,
+            worldTreasureDensity: genAutoTreasure ? 'moderate' : 'off',
+            worldMagicDensity: genAutoMagicItems ? 'moderate' : 'off',
+            worldMonsterDensity: genAutoMonsters ? 'moderate' : 'off',
           },
           {
             realmRepo: container.realmRepo,

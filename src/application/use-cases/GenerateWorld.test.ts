@@ -213,9 +213,9 @@ describe('executeGenerateWorld', () => {
         seed: 'seed-loot',
         size: 'medium',
         poiDensity: 'dense',
-        autoTreasure: true,
-        autoMagicItems: true,
-        autoMonsters: true,
+        worldTreasureDensity: 'moderate',
+        worldMagicDensity: 'moderate',
+        worldMonsterDensity: 'moderate',
       },
       deps(),
     )

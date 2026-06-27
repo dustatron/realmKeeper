@@ -377,9 +377,9 @@ describe('generateWorld', () => {
       systemId: 'system-cairn-2e',
       systemConfig: cairnSystemConfig,
       realmContent: {
-        treasure: true,
-        magicItems: true,
-        monsters: true,
+        treasureDensity: 'moderate',
+        magicDensity: 'moderate',
+        monsterDensity: 'moderate',
       },
     })
 
