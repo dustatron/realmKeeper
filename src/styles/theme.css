@@ -1,136 +1,134 @@
 /* Inter Variable font */
 @font-face {
-  font-family: 'Inter';
-  src: url('/fonts/Inter-Variable.woff2') format('woff2');
+  font-family: "Inter";
+  src: url("/fonts/Inter-Variable.woff2") format("woff2");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist Mono';
-  src: url('/fonts/GeistMono-Variable.woff2') format('woff2');
+  font-family: "Geist Mono";
+  src: url("/fonts/GeistMono-Variable.woff2") format("woff2");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
 
 :root {
-  /* Intercom design tokens (light) */
-  --radius: 0.5rem; /* 8px — Intercom md (buttons, inputs) */
+  --radius: 0.3rem;
 
-  --background: #f5f1ec;   /* canvas (cream) */
-  --foreground: #111111;   /* ink */
+  --background: oklch(0.975 0.007 106.521);
+  --foreground: oklch(0.281 0.001 0);
 
-  --card: #ffffff;
-  --card-foreground: #111111;
-  --popover: #ffffff;
-  --popover-foreground: #111111;
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.281 0.001 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.281 0.001 0);
 
-  --primary: #111111;      /* ink */
-  --primary-foreground: #ffffff;
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
 
-  --secondary: #ebe7e1;    /* surface-2 */
-  --secondary-foreground: #111111;
+  --secondary: oklch(0.926 0.039 115.103);
+  --secondary-foreground: oklch(0.382 0.051 113.064);
 
-  --muted: #ebe7e1;
-  --muted-foreground: #626260;  /* ink-muted */
+  --muted: oklch(0.975 0.007 106.521);
+  --muted-foreground: oklch(0.281 0.001 0);
 
-  --accent: #ebe7e1;
-  --accent-foreground: #111111;
+  --accent: oklch(0.938 0.008 114.226);
+  --accent-foreground: oklch(0.281 0.001 0);
 
-  --destructive: #c41c1c;  /* semantic-error */
-  --destructive-foreground: #ffffff;
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
 
-  --warning: #ff5600;      /* fin-orange — rare accent only */
+  --warning: #ff5600; /* rare accent only */
   --warning-foreground: #ffffff;
 
-  --border: #d3cec6;       /* hairline */
-  --input: #d3cec6;
-  --ring: #111111;         /* visible ink focus */
+  --border: oklch(0.872 0.004 106.484);
+  --input: oklch(0.872 0.004 106.484);
+  --ring: oklch(0.708 0 0);
 
-  /* Depth: NO drop shadows — flat 1px hairline ring (white-on-cream contrast) */
+  /* Depth: flat 1px hairline ring */
   --shadow-border: 0 0 0 1px var(--border);
   --shadow-card: 0 0 0 1px var(--border);
   --shadow-elevated: 0 0 0 1px var(--border);
 
-  /* Charts — Intercom report palette */
-  --chart-1: #65b5ff;
-  --chart-2: #0bdf50;
-  --chart-3: #ff2067;
-  --chart-4: #b3e01c;
-  --chart-5: #03b2cb;
+  --chart-1: oklch(0.507 0.122 121.249);
+  --chart-2: oklch(0.778 0.146 116.251);
+  --chart-3: oklch(0.603 0.136 119.568);
+  --chart-4: oklch(0.926 0.039 115.103);
+  --chart-5: oklch(0.382 0.051 113.064);
 
-  /* Sidebar */
-  --sidebar: #f5f1ec;
-  --sidebar-foreground: #111111;
-  --sidebar-primary: #111111;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ebe7e1;
-  --sidebar-accent-foreground: #111111;
-  --sidebar-border: #d3cec6;
-  --sidebar-ring: #111111;
+  --sidebar: oklch(0.959 0.008 106.548);
+  --sidebar-foreground: oklch(0.281 0.001 0);
+  --sidebar-primary: oklch(0.281 0.001 0);
+  --sidebar-primary-foreground: oklch(0.99 0.005 106.495);
+  --sidebar-accent: oklch(0.938 0.008 114.226);
+  --sidebar-accent-foreground: oklch(0.514 0.056 108.204);
+  --sidebar-border: oklch(0.872 0.004 106.484);
+  --sidebar-ring: oklch(0.924 0.019 119.764);
+
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-mono:
+    "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
 }
 
 .dark {
-  /* Intercom design tokens (dark — inverse-canvas/inverse-surface) */
-  --background: #000000;
-  --foreground: #ffffff;
+  --background: oklch(0.235 0.001 0);
+  --foreground: oklch(0.975 0.007 106.521);
 
-  --card: #313130;
-  --card-foreground: #ffffff;
-  --popover: #313130;
-  --popover-foreground: #ffffff;
+  --card: oklch(0.281 0.001 0);
+  --card-foreground: oklch(0.975 0.007 106.521);
+  --popover: oklch(0.281 0.001 0);
+  --popover-foreground: oklch(0.975 0.007 106.521);
 
-  --primary: #ffffff;
-  --primary-foreground: #111111;
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
 
-  --secondary: #313130;
-  --secondary-foreground: #ffffff;
+  --secondary: oklch(0.312 0.022 111.255);
+  --secondary-foreground: oklch(0.778 0.146 116.251);
 
-  --muted: #313130;
-  --muted-foreground: #9c9fa5;  /* inverse-ink-muted */
+  --muted: oklch(0.281 0.001 0);
+  --muted-foreground: oklch(0.698 0.007 106.584);
 
-  --accent: #313130;
-  --accent-foreground: #ffffff;
+  --accent: oklch(0.333 0.002 106.493);
+  --accent-foreground: oklch(0.975 0.007 106.521);
 
-  --destructive: #c41c1c;
-  --destructive-foreground: #ffffff;
+  --destructive: oklch(0.559 0.154 34.217);
+  --destructive-foreground: oklch(0.985 0 0);
 
   --warning: #ff5600;
   --warning-foreground: #ffffff;
 
-  --border: rgba(255, 255, 255, 0.12);
-  --input: rgba(255, 255, 255, 0.12);
-  --ring: #ffffff;
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(0.333 0.002 106.493);
+  --ring: oklch(0.465 0.016 145.309);
 
   --shadow-border: 0 0 0 1px var(--border);
   --shadow-card: 0 0 0 1px var(--border);
   --shadow-elevated: 0 0 0 1px var(--border);
 
-  --chart-1: #65b5ff;
-  --chart-2: #0bdf50;
-  --chart-3: #ff2067;
-  --chart-4: #b3e01c;
-  --chart-5: #03b2cb;
+  --chart-1: oklch(0.778 0.146 116.251);
+  --chart-2: oklch(0.312 0.022 111.255);
+  --chart-3: oklch(0.333 0.002 106.493);
+  --chart-4: oklch(0.382 0.051 113.064);
+  --chart-5: oklch(0.603 0.136 119.568);
 
-  --sidebar: #000000;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #ffffff;
-  --sidebar-primary-foreground: #111111;
-  --sidebar-accent: #313130;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgba(255, 255, 255, 0.12);
-  --sidebar-ring: #ffffff;
+  --sidebar: oklch(0.248 0.001 0);
+  --sidebar-foreground: oklch(0.975 0.007 106.521);
+  --sidebar-primary: oklch(0.938 0.008 114.226);
+  --sidebar-primary-foreground: oklch(0.281 0.001 0);
+  --sidebar-accent: oklch(0.333 0.002 106.493);
+  --sidebar-accent-foreground: oklch(0.985 0.001 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.439 0 0);
 }
 
 @theme inline {
-  /* Intercom radius scale (explicit, not derived) */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -165,4 +163,13 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }

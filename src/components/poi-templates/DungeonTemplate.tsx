@@ -827,7 +827,7 @@ export function DungeonTemplate({
             if (!showDescription && !hasLore && !readAloud && !hasMeta) return null;
             return (
               <Collapsible open={overviewOpen} onOpenChange={setOverviewOpen}>
-                <div className="rounded-lg border">
+                <div className="rounded-lg border bg-card text-card-foreground shadow-card">
                   <CollapsibleTrigger asChild>
                     <button className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted/50">
                       <span className="flex items-center gap-2">
@@ -1010,8 +1010,8 @@ export function DungeonTemplate({
                         key={child.id}
                         className={`rounded-md border p-2.5 cursor-pointer transition-colors ${
                           isSelected
-                            ? "ring-2 ring-primary bg-accent"
-                            : "hover:bg-accent"
+                            ? "border-primary ring-1 ring-primary bg-card"
+                            : "bg-card hover:bg-accent"
                         } ${child.visited ? "border-l-2 border-l-green-500" : ""}`}
                         onClick={() =>
                           onSelectChild(isSelected ? null : child.id)
