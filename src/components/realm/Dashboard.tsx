@@ -652,7 +652,8 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                     </Label>
                     <Input
                       id="settingsDaysPerSeason"
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       min={10}
                       max={90}
                       value={settingsDaysPerSeason}
@@ -668,7 +669,8 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                     <Label htmlFor="settingsDaysPerWeek">Days per week</Label>
                     <Input
                       id="settingsDaysPerWeek"
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       min={5}
                       max={10}
                       value={settingsDaysPerWeek}
@@ -686,7 +688,8 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                     </Label>
                     <Input
                       id="settingsWatchesPerDay"
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       min={2}
                       max={6}
                       value={settingsWatchesPerDay}
@@ -702,7 +705,8 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                     </Label>
                     <Input
                       id="settingsMoonCycleLength"
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       min={1}
                       max={99}
                       value={settingsMoonCycleLength}

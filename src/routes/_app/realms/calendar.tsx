@@ -70,6 +70,9 @@ import {
   Zap,
   ZapOff,
   Settings,
+  ChevronLeft,
+  ChevronRight,
+  CalendarDays,
 } from "lucide-react";
 import { db } from "@infrastructure/dexie/db";
 
@@ -227,16 +230,6 @@ function CalendarPage() {
   const handleMarkDayComplete = async (dayKey: number) => {
     const current = realm.completedThroughDay ?? -1;
     const newValue = dayKey <= current ? dayKey - 1 : dayKey;
-    await container.realmRepo.update({
-      ...realm,
-      completedThroughDay: newValue,
-      updatedAt: Date.now(),
-    });
-  };
-
-  const handleMarkWeekComplete = async () => {
-    const current = realm.completedThroughDay ?? -1;
-    const newValue = Math.min(current + realm.daysPerWeek, currentDayKey);
     await container.realmRepo.update({
       ...realm,
       completedThroughDay: newValue,
@@ -545,47 +538,75 @@ function CalendarPage() {
       />
 
       {/* Tab Bar */}
-      <div className="flex items-center gap-1 border-b px-4">
-        <button
-          onClick={() => setTab("timeline")}
-          className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            tab === "timeline"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Scroll className="size-4" />
-          Timeline
-        </button>
-        <button
-          onClick={() => setTab("events")}
-          className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            tab === "events"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <CalendarClock className="size-4" />
-          Scheduled Events
-          {eventCounts.active > 0 && (
-            <Badge className="bg-green-600 text-white text-xs px-1.5 py-0 ml-1">
-              {eventCounts.active}
-            </Badge>
-          )}
-        </button>
+      <div className="flex items-center justify-between gap-2 border-b px-4">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setTab("timeline")}
+            className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              tab === "timeline"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Scroll className="size-4" />
+            Timeline
+          </button>
+          <button
+            onClick={() => setTab("events")}
+            className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              tab === "events"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <CalendarClock className="size-4" />
+            Scheduled Events
+            {eventCounts.active > 0 && (
+              <Badge className="bg-green-600 text-white text-xs px-1.5 py-0 ml-1">
+                {eventCounts.active}
+              </Badge>
+            )}
+          </button>
+        </div>
+
+        {tab === "timeline" && (
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0"
+              onClick={handlePrev}
+              disabled={pageStartKey <= day1Key}
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0"
+              onClick={handleNext}
+              disabled={pageStartKey >= maxStartKey}
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={handleToday}
+            >
+              <CalendarDays className="size-3 mr-1" />
+              Today
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Timeline Tab */}
       {tab === "timeline" && (
         <DayLogTable
           entries={entries}
-          onPrev={handlePrev}
-          onNext={handleNext}
-          onToday={handleToday}
           onMarkDayComplete={handleMarkDayComplete}
-          onMarkWeekComplete={handleMarkWeekComplete}
-          canGoPrev={pageStartKey > day1Key}
-          canGoNext={pageStartKey < maxStartKey}
           worldId={activeRealmId!}
         />
       )}

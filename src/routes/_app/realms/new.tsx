@@ -30,6 +30,7 @@ import {
 import {
   DEFAULT_DAYS_PER_SEASON,
   DEFAULT_WATCHES_PER_DAY,
+  DEFAULT_MOON_CYCLE_LENGTH,
 } from "@shared/constants";
 import { useSystemConfigs } from "~/ui/hooks/useSystemConfigs";
 import { useContainer } from "~/ui/hooks/useContainer";
@@ -38,12 +39,19 @@ import { executeCreateRealm } from "@application/use-cases/CreateRealm";
 import { executeGenerateWorld } from "@application/use-cases/GenerateWorld";
 import { newId } from "@shared/ulid";
 
-const DEFAULT_SYSTEM_ID = "system-cairn-2e";
-const SHADOWDARK_SYSTEM_ID = "system-shadowdark";
+export const RulesSystemIds = {
+  cairn: "system-cairn-2e",
+  shadowdark: "system-shadowdark",
+} as const;
+
+export type RulesSystemIdType =
+  (typeof RulesSystemIds)[keyof typeof RulesSystemIds];
+
+const DEFAULT_SYSTEM_ID = RulesSystemIds.cairn;
 
 // Shadowdark runs on a 4-watch day; everything else uses the global default.
 function defaultWatchesForSystem(systemId: string): number {
-  return systemId === SHADOWDARK_SYSTEM_ID ? 4 : DEFAULT_WATCHES_PER_DAY;
+  return systemId === RulesSystemIds.shadowdark ? 4 : DEFAULT_WATCHES_PER_DAY;
 }
 
 export const Route = createFileRoute("/_app/realms/new")({
@@ -57,7 +65,7 @@ function NewRealmPage() {
   const setActiveRealmId = useUIStore((state) => state.setActiveRealmId);
 
   const [createName, setCreateName] = useState("");
-  const [createSystem, setCreateSystem] = useState(DEFAULT_SYSTEM_ID);
+  const [createSystem, setCreateSystem] = useState<string>(DEFAULT_SYSTEM_ID);
   const [createDesc, setCreateDesc] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(true);
   const [createWatchesPerDay, setCreateWatchesPerDay] = useState(
@@ -67,6 +75,9 @@ function NewRealmPage() {
     DEFAULT_DAYS_PER_SEASON,
   );
   const [createDaysPerWeek, setCreateDaysPerWeek] = useState(7);
+  const [createMoonCycleLength, setCreateMoonCycleLength] = useState(
+    DEFAULT_MOON_CYCLE_LENGTH,
+  );
   const FactionTiggerOptionValues = {
     day: "day",
     week: "week",
@@ -111,6 +122,7 @@ function NewRealmPage() {
             watchesPerDay: createWatchesPerDay,
             daysPerSeason: createDaysPerSeason,
             daysPerWeek: createDaysPerWeek,
+            moonCycleLength: createMoonCycleLength,
             factionTurnTrigger: createFactionTurnTrigger,
             poiDensity: genPoiDensity,
             factionCount: genFactions,
@@ -143,6 +155,7 @@ function NewRealmPage() {
           watchesPerDay: createWatchesPerDay,
           daysPerSeason: createDaysPerSeason,
           daysPerWeek: createDaysPerWeek,
+          moonCycleLength: createMoonCycleLength,
           factionTurnTrigger: createFactionTurnTrigger,
         },
         {
@@ -187,7 +200,8 @@ function NewRealmPage() {
             </Label>
             <Input
               id="watches-per-day"
-              type="number"
+              type="text"
+              inputMode="numeric"
               min="1"
               max="12"
               value={createWatchesPerDay}
@@ -206,7 +220,8 @@ function NewRealmPage() {
             </Label>
             <Input
               id="days-per-season"
-              type="number"
+              type="text"
+              inputMode="numeric"
               min="1"
               max="365"
               value={createDaysPerSeason}
@@ -224,12 +239,32 @@ function NewRealmPage() {
             </Label>
             <Input
               id="days-per-week"
-              type="number"
+              type="text"
+              inputMode="numeric"
               min="1"
               max="30"
               value={createDaysPerWeek}
               onChange={(e) =>
                 setCreateDaysPerWeek(parseInt(e.target.value) || 7)
+              }
+              disabled={isCreating}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="moon-cycle-length" className="text-xs">
+              Moon Cycle (days)
+            </Label>
+            <Input
+              id="moon-cycle-length"
+              type="text"
+              inputMode="numeric"
+              min="1"
+              max="99"
+              value={createMoonCycleLength}
+              onChange={(e) =>
+                setCreateMoonCycleLength(
+                  parseInt(e.target.value) || DEFAULT_MOON_CYCLE_LENGTH,
+                )
               }
               disabled={isCreating}
             />
@@ -323,7 +358,8 @@ function NewRealmPage() {
                 </Label>
                 <Input
                   id="gen-factions"
-                  type="number"
+                  type="text"
+              inputMode="numeric"
                   min="0"
                   max="20"
                   value={genFactions}
