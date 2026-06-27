@@ -644,6 +644,16 @@ db.version(37).stores(storesV36).upgrade(async (tx) => {
   }
 })
 
+// v38: Add ruinSite/landmarkLore/poiGenOptions to POIs (no index change needed)
+db.version(38).stores(storesV36).upgrade(async (tx) => {
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.ruinSite === undefined) {
+      await tx.table('pois').put({ ...poi, ruinSite: null, landmarkLore: null, poiGenOptions: null })
+    }
+  }
+})
+
 // Normalize Realms on read — ensures starred arrays have defaults
 db.worlds.hook('reading', (realm) => {
   if (!realm) return realm
