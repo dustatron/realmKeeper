@@ -21,6 +21,7 @@ export interface InventoryItem {
   compendiumId?: string
   compendiumKind?: 'magicItem' | 'equipment'
   compendiumSource?: 'system' | 'custom'
+  notable?: boolean
 }
 
 export interface NpcConnection {

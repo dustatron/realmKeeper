@@ -34,6 +34,12 @@ export function biomeTier(biome: Biome): Tier {
   return BIOME_TIER[biome]
 }
 
+const VALID_BIOMES = new Set<string>(Object.keys(BIOME_TIER))
+
+export function tierForTerrain(terrain: string): Tier {
+  return VALID_BIOMES.has(terrain) ? BIOME_TIER[terrain as Biome] : 'easy'
+}
+
 // Cairn has no generic "region danger" table; derive danger from a Lair (its
 // type + feature) and, when the region's people are themselves a threat, from
 // them too.
