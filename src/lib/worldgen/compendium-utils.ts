@@ -197,6 +197,44 @@ export function systemBlockFromMonster(id: string): SystemBlock {
   return emptySystemBlock()
 }
 
+const TIER_BAND: Record<'easy' | 'tough' | 'perilous', { min: number; max: number }> = {
+  easy: { min: 0, max: 3 },
+  tough: { min: 3, max: 6 },
+  perilous: { min: 5, max: 12 },
+}
+
+export function monsterThreat(m: CompendiumMonster): number {
+  if (m.systemData.system === 'shadowdark') return m.systemData.data.level
+  if (m.systemData.system === 'cairn') {
+    const hp = parseInt(m.systemData.data.stats?.match(/(\d+)\s*HP/i)?.[1] ?? '0')
+    return hp / 4 // rough HP→threat proxy
+  }
+  return 1
+}
+
+export function pickTierMonster(
+  systemId: string,
+  tier: 'easy' | 'tough' | 'perilous',
+  rng: SeededRandom,
+  opts: { high?: boolean } = {},
+): { id: string; name: string } | null {
+  const all = getMonstersBySystemId(systemId)
+  if (all.length === 0) return null
+  const band = TIER_BAND[tier]
+  const lo = opts.high ? (band.min + band.max) / 2 : band.min
+  let inBand = all.filter((m) => {
+    const t = monsterThreat(m)
+    return t >= lo && t <= band.max
+  })
+  if (inBand.length === 0) {
+    // Fallback: closest to the band's target (max for high, midpoint otherwise)
+    const target = opts.high ? band.max : (band.min + band.max) / 2
+    inBand = [...all].sort((a, b) => Math.abs(monsterThreat(a) - target) - Math.abs(monsterThreat(b) - target)).slice(0, 5)
+  }
+  const picked = rng.pick(inBand)
+  return { id: picked.id, name: picked.name }
+}
+
 /**
  * Fallback stat block scaled by dungeon depth + danger level.
  * Uses system-appropriate stat ranges (Cairn vs Shadowdark).
