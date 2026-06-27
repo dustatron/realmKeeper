@@ -11,8 +11,9 @@ import type { TreasureItem } from '@domain/value-objects/TreasureItem'
 import type { DungeonGenOptions } from '~/lib/dungeon/types'
 import { generateDungeon } from '~/lib/dungeon/DungeonGenerator'
 import { getBlueprint } from '~/lib/dungeon/dungeon/DungeonBlueprints'
-import { generateRoomTreasure, generateMagicItems, generateSpellScrolls, generateWeapons, generateGear } from '~/lib/dungeon/treasure-gen'
-import { resolveCreature, systemBlockFromMonster, fallbackSystemBlock, getMonsterDescription } from '~/lib/dungeon/compendium-utils'
+import { generateRoomTreasure, generateMagicItems, generateSpellScrolls, generateWeapons, generateGear } from '~/lib/worldgen/treasure-gen'
+import { resolveCreature, fallbackSystemBlock } from '~/lib/worldgen/compendium-utils'
+import { buildHumanoidFlavor, buildCreatureNpc } from '@domain/services/worldgen/npcFactory'
 import { generateNPCName } from '~/lib/dungeon/npc-names'
 import { executeDeletePOIWithChildren } from './DeletePOIWithChildren'
 import type { IFactionPresenceRepository } from '@application/ports/IFactionPresenceRepository'
@@ -152,6 +153,9 @@ export async function executeGenerateDungeon(
       watabouData: null,
       spatialDungeon: null,
       dungeonGenOptions: null,
+      ruinSite: null,
+      landmarkLore: null,
+      poiGenOptions: null,
       sessionLog: [],
       starred: false,
       monsterRefs: [],
@@ -221,6 +225,8 @@ export async function executeGenerateDungeon(
     const npcName = generateNPCName(rng.child(`npc-name-${dungeonNPC.npcId}`))
     const motivation = dungeonNPC.wants?.join(', ') ?? ''
     const categoryLabel = dungeonNPC.category.replace(/_/g, ' ')
+    // Use a fresh child rng so we don't shift the existing dungeon rng stream
+    const flavor = buildHumanoidFlavor(rng.child(`npc-flavor-${dungeonNPC.npcId}`))
 
     const npc: NPC = {
       id: newId(),
@@ -232,10 +238,10 @@ export async function executeGenerateDungeon(
       lifeStatus: 'alive',
       movementStatus: 'present',
       description: dungeonNPC.hasInfo ?? `A ${categoryLabel} encountered in the dungeon.`,
-      traits: [],
+      traits: flavor.traits,
       motivation,
-      appearance: '',
-      voice: '',
+      appearance: flavor.appearance,
+      voice: flavor.voice,
       want: motivation,
       tags: [dungeonNPC.category, dungeonNPC.disposition],
       imageUrl: null,
@@ -275,7 +281,7 @@ export async function executeGenerateDungeon(
   const wmRng = rng.child('wandering-resolve')
   // First pass: resolve all creatures
   const wanderingMonsters: WanderingMonsterEntry[] = (generated.wanderingMonsters?.entries ?? []).map((e) => {
-    const resolved = resolveCreature(e.creatureType, systemId, wmRng, generated.depth)
+    const resolved = resolveCreature(e.creatureType, systemId, wmRng, { depth: generated.depth })
     return {
       name: resolved?.name ?? e.creatureType,
       creatureType: e.creatureType,
@@ -295,7 +301,7 @@ export async function executeGenerateDungeon(
       continue
     }
     // This entry is a duplicate — find an unseen creature
-    const resolved = resolveCreature(`dedup-${entry.creatureType}-${seenIds.size}`, systemId, dedupRng, generated.depth)
+    const resolved = resolveCreature(`dedup-${entry.creatureType}-${seenIds.size}`, systemId, dedupRng, { depth: generated.depth })
     if (resolved && !seenIds.has(resolved.id)) {
       entry.name = resolved.name
       entry.compendiumId = resolved.id
@@ -306,12 +312,6 @@ export async function executeGenerateDungeon(
   // === 7b. Room creatures — picked from wandering monster table for ecological consistency ===
 
   const dangerChances: Record<string, number> = { low: 0.25, medium: 0.45, deadly: 0.70, very_deadly: 0.90 }
-  // Even a lurking monster wants something — gives every creature NPC a goal.
-  const CREATURE_WANTS = [
-    'guard its lair', 'feed on any intruders', 'protect its hoard',
-    'expand its hunting grounds', 'avenge a slain packmate', 'escape this place',
-    'serve the dungeon’s master', 'drag fresh prey back to its den',
-  ]
   const creatureRng = rng.child('room-creatures')
   const roomsWithNPC = new Set(dungeonNPCs.map((n) => n.roomId))
 
@@ -337,7 +337,7 @@ export async function executeGenerateDungeon(
 
     if (inhabitantCreature && inhabitantRooms.has(room.id)) {
       // This room is held by the dungeon's current faction — stock it with them.
-      const resolved = resolveCreature(inhabitantCreature, systemId, creatureRng, room.depth)
+      const resolved = resolveCreature(inhabitantCreature, systemId, creatureRng, { depth: room.depth })
       creatureName = resolved?.name ?? inhabitantCreature
       compendiumId = resolved?.id ?? null
     } else if (!useBlueprintFallback) {
@@ -347,39 +347,24 @@ export async function executeGenerateDungeon(
       compendiumId = wmEntry.compendiumId
     } else {
       const creatureSlug = creatureRng.pick(getBlueprint(options.theme).creaturePool)
-      const resolved = resolveCreature(creatureSlug, systemId, creatureRng, room.depth)
+      const resolved = resolveCreature(creatureSlug, systemId, creatureRng, { depth: room.depth })
       creatureName = resolved?.name ?? creatureSlug
       compendiumId = resolved?.id ?? null
     }
 
-    const creatureNpc: NPC = {
-      id: newId(),
+    const creatureNpc = buildCreatureNpc({
       worldId,
-      name: creatureName,
-      factionIds: [],
       regionId: poi.regionId,
       poiId: roomIdToPoiId.get(room.id) ?? poiId,
-      lifeStatus: 'alive',
-      movementStatus: 'present',
-      description: [
-        compendiumId ? getMonsterDescription(compendiumId) : '',
-        `Activity: ${room.activity ?? 'guarding'}.`,
-      ].filter(Boolean).join('\n\n'),
-      traits: [],
-      motivation: '',
-      appearance: '',
-      voice: '',
-      want: creatureRng.pick(CREATURE_WANTS),
-      tags: ['creature', options.theme],
-      imageUrl: null,
-      systemBlock: compendiumId
-        ? systemBlockFromMonster(compendiumId)
-        : fallbackSystemBlock(room.depth, options.dangerLevel, systemId),
+      systemId,
+      compendiumId,
+      name: creatureName,
+      activity: room.activity ?? 'guarding',
+      depth: room.depth,
+      dangerLevel: options.dangerLevel,
       disposition: 'hostile',
-      starred: false,
-      createdAt: now,
-      updatedAt: now,
-    }
+      tags: ['creature', options.theme],
+    }, creatureRng)
 
     await deps.npcRepo.create(creatureNpc)
     dungeonNPCs.push({ npcId: creatureNpc.id, category: 'faction_member', roomId: room.id, disposition: 'hostile' })

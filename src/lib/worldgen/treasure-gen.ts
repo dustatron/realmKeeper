@@ -1,7 +1,7 @@
 import { newId } from '@shared/ulid'
 import type { TreasureItem } from '@domain/value-objects/TreasureItem'
-import type { SpatialRoom } from './types'
-import type { SeededRandom } from './SeededRandom'
+import type { SpatialRoom } from '~/lib/dungeon/types'
+import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { pickWeapon, pickGear, pickSpellScroll, pickMagicItem } from './compendium-utils'
 
 const COIN_TREASURE: Record<string, { name: string; value: string }[]> = {
@@ -18,6 +18,20 @@ const TREASURE_CHANCES: Record<string, { deadEnd: number; treasure: number; othe
   hoard:    { deadEnd: 1.00, treasure: 1.00, other: 0.55 },
 }
 
+export function generateTreasureItems(
+  level: string,
+  count: number,
+  rng: SeededRandom
+): TreasureItem[] {
+  const items: TreasureItem[] = []
+  const pool = COIN_TREASURE[level] ?? COIN_TREASURE.standard
+  for (let i = 0; i < count; i++) {
+    const pick = rng.pick(pool)
+    items.push({ id: newId(), name: pick.name, description: '', value: pick.value, quantity: 1, collected: false })
+  }
+  return items
+}
+
 export function generateRoomTreasure(
   room: SpatialRoom,
   level: string,
@@ -31,14 +45,8 @@ export function generateRoomTreasure(
   const roll = isTreasureRoom ? chance.treasure : room.isDeadEnd ? chance.deadEnd : chance.other
   if (!rng.chance(roll)) return []
 
-  const items: TreasureItem[] = []
-  const pool = COIN_TREASURE[level] ?? COIN_TREASURE.standard
   const count = isTreasureRoom ? rng.between(2, 4) : rng.between(1, 2)
-  for (let i = 0; i < count; i++) {
-    const pick = rng.pick(pool)
-    items.push({ id: newId(), name: pick.name, description: '', value: pick.value, quantity: 1, collected: false })
-  }
-  return items
+  return generateTreasureItems(level, count, rng)
 }
 
 /** Generate exactly `count` magic items distributed across eligible rooms */

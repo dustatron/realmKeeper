@@ -35,6 +35,10 @@ export class NPCRepository implements INPCRepository {
     await db.npcs.put(npc)
   }
 
+  async bulkCreate(npcs: NPC[]): Promise<void> {
+    await db.npcs.bulkPut(npcs)
+  }
+
   async update(npc: NPC): Promise<void> {
     await db.npcs.put(npc)
   }

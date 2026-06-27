@@ -8,6 +8,7 @@ export interface INPCRepository {
   getByPoiId(poiId: string): Promise<NPC[]>
   getByTag(worldId: string, tag: string): Promise<NPC[]>
   create(npc: NPC): Promise<void>
+  bulkCreate(npcs: NPC[]): Promise<void>
   update(npc: NPC): Promise<void>
   delete(id: string): Promise<void>
 }

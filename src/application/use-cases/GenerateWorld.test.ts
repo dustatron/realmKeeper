@@ -15,6 +15,7 @@ beforeEach(async () => {
 
 const deps = () => ({
   realmRepo: container.realmRepo,
+  regionRepo: container.regionRepo,
   factionRepo: container.factionRepo,
   realmNoteRepo: container.realmNoteRepo,
   poiRepo: container.poiRepo,

@@ -1,7 +1,7 @@
 import { searchCompendium, getCompendiumById, getMonstersBySystemId, getEquipmentBySystemId, getSpellsBySystemId, getMagicItemsBySystemId } from '@domain/data/compendium'
 import type { CompendiumMonster } from '@domain/entities/Compendium'
 import type { SystemBlock } from '@domain/value-objects/SystemBlock'
-import type { SeededRandom } from './SeededRandom'
+import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
 
 const CONDITIONS = ['rusty', 'battered', 'worn', 'cracked', 'well-used', 'new', 'masterwork']
 
@@ -91,19 +91,21 @@ const _cache = new Map<string, CompendiumMonster[]>()
  * Resolve a creature slug to a compendium entry.
  * Falls back to a random real system monster if no name match found.
  * depth is used to filter by appropriate level (depth 1 → max level ~3, etc.)
+ * levelCap overrides depth*2+1 in both the over-level guard and the filter.
  */
 export function resolveCreature(
   slug: string,
   systemId: string,
   rng: SeededRandom,
-  depth = 1
+  opts: { depth?: number; levelCap?: number } = {}
 ): { id: string; name: string } | null {
+  const depth = opts.depth ?? 1
+  const maxLevel = opts.levelCap ?? depth * 2 + 1
   const exactId = findCompendiumId(slug, systemId)
   if (exactId) {
     // Verify the exact match isn't way over-leveled for this depth
     const entry = getCompendiumById(exactId) as CompendiumMonster | undefined
     if (entry?.systemData.system === 'shadowdark') {
-      const maxLevel = depth * 2 + 1 // depth 1→3, depth 2→5, depth 3→7
       if (entry.systemData.data.level > maxLevel + 2) {
         // Over-leveled — fall through to filtered random pick
       } else {
@@ -119,7 +121,6 @@ export function resolveCreature(
   if (allMonsters.length === 0) return null
 
   // Filter by appropriate level for the dungeon depth
-  const maxLevel = depth * 2 + 1
   const levelFiltered = allMonsters.filter((m) => {
     if (m.systemData.system === 'shadowdark') return m.systemData.data.level <= maxLevel
     if (m.systemData.system === 'cairn') {

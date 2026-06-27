@@ -9,6 +9,8 @@ import type { WanderingMonsterEntry } from '@domain/value-objects/WanderingMonst
 import type { WatabouCityData } from '@domain/value-objects/WatabouCityData'
 import type { WatabouDungeonData } from '@domain/value-objects/WatabouDungeonData'
 import type { GeneratedDungeon, DungeonGenOptions } from '~/lib/dungeon/types'
+import type { RuinSite } from '@domain/entities/RuinSite'
+import type { LandmarkLore } from '@domain/entities/LandmarkLore'
 
 export interface POI {
   id: string
@@ -50,6 +52,9 @@ export interface POI {
   sessionLog: SessionLogEntry[]
   spatialDungeon: GeneratedDungeon | null
   dungeonGenOptions: DungeonGenOptions | null
+  ruinSite: RuinSite | null
+  landmarkLore: LandmarkLore | null
+  poiGenOptions: { seed: string } | null
   starred: boolean
   createdAt: number
   updatedAt: number

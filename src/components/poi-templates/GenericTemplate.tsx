@@ -26,6 +26,9 @@ import { AtAGlancePanel } from "~/components/shared/AtAGlancePanel";
 import { LocationSeedEditor } from "~/components/shared/LocationSeedEditor";
 import { EncounterCascade } from "~/components/shared/EncounterCascade";
 import { RumorList } from "~/components/shared/RumorList";
+import { RuinLoreBlock } from "./RuinLoreBlock";
+import { LandmarkLoreBlock } from "./LandmarkLoreBlock";
+import { RuinAreasSection } from "./RuinAreasSection";
 import { ServicesList } from "~/components/shared/ServicesList";
 import { PathCard } from "~/components/shared/PathCard";
 import { EmptyState } from "~/components/shared/EmptyState";
@@ -217,6 +220,23 @@ export function GenericTemplate({
 
           {/* Sensory */}
           <SensoryBlock text={poi.sensory} />
+
+          {/* Ruin lore + areas (ruin POIs only) */}
+          {poi.type === "ruin" && poi.ruinSite && (
+            <>
+              <RuinLoreBlock site={poi.ruinSite} />
+              <RuinAreasSection
+                areas={poi.ruinSite.areas}
+                npcs={allNPCs.map(({ npc }) => npc)}
+                treasure={poi.treasure}
+              />
+            </>
+          )}
+
+          {/* Landmark lore (landmark POIs only) */}
+          {poi.type === "landmark" && poi.landmarkLore && (
+            <LandmarkLoreBlock lore={poi.landmarkLore} />
+          )}
 
           {/* Map */}
           {mapSection}

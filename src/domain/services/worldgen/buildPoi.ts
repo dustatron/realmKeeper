@@ -3,6 +3,8 @@ import type { PoiType } from '@shared/constants'
 import type { Service } from '@domain/value-objects/Service'
 import type { LocationSeed } from '@domain/value-objects/LocationSeed'
 import type { DungeonGenOptions } from '~/lib/dungeon/types'
+import type { RuinSite } from '@domain/entities/RuinSite'
+import type { LandmarkLore } from '@domain/entities/LandmarkLore'
 import { newId } from '@shared/ulid'
 
 export interface BuildPOIInput {
@@ -25,6 +27,9 @@ export interface BuildPOIInput {
   services?: Service[]
   locationSeed?: LocationSeed | null
   dungeonGenOptions?: DungeonGenOptions | null
+  ruinSite?: RuinSite | null
+  landmarkLore?: LandmarkLore | null
+  poiGenOptions?: { seed: string } | null
 }
 
 export function buildPOI(input: BuildPOIInput): POI {
@@ -63,6 +68,9 @@ export function buildPOI(input: BuildPOIInput): POI {
     watabouData: null,
     spatialDungeon: null,
     dungeonGenOptions: input.dungeonGenOptions ?? null,
+    ruinSite: input.ruinSite ?? null,
+    landmarkLore: input.landmarkLore ?? null,
+    poiGenOptions: input.poiGenOptions ?? null,
     sessionLog: [],
     starred: false,
     monsterRefs: [],

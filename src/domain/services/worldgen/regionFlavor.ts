@@ -16,7 +16,7 @@ export interface RegionFlavor {
 // Cairn splits terrain/landmarks into easy/tough/perilous difficulty bands. Map
 // each biome to the band that best matches its threat level so landmark flavor
 // fits the terrain.
-type Tier = 'easy' | 'tough' | 'perilous'
+export type Tier = 'easy' | 'tough' | 'perilous'
 const BIOME_TIER: Record<Biome, Tier> = {
   grasslands: 'easy',
   hills: 'easy',
@@ -28,6 +28,10 @@ const BIOME_TIER: Record<Biome, Tier> = {
   mountains: 'perilous',
   frozen: 'perilous',
   blighted: 'perilous',
+}
+
+export function biomeTier(biome: Biome): Tier {
+  return BIOME_TIER[biome]
 }
 
 // Cairn has no generic "region danger" table; derive danger from a Lair (its

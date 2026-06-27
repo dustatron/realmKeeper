@@ -133,6 +133,7 @@ function NewRealmPage() {
           },
           {
             realmRepo: container.realmRepo,
+            regionRepo: container.regionRepo,
             factionRepo: container.factionRepo,
             realmNoteRepo: container.realmNoteRepo,
             poiRepo: container.poiRepo,
