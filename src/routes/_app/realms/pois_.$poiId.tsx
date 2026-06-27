@@ -646,6 +646,7 @@ function POIDetailPage() {
         return (
           <DungeonTemplate
             poi={poi}
+            actionBar={poiActionBar}
             children={children}
             npcs={npcs}
             childNPCs={childNPCs}
@@ -755,7 +756,7 @@ function POIDetailPage() {
         />
       )}
 
-      {poi.type !== 'settlement' && (
+      {poi.type !== 'settlement' && poi.type !== 'dungeon' && (
         <div className="flex flex-wrap items-center gap-2">
           {poiHeading}
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">

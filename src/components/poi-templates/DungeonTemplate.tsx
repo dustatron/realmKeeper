@@ -594,6 +594,8 @@ interface DungeonTemplateProps {
   notesSection?: React.ReactNode;
   compendiumSection?: React.ReactNode;
   dungeonEventsPanel?: React.ReactNode;
+  /** Action buttons (Visited / Regenerate / Add Map / Edit), rendered on the tab row */
+  actionBar?: React.ReactNode;
   /** System ID for bestiary search */
   systemId?: string | null;
   /** World ID for custom compendium entries */
@@ -627,6 +629,7 @@ export function DungeonTemplate({
   notesSection,
   compendiumSection,
   dungeonEventsPanel,
+  actionBar,
   systemId,
   worldId,
 }: DungeonTemplateProps) {
@@ -766,24 +769,31 @@ export function DungeonTemplate({
     <div className="space-y-4">
       {/* Tabs */}
       <Tabs value={activeTab ?? "rooms"} onValueChange={onTabChange}>
-        <TabsList variant="line" className="w-full">
-          <TabsTrigger value="rooms">
-            <MapPin className="size-4" />
-            Rooms ({childPois.length})
-          </TabsTrigger>
-          <TabsTrigger value="denizens">
-            <Users className="size-4" />
-            Denizens{allNPCs.length > 0 ? ` (${allNPCs.length})` : ''}
-          </TabsTrigger>
-          <TabsTrigger value="encounters">
-            <Dices className="size-4" />
-            Encounters
-          </TabsTrigger>
-          <TabsTrigger value="notes">
-            <FileText className="size-4" />
-            Notes
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <TabsList variant="line" className="min-w-0 flex-1 justify-start overflow-x-auto">
+            <TabsTrigger value="rooms">
+              <MapPin className="size-4" />
+              Rooms ({childPois.length})
+            </TabsTrigger>
+            <TabsTrigger value="denizens">
+              <Users className="size-4" />
+              Denizens{allNPCs.length > 0 ? ` (${allNPCs.length})` : ''}
+            </TabsTrigger>
+            <TabsTrigger value="encounters">
+              <Dices className="size-4" />
+              Encounters
+            </TabsTrigger>
+            <TabsTrigger value="notes">
+              <FileText className="size-4" />
+              Notes
+            </TabsTrigger>
+          </TabsList>
+          {actionBar && (
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              {actionBar}
+            </div>
+          )}
+        </div>
 
         {/* Rooms tab */}
         <TabsContent value="rooms" className="space-y-4 pt-3">
@@ -812,7 +822,9 @@ export function DungeonTemplate({
               return overlap / small.size >= 0.7;
             };
             const showDescription = !!description && (!readAloud || !isRedundant(description, readAloud));
-            if (!showDescription && !hasLore && !readAloud && poi.tags.length === 0) return null;
+            const hasMeta =
+              !!poi.spatialDungeon || !!poi.subtypeLabel || poi.floor != null || poi.tags.length > 0;
+            if (!showDescription && !hasLore && !readAloud && !hasMeta) return null;
             return (
               <Collapsible open={overviewOpen} onOpenChange={setOverviewOpen}>
                 <div className="rounded-lg border">
@@ -825,7 +837,23 @@ export function DungeonTemplate({
                         <Eye className="size-4 text-muted-foreground" />
                         Overview
                       </span>
-                      <span className="flex flex-wrap items-center gap-1.5">
+                      <span className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5">
+                        <Badge variant="outline" className="text-xs">
+                          {poi.type}
+                        </Badge>
+                        {poi.spatialDungeon && (
+                          <>
+                            <Badge variant="secondary" className="text-xs capitalize">
+                              {poi.spatialDungeon.theme.replace(/_/g, " ")}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              Depth {poi.spatialDungeon.depth}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs capitalize">
+                              {poi.spatialDungeon.size}
+                            </Badge>
+                          </>
+                        )}
                         {poi.subtypeLabel && (
                           <Badge variant="secondary" className="text-xs capitalize">
                             {poi.subtypeLabel}
