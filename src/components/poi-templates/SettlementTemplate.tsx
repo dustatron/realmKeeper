@@ -55,12 +55,22 @@ import type { EncounterTable } from "@domain/entities/EncounterTable";
 import type { POIEvent } from "@domain/entities/POIEvent";
 import type { GameMap } from "@domain/entities/GameMap";
 import type { TreasureItem } from "@domain/value-objects/TreasureItem";
-import { OPPOSITE_DIRECTION, type Direction, type NoticeType } from "@shared/constants";
+import {
+  OPPOSITE_DIRECTION,
+  type Direction,
+  type NoticeType,
+} from "@shared/constants";
 import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
 import type { CascadeAction } from "@application/use-cases/RollEncounterCascade";
 import type { EncounterRollResult } from "@domain/value-objects/EncounterRollResult";
 
-type SettlementTab = "locations" | "denizens" | "rumors" | "encounters" | "events" | "notes";
+type SettlementTab =
+  | "locations"
+  | "denizens"
+  | "rumors"
+  | "encounters"
+  | "events"
+  | "notes";
 
 const SETTLEMENT_TABS: readonly SettlementTab[] = [
   "locations",
@@ -71,7 +81,9 @@ const SETTLEMENT_TABS: readonly SettlementTab[] = [
   "notes",
 ];
 
-function isSettlementTab(value: string | null | undefined): value is SettlementTab {
+function isSettlementTab(
+  value: string | null | undefined,
+): value is SettlementTab {
   return SETTLEMENT_TABS.includes(value as SettlementTab);
 }
 
@@ -84,7 +96,10 @@ function LocationDetailContent({
   location: POI;
   npcs: NPC[];
   onUpdateNPC?: (npc: NPC) => void;
-  onUpdateTreasure?: (location: POI, treasure: TreasureItem[]) => void | Promise<void>;
+  onUpdateTreasure?: (
+    location: POI,
+    treasure: TreasureItem[],
+  ) => void | Promise<void>;
 }) {
   const handleToggleTreasure = (itemId: string) => {
     if (!onUpdateTreasure) return;
@@ -101,14 +116,20 @@ function LocationDetailContent({
       {/* Read Aloud */}
       {location.readAloud && (
         <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5">
-          <div className="text-xs font-medium text-amber-500 mb-1">📖 Read Aloud</div>
-          <p className="text-sm italic text-foreground/80 leading-relaxed">{location.readAloud}</p>
+          <div className="text-xs font-medium text-amber-500 mb-1">
+            📖 Read Aloud
+          </div>
+          <p className="text-sm italic text-foreground/80 leading-relaxed">
+            {location.readAloud}
+          </p>
         </div>
       )}
 
       {/* Description */}
       {location.description && (
-        <p className="text-sm text-muted-foreground leading-relaxed">{location.description}</p>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          {location.description}
+        </p>
       )}
 
       {/* Sensory */}
@@ -137,7 +158,9 @@ function LocationDetailContent({
       {/* NPCs */}
       {npcs.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-xs font-semibold text-blue-400 uppercase tracking-wide">👤 NPCs</div>
+          <div className="text-xs font-semibold text-blue-400 uppercase tracking-wide">
+            👤 NPCs
+          </div>
           <div className="space-y-1.5">
             {npcs.map((n) => (
               <NPCMiniCard key={n.id} npc={n} onUpdateNPC={onUpdateNPC} />
@@ -149,7 +172,9 @@ function LocationDetailContent({
       {/* Services */}
       {location.services.length > 0 && (
         <div className="space-y-1">
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">🏪 Services</div>
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            🏪 Services
+          </div>
           <ServicesList services={location.services} />
         </div>
       )}
@@ -157,14 +182,27 @@ function LocationDetailContent({
       {/* Traps */}
       {location.traps?.length > 0 && (
         <div className="space-y-1">
-          <div className="text-xs font-semibold text-amber-500 uppercase tracking-wide">⚠️ Traps</div>
+          <div className="text-xs font-semibold text-amber-500 uppercase tracking-wide">
+            ⚠️ Traps
+          </div>
           {location.traps.map((trap) => (
-            <div key={trap.id} className="flex items-start gap-2 text-sm rounded border border-amber-500/20 bg-amber-500/5 px-2 py-1.5">
-              <span className={trap.disarmed ? "line-through text-muted-foreground" : "text-foreground"}>
+            <div
+              key={trap.id}
+              className="flex items-start gap-2 text-sm rounded border border-amber-500/20 bg-amber-500/5 px-2 py-1.5"
+            >
+              <span
+                className={
+                  trap.disarmed
+                    ? "line-through text-muted-foreground"
+                    : "text-foreground"
+                }
+              >
                 {trap.name}
               </span>
               {trap.dc != null && (
-                <Badge variant="outline" className="text-xs shrink-0">DC {trap.dc}</Badge>
+                <Badge variant="outline" className="text-xs shrink-0">
+                  DC {trap.dc}
+                </Badge>
               )}
               <span className="ml-auto text-xs shrink-0">
                 {trap.disarmed ? "✅ disarmed" : "❌ armed"}
@@ -177,7 +215,9 @@ function LocationDetailContent({
       {/* Treasure */}
       {location.treasure?.length > 0 && (
         <div className="space-y-1">
-          <div className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">💎 Treasure</div>
+          <div className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">
+            💎 Treasure
+          </div>
           {location.treasure.map((item) => {
             const treasureLabel = (
               <>
@@ -186,11 +226,16 @@ function LocationDetailContent({
               </>
             );
             const treasureLabelClassName = `min-w-0 flex-1 truncate ${
-              item.collected ? "line-through text-muted-foreground" : "text-foreground"
+              item.collected
+                ? "line-through text-muted-foreground"
+                : "text-foreground"
             }`;
 
             return (
-              <div key={item.id} className="flex items-center gap-2 text-sm rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5">
+              <div
+                key={item.id}
+                className="flex items-center gap-2 text-sm rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5"
+              >
                 {item.isMagic && item.compendiumId ? (
                   <Link
                     to="/realms/compendium/magic-items/$itemId"
@@ -200,7 +245,9 @@ function LocationDetailContent({
                     {treasureLabel}
                   </Link>
                 ) : (
-                  <span className={treasureLabelClassName}>{treasureLabel}</span>
+                  <span className={treasureLabelClassName}>
+                    {treasureLabel}
+                  </span>
                 )}
                 {item.value && (
                   <span className="text-xs text-amber-400">{item.value}</span>
@@ -238,7 +285,10 @@ function LocationDetailPanel({
   location: POI;
   npcs: NPC[];
   onUpdateNPC?: (npc: NPC) => void;
-  onUpdateTreasure?: (location: POI, treasure: TreasureItem[]) => void | Promise<void>;
+  onUpdateTreasure?: (
+    location: POI,
+    treasure: TreasureItem[],
+  ) => void | Promise<void>;
 }) {
   const LocIcon = POI_TYPE_ICONS[location.type];
   return (
@@ -317,7 +367,10 @@ interface SettlementTemplateProps {
   onCreateEvent: () => void;
   onDeleteEvent: (id: string) => void;
   onUpdateNPC?: (npc: NPC) => void;
-  onUpdateTreasure?: (location: POI, treasure: TreasureItem[]) => void | Promise<void>;
+  onUpdateTreasure?: (
+    location: POI,
+    treasure: TreasureItem[],
+  ) => void | Promise<void>;
   onRerollProblem?: () => void | Promise<void>;
   isRerollingProblem?: boolean;
   activeTab?: string | null;
@@ -332,7 +385,11 @@ interface TreasureManifestEntry {
   location: POI;
 }
 
-function pluralize(count: number, singular: string, plural = `${singular}s`): string {
+function pluralize(
+  count: number,
+  singular: string,
+  plural = `${singular}s`,
+): string {
   return `${count} ${count === 1 ? singular : plural}`;
 }
 
@@ -356,7 +413,10 @@ function magicItemCountFor(poi: POI): number {
 }
 
 function monsterCountFor(poi: POI): number {
-  return (poi.monsterRefs ?? []).reduce((sum, ref) => sum + (ref.quantity ?? 1), 0);
+  return (poi.monsterRefs ?? []).reduce(
+    (sum, ref) => sum + (ref.quantity ?? 1),
+    0,
+  );
 }
 
 function OverviewFact({
@@ -372,12 +432,16 @@ function OverviewFact({
 }) {
   return (
     <div className="min-w-0 rounded-md bg-muted/30 px-3 py-2">
-      <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <div className="mb-1 flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-muted-foreground ">
         <Icon className="size-3.5" />
         {label}
       </div>
       <div className="truncate text-sm font-medium">{value}</div>
-      {detail && <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{detail}</div>}
+      {detail && (
+        <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+          {detail}
+        </div>
+      )}
     </div>
   );
 }
@@ -433,7 +497,9 @@ function OverviewRoutes({
               const destId = isFrom ? path.toPoiId : path.fromPoiId;
               const dest = isFrom ? path.toName : path.fromName;
               const displayDir: Direction | null = path.direction
-                ? (isFrom ? path.direction : OPPOSITE_DIRECTION[path.direction])
+                ? isFrom
+                  ? path.direction
+                  : OPPOSITE_DIRECTION[path.direction]
                 : null;
               const description = cleanText(path.description);
               return (
@@ -448,7 +514,9 @@ function OverviewRoutes({
                           {displayDir.toUpperCase()}
                         </Badge>
                       ) : (
-                        <span className="w-8 shrink-0 text-center text-xs text-muted-foreground">→</span>
+                        <span className="w-8 shrink-0 text-center text-xs text-muted-foreground">
+                          →
+                        </span>
                       )}
                       <Link
                         to="/realms/pois/$poiId"
@@ -508,9 +576,15 @@ function OverviewRoutes({
               {treasureManifest.map(({ item, location }) => {
                 const itemLabel = (
                   <>
-                    {item.isMagic && <Sparkles className="size-3.5 shrink-0 text-violet-500" />}
-                    {!item.isMagic && <Gem className="size-3.5 shrink-0 text-emerald-500" />}
-                    <span className={`min-w-0 truncate ${item.collected ? "line-through text-muted-foreground" : ""}`}>
+                    {item.isMagic && (
+                      <Sparkles className="size-3.5 shrink-0 text-violet-500" />
+                    )}
+                    {!item.isMagic && (
+                      <Gem className="size-3.5 shrink-0 text-emerald-500" />
+                    )}
+                    <span
+                      className={`min-w-0 truncate ${item.collected ? "line-through text-muted-foreground" : ""}`}
+                    >
                       {item.name}
                       {item.quantity > 1 && ` (×${item.quantity})`}
                     </span>
@@ -640,14 +714,17 @@ export function SettlementTemplate({
   );
 
   const selectedLocation = selectedChildId
-    ? childPois.find((c) => c.id === selectedChildId) ?? null
+    ? (childPois.find((c) => c.id === selectedChildId) ?? null)
     : null;
 
   const detailPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (selectedChildId && detailPanelRef.current) {
-      detailPanelRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      detailPanelRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
     }
   }, [selectedChildId]);
 
@@ -694,19 +771,21 @@ export function SettlementTemplate({
     ],
     [poi, childPois],
   );
-  const uncollectedTreasure = treasureManifest.filter(({ item }) => !item.collected).length;
+  const uncollectedTreasure = treasureManifest.filter(
+    ({ item }) => !item.collected,
+  ).length;
   const magicItemCount =
-    magicItemCountFor(poi) + childPois.reduce((sum, child) => sum + magicItemCountFor(child), 0);
+    magicItemCountFor(poi) +
+    childPois.reduce((sum, child) => sum + magicItemCountFor(child), 0);
   const monsterCount =
-    monsterCountFor(poi) + childPois.reduce((sum, child) => sum + monsterCountFor(child), 0);
+    monsterCountFor(poi) +
+    childPois.reduce((sum, child) => sum + monsterCountFor(child), 0);
 
   const detailLine = cleanText(poi.description);
   const localProblem = cleanText(poi.trouble);
   const sizeLabel = settlementSize(poi.subtypeLabel);
   const displaySize = sizeLabel.charAt(0).toUpperCase() + sizeLabel.slice(1);
-  const npcWants = allNPCs
-    .filter(({ npc }) => cleanText(npc.want))
-    .slice(0, 3);
+  const npcWants = allNPCs.filter(({ npc }) => cleanText(npc.want)).slice(0, 3);
 
   const handleToggleManifestTreasure = (location: POI, itemId: string) => {
     if (!onUpdateTreasure) return;
@@ -720,7 +799,7 @@ export function SettlementTemplate({
 
   const overviewSection = (
     <Collapsible open={overviewOpen} onOpenChange={setOverviewOpen}>
-      <div className="rounded-lg border">
+      <div className="rounded-lg border bg-card text-card-foreground shadow-card">
         <CollapsibleTrigger asChild>
           <button className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted/50">
             <span className="flex shrink-0 items-center gap-2">
@@ -751,8 +830,8 @@ export function SettlementTemplate({
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="grid gap-3 px-3 pb-3 xl:grid-cols-[minmax(0,2fr)_minmax(260px,0.85fr)]">
-            <div className="min-w-0 space-y-3">
+          <div className="grid gap-1 px-3 pb-3 xl:grid-cols-[minmax(0,2fr)_minmax(260px,0.85fr)]">
+            <div className="min-w-0 space-y-2 font-bold">
               {detailLine ? (
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   {detailLine}
@@ -763,7 +842,7 @@ export function SettlementTemplate({
                 </p>
               )}
 
-              <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 space-y-1">
                     <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
@@ -783,7 +862,9 @@ export function SettlementTemplate({
                       disabled={isRerollingProblem}
                       title="Reroll settlement problem"
                     >
-                      <RefreshCw className={`size-4 ${isRerollingProblem ? "animate-spin" : ""}`} />
+                      <RefreshCw
+                        className={`size-4 ${isRerollingProblem ? "animate-spin" : ""}`}
+                      />
                       Reroll
                     </Button>
                   )}
@@ -795,15 +876,25 @@ export function SettlementTemplate({
                   icon={Landmark}
                   label="Location"
                   value={
-                    <Link to="/realms/pois/$poiId" params={{ poiId: poi.id }} className="hover:underline">
+                    <Link
+                      to="/realms/pois/$poiId"
+                      params={{ poiId: poi.id }}
+                      className="hover:underline"
+                    >
                       {poi.name}
                     </Link>
                   }
                   detail={[
                     settlementTypeDetail(poi, displaySize),
-                    childPois.length > 0 ? pluralize(childPois.length, "key location") : null,
-                    allServices.length > 0 ? pluralize(allServices.length, "service") : null,
-                  ].filter(Boolean).join(" - ")}
+                    childPois.length > 0
+                      ? pluralize(childPois.length, "key location")
+                      : null,
+                    allServices.length > 0
+                      ? pluralize(allServices.length, "service")
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" - ")}
                 />
                 <OverviewFact
                   icon={Sparkles}
@@ -812,47 +903,36 @@ export function SettlementTemplate({
                   detail={cleanText(poi.sensory)}
                 />
               </div>
-
-              {(treasureManifest.length > 0 || magicItemCount > 0 || monsterCount > 0) && (
-                <div className="flex flex-wrap gap-2">
-                  {treasureManifest.length > 0 && (
-                    <Badge variant="outline" className="gap-1.5 text-xs">
-                      <Gem className="size-3.5 text-emerald-500" />
-                      {uncollectedTreasure}/{treasureManifest.length} loot uncollected
-                    </Badge>
-                  )}
-                  {magicItemCount > 0 && (
-                    <Badge variant="outline" className="gap-1.5 text-xs">
-                      <Sparkles className="size-3.5 text-violet-500" />
-                      {pluralize(magicItemCount, "magic item")}
-                    </Badge>
-                  )}
-                  {monsterCount > 0 && (
-                    <Badge variant="outline" className="gap-1.5 text-xs">
-                      <Skull className="size-3.5 text-orange-500" />
-                      {pluralize(monsterCount, "monster")}
-                    </Badge>
-                  )}
-                </div>
-              )}
-
               {npcWants.length > 0 && (
                 <div className="space-y-2 rounded-md bg-muted/20 px-3 py-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="text-xs font-extrabold uppercase tracking-wide text-muted-foreground ">
                     Local Wants
                   </p>
                   <div className="grid gap-2 md:grid-cols-3">
                     {npcWants.map(({ npc, poiName }) => (
-                      <div key={npc.id} className="min-w-0">
+                      <div
+                        key={npc.id}
+                        className="min-w-0 border-t pt-2 first:border-t-0 first:pt-0 md:border-t-0 md:pt-0 md:border-l md:pl-3 md:first:border-l-0 md:first:pl-0"
+                      >
                         <p className="truncate text-sm font-medium">
-                          <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="hover:underline">
+                          <Link
+                            to="/realms/npcs/$npcId"
+                            params={{ npcId: npc.id }}
+                            className="hover:underline"
+                          >
                             {npc.name}
                           </Link>
                         </p>
-                        <p className="line-clamp-2 text-xs text-muted-foreground">{npc.want}</p>
+                        <p className="line-clamp-2 text-xs text-muted-foreground">
+                          {npc.want}
+                        </p>
                         {npc.poiId && (
                           <p className="mt-1 text-[11px] text-muted-foreground">
-                            <Link to="/realms/pois/$poiId" params={{ poiId: npc.poiId }} className="hover:underline">
+                            <Link
+                              to="/realms/pois/$poiId"
+                              params={{ poiId: npc.poiId }}
+                              className="hover:underline"
+                            >
                               {poiName ?? poi.name}
                             </Link>
                           </p>
@@ -869,7 +949,9 @@ export function SettlementTemplate({
               currentPoiId={poi.id}
               treasureManifest={treasureManifest}
               uncollectedTreasure={uncollectedTreasure}
-              onToggleTreasure={onUpdateTreasure ? handleToggleManifestTreasure : undefined}
+              onToggleTreasure={
+                onUpdateTreasure ? handleToggleManifestTreasure : undefined
+              }
             />
           </div>
         </CollapsibleContent>
@@ -882,14 +964,17 @@ export function SettlementTemplate({
       {/* Tabs */}
       <Tabs value={selectedTab} onValueChange={handleTabChange}>
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <TabsList variant="line" className="min-w-0 flex-1 justify-start overflow-x-auto">
+          <TabsList
+            variant="line"
+            className="min-w-0 flex-1 justify-start overflow-x-auto"
+          >
             <TabsTrigger value="locations">
               <MapPin className="size-4" />
               Locations
             </TabsTrigger>
             <TabsTrigger value="denizens">
               <Users className="size-4" />
-              Denizens{allNPCs.length > 0 ? ` (${allNPCs.length})` : ''}
+              Denizens{allNPCs.length > 0 ? ` (${allNPCs.length})` : ""}
             </TabsTrigger>
             <TabsTrigger value="rumors">
               <MessageSquare className="size-4" />
@@ -974,11 +1059,15 @@ export function SettlementTemplate({
                     return (
                       <div
                         key={child.id}
-                        ref={layout === "stacked" && isSelected ? detailPanelRef : undefined}
+                        ref={
+                          layout === "stacked" && isSelected
+                            ? detailPanelRef
+                            : undefined
+                        }
                         className={`rounded-md border p-2.5 cursor-pointer transition-colors ${
                           isSelected
-                            ? "ring-2 ring-primary bg-accent"
-                            : "hover:bg-accent"
+                            ? "border-primary ring-1 ring-primary bg-card"
+                            : "bg-card hover:bg-accent"
                         }`}
                         onClick={() =>
                           onSelectChild(isSelected ? null : child.id)
@@ -986,39 +1075,70 @@ export function SettlementTemplate({
                       >
                         <div className="flex items-center gap-2">
                           <ChildIcon className="size-4 shrink-0 text-muted-foreground" />
-                          <ChevronRight className={`size-3.5 shrink-0 text-muted-foreground transition-transform ${isSelected ? "rotate-90" : ""}`} />
+                          <ChevronRight
+                            className={`size-3.5 shrink-0 text-muted-foreground transition-transform ${isSelected ? "rotate-90" : ""}`}
+                          />
                           <span className="text-sm font-medium truncate">
                             {child.name}
                           </span>
                           {/* Compact indicators */}
                           <span className="flex items-center gap-1 shrink-0">
                             {childNpcList.length > 0 && (
-                              <span title={`${childNpcList.length} NPC${childNpcList.length > 1 ? "s" : ""}`}><Users className="size-3.5 text-blue-400" /></span>
+                              <span
+                                title={`${childNpcList.length} NPC${childNpcList.length > 1 ? "s" : ""}`}
+                              >
+                                <Users className="size-3.5 text-blue-400" />
+                              </span>
                             )}
                             {child.services.length > 0 && (
-                              <span title={`${child.services.length} service${child.services.length > 1 ? "s" : ""}`}><ShoppingBag className="size-3.5 text-muted-foreground" /></span>
+                              <span
+                                title={`${child.services.length} service${child.services.length > 1 ? "s" : ""}`}
+                              >
+                                <ShoppingBag className="size-3.5 text-muted-foreground" />
+                              </span>
                             )}
                             {childTreasureCount > 0 && (
-                              <span title={`${childTreasureCount} treasure item${childTreasureCount > 1 ? "s" : ""}`}><Gem className="size-3.5 text-emerald-500" /></span>
+                              <span
+                                title={`${childTreasureCount} treasure item${childTreasureCount > 1 ? "s" : ""}`}
+                              >
+                                <Gem className="size-3.5 text-emerald-500" />
+                              </span>
                             )}
                             {childMagicCount > 0 && (
-                              <span title={`${childMagicCount} magic item${childMagicCount > 1 ? "s" : ""}`}><Sparkles className="size-3.5 text-violet-500" /></span>
+                              <span
+                                title={`${childMagicCount} magic item${childMagicCount > 1 ? "s" : ""}`}
+                              >
+                                <Sparkles className="size-3.5 text-violet-500" />
+                              </span>
                             )}
                             {childMonsterCount > 0 && (
-                              <span title={`${childMonsterCount} monster${childMonsterCount > 1 ? "s" : ""}`}><Skull className="size-3.5 text-orange-500" /></span>
+                              <span
+                                title={`${childMonsterCount} monster${childMonsterCount > 1 ? "s" : ""}`}
+                              >
+                                <Skull className="size-3.5 text-orange-500" />
+                              </span>
                             )}
                           </span>
                           <span className="ml-auto flex items-center gap-1.5 shrink-0">
                             {child.subtypeLabel && (
-                              <Badge variant="secondary" className="text-xs shrink-0">
+                              <Badge
+                                variant="secondary"
+                                className="text-xs shrink-0"
+                              >
                                 {child.subtypeLabel}
                               </Badge>
                             )}
-                            <Badge variant="outline" className="text-xs shrink-0">
+                            <Badge
+                              variant="outline"
+                              className="text-xs shrink-0"
+                            >
                               {child.type}
                             </Badge>
                             {child.floor != null && (
-                              <Badge variant="secondary" className="text-xs shrink-0">
+                              <Badge
+                                variant="secondary"
+                                className="text-xs shrink-0"
+                              >
                                 F{child.floor}
                               </Badge>
                             )}
