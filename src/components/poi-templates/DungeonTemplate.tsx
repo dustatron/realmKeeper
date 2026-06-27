@@ -42,7 +42,6 @@ import { DispositionBadge } from "~/components/shared/DispositionBadge";
 import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
 import { FactionChip } from "~/components/shared/FactionChip";
 import { EncounterCascade } from "~/components/shared/EncounterCascade";
-import { ReadAloudBlock } from "~/components/shared/ReadAloudBlock";
 import { AtAGlancePanel } from "~/components/shared/AtAGlancePanel";
 import { WanderingMonsterTable } from "~/components/shared/WanderingMonsterTable";
 import { db } from "@infrastructure/dexie/db";
@@ -765,17 +764,6 @@ export function DungeonTemplate({
 
   return (
     <div className="space-y-4">
-      {/* Header — only non-duplicate tags (dungeon type + mood shown in At A Glance) */}
-      {poi.tags.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          {poi.tags.map((tag) => (
-            <Badge key={tag} variant="outline" className="text-xs">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-      )}
-
       {/* Tabs */}
       <Tabs value={activeTab ?? "rooms"} onValueChange={onTabChange}>
         <TabsList variant="line" className="w-full">
@@ -811,7 +799,7 @@ export function DungeonTemplate({
             );
             const description = poi.description?.trim();
             const readAloud = poi.readAloud?.trim();
-            if (!description && !hasLore && !readAloud) return null;
+            if (!description && !hasLore && !readAloud && poi.tags.length === 0) return null;
             return (
               <Collapsible open={overviewOpen} onOpenChange={setOverviewOpen}>
                 <div className="rounded-lg border">
@@ -835,12 +823,21 @@ export function DungeonTemplate({
                             F{poi.floor}
                           </Badge>
                         )}
+                        {poi.tags.map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
                       </span>
                     </button>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="space-y-3 px-4 pb-3">
-                      {readAloud && <ReadAloudBlock text={poi.readAloud} />}
+                      {readAloud && (
+                        <p className="whitespace-pre-wrap text-sm italic leading-relaxed text-foreground">
+                          {poi.readAloud}
+                        </p>
+                      )}
                       {description && (
                         <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
                           {description}
