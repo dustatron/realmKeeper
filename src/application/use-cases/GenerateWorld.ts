@@ -157,12 +157,12 @@ export async function executeGenerateWorld(
   }
 
   // Pre-generate ruins (areas, occupants, loot) up to the cap. A shared
-  // usedHistory Set keeps area names distinct across ruins in the same world.
+  // usedHistory Set deduplicates builder culture + fate across ruins in the realm.
   const usedHistory = new Set<string>()
   for (const stub of ruinStubs.slice(0, PREGEN_RUIN_CAP)) {
     await executeGenerateRuin(
       { poiId: stub.id, worldId: realmId, systemId: input.systemId, seed: `${input.seed}-ruin-${stub.id}`, usedHistory },
-      { poiRepo: deps.poiRepo, npcRepo: deps.npcRepo, regionRepo: deps.regionRepo }
+      { poiRepo: deps.poiRepo, npcRepo: deps.npcRepo, regionRepo: deps.regionRepo, factionRepo: deps.factionRepo }
     )
   }
 

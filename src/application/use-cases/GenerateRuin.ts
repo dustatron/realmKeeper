@@ -1,6 +1,7 @@
 import type { IPOIRepository } from '@application/ports/IPOIRepository'
 import type { INPCRepository } from '@application/ports/INPCRepository'
 import type { IRegionRepository } from '@application/ports/IRegionRepository'
+import type { IFactionRepository } from '@application/ports/IFactionRepository'
 import type { Biome } from '@domain/data/worldgen/biomes'
 import type { NPC } from '@domain/entities/NPC'
 import type { TreasureItem } from '@domain/value-objects/TreasureItem'
@@ -29,6 +30,7 @@ export interface GenerateRuinDeps {
   poiRepo: IPOIRepository
   npcRepo: INPCRepository
   regionRepo: IRegionRepository
+  factionRepo: IFactionRepository
 }
 
 export async function executeGenerateRuin(input: GenerateRuinInput, deps: GenerateRuinDeps): Promise<void> {
@@ -43,8 +45,12 @@ export async function executeGenerateRuin(input: GenerateRuinInput, deps: Genera
   const prior = await deps.npcRepo.getByPoiId(poi.id)
   for (const n of prior) await deps.npcRepo.delete(n.id)
 
+  const factions = await deps.factionRepo.getByRealmId(input.worldId)
+  const factionIds = factions.filter((f) => !f.isParty).map((f) => f.id)
+
   const rng = new SeededRandom(input.seed)
-  const plan = generateRuinSite(input.seed, tier, [], input.usedHistory ?? new Set(), rng)
+  const usedHistory = input.usedHistory ?? new Set<string>()
+  const plan = generateRuinSite(input.seed, tier, factionIds, usedHistory, rng)
 
   const now = Date.now()
   const levelCap = ruinCreatureLevel(tier, input.systemId)

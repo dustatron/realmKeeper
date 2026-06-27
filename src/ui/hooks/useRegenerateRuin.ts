@@ -10,7 +10,7 @@ export function useRegenerateRuin() {
     if (!realm) return
     await executeGenerateRuin(
       { poiId, worldId: realm.id, systemId: realm.systemId, seed: `ruin-${newId()}` },
-      { poiRepo: container.poiRepo, npcRepo: container.npcRepo, regionRepo: container.regionRepo }
+      { poiRepo: container.poiRepo, npcRepo: container.npcRepo, regionRepo: container.regionRepo, factionRepo: container.factionRepo }
     )
   }
 }

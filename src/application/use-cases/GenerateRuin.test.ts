@@ -5,9 +5,9 @@ import { buildPOI } from '@domain/services/worldgen/buildPoi'
 import { executeGenerateRuin } from './GenerateRuin'
 
 const container = createContainer()
-const deps = () => ({ poiRepo: container.poiRepo, npcRepo: container.npcRepo, regionRepo: container.regionRepo })
+const deps = () => ({ poiRepo: container.poiRepo, npcRepo: container.npcRepo, regionRepo: container.regionRepo, factionRepo: container.factionRepo })
 
-beforeEach(async () => { await db.open(); await Promise.all([db.pois.clear(), db.npcs.clear(), db.regions.clear()]) })
+beforeEach(async () => { await db.open(); await Promise.all([db.pois.clear(), db.npcs.clear(), db.regions.clear(), db.factions.clear()]) })
 
 async function seedRuin(systemId: string, seed = 'ruin-1') {
   await db.regions.put({ id: 'r1', terrain: 'mountains' } as any) // perilous → occupants likely
@@ -67,6 +67,51 @@ describe('executeGenerateRuin', () => {
     for (const id of priorIds) {
       expect(afterIds).not.toContain(id)
     }
+  })
+
+  it('faction-held state is reachable and binds a real faction id', async () => {
+    // Seed a non-party faction in the test world
+    const factionId = 'test-faction-1'
+    await db.factions.put({
+      id: factionId,
+      worldId: 'w',
+      name: 'The Iron Order',
+      description: 'A martial faction',
+      type: 'military',
+      status: 'active',
+      isParty: false,
+      regionId: null,
+      headquartersPoiId: null,
+      leaderNpcId: null,
+      agentNpcIds: [],
+      agendaGoals: [],
+      advantages: [],
+      obstacles: [],
+      traits: [],
+      sortOrder: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    })
+    await db.regions.put({ id: 'r1', terrain: 'mountains' } as any)
+
+    // ruin-faction-1 is seeded to produce faction-held (verified via SeededRandom trace)
+    // Use seeds 1-6 as fallback for robustness; at least one must hit faction-held
+    const seedsToTry = ['ruin-faction-1', 'ruin-faction-2', 'ruin-faction-3', 'ruin-faction-4', 'ruin-faction-5', 'ruin-faction-6']
+    let foundFactionHeld = false
+    for (const seed of seedsToTry) {
+      await db.pois.clear()
+      await db.npcs.clear()
+      const poi = buildPOI({ regionId: 'r1', name: 'Crumbled Keep', type: 'ruin' })
+      await db.pois.put(poi)
+      await executeGenerateRuin({ poiId: poi.id, worldId: 'w', systemId: 'system-cairn-2e', seed }, deps())
+      const saved = (await db.pois.get(poi.id))!
+      if (saved.ruinSite?.currentState === 'faction-held') {
+        expect(saved.ruinSite.factionId).toBe(factionId)
+        foundFactionHeld = true
+        break
+      }
+    }
+    expect(foundFactionHeld).toBe(true)
   })
 
   it('magic notable prize is reachable (~60% chance per ruin)', async () => {
