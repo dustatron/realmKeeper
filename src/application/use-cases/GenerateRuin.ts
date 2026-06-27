@@ -7,9 +7,10 @@ import type { TreasureItem } from '@domain/value-objects/TreasureItem'
 import type { RuinSite, RuinArea, OccupantGroup } from '@domain/entities/RuinSite'
 import { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { biomeTier } from '@domain/services/worldgen/regionFlavor'
-import { resolveCreature } from '~/lib/worldgen/compendium-utils'
+import { resolveCreature, pickMagicItem } from '~/lib/worldgen/compendium-utils'
 import { buildCreatureNpc } from '@domain/services/worldgen/npcFactory'
 import { generateTreasureItems } from '~/lib/worldgen/treasure-gen'
+import { newId } from '@shared/ulid'
 import { generateRuinSite } from '~/lib/ruin/RuinGenerator'
 import { ruinCreatureLevel } from '~/lib/ruin/ruinCreaturePools'
 
@@ -84,14 +85,32 @@ export async function executeGenerateRuin(input: GenerateRuinInput, deps: Genera
 
     // Loot → TreasureItem[] tagged with areaIndex (SINGLE SOURCE: all loot on poi.treasure)
     for (const loot of ap.lootSpecs) {
-      const items = generateTreasureItems('standard', 1, rng).map((t) => ({
-        ...t,
-        areaIndex: ap.order,
-        notable: loot.notable,
-      }))
-      for (const item of items) {
+      if (loot.magic) {
+        const picked = pickMagicItem(input.systemId, rng)
+        const item: TreasureItem = {
+          id: newId(),
+          name: picked?.name ?? 'Strange Relic',
+          description: picked?.description ?? 'A magical item of unknown origin.',
+          value: 'priceless',
+          quantity: 1,
+          collected: false,
+          isMagic: true,
+          ...(picked?.id ? { compendiumId: picked.id } : {}),
+          areaIndex: ap.order,
+          notable: loot.notable,
+        }
         treasure.push(item)
         if (loot.notable) notablePrizeItemId = item.id
+      } else {
+        const items = generateTreasureItems('standard', 1, rng).map((t) => ({
+          ...t,
+          areaIndex: ap.order,
+          notable: loot.notable,
+        }))
+        for (const item of items) {
+          treasure.push(item)
+          if (loot.notable) notablePrizeItemId = item.id
+        }
       }
     }
 
