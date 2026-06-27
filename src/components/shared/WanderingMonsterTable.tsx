@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '~/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { Dices, Plus, Trash2, Footprints, BookOpen, Users, PenLine, Pencil } from 'lucide-react'
 import { rollDice } from '@shared/dice'
+import { evaluateEncounterCheck } from '@shared/encounterCheck'
 import { WANDERING_MONSTER_ACTIVITIES } from '@domain/data/wandering-monster-activities'
 import type { WanderingMonsterEntry } from '@domain/value-objects/WanderingMonster'
 import type { NPC } from '@domain/entities/NPC'
@@ -28,6 +29,9 @@ interface WanderingMonsterTableProps {
   systemId?: string | null
   /** World ID for custom compendium entries */
   worldId?: string | null
+  /** Encounter-check chance denominator (1 in N). Enables the Encounter Check button when onSaveEncounterChance is set. */
+  encounterChance?: number | null
+  onSaveEncounterChance?: (n: number) => void
 }
 
 export function WanderingMonsterTable({
@@ -38,6 +42,8 @@ export function WanderingMonsterTable({
   poiChildren = [],
   systemId,
   worldId,
+  encounterChance,
+  onSaveEncounterChance,
 }: WanderingMonsterTableProps) {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
@@ -46,11 +52,16 @@ export function WanderingMonsterTable({
   const [rollingIdx, setRollingIdx] = useState<number | null>(null)
   const [isRolling, setIsRolling] = useState(false)
   const rollTimers = useRef<ReturnType<typeof setTimeout>[]>([])
+  const [checkResult, setCheckResult] = useState<string | null>(null)
+  const checkTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const dieSize = entries.length
 
   useEffect(() => {
-    return () => rollTimers.current.forEach(clearTimeout)
+    return () => {
+      rollTimers.current.forEach(clearTimeout)
+      if (checkTimer.current) clearTimeout(checkTimer.current)
+    }
   }, [])
 
   const handleRoll = useCallback(() => {
@@ -87,6 +98,21 @@ export function WanderingMonsterTable({
     rollTimers.current.push(settleTimer)
   }, [dieSize, isRolling])
 
+  const handleEncounterCheck = useCallback(() => {
+    const { roll, chance, triggered } = evaluateEncounterCheck(
+      encounterChance ?? null,
+      (sides) => rollDice(`1d${sides}`).total,
+    )
+    if (checkTimer.current) clearTimeout(checkTimer.current)
+    if (triggered) {
+      setCheckResult(`🎲 ${roll}/${chance} — Encounter! Rolling…`)
+      handleRoll()
+    } else {
+      setCheckResult(`🎲 ${roll}/${chance} — No encounter`)
+    }
+    checkTimer.current = setTimeout(() => setCheckResult(null), 4000)
+  }, [encounterChance, handleRoll])
+
   const addEntry = (entry: WanderingMonsterEntry) => onSave([...entries, entry])
   const updateEntry = (idx: number, entry: WanderingMonsterEntry) => onSave(entries.map((e, i) => i === idx ? entry : e))
   const removeEntry = (idx: number) => {
@@ -118,6 +144,31 @@ export function WanderingMonsterTable({
             <Plus className="size-3 mr-1" />
             Add
           </Button>
+          {onSaveEncounterChance && (
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">1 in</span>
+              <Input
+                type="number"
+                min={2}
+                max={20}
+                value={encounterChance ?? 6}
+                onChange={(e) => {
+                  const n = Math.max(2, Math.min(20, Number(e.target.value) || 6))
+                  onSaveEncounterChance(n)
+                }}
+                className="h-7 w-14 px-1 text-center text-xs"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleEncounterCheck}
+                className="gap-1.5 border-red-500/30 text-red-500 hover:bg-red-500/10 hover:text-red-500"
+              >
+                <Dices className="size-3.5" />
+                Encounter Check
+              </Button>
+            </div>
+          )}
           {dieSize > 0 && (
             <Button
               size="sm"
@@ -132,6 +183,9 @@ export function WanderingMonsterTable({
           )}
         </div>
       </div>
+      {checkResult && (
+        <p className="mb-2 text-xs text-red-400">{checkResult}</p>
+      )}
 
       {dieSize > 0 ? (
         <div className="overflow-hidden rounded border border-border">

@@ -1044,6 +1044,10 @@ export function DungeonTemplate({
               poiChildren={childPois}
               systemId={systemId}
               worldId={worldId}
+              encounterChance={poi.encounterChance}
+              onSaveEncounterChance={(n) =>
+                db.pois.update(poi.id, { encounterChance: n, updatedAt: Date.now() })
+              }
             />
           </div>
         </TabsContent>
