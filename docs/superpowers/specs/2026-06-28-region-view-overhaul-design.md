@@ -28,13 +28,37 @@ derivable danger tier are never shown. A GM review confirmed these gaps.
 ```ts
 // TreasureItem (src/domain/value-objects/TreasureItem.ts) gains:
 guardianNpcId?: string | null   // NPC guarding this item, if any
+
+// Region (src/domain/entities/Region.ts) gains:
+problem: string                 // the region's central problem/tension (e.g.
+                                // "A blight creeps out of the marsh, fouling wells")
 ```
-- Optional nested field → no Dexie index needed. A read-hook/default keeps it
-  `undefined` for existing rows; **no migration required** (confirm in plan; if a
-  version bump is wanted for hygiene, it's a no-op `.upgrade`).
-- Setting it: a picker in the POI treasure editor (choose a guardian NPC). World
-  generation MAY set it where a guardian monster/NPC guards a notable item — but
-  generator wiring is a follow-up; the field + manual UI ships now.
+- Both are additive. `guardianNpcId` is an optional nested field (no index). For
+  `Region.problem`, reads guard with `region.problem ?? ''` for pre-existing rows;
+  `CreateRegion` defaults it to `''`, world-gen fills it. **No migration required**
+  (confirm in plan; a no-op version bump is fine for hygiene).
+- `guardianNpcId`: a picker in the POI treasure editor (choose a guardian NPC).
+  World generation MAY set it where a guardian guards a notable item — generator
+  wiring is a follow-up; the field + manual UI ships now.
+
+## Region problem
+
+Every region gets a **central problem** — a one-line tension/crisis that gives the
+GM an immediate "why does this region matter right now" hook.
+
+- **Table:** `REGION_PROBLEMS: string[]` in `src/domain/services/worldgen/regionFlavor.ts`
+  — ~30 evocative sandbox problems (feuds, blights, missing persons, monster
+  encroachment, failing resources, cult activity, succession disputes, etc.).
+  Picked with the seeded `rng`.
+- **Generation:** `buildRegionFlavor(biome, rng)` (called at `generateWorld.ts:118`)
+  also returns `problem` (a `rng.pick(REGION_PROBLEMS)`), set on each region. May
+  bias by biome later; flat pick for now.
+- **Display:** the overview header shows the problem prominently (its own labeled
+  line/callout), with a **Reroll** button beside it.
+- **Reroll:** `executeRerollRegionProblem(regionId, deps)` picks a NEW problem and
+  persists via `regionRepo.update`. Uses a fresh `SeededRandom(newId())` so each
+  click varies (variety over reproducibility — this is a GM convenience, not
+  deterministic world-gen). The route wires a handler + button.
 
 ## Components
 
@@ -106,9 +130,10 @@ Panel renders **three grouped lists** (not chips):
 - **Notable-only by default** with a "show mundane" toggle.
 Every name links to its POI/NPC route. Counts are separate and correct.
 
-### F. Overview header (cheap wins)
-Render region `dangers[]`, `features[]`, `resources[]`, `settlements[]` (people
-already shown) as labeled chip groups, plus a **danger tier** badge (derive from
+### F. Overview header (cheap wins + region problem)
+Render the region **problem** as a prominent callout with a **Reroll** button,
+plus region `dangers[]`, `features[]`, `resources[]`, `settlements[]` (people
+already shown) as labeled chip groups, and a **danger tier** badge (derive from
 max region monster threat, fallback `tierForTerrain(region.terrain)`).
 
 ## Testing
@@ -119,6 +144,9 @@ max region monster threat, fallback `tierForTerrain(region.terrain)`).
 - `DataTable`: sorts asc/desc by a column's `sortValue`; renders empty state;
   stable `rowKey`.
 - Danger-tier helper: max-threat → tier; terrain fallback.
+- `buildRegionFlavor` returns a non-empty `problem` from `REGION_PROBLEMS`
+  (deterministic for a fixed seed); `executeRerollRegionProblem` persists a new
+  problem string via the repo.
 - Build (`tsc`) gates the JSX/route wiring (no component-render harness).
 
 ## Out of scope
