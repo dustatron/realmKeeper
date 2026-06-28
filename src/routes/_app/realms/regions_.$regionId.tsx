@@ -1,64 +1,90 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useState, useEffect, useMemo } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@infrastructure/dexie/db'
-import { useRegion } from '~/ui/hooks/useRegions'
-import { usePOIs } from '~/ui/hooks/usePOIs'
-import { useNPCsByRegion } from '~/ui/hooks/useNPCsByRegion'
-import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
-import { useSystemConfig } from '~/ui/hooks/useSystemConfigs'
-import { useContainer } from '~/ui/hooks/useContainer'
-import { useUIStore } from '~/ui/stores/uiStore'
-import { executeRerollRegionProblem } from '@application/use-cases/RerollRegionProblem'
-import { executeUpdateRegion } from '@application/use-cases/UpdateRegion'
-import { executeDeleteRegion } from '@application/use-cases/DeleteRegion'
-import { executeCreatePOI } from '@application/use-cases/CreatePOI'
-import { executeCreateFaction } from '@application/use-cases/CreateFaction'
-import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
-import { executeCreateNPC } from '@application/use-cases/CreateNPC'
-import { executeCreatePOIEvent } from '@application/use-cases/CreatePOIEvent'
-import { executeRollEncounter } from '@application/use-cases/RollEncounter'
-import { executeCreateEncounterTable } from '@application/use-cases/CreateEncounterTable'
-import { executeUpdateEncounterTable } from '@application/use-cases/UpdateEncounterTable'
-import { executeRegenerateRegionEncounter } from '@application/use-cases/RegenerateRegionEncounter'
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect, useMemo } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@infrastructure/dexie/db";
+import { useRegion } from "~/ui/hooks/useRegions";
+import { usePOIs } from "~/ui/hooks/usePOIs";
+import { useNPCsByRegion } from "~/ui/hooks/useNPCsByRegion";
+import { useActiveRealm } from "~/ui/hooks/useActiveRealm";
+import { useSystemConfig } from "~/ui/hooks/useSystemConfigs";
+import { useContainer } from "~/ui/hooks/useContainer";
+import { useUIStore } from "~/ui/stores/uiStore";
+import { executeRerollRegionProblem } from "@application/use-cases/RerollRegionProblem";
+import { executeUpdateRegion } from "@application/use-cases/UpdateRegion";
+import { executeDeleteRegion } from "@application/use-cases/DeleteRegion";
+import { executeCreatePOI } from "@application/use-cases/CreatePOI";
+import { executeCreateFaction } from "@application/use-cases/CreateFaction";
+import { executeGenerateNPC } from "@application/use-cases/GenerateNPC";
+import { executeCreateNPC } from "@application/use-cases/CreateNPC";
+import { executeCreatePOIEvent } from "@application/use-cases/CreatePOIEvent";
+import { executeRollEncounter } from "@application/use-cases/RollEncounter";
+import { executeCreateEncounterTable } from "@application/use-cases/CreateEncounterTable";
+import { executeUpdateEncounterTable } from "@application/use-cases/UpdateEncounterTable";
+import { executeRegenerateRegionEncounter } from "@application/use-cases/RegenerateRegionEncounter";
 import {
   executeEncounterCascade,
   type CascadeAction,
   type CascadeContext,
   type CascadeUseCaseDeps,
-} from '@application/use-cases/RollEncounterCascade'
-import { buildRegionEncounterContent } from '@domain/services/worldgen/regionEncounter'
-import { SeededRandom } from '~/lib/dungeon/SeededRandom'
-import { useEncounterTable } from '~/ui/hooks/useEncounterTable'
-import { EncounterCascade } from '~/components/shared/EncounterCascade'
-import type { EncounterTable } from '@domain/entities/EncounterTable'
-import type { EncounterRollResult } from '@domain/value-objects/EncounterRollResult'
-import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
-import { TagInput } from '~/components/shared/TagInput'
-import { NotesPanel } from '~/components/shared/NotesPanel'
-import { WysiwygEditor } from '~/components/shared/WysiwygEditor'
-import { ImagePicker } from '~/components/shared/ImagePicker'
-import { CloudinaryImage } from '~/components/shared/CloudinaryImage'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '~/components/ui/tabs'
-import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
-import { Badge } from '~/components/ui/badge'
-import { Button } from '~/components/ui/button'
-import { Input } from '~/components/ui/input'
-import { Label } from '~/components/ui/label'
-import { Textarea } from '~/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
-import { ArrowLeft, RotateCcw, Coins, Check, AlertTriangle } from 'lucide-react'
-import { RegionContentsPanel } from '~/components/regions/RegionContentsPanel'
-import { regionDangerTier, summarizeRegionContents } from '~/components/regions/regionContents'
-import { terrainLabel } from '~/components/map/terrainColors'
-import { compendiumHref } from '~/components/shared/compendiumHref'
-import { DataTable, type DataTableColumn } from '~/components/shared/DataTable'
-import { getCompendiumById } from '@domain/data/compendium'
-import { monsterThreat } from '~/lib/worldgen/compendium-utils'
-import type { CompendiumMonster } from '@domain/entities/Compendium'
-import type { POI } from '@domain/entities/POI'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '~/components/ui/dialog'
+} from "@application/use-cases/RollEncounterCascade";
+import { buildRegionEncounterContent } from "@domain/services/worldgen/regionEncounter";
+import { SeededRandom } from "~/lib/dungeon/SeededRandom";
+import { useEncounterTable } from "~/ui/hooks/useEncounterTable";
+import { EncounterCascade } from "~/components/shared/EncounterCascade";
+import type { EncounterTable } from "@domain/entities/EncounterTable";
+import type { EncounterRollResult } from "@domain/value-objects/EncounterRollResult";
+import { ConfirmDialog } from "~/components/shared/ConfirmDialog";
+import { TagInput } from "~/components/shared/TagInput";
+import { NotesPanel } from "~/components/shared/NotesPanel";
+import { WysiwygEditor } from "~/components/shared/WysiwygEditor";
+import { ImagePicker } from "~/components/shared/ImagePicker";
+import { CloudinaryImage } from "~/components/shared/CloudinaryImage";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { Textarea } from "~/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
+import {
+  ArrowLeft,
+  RotateCcw,
+  Coins,
+  Check,
+  AlertTriangle,
+} from "lucide-react";
+import { RegionContentsPanel } from "~/components/regions/RegionContentsPanel";
+import {
+  regionDangerTier,
+  summarizeRegionContents,
+} from "~/components/regions/regionContents";
+import { terrainLabel } from "~/components/map/terrainColors";
+import { compendiumHref } from "~/components/shared/compendiumHref";
+import { DataTable, type DataTableColumn } from "~/components/shared/DataTable";
+import { getCompendiumById } from "@domain/data/compendium";
+import { monsterThreat } from "~/lib/worldgen/compendium-utils";
+import type { CompendiumMonster } from "@domain/entities/Compendium";
+import type { POI } from "@domain/entities/POI";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "~/components/ui/dialog";
 import {
   ChevronRight,
   Pencil,
@@ -83,22 +109,43 @@ import {
   Landmark,
   Tent,
   Sparkles,
-} from 'lucide-react'
-import { POI_TYPES, POI_EVENT_TYPES, SEASONS, type PoiType, type POIEventType, type Season } from '@shared/constants'
-import type { POIEvent } from '@domain/entities/POIEvent'
-import type { NPC } from '@domain/entities/NPC'
-import type { Faction } from '@domain/entities/Faction'
+} from "lucide-react";
+import {
+  POI_TYPES,
+  POI_EVENT_TYPES,
+  SEASONS,
+  type PoiType,
+  type POIEventType,
+  type Season,
+} from "@shared/constants";
+import type { POIEvent } from "@domain/entities/POIEvent";
+import type { NPC } from "@domain/entities/NPC";
+import type { Faction } from "@domain/entities/Faction";
 
-export const Route = createFileRoute('/_app/realms/regions_/$regionId')({
+export const Route = createFileRoute("/_app/realms/regions_/$regionId")({
   component: RegionDetailPage,
   validateSearch: (search: Record<string, unknown>): { edit?: boolean } => ({
-    ...(search.edit === 'true' || search.edit === true ? { edit: true } : {}),
+    ...(search.edit === "true" || search.edit === true ? { edit: true } : {}),
   }),
-})
+});
 
-const TERRAIN_OPTIONS = ['plains', 'forest', 'hills', 'mountain', 'swamp', 'desert', 'coast', 'road', 'tundra', 'other'] as const
+const TERRAIN_OPTIONS = [
+  "plains",
+  "forest",
+  "hills",
+  "mountain",
+  "swamp",
+  "desert",
+  "coast",
+  "road",
+  "tundra",
+  "other",
+] as const;
 
-const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }>> = {
+const POI_TYPE_ICONS: Record<
+  PoiType,
+  React.ComponentType<{ className?: string }>
+> = {
   settlement: Building2,
   building: Home,
   interior: DoorOpen,
@@ -112,443 +159,622 @@ const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }
   camp: Tent,
   shrine: Sparkles,
   other: MapPin,
-}
+};
 
-function poiMaxThreat(monsterRefs: POI['monsterRefs']): number {
-  let max = 0
+function poiMaxThreat(monsterRefs: POI["monsterRefs"]): number {
+  let max = 0;
   for (const ref of monsterRefs ?? []) {
-    const e = getCompendiumById(ref.id)
-    if (e?.kind === 'monster') max = Math.max(max, monsterThreat(e as CompendiumMonster))
+    const e = getCompendiumById(ref.id);
+    if (e?.kind === "monster")
+      max = Math.max(max, monsterThreat(e as CompendiumMonster));
   }
-  return max
+  return max;
 }
 
 function RegionDetailPage() {
-  const { regionId } = Route.useParams()
-  const navigate = useNavigate()
-  const region = useRegion(regionId)
-  const realm = useActiveRealm()
-  const systemConfig = useSystemConfig(realm?.systemId ?? null)
-  const pois = usePOIs(regionId)
-  const npcs = useNPCsByRegion(regionId)
-  const container = useContainer()
-  const setHeaderTitle = useUIStore((s) => s.setHeaderTitle)
+  const { regionId } = Route.useParams();
+  const navigate = useNavigate();
+  const region = useRegion(regionId);
+  const realm = useActiveRealm();
+  const systemConfig = useSystemConfig(realm?.systemId ?? null);
+  const pois = usePOIs(regionId);
+  const npcs = useNPCsByRegion(regionId);
+  const container = useContainer();
+  const setHeaderTitle = useUIStore((s) => s.setHeaderTitle);
 
-  const { edit: editFromSearch } = Route.useSearch()
+  const { edit: editFromSearch } = Route.useSearch();
 
-  const [editSheetOpen, setEditSheetOpen] = useState(false)
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [createPoiOpen, setCreatePoiOpen] = useState(false)
-  const [createFactionOpen, setCreateFactionOpen] = useState(false)
-  const [assignFactionOpen, setAssignFactionOpen] = useState(false)
-  const [assignFactionId, setAssignFactionId] = useState<string>('')
-  const [createEventOpen, setCreateEventOpen] = useState(false)
-  const [isGeneratingNPC, setIsGeneratingNPC] = useState(false)
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [createPoiOpen, setCreatePoiOpen] = useState(false);
+  const [createFactionOpen, setCreateFactionOpen] = useState(false);
+  const [assignFactionOpen, setAssignFactionOpen] = useState(false);
+  const [assignFactionId, setAssignFactionId] = useState<string>("");
+  const [createEventOpen, setCreateEventOpen] = useState(false);
+  const [isGeneratingNPC, setIsGeneratingNPC] = useState(false);
 
   const [editForm, setEditForm] = useState({
-    name: '',
-    description: '',
-    terrain: 'plains' as string,
+    name: "",
+    description: "",
+    terrain: "plains" as string,
     imageUrl: null as string | null,
     people: [] as string[],
-  })
+  });
 
-  const [poiForm, setPoiForm] = useState({ name: '', type: 'settlement' as PoiType })
-  const [factionForm, setFactionForm] = useState({ name: '', type: '' })
+  const [poiForm, setPoiForm] = useState({
+    name: "",
+    type: "settlement" as PoiType,
+  });
+  const [factionForm, setFactionForm] = useState({ name: "", type: "" });
   const [eventForm, setEventForm] = useState({
-    name: '',
-    type: 'custom' as POIEventType,
-    poiId: '',
-    description: '',
-    season: (realm?.currentSeason ?? 'spring') as Season,
+    name: "",
+    type: "custom" as POIEventType,
+    poiId: "",
+    description: "",
+    season: (realm?.currentSeason ?? "spring") as Season,
     day: realm?.currentDay ?? 1,
-  })
+  });
 
   // POI event data
-  const poiIds = pois.map(p => p.id)
-  const poiEvents = useLiveQuery(
-    async () => {
-      if (poiIds.length === 0) return []
-      return db.poiEvents.where('poiId').anyOf(poiIds).toArray()
-    },
-    [poiIds.join(',')]
-  ) ?? []
+  const poiIds = pois.map((p) => p.id);
+  const poiEvents =
+    useLiveQuery(async () => {
+      if (poiIds.length === 0) return [];
+      return db.poiEvents.where("poiId").anyOf(poiIds).toArray();
+    }, [poiIds.join(",")]) ?? [];
 
   // Factions in this region (based here or with presence at POIs)
-  const factions = useLiveQuery(
-    async () => {
-      if (!regionId) return []
-      const basedHere = await db.factions.where('worldId').equals(region?.worldId ?? '').toArray()
-      const regionFactions = basedHere.filter(f => f.regionId === regionId)
+  const factions =
+    useLiveQuery(async () => {
+      if (!regionId) return [];
+      const basedHere = await db.factions
+        .where("worldId")
+        .equals(region?.worldId ?? "")
+        .toArray();
+      const regionFactions = basedHere.filter((f) => f.regionId === regionId);
 
       // Belt-and-suspenders: also include factions whose HQ POI sits in this
       // region. Fixes existing realms where FactionPresence was never seeded.
-      const poiIdSet = new Set(poiIds)
+      const poiIdSet = new Set(poiIds);
       const hqFactions = basedHere.filter(
-        f => f.headquartersPoiId != null && poiIdSet.has(f.headquartersPoiId),
-      )
+        (f) => f.headquartersPoiId != null && poiIdSet.has(f.headquartersPoiId),
+      );
 
       // Merge regionFactions + hqFactions, then add presence-based factions.
       // Use a plain object for dedup — lucide's Map import shadows the JS Map.
-      const merged: Record<string, typeof regionFactions[number]> = {}
-      for (const f of regionFactions) merged[f.id] = f
-      for (const f of hqFactions) merged[f.id] = f
+      const merged: Record<string, (typeof regionFactions)[number]> = {};
+      for (const f of regionFactions) merged[f.id] = f;
+      for (const f of hqFactions) merged[f.id] = f;
 
       if (poiIds.length > 0) {
-        const presences = await db.factionPresences.where('poiId').anyOf(poiIds).toArray()
+        const presences = await db.factionPresences
+          .where("poiId")
+          .anyOf(poiIds)
+          .toArray();
         const presenceOnlyIds = presences
-          .map(p => p.factionId)
-          .filter(id => !(id in merged))
+          .map((p) => p.factionId)
+          .filter((id) => !(id in merged));
         if (presenceOnlyIds.length > 0) {
-          const presenceFactions = await db.factions.where('id').anyOf(presenceOnlyIds).toArray()
-          for (const f of presenceFactions) merged[f.id] = f
+          const presenceFactions = await db.factions
+            .where("id")
+            .anyOf(presenceOnlyIds)
+            .toArray();
+          for (const f of presenceFactions) merged[f.id] = f;
         }
       }
 
-      return Object.values(merged)
-    },
-    [regionId, region?.worldId, poiIds.join(',')]
-  ) ?? []
+      return Object.values(merged);
+    }, [regionId, region?.worldId, poiIds.join(",")]) ?? [];
 
   // Party faction + stance toward party for each region faction
-  const partyFaction = useLiveQuery(async () =>
-    region?.worldId
-      ? (await db.factions.where('worldId').equals(region.worldId).toArray()).find(f => f.isParty) ?? null
-      : null,
-    [region?.worldId]
-  )
-  const stanceByFaction = useLiveQuery(async () => {
-    if (!partyFaction || factions.length === 0) return {} as Record<string, number>
-    const rels = await db.factionRelationships.where('factionId').anyOf(factions.map(f => f.id)).toArray()
-    const out: Record<string, number> = {}
-    for (const r of rels) if (r.targetId === partyFaction.id) out[r.factionId] = r.score
-    return out
-  }, [partyFaction?.id, factions.map(f => f.id).join(',')]) ?? {}
+  const partyFaction = useLiveQuery(
+    async () =>
+      region?.worldId
+        ? ((
+            await db.factions.where("worldId").equals(region.worldId).toArray()
+          ).find((f) => f.isParty) ?? null)
+        : null,
+    [region?.worldId],
+  );
+  const stanceByFaction =
+    useLiveQuery(async () => {
+      if (!partyFaction || factions.length === 0)
+        return {} as Record<string, number>;
+      const rels = await db.factionRelationships
+        .where("factionId")
+        .anyOf(factions.map((f) => f.id))
+        .toArray();
+      const out: Record<string, number> = {};
+      for (const r of rels)
+        if (r.targetId === partyFaction.id) out[r.factionId] = r.score;
+      return out;
+    }, [partyFaction?.id, factions.map((f) => f.id).join(",")]) ?? {};
 
   // Realm factions not already in this region (for "assign existing" dialog)
-  const factionIds = new Set(factions.map(f => f.id))
-  const unassignedFactions = useLiveQuery(
-    async () => {
-      if (!realm) return []
-      const all = await db.factions.where('worldId').equals(realm.id).toArray()
-      return all.filter(f => f.regionId !== regionId && !factionIds.has(f.id))
-    },
-    [realm?.id, regionId, [...factionIds].join(',')]
-  ) ?? []
+  const factionIds = new Set(factions.map((f) => f.id));
+  const unassignedFactions =
+    useLiveQuery(async () => {
+      if (!realm) return [];
+      const all = await db.factions.where("worldId").equals(realm.id).toArray();
+      return all.filter(
+        (f) => f.regionId !== regionId && !factionIds.has(f.id),
+      );
+    }, [realm?.id, regionId, [...factionIds].join(",")]) ?? [];
 
-  const topLevelPOIs = useMemo(() => pois.filter(p => p.parentPoiId === null), [pois])
+  const topLevelPOIs = useMemo(
+    () => pois.filter((p) => p.parentPoiId === null),
+    [pois],
+  );
 
   // Encounter table for this region
-  const encounterTable = useEncounterTable(null, regionId, region?.worldId ?? null)
+  const encounterTable = useEncounterTable(
+    null,
+    regionId,
+    region?.worldId ?? null,
+  );
 
   // Faction presence map: poiId → faction name (first presence per POI)
-  const presenceByPoi = useLiveQuery(async () => {
-    if (poiIds.length === 0) return {} as Record<string, string>
-    const pres = await db.factionPresences.where('poiId').anyOf(poiIds).toArray()
-    const facs = await db.factions.where('id').anyOf([...new Set(pres.map(p => p.factionId))]).toArray()
-    const nameById: Record<string, string> = {}
-    for (const f of facs) nameById[f.id] = f.name
-    const out: Record<string, string> = {}
-    for (const p of pres) if (!out[p.poiId]) out[p.poiId] = nameById[p.factionId] ?? ''
-    return out
-  }, [poiIds.join(',')]) ?? {}
+  const presenceByPoi =
+    useLiveQuery(async () => {
+      if (poiIds.length === 0) return {} as Record<string, string>;
+      const pres = await db.factionPresences
+        .where("poiId")
+        .anyOf(poiIds)
+        .toArray();
+      const facs = await db.factions
+        .where("id")
+        .anyOf([...new Set(pres.map((p) => p.factionId))])
+        .toArray();
+      const nameById: Record<string, string> = {};
+      for (const f of facs) nameById[f.id] = f.name;
+      const out: Record<string, string> = {};
+      for (const p of pres)
+        if (!out[p.poiId]) out[p.poiId] = nameById[p.factionId] ?? "";
+      return out;
+    }, [poiIds.join(",")]) ?? {};
 
   // Columns for the Locations DataTable
-  const locationColumns = useMemo<DataTableColumn<POI>[]>(() => [
-    {
-      key: 'name',
-      header: 'Name',
-      sortable: true,
-      sortValue: p => p.name,
-      render: p => (
-        <Link to="/realms/pois/$poiId" params={{ poiId: p.id }} className="text-primary hover:underline font-medium">
-          {p.name}
-        </Link>
-      ),
-    },
-    {
-      key: 'type',
-      header: 'Type',
-      sortable: true,
-      sortValue: p => p.type,
-      render: p => <Badge variant="outline" className="text-xs">{p.type}</Badge>,
-    },
-    {
-      key: 'danger',
-      header: 'Danger',
-      sortable: true,
-      sortValue: p => poiMaxThreat(p.monsterRefs),
-      render: p => {
-        const threat = poiMaxThreat(p.monsterRefs)
-        const label = threat === 0 ? 'none' : threat >= 5 ? 'perilous' : threat >= 3 ? 'tough' : 'easy'
-        const cls = label === 'none'
-          ? 'bg-muted text-muted-foreground border-border'
-          : label === 'easy' ? 'bg-green-600 text-white'
-          : label === 'tough' ? 'bg-amber-600 text-white'
-          : 'bg-red-600 text-white'
-        return <Badge className={`text-xs ${cls}`}>{label}</Badge>
+  const locationColumns = useMemo<DataTableColumn<POI>[]>(
+    () => [
+      {
+        key: "name",
+        header: "Name",
+        sortable: true,
+        sortValue: (p) => p.name,
+        render: (p) => (
+          <Link
+            to="/realms/pois/$poiId"
+            params={{ poiId: p.id }}
+            className="text-primary hover:underline font-medium"
+          >
+            {p.name}
+          </Link>
+        ),
       },
-    },
-    {
-      key: 'treasure',
-      header: 'Treasure',
-      sortable: true,
-      sortValue: p => (p.treasure ?? []).filter(t => t.notable && !t.collected).length,
-      render: p => {
-        const count = (p.treasure ?? []).filter(t => t.notable && !t.collected).length
-        return (
-          <span className="flex items-center gap-1 text-sm">
-            <Coins className="size-3.5 text-muted-foreground" />
-            {count}
-          </span>
-        )
+      {
+        key: "type",
+        header: "Type",
+        sortable: true,
+        sortValue: (p) => p.type,
+        render: (p) => (
+          <Badge variant="outline" className="text-xs">
+            {p.type}
+          </Badge>
+        ),
       },
-    },
-    {
-      key: 'encounter',
-      header: 'Encounter',
-      sortable: true,
-      sortValue: p => (p.encounterChance != null || (p.wanderingMonsters?.length ?? 0) > 0) ? 1 : 0,
-      render: p => {
-        const has = p.encounterChance != null || (p.wanderingMonsters?.length ?? 0) > 0
-        return has
-          ? <Check className="size-4 text-green-500" />
-          : <span className="text-muted-foreground text-sm">—</span>
+      {
+        key: "danger",
+        header: "Danger",
+        sortable: true,
+        sortValue: (p) => poiMaxThreat(p.monsterRefs),
+        render: (p) => {
+          const threat = poiMaxThreat(p.monsterRefs);
+          const label =
+            threat === 0
+              ? "none"
+              : threat >= 5
+                ? "perilous"
+                : threat >= 3
+                  ? "tough"
+                  : "easy";
+          const cls =
+            label === "none"
+              ? "bg-muted text-muted-foreground border-border"
+              : label === "easy"
+                ? "bg-green-600 text-white"
+                : label === "tough"
+                  ? "bg-amber-600 text-white"
+                  : "bg-red-600 text-white";
+          return <Badge className={`text-xs ${cls}`}>{label}</Badge>;
+        },
       },
-    },
-    {
-      key: 'faction',
-      header: 'Faction',
-      sortable: true,
-      sortValue: p => presenceByPoi[p.id] ?? '',
-      render: p => <span className="text-sm">{presenceByPoi[p.id] ?? '—'}</span>,
-    },
-    {
-      key: 'visited',
-      header: 'Visited',
-      sortable: true,
-      sortValue: p => p.visited ? 1 : 0,
-      render: p => p.visited
-        ? <Check className="size-4 text-green-500" />
-        : <span className="text-muted-foreground text-sm">—</span>,
-    },
-  ], [presenceByPoi])
+      {
+        key: "treasure",
+        header: "Treasure",
+        sortable: true,
+        sortValue: (p) =>
+          (p.treasure ?? []).filter((t) => t.notable && !t.collected).length,
+        render: (p) => {
+          const count = (p.treasure ?? []).filter(
+            (t) => t.notable && !t.collected,
+          ).length;
+          return (
+            <span className="flex items-center gap-1 text-sm">
+              <Coins className="size-3.5 text-muted-foreground" />
+              {count}
+            </span>
+          );
+        },
+      },
+      {
+        key: "encounter",
+        header: "Encounter",
+        sortable: true,
+        sortValue: (p) =>
+          p.encounterChance != null || (p.wanderingMonsters?.length ?? 0) > 0
+            ? 1
+            : 0,
+        render: (p) => {
+          const has =
+            p.encounterChance != null || (p.wanderingMonsters?.length ?? 0) > 0;
+          return has ? (
+            <Check className="size-4 text-green-500" />
+          ) : (
+            <span className="text-muted-foreground text-sm">—</span>
+          );
+        },
+      },
+      {
+        key: "faction",
+        header: "Faction",
+        sortable: true,
+        sortValue: (p) => presenceByPoi[p.id] ?? "",
+        render: (p) => (
+          <span className="text-sm">{presenceByPoi[p.id] ?? "—"}</span>
+        ),
+      },
+      {
+        key: "visited",
+        header: "Visited",
+        sortable: true,
+        sortValue: (p) => (p.visited ? 1 : 0),
+        render: (p) =>
+          p.visited ? (
+            <Check className="size-4 text-green-500" />
+          ) : (
+            <span className="text-muted-foreground text-sm">—</span>
+          ),
+      },
+    ],
+    [presenceByPoi],
+  );
 
   // NPC tab lookup objects (plain Record — not JS Map, which is shadowed by lucide's Map import)
   const poiName = useMemo<Record<string, string>>(
-    () => Object.fromEntries(pois.map(p => [p.id, p.name])),
-    [pois]
-  )
+    () => Object.fromEntries(pois.map((p) => [p.id, p.name])),
+    [pois],
+  );
   const factionById = useMemo<Record<string, Faction>>(
-    () => Object.fromEntries(factions.map(f => [f.id, f])),
-    [factions]
-  )
+    () => Object.fromEntries(factions.map((f) => [f.id, f])),
+    [factions],
+  );
   const npcName = useMemo<Record<string, string>>(
-    () => Object.fromEntries(npcs.map(n => [n.id, n.name])),
-    [npcs]
-  )
+    () => Object.fromEntries(npcs.map((n) => [n.id, n.name])),
+    [npcs],
+  );
 
   // Overview: key locations (top-level notable POI types)
-  const KEY_LOC_TYPES = new Set(['settlement', 'dungeon', 'ruin', 'landmark', 'fortification'])
+  const KEY_LOC_TYPES = new Set([
+    "settlement",
+    "dungeon",
+    "ruin",
+    "landmark",
+    "fortification",
+  ]);
   const keyLocations = useMemo(
-    () => pois.filter(p => p.parentPoiId == null && KEY_LOC_TYPES.has(p.type)),
-    [pois]
-  )
+    () =>
+      pois.filter((p) => p.parentPoiId == null && KEY_LOC_TYPES.has(p.type)),
+    [pois],
+  );
 
   // Overview: faction leader NPC ids
   const leaderNpcIds = useMemo(
-    () => new Set(factions.flatMap(f => f.leaderNpcId ? [f.leaderNpcId] : [])),
-    [factions]
-  )
+    () =>
+      new Set(factions.flatMap((f) => (f.leaderNpcId ? [f.leaderNpcId] : []))),
+    [factions],
+  );
 
   // Overview: key NPCs — leaders first, then fill to 8 with others
   const keyNpcs = useMemo(() => {
-    const leaders = npcs.filter(n => leaderNpcIds.has(n.id))
-    const others = npcs.filter(n => !leaderNpcIds.has(n.id)).slice(0, Math.max(0, 8 - leaders.length))
-    return [...leaders, ...others]
-  }, [npcs, leaderNpcIds])
+    const leaders = npcs.filter((n) => leaderNpcIds.has(n.id));
+    const others = npcs
+      .filter((n) => !leaderNpcIds.has(n.id))
+      .slice(0, Math.max(0, 8 - leaders.length));
+    return [...leaders, ...others];
+  }, [npcs, leaderNpcIds]);
 
   // Overview: common creatures deduped by compendiumId
   const regionMonsters = useMemo(() => {
-    const { monsters } = summarizeRegionContents(pois, npcs)
-    const seen = new Set<string>()
-    return monsters.filter(m => {
-      if (!m.compendiumId) return false
-      if (seen.has(m.compendiumId)) return false
-      seen.add(m.compendiumId)
-      return true
-    })
-  }, [pois, npcs])
+    const { monsters } = summarizeRegionContents(pois, npcs);
+    const seen = new Set<string>();
+    return monsters.filter((m) => {
+      if (!m.compendiumId) return false;
+      if (seen.has(m.compendiumId)) return false;
+      seen.add(m.compendiumId);
+      return true;
+    });
+  }, [pois, npcs]);
 
-  const STANCE_META: Array<{ min: number; max: number; label: string; cls: string }> = [
-    { min: 2, max: Infinity, label: 'ally', cls: 'bg-green-600 text-white' },
-    { min: 1, max: 1, label: 'friendly', cls: 'bg-blue-500 text-white' },
-    { min: 0, max: 0, label: 'neutral', cls: 'bg-muted text-muted-foreground border-border' },
-    { min: -1, max: -1, label: 'wary', cls: 'bg-amber-500 text-white' },
-    { min: -Infinity, max: -2, label: 'hostile', cls: 'bg-red-600 text-white' },
-  ]
+  const STANCE_META: Array<{
+    min: number;
+    max: number;
+    label: string;
+    cls: string;
+  }> = [
+    { min: 2, max: Infinity, label: "ally", cls: "bg-green-600 text-white" },
+    { min: 1, max: 1, label: "friendly", cls: "bg-blue-500 text-white" },
+    {
+      min: 0,
+      max: 0,
+      label: "neutral",
+      cls: "bg-muted text-muted-foreground border-border",
+    },
+    { min: -1, max: -1, label: "wary", cls: "bg-amber-500 text-white" },
+    { min: -Infinity, max: -2, label: "hostile", cls: "bg-red-600 text-white" },
+  ];
 
-  const factionColumns = useMemo<DataTableColumn<Faction>[]>(() => [
-    {
-      key: 'name',
-      header: 'Name',
-      sortable: true,
-      sortValue: f => f.name,
-      render: f => (
-        <span className="flex items-center gap-1.5">
-          <Link to="/realms/factions/$factionId" params={{ factionId: f.id }} className="text-primary hover:underline font-medium">
-            {f.name}
-          </Link>
-          {f.isParty && <Badge variant="outline" className="text-xs">Party</Badge>}
-        </span>
-      ),
-    },
-    {
-      key: 'stance',
-      header: 'Stance',
-      sortable: true,
-      sortValue: f => f.isParty ? Infinity : (stanceByFaction[f.id] ?? 0),
-      render: f => {
-        if (f.isParty) return <span className="text-muted-foreground text-sm">—</span>
-        const score = stanceByFaction[f.id] ?? 0
-        const meta = STANCE_META.find(m => score >= m.min && score <= m.max) ?? STANCE_META[2]
-        return <Badge className={`text-xs capitalize ${meta.cls}`}>{meta.label}</Badge>
-      },
-    },
-    {
-      key: 'hq',
-      header: 'HQ',
-      sortable: true,
-      sortValue: f => f.headquartersPoiId ? (poiName[f.headquartersPoiId] ?? '') : '',
-      render: f => f.headquartersPoiId && poiName[f.headquartersPoiId]
-        ? <Link to="/realms/pois/$poiId" params={{ poiId: f.headquartersPoiId }} className="text-primary hover:underline text-sm">{poiName[f.headquartersPoiId]}</Link>
-        : <span className="text-muted-foreground text-sm">—</span>,
-    },
-    {
-      key: 'leader',
-      header: 'Leader',
-      sortable: true,
-      sortValue: f => f.leaderNpcId ? (npcName[f.leaderNpcId] ?? '') : '',
-      render: f => f.leaderNpcId && npcName[f.leaderNpcId]
-        ? <Link to="/realms/npcs/$npcId" params={{ npcId: f.leaderNpcId }} className="text-primary hover:underline text-sm">{npcName[f.leaderNpcId]}</Link>
-        : <span className="text-muted-foreground text-sm">—</span>,
-    },
-    {
-      key: 'agenda',
-      header: 'Agenda',
-      render: f => {
-        const goals = f.agendaGoals ?? []
-        const goal = goals.find(g => g.timeframe === 'immediate' && !g.completed) ?? goals.find(g => !g.completed)
-        if (!goal) return <span className="text-muted-foreground text-sm">—</span>
-        const progress = goal.segments != null
-          ? ` (${goal.progress ?? 0}/${goal.segments})`
-          : ''
-        return <span className="text-sm text-muted-foreground max-w-[18rem] truncate block">{goal.description}{progress}</span>
-      },
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      sortable: true,
-      sortValue: f => f.status,
-      render: f => (
-        <Badge
-          className={`text-xs ${
-            f.status === 'active' ? 'bg-green-600' :
-            f.status === 'dormant' ? 'bg-yellow-600' :
-            f.status === 'disbanded' ? 'bg-orange-600' :
-            f.status === 'destroyed' ? 'bg-red-600' : 'bg-gray-600'
-          }`}
-        >
-          {f.status.charAt(0).toUpperCase() + f.status.slice(1)}
-        </Badge>
-      ),
-    },
-  ], [poiName, npcName, stanceByFaction])
-
-  const DISPOSITION_COLORS: Record<string, string> = {
-    hostile: 'bg-red-500/15 text-red-500 border-red-500/30',
-    wary: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
-    curious: 'bg-gray-400/15 text-gray-400 border-gray-400/30',
-    kind: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
-    helpful: 'bg-green-500/15 text-green-500 border-green-500/30',
-  }
-
-  const npcColumns = useMemo<DataTableColumn<NPC>[]>(() => [
-    {
-      key: 'name',
-      header: 'Name',
-      sortable: true,
-      sortValue: n => n.name,
-      render: n => (
-        <span className="flex items-center gap-1.5">
-          <Link to="/realms/npcs/$npcId" params={{ npcId: n.id }} className="text-primary hover:underline font-medium">
-            {n.name}
-          </Link>
-          {n.lifeStatus !== 'alive' && (
-            <Badge variant="destructive" className="text-xs capitalize">{n.lifeStatus}</Badge>
-          )}
-        </span>
-      ),
-    },
-    {
-      key: 'location',
-      header: 'Location',
-      sortable: true,
-      sortValue: n => (n.poiId ? (poiName[n.poiId] ?? '') : ''),
-      render: n => n.poiId && poiName[n.poiId]
-        ? <Link to="/realms/pois/$poiId" params={{ poiId: n.poiId }} className="text-primary hover:underline text-sm">{poiName[n.poiId]}</Link>
-        : <span className="text-muted-foreground text-sm">—</span>,
-    },
-    {
-      key: 'faction',
-      header: 'Faction',
-      sortable: true,
-      sortValue: n => {
-        const fId = n.factionIds?.[0]
-        return fId ? (factionById[fId]?.name ?? '') : ''
-      },
-      render: n => {
-        const fId = n.factionIds?.[0]
-        const faction = fId ? factionById[fId] : undefined
-        if (!faction) return <span className="text-muted-foreground text-sm">—</span>
-        return (
+  const factionColumns = useMemo<DataTableColumn<Faction>[]>(
+    () => [
+      {
+        key: "name",
+        header: "Name",
+        sortable: true,
+        sortValue: (f) => f.name,
+        render: (f) => (
           <span className="flex items-center gap-1.5">
-            <Link to="/realms/factions/$factionId" params={{ factionId: faction.id }} className="text-primary hover:underline text-sm">{faction.name}</Link>
-            {faction.leaderNpcId === n.id && (
-              <Badge variant="outline" className="text-xs">leader</Badge>
+            <Link
+              to="/realms/factions/$factionId"
+              params={{ factionId: f.id }}
+              className="text-primary hover:underline font-medium"
+            >
+              {f.name}
+            </Link>
+            {f.isParty && (
+              <Badge variant="outline" className="text-xs">
+                Party
+              </Badge>
             )}
           </span>
-        )
+        ),
       },
-    },
-    {
-      key: 'disposition',
-      header: 'Disposition',
-      sortable: true,
-      sortValue: n => n.disposition ?? '',
-      render: n => n.disposition
-        ? <Badge className={`text-xs capitalize ${DISPOSITION_COLORS[n.disposition] ?? ''}`}>{n.disposition}</Badge>
-        : <span className="text-muted-foreground text-sm">—</span>,
-    },
-    {
-      key: 'movement',
-      header: 'Movement',
-      sortable: true,
-      sortValue: n => n.movementStatus,
-      render: n => <span className="text-sm capitalize">{n.movementStatus}</span>,
-    },
-    {
-      key: 'want',
-      header: 'Want',
-      render: n => {
-        const text = n.want || n.motivation
-        return text
-          ? <span className="text-sm text-muted-foreground max-w-[16rem] truncate block">{text}</span>
-          : <span className="text-muted-foreground text-sm">—</span>
+      {
+        key: "stance",
+        header: "Stance",
+        sortable: true,
+        sortValue: (f) => (f.isParty ? Infinity : (stanceByFaction[f.id] ?? 0)),
+        render: (f) => {
+          if (f.isParty)
+            return <span className="text-muted-foreground text-sm">—</span>;
+          const score = stanceByFaction[f.id] ?? 0;
+          const meta =
+            STANCE_META.find((m) => score >= m.min && score <= m.max) ??
+            STANCE_META[2];
+          return (
+            <Badge className={`text-xs capitalize ${meta.cls}`}>
+              {meta.label}
+            </Badge>
+          );
+        },
       },
-    },
-  ], [poiName, factionById])
+      {
+        key: "hq",
+        header: "HQ",
+        sortable: true,
+        sortValue: (f) =>
+          f.headquartersPoiId ? (poiName[f.headquartersPoiId] ?? "") : "",
+        render: (f) =>
+          f.headquartersPoiId && poiName[f.headquartersPoiId] ? (
+            <Link
+              to="/realms/pois/$poiId"
+              params={{ poiId: f.headquartersPoiId }}
+              className="text-primary hover:underline text-sm"
+            >
+              {poiName[f.headquartersPoiId]}
+            </Link>
+          ) : (
+            <span className="text-muted-foreground text-sm">—</span>
+          ),
+      },
+      {
+        key: "leader",
+        header: "Leader",
+        sortable: true,
+        sortValue: (f) => (f.leaderNpcId ? (npcName[f.leaderNpcId] ?? "") : ""),
+        render: (f) =>
+          f.leaderNpcId && npcName[f.leaderNpcId] ? (
+            <Link
+              to="/realms/npcs/$npcId"
+              params={{ npcId: f.leaderNpcId }}
+              className="text-primary hover:underline text-sm"
+            >
+              {npcName[f.leaderNpcId]}
+            </Link>
+          ) : (
+            <span className="text-muted-foreground text-sm">—</span>
+          ),
+      },
+      {
+        key: "agenda",
+        header: "Agenda",
+        render: (f) => {
+          const goals = f.agendaGoals ?? [];
+          const goal =
+            goals.find((g) => g.timeframe === "immediate" && !g.completed) ??
+            goals.find((g) => !g.completed);
+          if (!goal)
+            return <span className="text-muted-foreground text-sm">—</span>;
+          const progress =
+            goal.segments != null
+              ? ` (${goal.progress ?? 0}/${goal.segments})`
+              : "";
+          return (
+            <span className="text-sm text-muted-foreground max-w-[18rem] truncate block">
+              {goal.description}
+              {progress}
+            </span>
+          );
+        },
+      },
+      {
+        key: "status",
+        header: "Status",
+        sortable: true,
+        sortValue: (f) => f.status,
+        render: (f) => (
+          <Badge
+            className={`text-xs ${
+              f.status === "active"
+                ? "bg-green-600"
+                : f.status === "dormant"
+                  ? "bg-yellow-600"
+                  : f.status === "disbanded"
+                    ? "bg-orange-600"
+                    : f.status === "destroyed"
+                      ? "bg-red-600"
+                      : "bg-gray-600"
+            }`}
+          >
+            {f.status.charAt(0).toUpperCase() + f.status.slice(1)}
+          </Badge>
+        ),
+      },
+    ],
+    [poiName, npcName, stanceByFaction],
+  );
+
+  const DISPOSITION_COLORS: Record<string, string> = {
+    hostile: "bg-red-500/15 text-red-500 border-red-500/30",
+    wary: "bg-amber-500/15 text-amber-500 border-amber-500/30",
+    curious: "bg-gray-400/15 text-gray-400 border-gray-400/30",
+    kind: "bg-blue-500/15 text-blue-500 border-blue-500/30",
+    helpful: "bg-green-500/15 text-green-500 border-green-500/30",
+  };
+
+  const npcColumns = useMemo<DataTableColumn<NPC>[]>(
+    () => [
+      {
+        key: "name",
+        header: "Name",
+        sortable: true,
+        sortValue: (n) => n.name,
+        render: (n) => (
+          <span className="flex items-center gap-1.5">
+            <Link
+              to="/realms/npcs/$npcId"
+              params={{ npcId: n.id }}
+              className="text-primary hover:underline font-medium"
+            >
+              {n.name}
+            </Link>
+            {n.lifeStatus !== "alive" && (
+              <Badge variant="destructive" className="text-xs capitalize">
+                {n.lifeStatus}
+              </Badge>
+            )}
+          </span>
+        ),
+      },
+      {
+        key: "location",
+        header: "Location",
+        sortable: true,
+        sortValue: (n) => (n.poiId ? (poiName[n.poiId] ?? "") : ""),
+        render: (n) =>
+          n.poiId && poiName[n.poiId] ? (
+            <Link
+              to="/realms/pois/$poiId"
+              params={{ poiId: n.poiId }}
+              className="text-primary hover:underline text-sm"
+            >
+              {poiName[n.poiId]}
+            </Link>
+          ) : (
+            <span className="text-muted-foreground text-sm">—</span>
+          ),
+      },
+      {
+        key: "faction",
+        header: "Faction",
+        sortable: true,
+        sortValue: (n) => {
+          const fId = n.factionIds?.[0];
+          return fId ? (factionById[fId]?.name ?? "") : "";
+        },
+        render: (n) => {
+          const fId = n.factionIds?.[0];
+          const faction = fId ? factionById[fId] : undefined;
+          if (!faction)
+            return <span className="text-muted-foreground text-sm">—</span>;
+          return (
+            <span className="flex items-center gap-1.5">
+              <Link
+                to="/realms/factions/$factionId"
+                params={{ factionId: faction.id }}
+                className="text-primary hover:underline text-sm"
+              >
+                {faction.name}
+              </Link>
+              {faction.leaderNpcId === n.id && (
+                <Badge variant="outline" className="text-xs">
+                  leader
+                </Badge>
+              )}
+            </span>
+          );
+        },
+      },
+      {
+        key: "disposition",
+        header: "Disposition",
+        sortable: true,
+        sortValue: (n) => n.disposition ?? "",
+        render: (n) =>
+          n.disposition ? (
+            <Badge
+              className={`text-xs capitalize ${DISPOSITION_COLORS[n.disposition] ?? ""}`}
+            >
+              {n.disposition}
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground text-sm">—</span>
+          ),
+      },
+      {
+        key: "movement",
+        header: "Movement",
+        sortable: true,
+        sortValue: (n) => n.movementStatus,
+        render: (n) => (
+          <span className="text-sm capitalize">{n.movementStatus}</span>
+        ),
+      },
+      {
+        key: "want",
+        header: "Want",
+        render: (n) => {
+          const text = n.want || n.motivation;
+          return text ? (
+            <span className="text-sm text-muted-foreground max-w-[16rem] truncate block">
+              {text}
+            </span>
+          ) : (
+            <span className="text-muted-foreground text-sm">—</span>
+          );
+        },
+      },
+    ],
+    [poiName, factionById],
+  );
 
   // Auto-open edit mode from ?edit=true search param
   useEffect(() => {
@@ -556,105 +782,124 @@ function RegionDetailPage() {
       setEditForm({
         name: region.name,
         description: region.description,
-        terrain: region.terrain || 'plains',
+        terrain: region.terrain || "plains",
         imageUrl: region.imageUrl,
         people: region.people ?? [],
-      })
-      setEditSheetOpen(true)
+      });
+      setEditSheetOpen(true);
     }
-  }, [editFromSearch, region?.id])
+  }, [editFromSearch, region?.id]);
 
   // Set breadcrumb in site header
   useEffect(() => {
-    if (!region) return
+    if (!region) return;
     setHeaderTitle(
       <div className="flex items-center gap-1.5 text-sm">
-        <Link to="/realms/locations/regions" className="text-muted-foreground hover:text-foreground">Regions</Link>
+        <Link
+          to="/realms/locations/regions"
+          className="text-muted-foreground hover:text-foreground"
+        >
+          Regions
+        </Link>
         <ChevronRight className="size-3 text-muted-foreground" />
         <span className="font-medium">{region.name}</span>
-      </div>
-    )
-    return () => setHeaderTitle(null)
-  }, [region, setHeaderTitle])
+      </div>,
+    );
+    return () => setHeaderTitle(null);
+  }, [region, setHeaderTitle]);
 
   const openEditSheet = () => {
-    if (!region) return
+    if (!region) return;
     setEditForm({
       name: region.name,
       description: region.description,
-      terrain: region.terrain || 'plains',
+      terrain: region.terrain || "plains",
       imageUrl: region.imageUrl,
       people: region.people ?? [],
-    })
-    setEditSheetOpen(true)
-  }
+    });
+    setEditSheetOpen(true);
+  };
 
   const handleEdit = async () => {
-    if (!region || !editForm.name.trim()) return
+    if (!region || !editForm.name.trim()) return;
     await executeUpdateRegion(
-      { ...region, name: editForm.name, description: editForm.description, terrain: editForm.terrain, imageUrl: editForm.imageUrl, people: editForm.people },
-      { regionRepo: container.regionRepo }
-    )
-    setEditSheetOpen(false)
-  }
+      {
+        ...region,
+        name: editForm.name,
+        description: editForm.description,
+        terrain: editForm.terrain,
+        imageUrl: editForm.imageUrl,
+        people: editForm.people,
+      },
+      { regionRepo: container.regionRepo },
+    );
+    setEditSheetOpen(false);
+  };
 
   const handleDelete = async () => {
-    if (!region) return
-    await executeDeleteRegion(region.id, { regionRepo: container.regionRepo })
-    setDeleteConfirmOpen(false)
-    window.history.back()
-  }
+    if (!region) return;
+    await executeDeleteRegion(region.id, { regionRepo: container.regionRepo });
+    setDeleteConfirmOpen(false);
+    window.history.back();
+  };
 
   const handleCreatePOI = async () => {
-    if (!region || !poiForm.name.trim()) return
+    if (!region || !poiForm.name.trim()) return;
     const poi = await executeCreatePOI(
       { regionId: region.id, name: poiForm.name.trim(), type: poiForm.type },
-      { poiRepo: container.poiRepo }
-    )
-    setCreatePoiOpen(false)
-    setPoiForm({ name: '', type: 'settlement' })
-    navigate({ to: '/realms/pois/$poiId', params: { poiId: poi.id } })
-  }
+      { poiRepo: container.poiRepo },
+    );
+    setCreatePoiOpen(false);
+    setPoiForm({ name: "", type: "settlement" });
+    navigate({ to: "/realms/pois/$poiId", params: { poiId: poi.id } });
+  };
 
   const handleGenerateNPC = async () => {
-    if (!region || !realm || !systemConfig) return
-    setIsGeneratingNPC(true)
+    if (!region || !realm || !systemConfig) return;
+    setIsGeneratingNPC(true);
     try {
       const npc = await executeGenerateNPC(
         { worldId: realm.id, systemConfig, regionId: region.id },
-        { tableRepo: container.tableRepo }
-      )
-      await executeCreateNPC(npc, { npcRepo: container.npcRepo })
-      navigate({ to: '/realms/npcs/$npcId', params: { npcId: npc.id } })
+        { tableRepo: container.tableRepo },
+      );
+      await executeCreateNPC(npc, { npcRepo: container.npcRepo });
+      navigate({ to: "/realms/npcs/$npcId", params: { npcId: npc.id } });
     } finally {
-      setIsGeneratingNPC(false)
+      setIsGeneratingNPC(false);
     }
-  }
+  };
 
   const handleCreateFaction = async () => {
-    if (!realm || !factionForm.name.trim()) return
+    if (!realm || !factionForm.name.trim()) return;
     const faction = await executeCreateFaction(
-      { worldId: realm.id, name: factionForm.name.trim(), type: factionForm.type || undefined },
-      { factionRepo: container.factionRepo }
-    )
+      {
+        worldId: realm.id,
+        name: factionForm.name.trim(),
+        type: factionForm.type || undefined,
+      },
+      { factionRepo: container.factionRepo },
+    );
     // Set the faction's regionId
-    await container.factionRepo.update({ ...faction, regionId })
-    setCreateFactionOpen(false)
-    setFactionForm({ name: '', type: '' })
-    navigate({ to: '/realms/factions/$factionId', params: { factionId: faction.id } })
-  }
+    await container.factionRepo.update({ ...faction, regionId });
+    setCreateFactionOpen(false);
+    setFactionForm({ name: "", type: "" });
+    navigate({
+      to: "/realms/factions/$factionId",
+      params: { factionId: faction.id },
+    });
+  };
 
   const handleAssignFaction = async () => {
-    if (!assignFactionId) return
-    const faction = await db.factions.get(assignFactionId)
-    if (!faction) return
-    await container.factionRepo.update({ ...faction, regionId })
-    setAssignFactionOpen(false)
-    setAssignFactionId('')
-  }
+    if (!assignFactionId) return;
+    const faction = await db.factions.get(assignFactionId);
+    if (!faction) return;
+    await container.factionRepo.update({ ...faction, regionId });
+    setAssignFactionOpen(false);
+    setAssignFactionId("");
+  };
 
   const handleCreateEvent = async () => {
-    if (!realm || !eventForm.name.trim() || !eventForm.poiId) return
+    if (!realm || !eventForm.name.trim() || !eventForm.poiId) return;
     await executeCreatePOIEvent(
       {
         poiId: eventForm.poiId,
@@ -662,56 +907,85 @@ function RegionDetailPage() {
         name: eventForm.name.trim(),
         description: eventForm.description,
         type: eventForm.type,
-        trigger: { year: null, season: eventForm.season, day: eventForm.day, watch: null },
+        trigger: {
+          year: null,
+          season: eventForm.season,
+          day: eventForm.day,
+          watch: null,
+        },
         recurring: false,
         durationWatches: 1,
       },
-      { poiEventRepo: container.poiEventRepo }
-    )
-    setCreateEventOpen(false)
-    setEventForm({ name: '', type: 'custom', poiId: '', description: '', season: realm?.currentSeason ?? 'spring', day: realm?.currentDay ?? 1 })
-  }
+      { poiEventRepo: container.poiEventRepo },
+    );
+    setCreateEventOpen(false);
+    setEventForm({
+      name: "",
+      type: "custom",
+      poiId: "",
+      description: "",
+      season: realm?.currentSeason ?? "spring",
+      day: realm?.currentDay ?? 1,
+    });
+  };
 
   const handleRollEncounter = async () => {
-    if (!region) throw new Error('No region')
+    if (!region) throw new Error("No region");
     return executeRollEncounter(
       { poiId: null, regionId: region.id, worldId: region.worldId },
-      { encounterTableRepo: container.encounterTableRepo }
-    )
-  }
+      { encounterTableRepo: container.encounterTableRepo },
+    );
+  };
 
-  const handleSaveEncounterTable = async (entries: Pick<EncounterTable, 'creature' | 'signOmen' | 'loss' | 'npc' | 'discovery' | 'treasure' | 'customSections' | 'disabledCategories'>) => {
-    if (!region) return
+  const handleSaveEncounterTable = async (
+    entries: Pick<
+      EncounterTable,
+      | "creature"
+      | "signOmen"
+      | "loss"
+      | "npc"
+      | "discovery"
+      | "treasure"
+      | "customSections"
+      | "disabledCategories"
+    >,
+  ) => {
+    if (!region) return;
     if (encounterTable) {
       await executeUpdateEncounterTable(
         { ...encounterTable, ...entries },
-        { encounterTableRepo: container.encounterTableRepo }
-      )
+        { encounterTableRepo: container.encounterTableRepo },
+      );
     } else {
       await executeCreateEncounterTable(
         { ownerRegionId: region.id, worldId: region.worldId, ...entries },
-        { encounterTableRepo: container.encounterTableRepo }
-      )
+        { encounterTableRepo: container.encounterTableRepo },
+      );
     }
-  }
+  };
 
   // Lazily create a persistable region-owned encounter-table row when none
   // exists, so the cascade's lastResult can be saved. Mirrors the POI hook.
-  const handleEncounterCascade = async (action: CascadeAction): Promise<EncounterRollResult> => {
-    if (!region || !systemConfig) throw new Error('Missing context for encounter cascade')
-    const table = encounterTable ?? await (async () => {
-      const content = buildRegionEncounterContent({
-        region: { terrain: region.terrain },
-        pois,
-        factions: factions ?? [],
-        systemId: systemConfig.id,
-        rng: new SeededRandom(`${region.id}-encounter`),
-      })
-      return executeCreateEncounterTable(
-        { ownerRegionId: region.id, worldId: region.worldId, ...content },
-        { encounterTableRepo: container.encounterTableRepo }
-      )
-    })()
+  const handleEncounterCascade = async (
+    action: CascadeAction,
+  ): Promise<EncounterRollResult> => {
+    if (!region || !systemConfig)
+      throw new Error("Missing context for encounter cascade");
+    const table =
+      encounterTable ??
+      (await (async () => {
+        const content = buildRegionEncounterContent({
+          region: { terrain: region.terrain },
+          pois,
+          factions: factions ?? [],
+          systemId: systemConfig.id,
+          rng: new SeededRandom(`${region.id}-encounter`),
+        });
+        return executeCreateEncounterTable(
+          { ownerRegionId: region.id, worldId: region.worldId, ...content },
+          { encounterTableRepo: container.encounterTableRepo },
+        );
+      })());
     const ctx: CascadeContext = {
       table,
       poiId: null,
@@ -719,45 +993,61 @@ function RegionDetailPage() {
       worldId: region.worldId,
       systemConfig,
       regionPois: pois.map((p) => ({ id: p.id, name: p.name })),
-    }
+    };
     const deps: CascadeUseCaseDeps = {
       encounterTableRepo: container.encounterTableRepo,
       tableRepo: container.tableRepo,
-    }
-    return executeEncounterCascade(action, ctx, deps)
-  }
+    };
+    return executeEncounterCascade(action, ctx, deps);
+  };
 
   const handleRerollProblem = async () => {
-    if (!region) return
-    await executeRerollRegionProblem(region.id, { regionRepo: container.regionRepo })
-  }
+    if (!region) return;
+    await executeRerollRegionProblem(region.id, {
+      regionRepo: container.regionRepo,
+    });
+  };
 
   const handleRegenerateEncounter = async () => {
-    if (!region || !systemConfig) return
+    if (!region || !systemConfig) return;
     await executeRegenerateRegionEncounter(
-      { regionId: region.id, worldId: region.worldId, systemId: systemConfig.id },
+      {
+        regionId: region.id,
+        worldId: region.worldId,
+        systemId: systemConfig.id,
+      },
       {
         encounterTableRepo: container.encounterTableRepo,
         poiRepo: container.poiRepo,
         factionRepo: container.factionRepo,
         regionRepo: container.regionRepo,
       },
-    )
-  }
+    );
+  };
 
   if (region === undefined) {
-    return <div className="py-8 text-center text-muted-foreground">Loading...</div>
+    return (
+      <div className="py-8 text-center text-muted-foreground">Loading...</div>
+    );
   }
 
   if (region === null) {
-    return <div className="py-8 text-center text-muted-foreground">Region not found.</div>
+    return (
+      <div className="py-8 text-center text-muted-foreground">
+        Region not found.
+      </div>
+    );
   }
 
   if (editSheetOpen) {
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setEditSheetOpen(false)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditSheetOpen(false)}
+          >
             <ArrowLeft className="mr-1.5 size-4" />
             Back
           </Button>
@@ -765,15 +1055,26 @@ function RegionDetailPage() {
           <Button
             variant="destructive"
             size="sm"
-            onClick={() => { setEditSheetOpen(false); setDeleteConfirmOpen(true) }}
+            onClick={() => {
+              setEditSheetOpen(false);
+              setDeleteConfirmOpen(true);
+            }}
           >
             <Trash2 className="mr-2 size-4" />
             Delete
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setEditSheetOpen(false)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEditSheetOpen(false)}
+          >
             Cancel
           </Button>
-          <Button size="sm" onClick={handleEdit} disabled={!editForm.name.trim()}>
+          <Button
+            size="sm"
+            onClick={handleEdit}
+            disabled={!editForm.name.trim()}
+          >
             Save
           </Button>
         </div>
@@ -784,7 +1085,9 @@ function RegionDetailPage() {
             <Input
               id="edit-name"
               value={editForm.name}
-              onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, name: e.target.value }))
+              }
               placeholder="Region name"
             />
           </div>
@@ -792,7 +1095,9 @@ function RegionDetailPage() {
             <Label htmlFor="edit-terrain">Terrain</Label>
             <Select
               value={editForm.terrain}
-              onValueChange={(value) => setEditForm((f) => ({ ...f, terrain: value }))}
+              onValueChange={(value) =>
+                setEditForm((f) => ({ ...f, terrain: value }))
+              }
             >
               <SelectTrigger id="edit-terrain">
                 <SelectValue />
@@ -812,7 +1117,9 @@ function RegionDetailPage() {
           <Label>Description</Label>
           <WysiwygEditor
             content={editForm.description}
-            onChange={(html) => setEditForm((f) => ({ ...f, description: html }))}
+            onChange={(html) =>
+              setEditForm((f) => ({ ...f, description: html }))
+            }
             placeholder="Describe this region..."
           />
         </div>
@@ -821,7 +1128,9 @@ function RegionDetailPage() {
           <Label>Image</Label>
           <ImagePicker
             imageUrl={editForm.imageUrl}
-            onImageChange={(url) => setEditForm((f) => ({ ...f, imageUrl: url }))}
+            onImageChange={(url) =>
+              setEditForm((f) => ({ ...f, imageUrl: url }))
+            }
           />
         </div>
 
@@ -844,7 +1153,7 @@ function RegionDetailPage() {
           onConfirm={handleDelete}
         />
       </div>
-    )
+    );
   }
 
   return (
@@ -909,84 +1218,111 @@ function RegionDetailPage() {
           )}
 
           {/* Problem callout — styled like the dashboard's doom card so it pops */}
-          <Card className="border-warning/40 bg-card mb-4">
-            <CardHeader className="pb-2">
-              <div className="flex items-start justify-between gap-2">
-                <CardTitle className="flex items-center gap-2 text-warning text-base">
-                  <AlertTriangle className="size-5" />
-                  Problem
-                </CardTitle>
-                <Button variant="ghost" size="sm" className="shrink-0 h-7 px-2" onClick={handleRerollProblem}>
-                  <RotateCcw className="size-3.5 mr-1" />
-                  Reroll
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm">{region.problem || 'No problem set.'}</p>
-            </CardContent>
-          </Card>
+          <div className="rounded-lg border border-warning/40 bg-card px-3 py-2 mb-4">
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5 text-warning text-sm font-semibold">
+                <AlertTriangle className="size-4" />
+                Problem
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0 h-7 px-2"
+                onClick={handleRerollProblem}
+              >
+                <RotateCcw className="size-3.5 mr-1" />
+                Reroll
+              </Button>
+            </div>
+            <p className="text-sm mt-1">
+              {region.problem || "No problem set."}
+            </p>
+          </div>
 
           {/* Danger tier + Terrain */}
           {(() => {
-            const tier = regionDangerTier(pois, region.terrain)
+            const tier = regionDangerTier(pois, region.terrain);
             const tierClass =
-              tier === 'easy' ? 'bg-green-600' :
-              tier === 'tough' ? 'bg-amber-600' :
-              'bg-red-600'
+              tier === "easy"
+                ? "bg-green-600"
+                : tier === "tough"
+                  ? "bg-amber-600"
+                  : "bg-red-600";
             return (
               <div className="flex items-center gap-2 mb-4 flex-wrap">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Danger</span>
+                {region.terrain && (
+                  <div className="border-1">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground ml-3">
+                      Terrain
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
+                      {terrainLabel(region.terrain)}
+                    </Badge>
+                  </div>
+                )}
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Danger Level
+                </span>
                 <Badge className={`text-xs ${tierClass}`}>
                   {tier.charAt(0).toUpperCase() + tier.slice(1)}
                 </Badge>
-                {region.terrain && (
-                  <>
-                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground ml-3">Terrain</span>
-                    <Badge variant="secondary" className="text-xs">{terrainLabel(region.terrain)}</Badge>
-                  </>
-                )}
               </div>
-            )
+            );
           })()}
 
           {/* Chip groups */}
           {(region.dangers ?? []).length > 0 && (
             <div className="mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dangers</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Dangers
+              </span>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {region.dangers.map((d, i) => (
-                  <Badge key={i} variant="secondary">{d}</Badge>
+                  <Badge key={i} variant="secondary">
+                    {d}
+                  </Badge>
                 ))}
               </div>
             </div>
           )}
           {(region.features ?? []).length > 0 && (
             <div className="mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Features</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Features
+              </span>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {region.features.map((f, i) => (
-                  <Badge key={i} variant="secondary">{f}</Badge>
+                  <Badge key={i} variant="secondary">
+                    {f}
+                  </Badge>
                 ))}
               </div>
             </div>
           )}
           {(region.resources ?? []).length > 0 && (
             <div className="mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Resources</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Resources
+              </span>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {region.resources.map((r, i) => (
-                  <Badge key={i} variant="secondary">{r}</Badge>
+                  <Badge key={i} variant="secondary">
+                    {r}
+                  </Badge>
                 ))}
               </div>
             </div>
           )}
           {(region.settlements ?? []).length > 0 && (
             <div className="mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Settlements</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Settlements
+              </span>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {region.settlements.map((s, i) => (
-                  <Badge key={i} variant="secondary">{s}</Badge>
+                  <Badge key={i} variant="secondary">
+                    {s}
+                  </Badge>
                 ))}
               </div>
             </div>
@@ -1003,10 +1339,14 @@ function RegionDetailPage() {
 
           {(region.people ?? []).length > 0 && (
             <div className="mt-4">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">People</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                People
+              </span>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {region.people.map((p, i) => (
-                  <Badge key={i} variant="secondary">{p}</Badge>
+                  <Badge key={i} variant="secondary">
+                    {p}
+                  </Badge>
                 ))}
               </div>
             </div>
@@ -1015,11 +1355,22 @@ function RegionDetailPage() {
           {/* Key Locations */}
           {keyLocations.length > 0 && (
             <div className="mt-4">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Key Locations</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Key Locations
+              </span>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {keyLocations.map(p => (
-                  <Link key={p.id} to="/realms/pois/$poiId" params={{ poiId: p.id }}>
-                    <Badge variant="outline" className="text-xs hover:bg-accent cursor-pointer">{p.name}</Badge>
+                {keyLocations.map((p) => (
+                  <Link
+                    key={p.id}
+                    to="/realms/pois/$poiId"
+                    params={{ poiId: p.id }}
+                  >
+                    <Badge
+                      variant="outline"
+                      className="text-xs hover:bg-accent cursor-pointer"
+                    >
+                      {p.name}
+                    </Badge>
                   </Link>
                 ))}
               </div>
@@ -1029,15 +1380,24 @@ function RegionDetailPage() {
           {/* Key NPCs */}
           {keyNpcs.length > 0 && (
             <div className="mt-4">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Key NPCs</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Key NPCs
+              </span>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {keyNpcs.map(n => (
+                {keyNpcs.map((n) => (
                   <span key={n.id} className="flex items-center gap-1">
                     <Link to="/realms/npcs/$npcId" params={{ npcId: n.id }}>
-                      <Badge variant="outline" className="text-xs hover:bg-accent cursor-pointer">{n.name}</Badge>
+                      <Badge
+                        variant="outline"
+                        className="text-xs hover:bg-accent cursor-pointer"
+                      >
+                        {n.name}
+                      </Badge>
                     </Link>
                     {leaderNpcIds.has(n.id) && (
-                      <Badge className="text-xs bg-amber-600 text-white">leader</Badge>
+                      <Badge className="text-xs bg-amber-600 text-white">
+                        leader
+                      </Badge>
                     )}
                   </span>
                 ))}
@@ -1048,17 +1408,34 @@ function RegionDetailPage() {
           {/* Common Creatures */}
           {regionMonsters.length > 0 && (
             <div className="mt-4">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Common Creatures</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Common Creatures
+              </span>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {regionMonsters.map(m => {
-                  const href = compendiumHref(m.compendiumId)
+                {regionMonsters.map((m) => {
+                  const href = compendiumHref(m.compendiumId);
                   return href ? (
-                    <Link key={m.compendiumId} to={href.to as never} params={href.params as never}>
-                      <Badge variant="outline" className="text-xs hover:bg-accent cursor-pointer">{m.name}</Badge>
+                    <Link
+                      key={m.compendiumId}
+                      to={href.to as never}
+                      params={href.params as never}
+                    >
+                      <Badge
+                        variant="outline"
+                        className="text-xs hover:bg-accent cursor-pointer"
+                      >
+                        {m.name}
+                      </Badge>
                     </Link>
                   ) : (
-                    <Badge key={m.compendiumId ?? m.name} variant="secondary" className="text-xs">{m.name}</Badge>
-                  )
+                    <Badge
+                      key={m.compendiumId ?? m.name}
+                      variant="secondary"
+                      className="text-xs"
+                    >
+                      {m.name}
+                    </Badge>
+                  );
                 })}
               </div>
             </div>
@@ -1073,16 +1450,25 @@ function RegionDetailPage() {
         <TabsContent value="locations" className="pt-3">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold">Points of Interest</h4>
-            <Button variant="outline" size="sm" className="h-7" onClick={() => setCreatePoiOpen(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              onClick={() => setCreatePoiOpen(true)}
+            >
               <Plus className="mr-1.5 size-3.5" />
               Add
             </Button>
           </div>
           <DataTable
             rows={topLevelPOIs}
-            rowKey={p => p.id}
+            rowKey={(p) => p.id}
             columns={locationColumns}
-            empty={<p className="text-sm text-muted-foreground">No points of interest.</p>}
+            empty={
+              <p className="text-sm text-muted-foreground">
+                No points of interest.
+              </p>
+            }
           />
         </TabsContent>
 
@@ -1098,14 +1484,18 @@ function RegionDetailPage() {
               disabled={isGeneratingNPC || !systemConfig}
             >
               <Dices className="mr-1.5 size-3.5" />
-              {isGeneratingNPC ? '...' : 'Generate'}
+              {isGeneratingNPC ? "..." : "Generate"}
             </Button>
           </div>
           <DataTable
             rows={npcs}
-            rowKey={n => n.id}
+            rowKey={(n) => n.id}
             columns={npcColumns}
-            empty={<p className="text-sm text-muted-foreground">No NPCs in this region.</p>}
+            empty={
+              <p className="text-sm text-muted-foreground">
+                No NPCs in this region.
+              </p>
+            }
           />
         </TabsContent>
 
@@ -1121,16 +1511,24 @@ function RegionDetailPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setCreateFactionOpen(true)}>Create New</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setAssignFactionOpen(true)}>Assign Existing</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setCreateFactionOpen(true)}>
+                  Create New
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setAssignFactionOpen(true)}>
+                  Assign Existing
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
           <DataTable
             rows={factions}
-            rowKey={f => f.id}
+            rowKey={(f) => f.id}
             columns={factionColumns}
-            empty={<p className="text-sm text-muted-foreground">No factions in this region.</p>}
+            empty={
+              <p className="text-sm text-muted-foreground">
+                No factions in this region.
+              </p>
+            }
           />
         </TabsContent>
 
@@ -1154,8 +1552,15 @@ function RegionDetailPage() {
               size="sm"
               className="h-7"
               onClick={() => {
-                setEventForm({ name: '', type: 'custom', poiId: '', description: '', season: realm?.currentSeason ?? 'spring', day: realm?.currentDay ?? 1 })
-                setCreateEventOpen(true)
+                setEventForm({
+                  name: "",
+                  type: "custom",
+                  poiId: "",
+                  description: "",
+                  season: realm?.currentSeason ?? "spring",
+                  day: realm?.currentDay ?? 1,
+                });
+                setCreateEventOpen(true);
               }}
               disabled={pois.length === 0}
             >
@@ -1164,11 +1569,13 @@ function RegionDetailPage() {
             </Button>
           </div>
           {poiEvents.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No events scheduled.</p>
+            <p className="text-sm text-muted-foreground">
+              No events scheduled.
+            </p>
           ) : (
             <div className="space-y-2">
               {poiEvents.map((event) => {
-                const eventPoi = pois.find(p => p.id === event.poiId)
+                const eventPoi = pois.find((p) => p.id === event.poiId);
                 return (
                   <div
                     key={event.id}
@@ -1176,13 +1583,21 @@ function RegionDetailPage() {
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{event.name}</span>
-                        <Badge variant="outline" className="text-xs">{event.type}</Badge>
-                        {event.isActive && <Badge className="text-xs bg-green-600">Active</Badge>}
+                        <span className="text-sm font-medium">
+                          {event.name}
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          {event.type}
+                        </Badge>
+                        {event.isActive && (
+                          <Badge className="text-xs bg-green-600">Active</Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         {eventPoi && (
-                          <span className="text-xs text-muted-foreground">at {eventPoi.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            at {eventPoi.name}
+                          </span>
                         )}
                         {event.description && (
                           <span className="text-xs text-muted-foreground line-clamp-1">
@@ -1192,7 +1607,7 @@ function RegionDetailPage() {
                       </div>
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
           )}
@@ -1200,11 +1615,13 @@ function RegionDetailPage() {
 
         {/* Notes tab */}
         <TabsContent value="notes" className="pt-3">
-          <NotesPanel ownerType="region" ownerId={regionId} worldId={region.worldId} />
+          <NotesPanel
+            ownerType="region"
+            ownerId={regionId}
+            worldId={region.worldId}
+          />
         </TabsContent>
       </Tabs>
-
-
 
       {/* Create POI Dialog */}
       <Dialog open={createPoiOpen} onOpenChange={setCreatePoiOpen}>
@@ -1218,7 +1635,9 @@ function RegionDetailPage() {
               <Input
                 id="poi-name"
                 value={poiForm.name}
-                onChange={(e) => setPoiForm((f) => ({ ...f, name: e.target.value }))}
+                onChange={(e) =>
+                  setPoiForm((f) => ({ ...f, name: e.target.value }))
+                }
                 placeholder="The Iron Keep"
               />
             </div>
@@ -1226,7 +1645,9 @@ function RegionDetailPage() {
               <Label htmlFor="poi-type">Type</Label>
               <Select
                 value={poiForm.type}
-                onValueChange={(v) => setPoiForm((f) => ({ ...f, type: v as PoiType }))}
+                onValueChange={(v) =>
+                  setPoiForm((f) => ({ ...f, type: v as PoiType }))
+                }
               >
                 <SelectTrigger id="poi-type">
                   <SelectValue />
@@ -1242,8 +1663,12 @@ function RegionDetailPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreatePoiOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreatePOI} disabled={!poiForm.name.trim()}>Create</Button>
+            <Button variant="outline" onClick={() => setCreatePoiOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreatePOI} disabled={!poiForm.name.trim()}>
+              Create
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1260,7 +1685,9 @@ function RegionDetailPage() {
               <Input
                 id="faction-name"
                 value={factionForm.name}
-                onChange={(e) => setFactionForm((f) => ({ ...f, name: e.target.value }))}
+                onChange={(e) =>
+                  setFactionForm((f) => ({ ...f, name: e.target.value }))
+                }
                 placeholder="The Shadow Guild"
               />
             </div>
@@ -1269,37 +1696,62 @@ function RegionDetailPage() {
               <Input
                 id="faction-type"
                 value={factionForm.type}
-                onChange={(e) => setFactionForm((f) => ({ ...f, type: e.target.value }))}
+                onChange={(e) =>
+                  setFactionForm((f) => ({ ...f, type: e.target.value }))
+                }
                 placeholder="Guild, Military, Religious..."
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateFactionOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreateFaction} disabled={!factionForm.name.trim()}>Create</Button>
+            <Button
+              variant="outline"
+              onClick={() => setCreateFactionOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateFaction}
+              disabled={!factionForm.name.trim()}
+            >
+              Create
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Assign Existing Faction Dialog */}
-      <Dialog open={assignFactionOpen} onOpenChange={(open) => { setAssignFactionOpen(open); if (!open) setAssignFactionId('') }}>
+      <Dialog
+        open={assignFactionOpen}
+        onOpenChange={(open) => {
+          setAssignFactionOpen(open);
+          if (!open) setAssignFactionId("");
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Assign Faction to Region</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {unassignedFactions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No unassigned factions available.</p>
+              <p className="text-sm text-muted-foreground">
+                No unassigned factions available.
+              </p>
             ) : (
               <div>
                 <Label>Faction</Label>
-                <Select value={assignFactionId} onValueChange={setAssignFactionId}>
+                <Select
+                  value={assignFactionId}
+                  onValueChange={setAssignFactionId}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a faction..." />
                   </SelectTrigger>
                   <SelectContent>
                     {unassignedFactions.map((f) => (
-                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1307,8 +1759,18 @@ function RegionDetailPage() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setAssignFactionOpen(false); setAssignFactionId('') }}>Cancel</Button>
-            <Button onClick={handleAssignFaction} disabled={!assignFactionId}>Assign</Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAssignFactionOpen(false);
+                setAssignFactionId("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleAssignFaction} disabled={!assignFactionId}>
+              Assign
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1325,7 +1787,9 @@ function RegionDetailPage() {
               <Input
                 id="event-name"
                 value={eventForm.name}
-                onChange={(e) => setEventForm((f) => ({ ...f, name: e.target.value }))}
+                onChange={(e) =>
+                  setEventForm((f) => ({ ...f, name: e.target.value }))
+                }
                 placeholder="Goblin Ambush"
               />
             </div>
@@ -1340,7 +1804,9 @@ function RegionDetailPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {pois.map((poi) => (
-                    <SelectItem key={poi.id} value={poi.id}>{poi.name}</SelectItem>
+                    <SelectItem key={poi.id} value={poi.id}>
+                      {poi.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1349,7 +1815,9 @@ function RegionDetailPage() {
               <Label htmlFor="event-type">Type</Label>
               <Select
                 value={eventForm.type}
-                onValueChange={(v) => setEventForm((f) => ({ ...f, type: v as POIEventType }))}
+                onValueChange={(v) =>
+                  setEventForm((f) => ({ ...f, type: v as POIEventType }))
+                }
               >
                 <SelectTrigger id="event-type">
                   <SelectValue />
@@ -1368,7 +1836,9 @@ function RegionDetailPage() {
                 <Label htmlFor="event-season">Season</Label>
                 <Select
                   value={eventForm.season}
-                  onValueChange={(v) => setEventForm((f) => ({ ...f, season: v as Season }))}
+                  onValueChange={(v) =>
+                    setEventForm((f) => ({ ...f, season: v as Season }))
+                  }
                 >
                   <SelectTrigger id="event-season">
                     <SelectValue />
@@ -1389,7 +1859,12 @@ function RegionDetailPage() {
                   type="number"
                   min={1}
                   value={eventForm.day}
-                  onChange={(e) => setEventForm((f) => ({ ...f, day: parseInt(e.target.value) || 1 }))}
+                  onChange={(e) =>
+                    setEventForm((f) => ({
+                      ...f,
+                      day: parseInt(e.target.value) || 1,
+                    }))
+                  }
                 />
               </div>
             </div>
@@ -1398,15 +1873,24 @@ function RegionDetailPage() {
               <Textarea
                 id="event-description"
                 value={eventForm.description}
-                onChange={(e) => setEventForm((f) => ({ ...f, description: e.target.value }))}
+                onChange={(e) =>
+                  setEventForm((f) => ({ ...f, description: e.target.value }))
+                }
                 placeholder="What happens..."
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateEventOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreateEvent} disabled={!eventForm.name.trim() || !eventForm.poiId}>Create</Button>
+            <Button variant="outline" onClick={() => setCreateEventOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateEvent}
+              disabled={!eventForm.name.trim() || !eventForm.poiId}
+            >
+              Create
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1422,5 +1906,5 @@ function RegionDetailPage() {
         onConfirm={handleDelete}
       />
     </div>
-  )
+  );
 }
