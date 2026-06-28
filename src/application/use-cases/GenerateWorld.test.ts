@@ -293,3 +293,25 @@ describe('executeGenerateWorld', () => {
     expect(mapA?.hexCells?.map((c) => c.biome)).toEqual(mapB?.hexCells?.map((c) => c.biome))
   })
 })
+
+describe('faction count auto-scales with map size when factionCount is omitted', () => {
+  it('a large world generates more factions than a small one (engine default)', async () => {
+    await executeGenerateWorld(
+      { name: 'SmallRealm', systemId: 'system-cairn-2e', seed: 'fac-scale', size: 'small' },
+      deps(),
+    )
+    const small = (await db.factions.toArray()).length
+    await Promise.all([
+      db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.factionRelationships.clear(),
+      db.npcs.clear(), db.connections.clear(), db.hooks.clear(), db.notices.clear(), db.rumors.clear(),
+      db.worldEvents.clear(), db.poiEvents.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear(),
+    ])
+    await executeGenerateWorld(
+      { name: 'LargeRealm', systemId: 'system-cairn-2e', seed: 'fac-scale', size: 'large' },
+      deps(),
+    )
+    const large = (await db.factions.toArray()).length
+    expect(small).toBeGreaterThanOrEqual(2)
+    expect(large).toBeGreaterThan(small)
+  })
+})
