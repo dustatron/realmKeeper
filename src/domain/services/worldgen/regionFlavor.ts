@@ -2,6 +2,39 @@ import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { pickBiomeFeature, biomeLabel, type Biome } from '@domain/data/worldgen/biomes'
 import { pickCairn, sampleCairn } from './cairnPick'
 
+export const REGION_PROBLEMS = [
+  'A blight creeps out of the wilds, fouling wells and crops',
+  'Two settlements feud over the only reliable water source',
+  'Children have gone missing on the road after dark',
+  'A monster has driven hunters from the best game lands',
+  'A failing mine or harvest threatens the coming winter',
+  'A cult has taken root and recruits the desperate',
+  'Bandits have closed the main trade road',
+  'A disputed succession splits the local powers',
+  'An old pact with something in the dark is coming due',
+  'Strange weather is ruining the season and frightening folk',
+  'A plague spreads faster than the healers can manage',
+  'A relic was stolen and rival parties race to recover it',
+  'Refugees arrive faster than the region can feed them',
+  'A bridge or pass collapsed, cutting off a community',
+  'The dead will not rest in one corner of the region',
+  'A tax or tithe has turned the common folk to unrest',
+  'A predator beast has learned to hunt people',
+  'A border dispute is sliding toward open conflict',
+  'A spring or shrine has gone foul and the faithful are afraid',
+  'Someone powerful has vanished, and their holdings are up for grabs',
+  'A creeping curse marks those who linger too long',
+  'Smugglers move something dangerous through the region',
+  'A drought (or flood) is reshaping who holds power',
+  'An outsider arrived with coin and unsettling questions',
+  'Wild magic or a planar leak warps a stretch of land',
+  'A long-buried grievance has erupted into vendetta',
+  'The local lord demands an impossible levy',
+  'A famine-driven raid threatens the harvest stores',
+  'A sickness afflicts the livestock the region depends on',
+  'A prophecy has the population either fleeing or fortifying',
+]
+
 // Structured region flavor, sourced from the Cairn region/setting tables that
 // already ship in the codebase. Used for every system (the Cairn tables are the
 // only region tables we have); deterministic given the same seed + biome.
@@ -11,6 +44,7 @@ export interface RegionFlavor {
   dangers: string[]
   resources: string[]
   people: string[]
+  problem: string
 }
 
 // Cairn splits terrain/landmarks into easy/tough/perilous difficulty bands. Map
@@ -90,6 +124,8 @@ export function buildRegionFlavor(biome: Biome, rng: SeededRandom): RegionFlavor
   const dangers = [`${lairFeature} ${lair}`.toLowerCase()]
   if (THREATENING_PEOPLE.has(people[0])) dangers.push(people[0].toLowerCase())
 
+  const problem = rng.pick(REGION_PROBLEMS)
+
   const resourcePhrase =
     resources.length === 2
       ? `${resources[0]} and ${resources[1]}`
@@ -99,5 +135,5 @@ export function buildRegionFlavor(biome: Biome, rng: SeededRandom): RegionFlavor
     `Home to ${people[0].toLowerCase()}, prized for its ${resourcePhrase.toLowerCase()}. ` +
     `Travelers speak of ${dangers[0]}.`
 
-  return { description, features, dangers, resources, people }
+  return { description, features, dangers, resources, people, problem }
 }
