@@ -10,6 +10,7 @@ import { LOOT_DENSITY, type LootDensity } from './lootDensity'
 import type { NPC } from '@domain/entities/NPC'
 import type { Region } from '@domain/entities/Region'
 import type { Faction } from '@domain/entities/Faction'
+import { seedRegionLoot, eligibleTreasurePois } from './seedTreasureHelpers'
 
 export interface RealmContentSprinkleOptions {
   treasureDensity?: LootDensity
@@ -22,21 +23,10 @@ interface SprinkleRealmContentInput {
   systemId: string
   options: RealmContentSprinkleOptions
   rng: SeededRandom
-  npcs?: NPC[]       // used from Task 4 onward
-  regions?: Region[] // used from Task 4 onward
-  factions?: Faction[] // used from Task 6 onward
+  npcs?: NPC[]
+  regions?: Region[]
+  factions?: Faction[]
 }
-
-const TREASURE_POI_TYPES = new Set<PoiType>([
-  'building',
-  'camp',
-  'dungeon',
-  'fortification',
-  'landmark',
-  'natural',
-  'ruin',
-  'shrine',
-])
 
 const MONSTER_POI_TYPES = new Set<PoiType>([
   'camp',
@@ -71,55 +61,55 @@ function pickTreasureItem(rng: SeededRandom): TreasureItem {
   }
 }
 
-export function sprinkleRealmContent({
-  pois,
-  systemId,
-  options,
-  rng,
-}: SprinkleRealmContentInput): POI[] {
-  const treasurePois = pois.filter((poi) => TREASURE_POI_TYPES.has(poi.type))
-  const monsterPois = pois.filter((poi) => MONSTER_POI_TYPES.has(poi.type))
+export function sprinkleRealmContent(input: SprinkleRealmContentInput): POI[] {
+  const { pois, systemId, options, rng } = input
 
   const treasureMult = LOOT_DENSITY[options.treasureDensity ?? 'off']
-  if (treasureMult > 0) {
-    const targets = rng.sample(
-      treasurePois,
-      targetCount(treasurePois.length, 0.45 * treasureMult, 1, 64),
-    )
-    for (const poi of targets) {
-      poi.treasure = [...poi.treasure, pickTreasureItem(rng.child(`treasure-${poi.id}`))]
-    }
-  }
-
   const magicMult = LOOT_DENSITY[options.magicDensity ?? 'off']
-  if (magicMult > 0) {
-    const magicItems = getMagicItemsBySystemId(systemId)
-    const targets = rng.sample(
-      treasurePois,
-      targetCount(treasurePois.length, 0.18 * magicMult, 1, 24),
-    )
-    for (const poi of targets) {
-      if (magicItems.length === 0) break
-      const item = rng.pick(magicItems)
-      const treasure: TreasureItem = {
-        id: newId(),
-        name: item.name,
-        description: item.description,
-        value: 'priceless',
-        quantity: 1,
-        collected: false,
-        isMagic: true,
-        compendiumId: item.id,
-      }
-      poi.treasure = [...poi.treasure, treasure]
-      if (!poi.magicItemRefs.some((ref) => ref.id === item.id)) {
-        poi.magicItemRefs = [...poi.magicItemRefs, { id: item.id }]
-      }
+
+  // Per-region treasure + magic seeding
+  if (treasureMult > 0 || magicMult > 0) {
+    // Build realm-wide magic pool (shuffled, unique draw via closure)
+    const magicPool = magicMult > 0 ? rng.shuffle([...getMagicItemsBySystemId(systemId)]) : []
+    let magicIndex = 0
+    const takeMagic = (): { id: string; name: string; description: string } | null => {
+      if (magicIndex >= magicPool.length) return null
+      return magicPool[magicIndex++]
+    }
+
+    const elig = eligibleTreasurePois(pois)
+    const byRegion = new Map<string, POI[]>()
+    for (const p of elig) {
+      const a = byRegion.get(p.regionId) ?? []
+      a.push(p)
+      byRegion.set(p.regionId, a)
+    }
+
+    // Use provided regions or derive pseudo-regions from POI regionIds
+    const regions: Array<{ id: string; terrain: string }> =
+      input.regions && input.regions.length > 0
+        ? input.regions
+        : Array.from(byRegion.keys()).map((id) => ({ id, terrain: 'grasslands' }))
+
+    for (const region of regions) {
+      const holders = byRegion.get(region.id) ?? []
+      if (holders.length === 0) continue
+      seedRegionLoot({
+        region,
+        holders,
+        treasureMult,
+        magicMult,
+        takeMagic,
+        rng,
+        pickTreasureItemFn: pickTreasureItem,
+      })
     }
   }
 
+  // Monster seeding (unchanged)
   const monsterMult = LOOT_DENSITY[options.monsterDensity ?? 'off']
   if (monsterMult > 0) {
+    const monsterPois = pois.filter((poi) => MONSTER_POI_TYPES.has(poi.type))
     const monsters = getMonstersBySystemId(systemId)
     const targets = rng.sample(
       monsterPois,
