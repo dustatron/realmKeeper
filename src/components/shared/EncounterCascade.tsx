@@ -29,6 +29,7 @@ interface EncounterCascadeProps {
   onSaveNpc?: () => Promise<void>;
   onSaveTable?: (entries: SavePayload) => void;
   onRoll: () => Promise<RollEncounterResult>;
+  onRegenerateFromRegion?: () => Promise<void>;
 }
 
 /** Build a one-line summary of the persisted result for the banner. */
