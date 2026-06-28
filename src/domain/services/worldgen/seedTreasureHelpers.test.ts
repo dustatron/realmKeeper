@@ -13,7 +13,7 @@ describe('seedRegionMonsters — guardian collision handling', () => {
         poi.treasure = [{ id: 'tr1', name: 'Ancient Coin', description: '', value: '50 gp', quantity: 1, collected: false, notable: true }]
       }
       seedRegionMonsters([poi], 'perilous', 1, 'system-cairn-2e', new SeededRandom(seed), alwaysSame)
-      return poi.monsterRefs.find((r) => r.id === 'mon-x')!.quantity
+      return poi.monsterRefs.find((r) => r.id === 'mon-x')?.quantity ?? 0
     }
     // Same seed → identical regional placement; the ONLY difference is the guardian
     // pass (runs only when a notable find exists). Find a seed where the guardian
