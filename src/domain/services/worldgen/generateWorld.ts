@@ -35,6 +35,7 @@ import type { Rumor } from '@domain/entities/Rumor'
 import type { WorldEvent } from '@domain/entities/WorldEvent'
 import type { POIEvent } from '@domain/entities/POIEvent'
 import type { SystemConfig } from '@domain/entities/SystemConfig'
+import type { FactionPresence } from '@domain/entities/FactionPresence'
 import { newId } from '@shared/ulid'
 
 export type PoiDensity = 'sparse' | 'normal' | 'dense'
@@ -68,6 +69,7 @@ export function generateWorld(
   pois: POI[]
   paths: Path[]
   factions: Faction[]
+  factionPresences: FactionPresence[]
   factionRelationships: FactionRelationship[]
   npcs: NPC[]
   connections: Connection[]
@@ -127,6 +129,7 @@ export function generateWorld(
       settlements: [],
       resources: flavor.resources,
       people: flavor.people,
+      problem: flavor.problem,
       boundary: null, // set in step 4c from the region's hex cluster
       // Distinct per-region color (not the biome color) so adjacent regions of
       // the same biome still read as separate areas on the map.
@@ -434,11 +437,12 @@ export function generateWorld(
   for (const edge of extraEdges.slice(0, extraCount)) addPath(edge.a, edge.b, edge.dist)
 
   // Step 8: factions. Each gets a distinct settlement as its headquarters (and
-  // inherits that settlement's region). Count scales with the number of
-  // settlements unless overridden, and can never exceed the settlements
-  // available to host them. Faction leadership/agents are assigned in a later
-  // NPC stage, so those references start empty.
-  const defaultFactionCount = Math.max(2, Math.round(settlementNodes.length / 4))
+  // inherits that settlement's region). Count scales with map size via the
+  // region count (which grows reliably small→medium→large, unlike settlement
+  // count, which can plateau) — capped at the settlements available to host
+  // them. Faction leadership/agents are assigned in a later NPC stage, so those
+  // references start empty.
+  const defaultFactionCount = Math.max(2, Math.round(regions.length * 0.75))
   const factionCount = Math.min(
     settlementNodes.length,
     opts.factionCount ?? defaultFactionCount,
@@ -450,6 +454,21 @@ export function generateWorld(
       rng,
     ),
   )
+
+  // Seed a FactionPresence row for each faction's HQ so the region Factions tab
+  // can find it via presence lookup (not only via f.regionId, which misses factions
+  // whose HQ is in a different region from their assigned regionId).
+  const factionPresences: FactionPresence[] = factions
+    .filter((f) => f.headquartersPoiId)
+    .map((f) => ({
+      id: newId(),
+      factionId: f.id,
+      poiId: f.headquartersPoiId as string,
+      type: 'controls' as const,
+      notes: '',
+      createdAt: now,
+      updatedAt: now,
+    }))
 
   // Step 8b: faction leaders + agents. Only runs when the realm's system config
   // is supplied (the SystemBlock is rolled for that system). Each faction gets
@@ -579,6 +598,7 @@ export function generateWorld(
     pois,
     paths,
     factions,
+    factionPresences,
     factionRelationships,
     npcs,
     connections,

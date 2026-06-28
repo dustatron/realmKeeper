@@ -3,6 +3,7 @@ import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { GameMap } from '@domain/entities/GameMap'
 import { BIOME_COLORS } from '~/lib/hexmap/hexLayout'
+import { colorForTerrain } from './terrainColors'
 import type { POI } from '@domain/entities/POI'
 import type { Path } from '@domain/entities/Path'
 import type { Region } from '@domain/entities/Region'
@@ -30,18 +31,6 @@ import { createRoot } from 'react-dom/client'
 
 export type MapMode = 'view' | 'place-poi' | 'draw-path' | 'draw-region'
 
-const REGION_COLORS: Record<string, string> = {
-  plains: '#22c55e',
-  forest: '#166534',
-  hills: '#d97706',
-  mountain: '#64748b',
-  swamp: '#713f12',
-  desert: '#fbbf24',
-  coast: '#06b6d4',
-  road: '#78716c',
-  tundra: '#94a3b8',
-  other: '#8b5cf6',
-}
 
 export interface MapViewerHandle {
   zoomToFit: () => void
@@ -585,7 +574,7 @@ export function MapViewer({
     const features = regionsWithBoundary.map((r) => {
       const coords = r.boundary!.map((p) => pxToLngLat(p.x, p.y))
       coords.push(coords[0]) // close ring
-      const color = r.color ?? REGION_COLORS[r.terrain] ?? REGION_COLORS.other
+      const color = r.color ?? colorForTerrain(r.terrain)
       return {
         type: 'Feature' as const,
         properties: { id: r.id, name: r.name, color },

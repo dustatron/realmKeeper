@@ -8,7 +8,7 @@ import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { tierForTerrain } from './regionFlavor'
 import type { Faction } from '@domain/entities/Faction'
 import type { LootDensity } from './lootDensity'
-import { pickTierMonster } from '~/lib/worldgen/compendium-utils'
+import { pickTierMonster, pickEquipment } from '~/lib/worldgen/compendium-utils'
 
 /** POI types eligible for monster seeding (excludes dungeon/ruin — those have their own generators). */
 export const MONSTER_POI_TYPES = new Set<PoiType>([
@@ -193,6 +193,43 @@ export function seedRegionLoot(input: SeedRegionLootInput): void {
         h.poi.treasure = [...h.poi.treasure, item]
       } else {
         pushTreasureToNpc(h.npc, item)
+      }
+    }
+  }
+}
+
+export function pushGearToNpc(npc: NPC, equip: { id: string; name: string; description: string }): void {
+  const item: InventoryItem = {
+    id: newId(),
+    name: equip.name,
+    slots: 1,
+    description: equip.description,
+    source: 'compendium',
+    compendiumKind: 'equipment',
+    compendiumId: equip.id,
+  }
+  npc.systemBlock.inventory = [...(npc.systemBlock.inventory ?? []), item]
+}
+
+const GEAR_NPC_CHANCE = 0.35
+const GEAR_POI_CHANCE = 0.4
+
+export function seedRegionGear(pois: POI[], npcs: NPC[], systemId: string, rng: SeededRandom): void {
+  for (const npc of npcs) {
+    if (!rng.chance(GEAR_NPC_CHANCE)) continue
+    const n = rng.between(1, 2)
+    for (let i = 0; i < n; i++) {
+      const e = pickEquipment(systemId, rng)
+      if (e) pushGearToNpc(npc, e)
+    }
+  }
+  for (const poi of pois) {
+    if (!rng.chance(GEAR_POI_CHANCE)) continue
+    const n = rng.between(1, 2)
+    for (let i = 0; i < n; i++) {
+      const e = pickEquipment(systemId, rng)
+      if (e && !(poi.equipmentRefs ?? []).some((r) => r.id === e.id)) {
+        poi.equipmentRefs = [...(poi.equipmentRefs ?? []), { id: e.id }]
       }
     }
   }

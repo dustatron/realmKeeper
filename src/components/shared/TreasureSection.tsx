@@ -3,18 +3,26 @@ import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '~/components/ui/select'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
-import { Gem, Plus, Trash2, Check, X, Sparkles, Coins, Diamond, Crown } from 'lucide-react'
+import { Gem, Plus, Trash2, Check, X, Sparkles, Coins, Diamond, Crown, Shield } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { newId } from '@shared/ulid'
 import { rollDice } from '@shared/dice'
 import { rollOnTable } from '@domain/services/RandomTableEngine'
 import { treasureTableDefs } from '@domain/data/treasure-tables'
 import type { TreasureItem } from '@domain/value-objects/TreasureItem'
+import type { NPC } from '@domain/entities/NPC'
 
 function itemIcon(item: TreasureItem, collected: boolean): string {
   if (collected) return '✅'
@@ -28,6 +36,7 @@ function itemIcon(item: TreasureItem, collected: boolean): string {
 interface TreasureSectionProps {
   treasure: TreasureItem[]
   onUpdate: (treasure: TreasureItem[]) => void
+  npcs?: NPC[]
 }
 
 const goldTable = treasureTableDefs.find((t) => t.id === 'table-treasure-gold')!
@@ -48,7 +57,7 @@ function generateFromTable(table: typeof goldTable): TreasureItem {
   }
 }
 
-export function TreasureSection({ treasure, onUpdate }: TreasureSectionProps) {
+export function TreasureSection({ treasure, onUpdate, npcs }: TreasureSectionProps) {
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [value, setValue] = useState('')
@@ -225,6 +234,39 @@ export function TreasureSection({ treasure, onUpdate }: TreasureSectionProps) {
                     <Trash2 className="size-3" />
                   </Button>
                 </div>
+                {/* Guardian NPC picker */}
+                {npcs && npcs.length > 0 && (
+                  <div className="flex items-center gap-2 px-3 pb-2 border-t border-border/30 pt-1.5">
+                    <Shield className="size-3 text-muted-foreground shrink-0" />
+                    <Select
+                      value={item.guardianNpcId ?? '__none__'}
+                      onValueChange={(val) => {
+                        onUpdate(treasure.map((t) =>
+                          t.id === item.id ? { ...t, guardianNpcId: val === '__none__' ? null : val } : t
+                        ))
+                      }}
+                    >
+                      <SelectTrigger size="sm" className="h-6 text-xs flex-1 min-w-0">
+                        <SelectValue placeholder="No guardian" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">No guardian</SelectItem>
+                        {npcs.map((npc) => (
+                          <SelectItem key={npc.id} value={npc.id}>{npc.name || '(unnamed)'}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {item.guardianNpcId && (
+                      <Link
+                        to="/realms/npcs/$npcId"
+                        params={{ npcId: item.guardianNpcId }}
+                        className="text-xs text-primary hover:underline shrink-0"
+                      >
+                        View →
+                      </Link>
+                    )}
+                  </div>
+                )}
                 {/* Description + link row for magic/scrolls */}
                 {item.description && !isWeapon && (
                   <div className="flex items-start justify-between gap-2 px-3 pb-2 border-t border-border/30 pt-1.5">

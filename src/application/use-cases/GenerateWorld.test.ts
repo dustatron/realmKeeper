@@ -8,7 +8,7 @@ const container = createContainer()
 
 beforeEach(async () => {
   await db.open()
-  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.factionRelationships.clear(), db.npcs.clear(), db.connections.clear(), db.hooks.clear(), db.notices.clear(), db.rumors.clear(), db.worldEvents.clear(), db.poiEvents.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear()])
+  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.factionPresences.clear(), db.factionRelationships.clear(), db.npcs.clear(), db.connections.clear(), db.hooks.clear(), db.notices.clear(), db.rumors.clear(), db.worldEvents.clear(), db.poiEvents.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear()])
   // NPC generation rolls a system-correct stat block, so the system config must exist.
   await db.systemConfigs.put(cairnSystemConfig)
 })
@@ -301,17 +301,54 @@ describe('faction count auto-scales with map size when factionCount is omitted',
       deps(),
     )
     const small = (await db.factions.toArray()).length
-    await Promise.all([
+    const clearAll = () => Promise.all([
       db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.factionRelationships.clear(),
       db.npcs.clear(), db.connections.clear(), db.hooks.clear(), db.notices.clear(), db.rumors.clear(),
       db.worldEvents.clear(), db.poiEvents.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear(),
     ])
+    await clearAll()
+    await executeGenerateWorld(
+      { name: 'MediumRealm', systemId: 'system-cairn-2e', seed: 'fac-scale', size: 'medium' },
+      deps(),
+    )
+    const medium = (await db.factions.toArray()).length
+    await clearAll()
     await executeGenerateWorld(
       { name: 'LargeRealm', systemId: 'system-cairn-2e', seed: 'fac-scale', size: 'large' },
       deps(),
     )
     const large = (await db.factions.toArray()).length
+    // Region-count-driven default scales smoothly across all three sizes.
     expect(small).toBeGreaterThanOrEqual(2)
-    expect(large).toBeGreaterThan(small)
+    expect(medium).toBeGreaterThan(small)
+    expect(large).toBeGreaterThan(medium)
+  })
+})
+
+describe('FactionPresence seeding', () => {
+  it('seeds a "controls" presence row at every faction HQ after world-gen', async () => {
+    await executeGenerateWorld(
+      { name: 'PresenceWorld', systemId: 'system-cairn-2e', seed: 'presence-seed', size: 'small' },
+      deps(),
+    )
+
+    const factions = await db.factions.toArray()
+    const presences = await db.factionPresences.toArray()
+
+    // At least one faction must exist for this test to be meaningful.
+    const hqFactions = factions.filter(f => f.headquartersPoiId)
+    expect(hqFactions.length).toBeGreaterThanOrEqual(1)
+
+    // Every faction with an HQ gets exactly one 'controls' presence at that POI.
+    for (const faction of hqFactions) {
+      const row = presences.find(
+        p => p.factionId === faction.id && p.poiId === faction.headquartersPoiId,
+      )
+      expect(row).toBeDefined()
+      expect(row?.type).toBe('controls')
+    }
+
+    // Total presence count matches the number of HQ-factions.
+    expect(presences.length).toBe(hqFactions.length)
   })
 })

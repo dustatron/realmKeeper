@@ -1,71 +1,109 @@
 import { describe, it, expect } from 'vitest'
 import { summarizeRegionContents } from './regionContents'
 import { buildPOI } from '@domain/services/worldgen/buildPoi'
+import { getMagicItemsBySystemId } from '@domain/data/compendium'
+import { getMonstersBySystemId } from '@domain/data/compendium'
 
 describe('summarizeRegionContents', () => {
-  it('counts treasure/magic, lists highlights and monsters', () => {
-    const p = buildPOI({ regionId: 'r', name: 'p', type: 'landmark' })
-    p.treasure = [
-      { id: 't1', name: 'Gold', description: '', value: '10 gp', quantity: 1, collected: false },
-      { id: 't2', name: 'Sun Blade', description: '', value: 'priceless', quantity: 1, collected: false, isMagic: true, notable: true },
+  it('splits treasures vs magic, retains ids, no double-count', () => {
+    const poi = buildPOI({ regionId: 'r', name: 'Vault', type: 'dungeon' })
+    poi.treasure = [
+      { id: 't1', name: 'Gold Crown', description: '', value: '500 gp', quantity: 1, collected: false, notable: true, guardianNpcId: 'npc-9' },
+      { id: 't2', name: 'Sun Blade', description: '', value: 'priceless', quantity: 1, collected: false, isMagic: true },
     ]
-    p.monsterRefs = [{ id: 'mon-x', quantity: 2 }]
-    const npc: any = { systemBlock: { inventory: [{ name: 'Ring of Y', slots: 1, description: '', source: 'compendium', compendiumKind: 'magicItem' }] } }
-    const s = summarizeRegionContents([p], [npc])
-    expect(s.treasureCount).toBe(3)       // 2 poi + 1 npc
-    expect(s.magicCount).toBe(2)          // Sun Blade + Ring of Y
-    expect(s.highlights.map((h) => h.name).sort()).toEqual(['Ring of Y', 'Sun Blade'])
-    expect(s.monsters[0].count).toBe(2)
+    const c = summarizeRegionContents([poi], [])
+    expect(c.treasures.map((t) => t.name)).toEqual(['Gold Crown'])
+    expect(c.treasures[0].poiId).toBe(poi.id)
+    expect(c.treasures[0].guardianNpcId).toBe('npc-9')
+    expect(c.magic.map((m) => m.name)).toEqual(['Sun Blade'])
+    expect(c.treasureCount).toBe(1)        // non-magic only — no double-count
+    expect(c.magicCount).toBe(1)
   })
 
-  it('handles empty region', () => {
-    const s = summarizeRegionContents([], [])
-    expect(s).toEqual({ treasureCount: 0, magicCount: 0, highlights: [], monsters: [], bigMonsters: [] })
+  it('NPC magicItem inventory item appears in magic with npcId', () => {
+    const npc = {
+      id: 'npc-1',
+      name: 'Wizard',
+      systemBlock: { inventory: [{ name: 'Ring of Power', compendiumKind: 'magicItem', source: 'loot' }] },
+    } as any
+    const c = summarizeRegionContents([], [npc])
+    expect(c.magic).toHaveLength(1)
+    expect(c.magic[0].name).toBe('Ring of Power')
+    expect(c.magic[0].npcId).toBe('npc-1')
+    expect(c.magic[0].poiId).toBeNull()
+    expect(c.treasures).toHaveLength(0)
   })
 
-  it('does not count authored NPC gear toward treasureCount — only seeded/findable items', () => {
-    const npc: any = {
-      systemBlock: {
-        inventory: [
-          // Authored starting gear — must NOT count
-          { name: 'Boots', slots: 1, description: '', source: 'manual' },
-          { name: 'Rope', slots: 1, description: '' },
-          // Seeded items — MUST count
-          { name: 'Old Coin Purse', slots: 1, description: '', source: 'treasure', notable: false },
-          { name: 'Ember Ring', slots: 1, description: '', source: 'compendium', compendiumKind: 'magicItem', notable: true },
-        ],
-      },
-    }
-    const s = summarizeRegionContents([], [npc])
-    // Only 'Old Coin Purse' (source:'treasure') and 'Ember Ring' (compendiumKind:'magicItem') count
-    expect(s.treasureCount).toBe(2)
-    expect(s.magicCount).toBe(1)
-    expect(s.highlights.map((h) => h.name)).toContain('Ember Ring')
+  it('NPC treasure inventory item appears in treasures with npcId', () => {
+    const npc = {
+      id: 'npc-2',
+      name: 'Bandit',
+      systemBlock: { inventory: [{ name: 'Gold Coins', source: 'treasure', value: '50 gp', notable: false }] },
+    } as any
+    const c = summarizeRegionContents([], [npc])
+    expect(c.treasures).toHaveLength(1)
+    expect(c.treasures[0].name).toBe('Gold Coins')
+    expect(c.treasures[0].npcId).toBe('npc-2')
+    expect(c.treasures[0].poiId).toBeNull()
+    expect(c.magic).toHaveLength(0)
   })
 
-  it('reports holder location per highlight and big monsters with location', () => {
-    const mill = buildPOI({ regionId: 'r', name: 'Old Mill', type: 'landmark' })
-    mill.treasure = [
-      { id: 't1', name: 'Sun Blade', description: '', value: 'priceless', quantity: 1, collected: false, isMagic: true, notable: true },
-    ]
-    // sd-monster-ape_snow has level 4 (threat >= 4) in the shadowdark compendium
-    mill.monsterRefs = [{ id: 'sd-monster-ape_snow', quantity: 2 }]
-    const s = summarizeRegionContents([mill], [])
-    expect(s.highlights[0]).toMatchObject({ name: 'Sun Blade', location: 'Old Mill' })
-    expect(s.bigMonsters.some((m) => m.location === 'Old Mill')).toBe(true)
-    const snowApe = s.bigMonsters.find((m) => m.location === 'Old Mill')
-    expect(snowApe).toBeDefined()
-    expect(snowApe!.count).toBe(2)
+  it('POI magicItemRefs resolve via compendium and appear in magic', () => {
+    const items = getMagicItemsBySystemId('system-cairn-2e')
+    if (items.length === 0) return // skip gracefully if compendium has no magic items
+    const poi = buildPOI({ regionId: 'r', name: 'Shrine', type: 'landmark' })
+    poi.magicItemRefs = [{ id: items[0].id }]
+    const c = summarizeRegionContents([poi], [])
+    expect(c.magic).toHaveLength(1)
+    expect(c.magic[0].name).toBe(items[0].name)
+    expect(c.magic[0].poiId).toBe(poi.id)
+    expect(c.magic[0].npcId).toBeNull()
   })
 
-  it('excludes low-threat monsters from bigMonsters', () => {
-    const p = buildPOI({ regionId: 'r', name: 'Cave', type: 'landmark' })
-    // sd-monster-goblin has level 1 — below threshold
-    p.monsterRefs = [{ id: 'sd-monster-goblin', quantity: 3 }]
-    const s = summarizeRegionContents([p], [])
-    // Still in monsters total, but not bigMonsters
-    expect(s.monsters.length).toBeGreaterThan(0)
-    expect(s.bigMonsters).toHaveLength(0)
-    expect(s.bigMonsters.find((m) => m.name === 'Goblin')).toBeUndefined()
+  it('monster ref with quantity 3 sums into monsterCount', () => {
+    const poi = buildPOI({ regionId: 'r', name: 'Cave', type: 'dungeon' })
+    // cairn-monster-acolyte is always present in the compendium
+    poi.monsterRefs = [{ id: 'cairn-monster-acolyte', quantity: 3 }]
+    const c = summarizeRegionContents([poi], [])
+    expect(c.monsters).toHaveLength(1)
+    expect(c.monsters[0].count).toBe(3)
+    expect(c.monsterCount).toBe(3)
+  })
+
+  it('empty input returns all empty arrays and zero counts', () => {
+    const c = summarizeRegionContents([], [])
+    expect(c.treasures).toHaveLength(0)
+    expect(c.magic).toHaveLength(0)
+    expect(c.monsters).toHaveLength(0)
+    expect(c.treasureCount).toBe(0)
+    expect(c.magicCount).toBe(0)
+    expect(c.monsterCount).toBe(0)
+  })
+
+  it('POI with undefined treasure does not throw', () => {
+    const poi = buildPOI({ regionId: 'r', name: 'Old Ruin', type: 'dungeon' })
+    // Simulate legacy POI with no treasure array
+    ;(poi as any).treasure = undefined
+    expect(() => summarizeRegionContents([poi], [])).not.toThrow()
+  })
+
+  it('POI monsterRef carries compendiumId equal to the ref id', () => {
+    const monsters = getMonstersBySystemId('system-cairn-2e')
+    if (monsters.length === 0) return
+    const poi = buildPOI({ regionId: 'r', name: 'Lair', type: 'dungeon' })
+    poi.monsterRefs = [{ id: monsters[0].id, quantity: 1 }]
+    const c = summarizeRegionContents([poi], [])
+    expect(c.monsters).toHaveLength(1)
+    expect(c.monsters[0].compendiumId).toBe(monsters[0].id)
+  })
+
+  it('POI magicItemRefs entry carries compendiumId equal to the ref id', () => {
+    const items = getMagicItemsBySystemId('system-cairn-2e')
+    if (items.length === 0) return
+    const poi = buildPOI({ regionId: 'r', name: 'Shrine', type: 'landmark' })
+    poi.magicItemRefs = [{ id: items[0].id }]
+    const c = summarizeRegionContents([poi], [])
+    expect(c.magic).toHaveLength(1)
+    expect(c.magic[0].compendiumId).toBe(items[0].id)
   })
 })

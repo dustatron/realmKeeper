@@ -7,6 +7,7 @@ import { useRegion, useRegions } from '~/ui/hooks/useRegions'
 import { usePOIBreadcrumb } from '~/ui/hooks/usePOIBreadcrumb'
 import { usePOIChildren } from '~/ui/hooks/usePOIChildren'
 import { useNPCs } from '~/ui/hooks/useNPCs'
+import { useNPCsByRegion } from '~/ui/hooks/useNPCsByRegion'
 import { useNPCsByPoi } from '~/ui/hooks/useNPCsByPoi'
 import { useNPCsByPoiIds } from '~/ui/hooks/useNPCsByPoiIds'
 import { useFactionPresencesByPoi } from '~/ui/hooks/useFactionPresences'
@@ -136,6 +137,7 @@ function POIDetailPage() {
   const encounterTable = useEncounterTable(poiId, poi?.regionId ?? null, null)
   const realm = useActiveRealm()
   const allWorldNPCs = useNPCs(realm?.id ?? null)
+  const regionNPCs = useNPCsByRegion(poi?.regionId ?? null)
   const systemConfig = useSystemConfig(realm?.systemId ?? null)
   const factions = useFactions(realm?.id ?? null)
   const regions = useRegions(realm?.id ?? null)
@@ -612,7 +614,7 @@ function POIDetailPage() {
           onUpdateNPC={actions.handleUpdateNPC}
           compendiumSection={compendiumSection}
           trapSection={<TrapSection traps={poi.traps ?? []} onUpdate={actions.handleUpdateTraps} />}
-          treasureSection={<TreasureSection treasure={poi.treasure ?? []} onUpdate={actions.handleUpdateTreasure} />}
+          treasureSection={<TreasureSection treasure={poi.treasure ?? []} onUpdate={actions.handleUpdateTreasure} npcs={regionNPCs} />}
           dungeonEventsPanel={
             <DungeonEventsPanel
               encounterTable={encounterTable}
@@ -805,7 +807,7 @@ function POIDetailPage() {
         <TrapSection traps={poi.traps ?? []} onUpdate={actions.handleUpdateTraps} />
       )}
       {poi.type !== 'dungeon' && parentPoi?.type !== 'dungeon' && (
-        <TreasureSection treasure={poi.treasure ?? []} onUpdate={actions.handleUpdateTreasure} />
+        <TreasureSection treasure={poi.treasure ?? []} onUpdate={actions.handleUpdateTreasure} npcs={regionNPCs} />
       )}
 
       {/* Dialogs */}
