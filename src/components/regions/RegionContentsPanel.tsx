@@ -99,9 +99,10 @@ export function RegionContentsPanel({ pois, npcs }: { pois: POI[]; npcs: NPC[] }
           <span className="flex flex-wrap items-center gap-1 text-xs">
             {href ? (
               <Link
+                // compendiumHref returns a validated route+params pair (unit-tested); cast bypasses TanStack's literal-route typing.
                 to={href.to as never}
                 params={href.params as never}
-                className={r.collected ? 'line-through text-muted-foreground text-primary hover:underline' : 'text-primary hover:underline'}
+                className={r.collected ? 'line-through text-primary/50 hover:underline' : 'text-primary hover:underline'}
               >
                 {r.name}
               </Link>
@@ -167,6 +168,8 @@ export function RegionContentsPanel({ pois, npcs }: { pois: POI[]; npcs: NPC[] }
     {
       key: 'detail',
       header: 'Detail',
+      sortable: true,
+      sortValue: (r) => r.detail,
       render: (r) => <span className="text-xs text-muted-foreground">{r.detail}</span>,
     },
     {
