@@ -84,6 +84,8 @@ import {
 } from 'lucide-react'
 import { POI_TYPES, POI_EVENT_TYPES, SEASONS, type PoiType, type POIEventType, type Season } from '@shared/constants'
 import type { POIEvent } from '@domain/entities/POIEvent'
+import type { NPC } from '@domain/entities/NPC'
+import type { Faction } from '@domain/entities/Faction'
 
 export const Route = createFileRoute('/_app/realms/regions_/$regionId')({
   component: RegionDetailPage,
@@ -314,6 +316,100 @@ function RegionDetailPage() {
         : <span className="text-muted-foreground text-sm">—</span>,
     },
   ], [presenceByPoi])
+
+  // NPC tab lookup objects (plain Record — not JS Map, which is shadowed by lucide's Map import)
+  const poiName = useMemo<Record<string, string>>(
+    () => Object.fromEntries(pois.map(p => [p.id, p.name])),
+    [pois]
+  )
+  const factionById = useMemo<Record<string, Faction>>(
+    () => Object.fromEntries(factions.map(f => [f.id, f])),
+    [factions]
+  )
+
+  const DISPOSITION_COLORS: Record<string, string> = {
+    hostile: 'bg-red-500/15 text-red-500 border-red-500/30',
+    wary: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
+    curious: 'bg-gray-400/15 text-gray-400 border-gray-400/30',
+    kind: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
+    helpful: 'bg-green-500/15 text-green-500 border-green-500/30',
+  }
+
+  const npcColumns = useMemo<DataTableColumn<NPC>[]>(() => [
+    {
+      key: 'name',
+      header: 'Name',
+      sortable: true,
+      sortValue: n => n.name,
+      render: n => (
+        <span className="flex items-center gap-1.5">
+          <Link to="/realms/npcs/$npcId" params={{ npcId: n.id }} className="text-primary hover:underline font-medium">
+            {n.name}
+          </Link>
+          {n.lifeStatus !== 'alive' && (
+            <Badge variant="destructive" className="text-xs capitalize">{n.lifeStatus}</Badge>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: 'location',
+      header: 'Location',
+      sortable: true,
+      sortValue: n => (n.poiId ? (poiName[n.poiId] ?? '') : ''),
+      render: n => n.poiId && poiName[n.poiId]
+        ? <Link to="/realms/pois/$poiId" params={{ poiId: n.poiId }} className="text-primary hover:underline text-sm">{poiName[n.poiId]}</Link>
+        : <span className="text-muted-foreground text-sm">—</span>,
+    },
+    {
+      key: 'faction',
+      header: 'Faction',
+      sortable: true,
+      sortValue: n => {
+        const fId = n.factionIds?.[0]
+        return fId ? (factionById[fId]?.name ?? '') : ''
+      },
+      render: n => {
+        const fId = n.factionIds?.[0]
+        const faction = fId ? factionById[fId] : undefined
+        if (!faction) return <span className="text-muted-foreground text-sm">—</span>
+        return (
+          <span className="flex items-center gap-1.5">
+            <Link to="/realms/factions/$factionId" params={{ factionId: faction.id }} className="text-primary hover:underline text-sm">{faction.name}</Link>
+            {faction.leaderNpcId === n.id && (
+              <Badge variant="outline" className="text-xs">leader</Badge>
+            )}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'disposition',
+      header: 'Disposition',
+      sortable: true,
+      sortValue: n => n.disposition ?? '',
+      render: n => n.disposition
+        ? <Badge className={`text-xs capitalize ${DISPOSITION_COLORS[n.disposition] ?? ''}`}>{n.disposition}</Badge>
+        : <span className="text-muted-foreground text-sm">—</span>,
+    },
+    {
+      key: 'movement',
+      header: 'Movement',
+      sortable: true,
+      sortValue: n => n.movementStatus,
+      render: n => <span className="text-sm capitalize">{n.movementStatus}</span>,
+    },
+    {
+      key: 'want',
+      header: 'Want',
+      render: n => {
+        const text = n.want || n.motivation
+        return text
+          ? <span className="text-sm text-muted-foreground max-w-[16rem] truncate block">{text}</span>
+          : <span className="text-muted-foreground text-sm">—</span>
+      },
+    },
+  ], [poiName, factionById])
 
   // Auto-open edit mode from ?edit=true search param
   useEffect(() => {
@@ -801,33 +897,12 @@ function RegionDetailPage() {
               {isGeneratingNPC ? '...' : 'Generate'}
             </Button>
           </div>
-          {npcs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No NPCs in this region.</p>
-          ) : (
-            <div className="space-y-1">
-              {npcs.map((npc) => (
-                <div key={npc.id} className="flex items-center justify-between py-1">
-                  <Link
-                    to="/realms/npcs/$npcId"
-                    params={{ npcId: npc.id }}
-                    className="text-sm text-primary hover:underline font-medium"
-                  >
-                    {npc.name}
-                  </Link>
-                  <div className="flex items-center gap-1">
-                    {npc.traits.slice(0, 2).map((trait) => (
-                      <Badge key={trait} variant="secondary" className="text-xs">{trait}</Badge>
-                    ))}
-                    {npc.lifeStatus !== 'alive' && (
-                      <Badge variant="destructive" className="text-xs">
-                        {npc.lifeStatus.charAt(0).toUpperCase() + npc.lifeStatus.slice(1)}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <DataTable
+            rows={npcs}
+            rowKey={n => n.id}
+            columns={npcColumns}
+            empty={<p className="text-sm text-muted-foreground">No NPCs in this region.</p>}
+          />
         </TabsContent>
 
         {/* Factions tab */}
