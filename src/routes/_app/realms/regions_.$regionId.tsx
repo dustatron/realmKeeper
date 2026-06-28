@@ -45,6 +45,7 @@ import { Textarea } from '~/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
 import { ArrowLeft } from 'lucide-react'
+import { RegionContentsPanel } from '~/components/regions/RegionContentsPanel'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '~/components/ui/dialog'
 import {
   ChevronRight,
@@ -535,6 +536,10 @@ function RegionDetailPage() {
               </div>
             </div>
           )}
+
+          <div className="mt-4">
+            <RegionContentsPanel pois={pois} npcs={npcs} />
+          </div>
         </TabsContent>
 
         {/* Locations tab */}
