@@ -655,6 +655,16 @@ db.version(38).stores(storesV36).upgrade(async (tx) => {
   }
 })
 
+const storesV39 = { ...storesV36, rumors: 'id, poiId, regionId, worldId, isUsed, hookId, sourceNpcId' }
+
+// v39: Rumor.sourceNpcId (indexed) + backfill null on existing rumors
+db.version(39).stores(storesV39).upgrade(async (tx) => {
+  const rumors = await tx.table('rumors').toArray()
+  for (const r of rumors) {
+    if (r.sourceNpcId === undefined) await tx.table('rumors').put({ ...r, sourceNpcId: null })
+  }
+})
+
 // Normalize Realms on read — ensures starred arrays have defaults
 db.worlds.hook('reading', (realm) => {
   if (!realm) return realm
@@ -772,6 +782,17 @@ db.npcs.hook('reading', (npc) => {
     }
   }
   return npc
+})
+
+// Normalize Rumors on read — ensures sourceNpcId has a default
+db.rumors.hook('reading', (rumor) => {
+  if (!rumor) return rumor
+  const rec = rumor as unknown as Record<string, unknown>
+  if (rec.sourceNpcId === undefined) {
+    rumor = { ...rumor }
+    ;(rumor as unknown as Record<string, unknown>).sourceNpcId = null
+  }
+  return rumor
 })
 
 // Seed system configs on first DB creation

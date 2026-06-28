@@ -23,6 +23,10 @@ export class NoticeRepository implements INoticeRepository {
     await db.notices.put(notice)
   }
 
+  async bulkCreate(notices: Notice[]): Promise<void> {
+    await db.notices.bulkPut(notices)
+  }
+
   async update(notice: Notice): Promise<void> {
     await db.notices.put(notice)
   }

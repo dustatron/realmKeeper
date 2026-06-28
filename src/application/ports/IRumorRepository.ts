@@ -6,6 +6,7 @@ export interface IRumorRepository {
   getByRegionId(regionId: string): Promise<Rumor[]>
   getByRealmId(worldId: string): Promise<Rumor[]>
   create(rumor: Rumor): Promise<void>
+  bulkCreate(rumors: Rumor[]): Promise<void>
   update(rumor: Rumor): Promise<void>
   delete(id: string): Promise<void>
 }
