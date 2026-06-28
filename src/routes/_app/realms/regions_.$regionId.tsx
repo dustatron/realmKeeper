@@ -364,7 +364,7 @@ function RegionDetailPage() {
       },
       {
         key: "danger",
-        header: "Danger",
+        header: "Threat",
         sortable: true,
         sortValue: (p) => poiMaxThreat(p.monsterRefs),
         render: (p) => {
@@ -551,11 +551,18 @@ function RegionDetailPage() {
         key: "stance",
         header: "Stance",
         sortable: true,
-        sortValue: (f) => (f.isParty ? Infinity : (stanceByFaction[f.id] ?? 0)),
+        sortValue: (f) =>
+          f.isParty
+            ? Infinity
+            : (stanceByFaction[f.id] ?? Number.NEGATIVE_INFINITY),
         render: (f) => {
           if (f.isParty)
             return <span className="text-muted-foreground text-sm">—</span>;
-          const score = stanceByFaction[f.id] ?? 0;
+          const score = stanceByFaction[f.id];
+          if (score === undefined)
+            return (
+              <span className="text-muted-foreground text-sm">—</span>
+            );
           const meta =
             STANCE_META.find((m) => score >= m.min && score <= m.max) ??
             STANCE_META[2];
@@ -1251,7 +1258,7 @@ function RegionDetailPage() {
             return (
               <div className="flex items-center gap-2 mb-4 flex-wrap">
                 {region.terrain && (
-                  <div className="border-1">
+                  <div className="border-1 p-1">
                     <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground ml-3">
                       Terrain
                     </span>
@@ -1261,7 +1268,7 @@ function RegionDetailPage() {
                   </div>
                 )}
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Danger Level
+                  Region danger
                 </span>
                 <Badge className={`text-xs ${tierClass}`}>
                   {tier.charAt(0).toUpperCase() + tier.slice(1)}

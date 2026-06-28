@@ -126,7 +126,7 @@ export function RegionContentsPanel({ pois, npcs }: { pois: POI[]; npcs: NPC[] }
       sortValue: (r) => {
         if (r.poiId) {
           const crumbs = poiBreadcrumb(r.poiId, pois)
-          return crumbs.at(-1)?.name ?? ''
+          return crumbs[0]?.name ?? ''
         }
         if (r.npcId) return npcName[r.npcId] ?? ''
         return ''
@@ -181,15 +181,21 @@ export function RegionContentsPanel({ pois, npcs }: { pois: POI[]; npcs: NPC[] }
           {r.notable && (
             <Badge variant="secondary" className="h-4 px-1 text-[10px]">notable</Badge>
           )}
-          {r.guardianNpcId && npcName[r.guardianNpcId] && (
-            <Link
-              to="/realms/npcs/$npcId"
-              params={{ npcId: r.guardianNpcId }}
-            >
-              <Badge variant="outline" className="h-4 cursor-pointer px-1 text-[10px] text-primary hover:underline">
-                guardian: {npcName[r.guardianNpcId]}
+          {r.guardianNpcId && (
+            npcName[r.guardianNpcId] ? (
+              <Link
+                to="/realms/npcs/$npcId"
+                params={{ npcId: r.guardianNpcId }}
+              >
+                <Badge variant="outline" className="h-4 cursor-pointer px-1 text-[10px] text-primary hover:underline">
+                  guardian: {npcName[r.guardianNpcId]}
+                </Badge>
+              </Link>
+            ) : (
+              <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                guardian
               </Badge>
-            </Link>
+            )
           )}
           {r.big && (
             <Badge variant="destructive" className="h-4 px-1 text-[10px]">big</Badge>
