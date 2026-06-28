@@ -665,6 +665,25 @@ db.version(39).stores(storesV39).upgrade(async (tx) => {
   }
 })
 
+// v40: Persist InventoryItem.id for legacy NPCs (backfill non-persistently by read-hook; now writing back)
+db.version(40).stores(storesV39).upgrade(async (tx) => {
+  const npcs = await tx.table('npcs').toArray()
+  for (const npc of npcs) {
+    const sb = npc.systemBlock as Record<string, unknown> | undefined
+    if (!sb) continue
+    const inv = (sb.inventory as Array<Record<string, unknown>> | undefined) ?? []
+    if (inv.some((it) => it.id === undefined)) {
+      await tx.table('npcs').put({
+        ...npc,
+        systemBlock: {
+          ...sb,
+          inventory: inv.map((it) => (it.id === undefined ? { ...it, id: newId() } : it)),
+        },
+      })
+    }
+  }
+})
+
 // Normalize Realms on read — ensures starred arrays have defaults
 db.worlds.hook('reading', (realm) => {
   if (!realm) return realm
