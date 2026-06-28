@@ -4,6 +4,7 @@ import type { IRegionRepository } from '@application/ports/IRegionRepository'
 import type { IHookRepository } from '@application/ports/IHookRepository'
 import type { IRumorRepository } from '@application/ports/IRumorRepository'
 import type { INoticeRepository } from '@application/ports/INoticeRepository'
+import type { IFactionRepository } from '@application/ports/IFactionRepository'
 import type { Hook } from '@domain/entities/Hook'
 import type { Rumor } from '@domain/entities/Rumor'
 import type { Notice } from '@domain/entities/Notice'
@@ -23,6 +24,7 @@ export interface GenerateTreasureLeadsDeps {
   hookRepo: IHookRepository
   rumorRepo: IRumorRepository
   noticeRepo: INoticeRepository
+  factionRepo: IFactionRepository
 }
 
 export async function executeGenerateTreasureLeads(
@@ -181,6 +183,59 @@ export async function executeGenerateTreasureLeads(
         hookId,
         sourceNpcId: source.npcId ?? null,
         tags: ['treasure-lead'],
+        createdAt: now,
+        updatedAt: now,
+      })
+    }
+  }
+
+  // Faction-seeks-item pass: each non-party faction with a leader seeks an item held elsewhere
+  const factions = await deps.factionRepo.getByRealmId(input.worldId)
+  const frng = rng.child('faction-seeks')
+  for (const f of factions) {
+    if (f.isParty || !f.leaderNpcId) continue
+    const candidates = targets.filter(
+      (t) =>
+        t.kind === 'item' &&
+        t.containerId !== f.headquartersPoiId &&
+        t.containerId !== f.leaderNpcId,
+    )
+    if (candidates.length === 0) continue
+    const t = frng.pick(candidates)
+    const hookId = newId()
+    hooks.push({
+      id: hookId,
+      worldId: input.worldId,
+      type: 'artifact',
+      title: `${f.name} seeks ${itemLabel(t)}`,
+      status: 'open',
+      contactNpcId: f.leaderNpcId,
+      rewardText: 'The favor of the faction.',
+      secret: {
+        kind: 'hidden_item',
+        targetType: 'item',
+        targetId: t.itemId!,
+        containerType: t.containerType,
+        containerId: t.containerId,
+        detail: `${f.name} covets ${itemLabel(t)}, last known to be with ${holderName(t)}.`,
+      },
+      createdAt: now,
+      updatedAt: now,
+    })
+    if (f.headquartersPoiId) {
+      notices.push({
+        id: newId(),
+        poiId: f.headquartersPoiId,
+        regionId: f.regionId,
+        worldId: input.worldId,
+        title: `${f.name} seeks ${itemLabel(t)}`,
+        description: `The ${f.name} will reward whoever brings them ${itemLabel(t)}, last seen with ${holderName(t)}.`,
+        type: 'bounty',
+        reward: 'The favor of the faction.',
+        contactNpcId: f.leaderNpcId,
+        hookId,
+        isUsed: false,
+        tags: ['faction-seeks'],
         createdAt: now,
         updatedAt: now,
       })
