@@ -3,6 +3,7 @@ import type { NPC } from '@domain/entities/NPC'
 import type { CompendiumMonster } from '@domain/entities/Compendium'
 import { getCompendiumById } from '@domain/data/compendium'
 import { monsterThreat } from '~/lib/worldgen/compendium-utils'
+import { tierForTerrain, type Tier } from '@domain/services/worldgen/regionFlavor'
 
 const BIG_MONSTER_THREAT_CUTOFF = 4
 
@@ -12,6 +13,18 @@ export interface RegionContents {
   highlights: { name: string; kind: 'magic' | 'notable'; location: string }[]
   bigMonsters: { name: string; location: string; count: number }[]
   monsters: { name: string; count: number }[]
+}
+
+export function regionDangerTier(pois: POI[], terrain: string): Tier {
+  let max = 0
+  for (const p of pois) {
+    for (const ref of p.monsterRefs ?? []) {
+      const e = getCompendiumById(ref.id)
+      if (e?.kind === 'monster') max = Math.max(max, monsterThreat(e as CompendiumMonster))
+    }
+  }
+  if (max === 0) return tierForTerrain(terrain)
+  return max >= 5 ? 'perilous' : max >= 3 ? 'tough' : 'easy'
 }
 
 export function summarizeRegionContents(pois: POI[], npcs: NPC[]): RegionContents {
