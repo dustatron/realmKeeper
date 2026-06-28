@@ -44,7 +44,7 @@ export function buildRegionEncounterContent(input: {
 
   // creature: region monster names + tier top-up to >= 6
   const monsterNames = dedup(
-    pois.flatMap((p) => p.monsterRefs).map((r) => getCompendiumById(r.id)?.name ?? ''),
+    pois.flatMap((p) => p.monsterRefs ?? []).map((r) => getCompendiumById(r.id)?.name ?? ''),
   )
   const creature = [...monsterNames]
   let attempts = 0
@@ -58,7 +58,7 @@ export function buildRegionEncounterContent(input: {
   // discovery: the region's real notable sites
   const sites = dedup(
     pois
-      .filter((p) => ['dungeon', 'ruin', 'landmark'].includes(p.type) || p.treasure.some((t) => t.notable || t.isMagic))
+      .filter((p) => ['dungeon', 'ruin', 'landmark'].includes(p.type) || (p.treasure ?? []).some((t) => t.notable || t.isMagic))
       .map((p) => p.name),
   )
   const discovery = sites.length > 0 ? [...sites] : ['An unmarked cave', 'A weathered shrine', 'A buried ruin']
