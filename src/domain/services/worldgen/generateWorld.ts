@@ -437,11 +437,12 @@ export function generateWorld(
   for (const edge of extraEdges.slice(0, extraCount)) addPath(edge.a, edge.b, edge.dist)
 
   // Step 8: factions. Each gets a distinct settlement as its headquarters (and
-  // inherits that settlement's region). Count scales with the number of
-  // settlements unless overridden, and can never exceed the settlements
-  // available to host them. Faction leadership/agents are assigned in a later
-  // NPC stage, so those references start empty.
-  const defaultFactionCount = Math.max(2, Math.round(settlementNodes.length / 4))
+  // inherits that settlement's region). Count scales with map size via the
+  // region count (which grows reliably small→medium→large, unlike settlement
+  // count, which can plateau) — capped at the settlements available to host
+  // them. Faction leadership/agents are assigned in a later NPC stage, so those
+  // references start empty.
+  const defaultFactionCount = Math.max(2, Math.round(regions.length * 0.75))
   const factionCount = Math.min(
     settlementNodes.length,
     opts.factionCount ?? defaultFactionCount,

@@ -301,18 +301,27 @@ describe('faction count auto-scales with map size when factionCount is omitted',
       deps(),
     )
     const small = (await db.factions.toArray()).length
-    await Promise.all([
+    const clearAll = () => Promise.all([
       db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.factionRelationships.clear(),
       db.npcs.clear(), db.connections.clear(), db.hooks.clear(), db.notices.clear(), db.rumors.clear(),
       db.worldEvents.clear(), db.poiEvents.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear(),
     ])
+    await clearAll()
+    await executeGenerateWorld(
+      { name: 'MediumRealm', systemId: 'system-cairn-2e', seed: 'fac-scale', size: 'medium' },
+      deps(),
+    )
+    const medium = (await db.factions.toArray()).length
+    await clearAll()
     await executeGenerateWorld(
       { name: 'LargeRealm', systemId: 'system-cairn-2e', seed: 'fac-scale', size: 'large' },
       deps(),
     )
     const large = (await db.factions.toArray()).length
+    // Region-count-driven default scales smoothly across all three sizes.
     expect(small).toBeGreaterThanOrEqual(2)
-    expect(large).toBeGreaterThan(small)
+    expect(medium).toBeGreaterThan(small)
+    expect(large).toBeGreaterThan(medium)
   })
 })
 
