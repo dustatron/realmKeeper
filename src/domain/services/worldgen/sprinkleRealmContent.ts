@@ -10,7 +10,7 @@ import { LOOT_DENSITY, type LootDensity } from './lootDensity'
 import type { NPC } from '@domain/entities/NPC'
 import type { Region } from '@domain/entities/Region'
 import type { Faction } from '@domain/entities/Faction'
-import { seedRegionLoot, eligibleTreasurePois, npcsByRegion } from './seedTreasureHelpers'
+import { seedRegionLoot, eligibleTreasurePois, npcsByRegion, seedFactionGreatItems } from './seedTreasureHelpers'
 
 export interface RealmContentSprinkleOptions {
   treasureDensity?: LootDensity
@@ -67,16 +67,16 @@ export function sprinkleRealmContent(input: SprinkleRealmContentInput): POI[] {
   const treasureMult = LOOT_DENSITY[options.treasureDensity ?? 'off']
   const magicMult = LOOT_DENSITY[options.magicDensity ?? 'off']
 
+  // Build realm-wide magic pool (shared by region passes AND faction great-item pass)
+  const magicPool = magicMult > 0 ? rng.shuffle([...getMagicItemsBySystemId(systemId)]) : []
+  let magicIndex = 0
+  const takeMagic = (): { id: string; name: string; description: string } | null => {
+    if (magicIndex >= magicPool.length) return null
+    return magicPool[magicIndex++]
+  }
+
   // Per-region treasure + magic seeding — requires explicit regions
   if ((treasureMult > 0 || magicMult > 0) && input.regions?.length) {
-    // Build realm-wide magic pool (shuffled, unique draw via closure)
-    const magicPool = magicMult > 0 ? rng.shuffle([...getMagicItemsBySystemId(systemId)]) : []
-    let magicIndex = 0
-    const takeMagic = (): { id: string; name: string; description: string } | null => {
-      if (magicIndex >= magicPool.length) return null
-      return magicPool[magicIndex++]
-    }
-
     const elig = eligibleTreasurePois(pois)
     const byRegion = new Map<string, POI[]>()
     for (const p of elig) {
@@ -102,6 +102,21 @@ export function sprinkleRealmContent(input: SprinkleRealmContentInput): POI[] {
         pickTreasureItemFn: pickTreasureItem,
       })
     }
+  }
+
+  // Faction great-item guarantee — runs after region loop, draws from the same takeMagic pool
+  if (input.factions?.length) {
+    const poiById = new Map(pois.map((p) => [p.id, p]))
+    const npcById = new Map((input.npcs ?? []).map((n) => [n.id, n]))
+    seedFactionGreatItems({
+      factions: input.factions,
+      poiById,
+      npcById,
+      magicDensity: options.magicDensity,
+      takeMagic,
+      pickTreasureItemFn: pickTreasureItem,
+      rng: rng.child('faction-great-items'),
+    })
   }
 
   // Monster seeding (unchanged)

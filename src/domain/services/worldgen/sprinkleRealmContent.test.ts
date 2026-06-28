@@ -92,4 +92,60 @@ describe('sprinkleRealmContent densities', () => {
     expect(all.length).toBeGreaterThan(0)
     expect(new Set(all).size).toBe(all.length)
   })
+
+  it('gives each non-party faction one notable great item at HQ or leader', () => {
+    const hq = buildPOI({ regionId: 'rA', name: 'Hall', type: 'fortification' })
+    const factions = [
+      { id: 'f1', worldId: 'w', name: 'Iron Order', isParty: false, headquartersPoiId: hq.id, leaderNpcId: null } as any,
+      { id: 'fp', worldId: 'w', name: 'The Party', isParty: true, headquartersPoiId: hq.id, leaderNpcId: null } as any,
+    ]
+    // No regions → per-region seeding skipped; only the faction pass adds notable items
+    sprinkleRealmContent({ pois: [hq], factions, systemId: 'system-cairn-2e', options: { treasureDensity: 'off', magicDensity: 'moderate', monsterDensity: 'off' }, rng: new SeededRandom('fac') })
+    const notable = hq.treasure.filter((t) => t.notable)
+    expect(notable.length).toBeGreaterThanOrEqual(1) // at least the faction's great item
+  })
+
+  it('party faction never receives a faction great item', () => {
+    const hq = buildPOI({ regionId: 'rA', name: 'Party HQ', type: 'fortification' })
+    const factions = [
+      { id: 'fp', worldId: 'w', name: 'The Party', isParty: true, headquartersPoiId: hq.id, leaderNpcId: null } as any,
+    ]
+    sprinkleRealmContent({ pois: [hq], factions, systemId: 'system-cairn-2e', options: { treasureDensity: 'off', magicDensity: 'moderate', monsterDensity: 'off' }, rng: new SeededRandom('party') })
+    expect(hq.treasure.length).toBe(0)
+  })
+
+  it('faction with neither HQ nor leader is skipped', () => {
+    const poi = buildPOI({ regionId: 'rA', name: 'Tavern', type: 'building' })
+    const factions = [
+      { id: 'f2', worldId: 'w', name: 'Ghosts', isParty: false, headquartersPoiId: null, leaderNpcId: null } as any,
+    ]
+    sprinkleRealmContent({ pois: [poi], factions, systemId: 'system-cairn-2e', options: { treasureDensity: 'off', magicDensity: 'moderate', monsterDensity: 'off' }, rng: new SeededRandom('skip') })
+    expect(poi.treasure.length).toBe(0)
+  })
+
+  it('faction leader NPC gets notable item when no HQ POI', () => {
+    const leader: any = {
+      id: 'npc1', worldId: 'w', name: 'Baron', factionIds: [], regionId: 'rA', poiId: null,
+      lifeStatus: 'alive', movementStatus: 'present', description: '', traits: [], motivation: '',
+      appearance: '', voice: '', want: '', tags: [], imageUrl: null,
+      systemBlock: { inventory: [] }, starred: false, createdAt: 1, updatedAt: 1,
+    }
+    const factions = [
+      { id: 'f3', worldId: 'w', name: 'Barons', isParty: false, headquartersPoiId: null, leaderNpcId: 'npc1' } as any,
+    ]
+    sprinkleRealmContent({ pois: [], factions, npcs: [leader], systemId: 'system-cairn-2e', options: { treasureDensity: 'off', magicDensity: 'moderate', monsterDensity: 'off' }, rng: new SeededRandom('leader') })
+    const notable = (leader.systemBlock.inventory ?? []).filter((i: any) => i.notable)
+    expect(notable.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('faction magic item is unique vs region magic items (shared pool)', () => {
+    const hq = buildPOI({ regionId: 'rA', name: 'Hall', type: 'fortification' })
+    const regionPoi = buildPOI({ regionId: 'rA', name: 'Shrine', type: 'shrine' })
+    const factions = [
+      { id: 'f4', worldId: 'w', name: 'Knights', isParty: false, headquartersPoiId: hq.id, leaderNpcId: null } as any,
+    ]
+    sprinkleRealmContent({ pois: [hq, regionPoi], factions, regions: [{ id: 'rA', terrain: 'grasslands' } as any], systemId: 'system-cairn-2e', options: { treasureDensity: 'off', magicDensity: 'moderate', monsterDensity: 'off' }, rng: new SeededRandom('shared-pool') })
+    const allMagicIds = [hq, regionPoi].flatMap((p) => p.treasure.filter((t) => t.isMagic).map((t) => t.compendiumId!))
+    expect(new Set(allMagicIds).size).toBe(allMagicIds.length)
+  })
 })

@@ -6,6 +6,8 @@ import type { PoiType } from '@shared/constants'
 import { newId } from '@shared/ulid'
 import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { tierForTerrain } from './regionFlavor'
+import type { Faction } from '@domain/entities/Faction'
+import type { LootDensity } from './lootDensity'
 
 export const TREASURE_POI_TYPES = new Set<PoiType>([
   'building',
@@ -171,6 +173,78 @@ export function seedRegionLoot(input: SeedRegionLootInput): void {
         h.poi.treasure = [...h.poi.treasure, item]
       } else {
         pushTreasureToNpc(h.npc, item)
+      }
+    }
+  }
+}
+
+export interface SeedFactionGreatItemsInput {
+  factions: Faction[]
+  poiById: Map<string, POI>
+  npcById: Map<string, NPC>
+  magicDensity?: LootDensity
+  takeMagic: () => { id: string; name: string; description: string } | null
+  pickTreasureItemFn: (rng: SeededRandom) => TreasureItem
+  rng: SeededRandom
+}
+
+/**
+ * Guarantee one notable "great" item per non-party faction.
+ * Prefers the HQ POI; falls back to the leader NPC.
+ * If magicDensity !== 'off', draws from the shared takeMagic pool (falls back to notable
+ * treasure when pool exhausted). If magicDensity === 'off', always places a notable treasure.
+ */
+export function seedFactionGreatItems(input: SeedFactionGreatItemsInput): void {
+  const { factions, poiById, npcById, magicDensity, takeMagic, pickTreasureItemFn, rng } = input
+  const magicOn = (magicDensity ?? 'off') !== 'off'
+
+  for (const f of factions) {
+    if (f.isParty) continue
+
+    const hqPoi = f.headquartersPoiId ? poiById.get(f.headquartersPoiId) : undefined
+    const leader = f.leaderNpcId ? npcById.get(f.leaderNpcId) : undefined
+    if (!hqPoi && !leader) continue
+
+    if (magicOn) {
+      const picked = takeMagic()
+      if (picked !== null) {
+        if (hqPoi) {
+          const treasure: TreasureItem = {
+            id: newId(),
+            name: picked.name,
+            description: picked.description,
+            value: 'priceless',
+            quantity: 1,
+            collected: false,
+            isMagic: true,
+            compendiumId: picked.id,
+            notable: true,
+          }
+          hqPoi.treasure = [...hqPoi.treasure, treasure]
+          if (!hqPoi.magicItemRefs.some((ref) => ref.id === picked.id)) {
+            hqPoi.magicItemRefs = [...hqPoi.magicItemRefs, { id: picked.id }]
+          }
+        } else {
+          pushMagicToNpc(leader!, picked, true)
+        }
+      } else {
+        // Magic pool exhausted → fall back to notable treasure
+        const item = pickTreasureItemFn(rng)
+        item.notable = true
+        if (hqPoi) {
+          hqPoi.treasure = [...hqPoi.treasure, item]
+        } else {
+          pushTreasureToNpc(leader!, item)
+        }
+      }
+    } else {
+      // magicDensity === 'off' → always a notable treasure
+      const item = pickTreasureItemFn(rng)
+      item.notable = true
+      if (hqPoi) {
+        hqPoi.treasure = [...hqPoi.treasure, item]
+      } else {
+        pushTreasureToNpc(leader!, item)
       }
     }
   }
