@@ -7,7 +7,6 @@ import { executeCreateRealmNote } from '@application/use-cases/CreateRealmNote'
 import { executeUpdateRealmNote } from '@application/use-cases/UpdateRealmNote'
 import { executeDeleteRealmNote } from '@application/use-cases/DeleteRealmNote'
 import type { RealmNote } from '@domain/entities/RealmNote'
-import { PageHeader } from '~/components/shared/PageHeader'
 import { EmptyState } from '~/components/shared/EmptyState'
 import { FilterBar } from '~/components/shared/FilterBar'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
@@ -88,7 +87,6 @@ function NotesPage() {
   if (!activeRealmId) {
     return (
       <div>
-        <PageHeader title="Notes" description="Markdown notes for your realm." />
         <EmptyState icon={NotebookPen} title="No realm selected" />
       </div>
     )
@@ -97,7 +95,6 @@ function NotesPage() {
   if (allNotes.length === 0) {
     return (
       <div>
-        <PageHeader title="Notes" description="Markdown notes for your realm." />
         <EmptyState
           icon={NotebookPen}
           title="No notes yet"
@@ -122,8 +119,6 @@ function NotesPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title="Notes" description="Markdown notes for your realm." />
-
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-[calc(100vh-12rem)]">
         {/* Note List Sidebar */}
         <div className="lg:col-span-1 space-y-3">

@@ -17,6 +17,7 @@ import type { Connection } from '@domain/entities/Connection'
 import type { Hook } from '@domain/entities/Hook'
 import type { RealmExport, GameMapExport } from './ExportRealm'
 import { newId } from '@shared/ulid'
+import { DEFAULT_MOON_CYCLE_LENGTH } from '@shared/constants'
 
 export interface ImportRealmDeps {
   realmRepo: IRealmRepository
@@ -88,6 +89,7 @@ export async function executeImportRealm(
     id: worldId,
     daysPerWeek: data.realm.daysPerWeek ?? 7,
     watchesPerDay: data.realm.watchesPerDay ?? 3,
+    moonCycleLength: data.realm.moonCycleLength ?? DEFAULT_MOON_CYCLE_LENGTH,
     completedThroughDay: data.realm.completedThroughDay ?? -1,
     updatedAt: Date.now(),
   })

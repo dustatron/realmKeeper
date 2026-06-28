@@ -15,7 +15,6 @@ import {
   customEntryToEquipment,
 } from "@domain/data/compendium";
 import type { CompendiumEntry } from "@domain/entities/Compendium";
-import { PageHeader } from "~/components/shared/PageHeader";
 import { FilterBar } from "~/components/shared/FilterBar";
 import { SearchFilterToggles } from "~/components/shared/SearchFilterToggles";
 import { EmptyState } from "~/components/shared/EmptyState";
@@ -440,10 +439,6 @@ function CompendiumPage() {
   if (!realm) {
     return (
       <div className="flex flex-col gap-4">
-        <PageHeader
-          title="Compendium"
-          description="Browse game system reference data."
-        />
         <EmptyState
           icon={Book}
           title="No realm selected"
@@ -456,10 +451,6 @@ function CompendiumPage() {
   if (tabs.length === 0 && !activeRealmId) {
     return (
       <div className="flex flex-col gap-4">
-        <PageHeader
-          title="Compendium"
-          description="Browse game system reference data."
-        />
         <EmptyState
           icon={Book}
           title="No compendium data"

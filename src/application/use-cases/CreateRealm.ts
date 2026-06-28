@@ -3,7 +3,7 @@ import type { IFactionRepository } from '@application/ports/IFactionRepository'
 import type { IRealmNoteRepository } from '@application/ports/IRealmNoteRepository'
 import type { Realm } from '@domain/entities/Realm'
 import { newId } from '@shared/ulid'
-import { DEFAULT_DAYS_PER_SEASON, DEFAULT_WATCHES_PER_DAY } from '@shared/constants'
+import { DEFAULT_DAYS_PER_SEASON, DEFAULT_WATCHES_PER_DAY, DEFAULT_MOON_CYCLE_LENGTH } from '@shared/constants'
 
 export interface CreateRealmInput {
   name: string
@@ -12,6 +12,7 @@ export interface CreateRealmInput {
   watchesPerDay?: number
   daysPerSeason?: number
   daysPerWeek?: number
+  moonCycleLength?: number
   factionTurnTrigger?: 'day' | 'week' | 'manual'
 }
 
@@ -38,7 +39,8 @@ export async function executeCreateRealm(
     daysPerSeason: input.daysPerSeason ?? DEFAULT_DAYS_PER_SEASON,
     daysPerWeek: input.daysPerWeek ?? 7,
     watchesPerDay: input.watchesPerDay ?? DEFAULT_WATCHES_PER_DAY,
-    factionTurnTrigger: input.factionTurnTrigger ?? 'day',
+    moonCycleLength: input.moonCycleLength ?? DEFAULT_MOON_CYCLE_LENGTH,
+    factionTurnTrigger: input.factionTurnTrigger ?? 'week',
     completedThroughDay: -1,
     customRaces: [],
     raceColors: {},

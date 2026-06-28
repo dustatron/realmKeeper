@@ -22,3 +22,11 @@ export function fromDayKey(key: number, daysPerSeason: number): { year: number; 
 export function dayKeyRange(startKey: number, count: number): number[] {
   return Array.from({ length: count }, (_, i) => startKey + i)
 }
+
+/**
+ * Ordinal "campaign day" — 1 at Year 1, Spring, Day 1; increments by 1 each day
+ * across season/year boundaries. The stable anchor for cycles like moon phases.
+ */
+export function campaignDayOf(year: number, season: Season, day: number, daysPerSeason: number): number {
+  return toDayKey(year, season, day, daysPerSeason) - toDayKey(1, 'spring', 1, daysPerSeason) + 1
+}

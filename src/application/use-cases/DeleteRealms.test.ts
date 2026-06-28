@@ -26,6 +26,7 @@ const makeRealm = (name: string): Realm => {
     daysPerSeason: 30,
     daysPerWeek: 7,
     watchesPerDay: 4,
+    moonCycleLength: 28,
     factionTurnTrigger: 'day',
     completedThroughDay: 0,
     customRaces: [],

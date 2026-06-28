@@ -1,5 +1,7 @@
 import type { Realm } from '@domain/entities/Realm'
 import { toDayKey } from '@domain/value-objects/DayKey'
+import { moonPhase } from '@domain/value-objects/Moon'
+import { MoonGlyph } from './MoonGlyph'
 import { Button } from '~/components/ui/button'
 import { ChevronLeft, ChevronRight, FastForward, Settings } from 'lucide-react'
 
@@ -24,6 +26,7 @@ export function StickyTimeBar({ realm, isAdvancing, onRewindDay, onAdvanceDay, o
   const day1Key = toDayKey(1, 'spring', 1, realm.daysPerSeason)
   const currentKey = toDayKey(realm.currentYear, realm.currentSeason, realm.currentDay, realm.daysPerSeason)
   const campaignDay = currentKey - day1Key + 1
+  const moon = moonPhase(campaignDay, realm.moonCycleLength)
 
   return (
     <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -48,6 +51,11 @@ export function StickyTimeBar({ realm, isAdvancing, onRewindDay, onAdvanceDay, o
           <span>Day {realm.currentDay}</span>
           <span className="text-muted-foreground">&middot;</span>
           <span className="text-sm">Watch {realm.currentWatch}</span>
+          <span className="text-muted-foreground">&middot;</span>
+          <span className="inline-flex items-center gap-1 text-muted-foreground" title={moon.name}>
+            <MoonGlyph fraction={moon.fraction} size={15} />
+            <span className="hidden sm:inline text-xs">{moon.name}</span>
+          </span>
         </div>
 
         {/* Advance + Settings */}

@@ -52,6 +52,7 @@ export interface GenerateWorldInput {
   watchesPerDay?: number
   daysPerSeason?: number
   daysPerWeek?: number
+  moonCycleLength?: number
   factionTurnTrigger?: 'day' | 'week' | 'manual'
   poiDensity?: PoiDensity
   factionCount?: number
@@ -93,6 +94,7 @@ export async function executeGenerateWorld(
         watchesPerDay: input.watchesPerDay,
         daysPerSeason: input.daysPerSeason,
         daysPerWeek: input.daysPerWeek,
+        moonCycleLength: input.moonCycleLength,
         factionTurnTrigger: input.factionTurnTrigger,
       },
       deps

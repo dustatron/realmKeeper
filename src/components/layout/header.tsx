@@ -5,6 +5,7 @@ import { Button } from '~/components/ui/button'
 import { Search } from 'lucide-react'
 import { ThemeSwitch } from './theme-switch'
 import { CloudAuth } from './cloud-auth'
+import { HeaderClock } from './header-clock'
 import { getSidebarData } from './sidebar-data'
 import { isNavCollapsible } from './types'
 import { useUIStore } from '~/ui/stores/uiStore'
@@ -63,6 +64,7 @@ export function Header() {
         ) : null}
       </div>
       <div className="ml-auto flex items-center gap-2">
+        <HeaderClock />
         <Button
           variant="outline"
           size="sm"

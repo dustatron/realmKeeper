@@ -28,12 +28,6 @@ import {
   SheetTitle,
   SheetFooter,
 } from '~/components/ui/sheet'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
@@ -244,52 +238,74 @@ function PathsPage() {
           }
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {realmPaths.map((path) => {
-            const travelTime = calculateTravelTime({
-              baseTravelWatches: path.baseTravelWatches,
-              terrain: path.terrain,
-            })
-            return (
-              <Card
-                key={path.id}
-                className="cursor-pointer transition-shadow hover:shadow-elevated"
-                onClick={() => openEditSheet(path)}
-              >
-                <CardHeader>
-                  <CardTitle className="text-base">{path.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="text-sm">
-                    <span className="font-medium">{getPOIName(path.fromPoiId)}</span>
-                    <span className="text-muted-foreground"> → </span>
-                    <span className="font-medium">{getPOIName(path.toPoiId)}</span>
-                  </div>
-                  {path.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {path.description}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2">
-                    {path.direction && (
-                      <Badge variant="secondary" className="font-mono">{path.direction.toUpperCase()}</Badge>
-                    )}
-                    <Badge variant="outline">{path.type}</Badge>
-                    <Badge variant="secondary">{path.terrain}</Badge>
-                    {path.hasDoor && (
-                      <span title={path.isLocked ? 'Locked door' : 'Door'}>
-                        {path.isLocked ? '🔒' : '🚪'}
+        <div className="rounded-md border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40 border-b">
+              <tr>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Name</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Route</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden md:table-cell">Type</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden sm:table-cell">Terrain</th>
+                <th className="text-right px-3 py-2 font-medium text-muted-foreground hidden sm:table-cell">Travel</th>
+                <th className="w-8 px-3 py-2" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/50">
+              {realmPaths.map((path, i) => {
+                const travelTime = calculateTravelTime({
+                  baseTravelWatches: path.baseTravelWatches,
+                  terrain: path.terrain,
+                })
+                return (
+                  <tr
+                    key={path.id}
+                    onClick={() => openEditSheet(path)}
+                    className={`hover:bg-muted/30 transition-colors group cursor-pointer ${i % 2 === 0 ? '' : 'bg-muted/10'}`}
+                  >
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-2 font-medium">
+                        <span>{path.name}</span>
+                        {path.hasDoor && (
+                          <span title={path.isLocked ? 'Locked door' : 'Door'}>
+                            {path.isLocked ? '🔒' : '🚪'}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground text-xs">
+                      {getPOIName(path.fromPoiId)} → {getPOIName(path.toPoiId)}
+                    </td>
+                    <td className="px-3 py-2 hidden md:table-cell">
+                      <div className="flex items-center gap-1">
+                        {path.direction && (
+                          <Badge variant="secondary" className="font-mono text-[10px]">{path.direction.toUpperCase()}</Badge>
+                        )}
+                        <Badge variant="outline" className="text-xs">{path.type}</Badge>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 hidden sm:table-cell">
+                      <Badge variant="secondary" className="text-xs">{path.terrain}</Badge>
+                    </td>
+                    <td className="px-3 py-2 text-right text-muted-foreground text-xs tabular-nums hidden sm:table-cell">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="size-3" />
+                        {travelTime} {travelTime === 1 ? 'watch' : 'watches'}
                       </span>
-                    )}
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="size-3" />
-                      <span>{travelTime} {travelTime === 1 ? 'watch' : 'watches'}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openDeleteDialog(path.id) }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center justify-center size-6 rounded hover:bg-muted"
+                        title="Delete path"
+                      >
+                        <Trash2 className="size-3.5 text-muted-foreground" />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 

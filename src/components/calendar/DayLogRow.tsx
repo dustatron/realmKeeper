@@ -33,6 +33,7 @@ import { cn } from "~/lib/utils";
 import { useFaction } from "~/ui/hooks/useFactions";
 import { ProgressClock } from "~/components/shared/ProgressClock";
 import { InlineGMNote } from "./InlineGMNote";
+import { MoonGlyph } from "./MoonGlyph";
 import { db } from "@infrastructure/dexie/db";
 import type { WeatherHistory } from "@domain/entities/WeatherHistory";
 
@@ -307,7 +308,7 @@ export function DayLogRow({
       {showSeasonDivider && (
         <tr>
           <td
-            colSpan={7}
+            colSpan={8}
             className={cn(
               "px-3 py-1 text-xs font-semibold tracking-wide",
               SEASON_COLORS[entry.season],
@@ -360,6 +361,20 @@ export function DayLogRow({
         {/* Weather */}
         <td className="px-2 py-2 align-middle">
           <WeatherCell weather={primaryWeather} />
+        </td>
+
+        {/* Moon phase */}
+        <td className="px-2 py-2 align-middle">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex">
+                  <MoonGlyph fraction={entry.moonPhase.fraction} size={15} />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{entry.moonPhase.name}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </td>
 
         {/* Activity (faction turns + world events) */}

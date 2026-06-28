@@ -4,16 +4,8 @@ import { useUIStore } from '~/ui/stores/uiStore'
 import { useRegions } from '~/ui/hooks/useRegions'
 import { useStarredPOIs } from '~/ui/hooks/usePOIs'
 import { db } from '@infrastructure/dexie/db'
-import type { POI } from '@domain/entities/POI'
 import type { PoiType } from '@shared/constants'
 import { EmptyState } from '~/components/shared/EmptyState'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '~/components/ui/card'
 import { Input } from '~/components/ui/input'
 import { Badge } from '~/components/ui/badge'
 import {
@@ -72,15 +64,6 @@ function StarredPOIsPage() {
     )
   }, [starredPois, searchQuery])
 
-  const poisByRegionMap = useMemo(() => {
-    const mapObj: Record<string, POI[]> = {}
-    filtered.forEach((poi) => {
-      if (!mapObj[poi.regionId]) mapObj[poi.regionId] = []
-      mapObj[poi.regionId].push(poi)
-    })
-    return mapObj
-  }, [filtered])
-
   const getPoiTypeColor = (type: PoiType): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (type) {
       case 'settlement': return 'default'
@@ -113,77 +96,64 @@ function StarredPOIsPage() {
           description="Star POIs from the Points of Interest tab to see them here"
         />
       ) : (
-        <div className="space-y-6">
-          {Object.entries(poisByRegionMap).map(([regionId, regionPois]) => {
-            const region = regions.find((r) => r.id === regionId)
-            if (!region) return null
-
-            return (
-              <div key={regionId} className="space-y-3">
-                <h3 className="text-lg font-semibold">{region.name}</h3>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {regionPois.map((poi) => {
-                    const Icon = POI_TYPE_ICONS[poi.type]
-
-                    return (
+        <div className="rounded-md border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40 border-b">
+              <tr>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Name</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden sm:table-cell">Region</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden md:table-cell">Type</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden lg:table-cell">Tags</th>
+                <th className="w-8 px-3 py-2" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/50">
+              {filtered.map((poi, i) => {
+                const Icon = POI_TYPE_ICONS[poi.type]
+                const region = regions.find((r) => r.id === poi.regionId)
+                return (
+                  <tr key={poi.id} className={`hover:bg-muted/30 transition-colors group ${i % 2 === 0 ? '' : 'bg-muted/10'}`}>
+                    <td className="px-3 py-2">
                       <Link
-                        key={poi.id}
                         to="/realms/pois/$poiId"
                         params={{ poiId: poi.id }}
-                        className="block"
+                        className="flex items-center gap-2 font-medium hover:underline"
                       >
-                        <Card className="cursor-pointer transition-shadow hover:shadow-elevated h-full">
-                          <CardHeader>
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-start gap-2 flex-1">
-                                <Icon className="size-5 text-muted-foreground shrink-0 mt-0.5" />
-                                <div className="flex-1 min-w-0">
-                                  <CardTitle className="text-base">{poi.name}</CardTitle>
-                                  {poi.subtypeLabel && (
-                                    <CardDescription className="mt-0.5 text-xs">
-                                      {poi.subtypeLabel}
-                                    </CardDescription>
-                                  )}
-                                </div>
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                  db.pois.update(poi.id, { starred: false, updatedAt: Date.now() })
-                                }}
-                                className="shrink-0 p-1 rounded-md hover:bg-muted transition-colors"
-                                title="Unstar"
-                              >
-                                <Star className="size-4 fill-yellow-400 text-yellow-400" />
-                              </button>
-                              <Badge variant={getPoiTypeColor(poi.type)}>{poi.type}</Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="space-y-2">
-                            {poi.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {poi.description}
-                              </p>
-                            )}
-                            {poi.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {poi.tags.map((tag) => (
-                                  <Badge key={tag} variant="outline" className="text-xs">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
+                        <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span>{poi.name}</span>
+                        <Star className="size-3 fill-yellow-400 text-yellow-400 shrink-0" />
                       </Link>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
+                      {poi.subtypeLabel && (
+                        <div className="ml-5 mt-0.5 text-xs text-muted-foreground">{poi.subtypeLabel}</div>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground text-xs hidden sm:table-cell">
+                      {region?.name ?? '—'}
+                    </td>
+                    <td className="px-3 py-2 hidden md:table-cell">
+                      <Badge variant={getPoiTypeColor(poi.type)} className="text-xs">{poi.type}</Badge>
+                    </td>
+                    <td className="px-3 py-2 hidden lg:table-cell">
+                      <div className="flex flex-wrap gap-1">
+                        {poi.tags.slice(0, 3).map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-[10px] px-1 py-0">{tag}</Badge>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        onClick={() => db.pois.update(poi.id, { starred: false, updatedAt: Date.now() })}
+                        className="inline-flex items-center justify-center size-6 rounded hover:bg-muted transition-colors"
+                        title="Unstar"
+                      >
+                        <Star className="size-4 fill-yellow-400 text-yellow-400" />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
