@@ -9,6 +9,7 @@ export interface Region {
   settlements: string[]
   resources: string[]
   people: string[]
+  problem: string
   boundary: { x: number; y: number }[] | null
   color: string | null
   imageUrl: string | null

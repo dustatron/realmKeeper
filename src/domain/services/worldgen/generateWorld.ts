@@ -127,6 +127,7 @@ export function generateWorld(
       settlements: [],
       resources: flavor.resources,
       people: flavor.people,
+      problem: '',
       boundary: null, // set in step 4c from the region's hex cluster
       // Distinct per-region color (not the biome color) so adjacent regions of
       // the same biome still read as separate areas on the map.

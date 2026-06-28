@@ -216,6 +216,7 @@ export async function executeGenerateRegion(
     settlements,
     resources,
     people,
+    problem: '',
     boundary: null,
     color: null,
     imageUrl: null,
