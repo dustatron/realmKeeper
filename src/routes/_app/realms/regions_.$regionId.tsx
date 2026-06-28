@@ -9,6 +9,7 @@ import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
 import { useSystemConfig } from '~/ui/hooks/useSystemConfigs'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { useUIStore } from '~/ui/stores/uiStore'
+import { executeRerollRegionProblem } from '@application/use-cases/RerollRegionProblem'
 import { executeUpdateRegion } from '@application/use-cases/UpdateRegion'
 import { executeDeleteRegion } from '@application/use-cases/DeleteRegion'
 import { executeCreatePOI } from '@application/use-cases/CreatePOI'
@@ -47,8 +48,9 @@ import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, RotateCcw } from 'lucide-react'
 import { RegionContentsPanel } from '~/components/regions/RegionContentsPanel'
+import { regionDangerTier } from '~/components/regions/regionContents'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '~/components/ui/dialog'
 import {
   ChevronRight,
@@ -366,6 +368,11 @@ function RegionDetailPage() {
     return executeEncounterCascade(action, ctx, deps)
   }
 
+  const handleRerollProblem = async () => {
+    if (!region) return
+    await executeRerollRegionProblem(region.id, { regionRepo: container.regionRepo })
+  }
+
   const handleRegenerateEncounter = async () => {
     if (!region || !systemConfig) return
     await executeRegenerateRegionEncounter(
@@ -541,6 +548,78 @@ function RegionDetailPage() {
               className="w-full max-h-64 rounded-lg border object-cover mb-4"
             />
           )}
+
+          {/* Problem callout */}
+          <div className="flex items-start justify-between gap-2 rounded-md border border-muted bg-muted/40 px-3 py-2 mb-4">
+            <div className="flex-1 min-w-0">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Problem</span>
+              <p className="text-sm mt-0.5">{region.problem || 'No problem set.'}</p>
+            </div>
+            <Button variant="ghost" size="sm" className="shrink-0 h-7 px-2" onClick={handleRerollProblem}>
+              <RotateCcw className="size-3.5 mr-1" />
+              Reroll
+            </Button>
+          </div>
+
+          {/* Danger tier */}
+          {(() => {
+            const tier = regionDangerTier(pois, region.terrain)
+            const tierClass =
+              tier === 'easy' ? 'bg-green-600' :
+              tier === 'tough' ? 'bg-amber-600' :
+              'bg-red-600'
+            return (
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Danger</span>
+                <Badge className={`text-xs ${tierClass}`}>
+                  {tier.charAt(0).toUpperCase() + tier.slice(1)}
+                </Badge>
+              </div>
+            )
+          })()}
+
+          {/* Chip groups */}
+          {(region.dangers ?? []).length > 0 && (
+            <div className="mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dangers</span>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {region.dangers.map((d, i) => (
+                  <Badge key={i} variant="secondary">{d}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          {(region.features ?? []).length > 0 && (
+            <div className="mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Features</span>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {region.features.map((f, i) => (
+                  <Badge key={i} variant="secondary">{f}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          {(region.resources ?? []).length > 0 && (
+            <div className="mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Resources</span>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {region.resources.map((r, i) => (
+                  <Badge key={i} variant="secondary">{r}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          {(region.settlements ?? []).length > 0 && (
+            <div className="mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Settlements</span>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {region.settlements.map((s, i) => (
+                  <Badge key={i} variant="secondary">{s}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
           {region.description ? (
             <div
               className="tiptap prose prose-sm dark:prose-invert max-w-none"
