@@ -54,9 +54,10 @@ export function sprinkleRealmContent(input: SprinkleRealmContentInput): POI[] {
   const monsterMult = LOOT_DENSITY[options.monsterDensity ?? 'off']
 
   // Build realm-wide magic pool (shared by region passes AND faction great-item pass)
-  // Guard: only shuffle (and consume rng state) when there's actually a magic consumer
-  const magicPool = (magicMult > 0 && ((input.regions?.length ?? 0) > 0 || (input.factions?.length ?? 0) > 0))
-    ? rng.shuffle([...getMagicItemsBySystemId(systemId)])
+  // Use a dedicated child RNG so the parent state is never mutated by the magic pool shuffle,
+  // keeping monster/treasure streams independent of magicDensity.
+  const magicPool = magicMult > 0
+    ? rng.child('magic-pool').shuffle([...getMagicItemsBySystemId(systemId)])
     : []
   let magicIndex = 0
   const takeMagic = (): { id: string; name: string; description: string } | null => {

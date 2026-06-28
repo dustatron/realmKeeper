@@ -193,17 +193,37 @@ describe('sprinkleRealmContent densities', () => {
     expect(notablePoi2?.monsterRefs.length).toBeGreaterThanOrEqual(2)
   })
 
-  it('monster seeding is deterministic regardless of magicDensity when no regions/factions', () => {
-    const makePois = () => [poi('dungeon'), poi('camp'), poi('landmark'), poi('ruin'), poi('natural')]
-    const base = { systemId: 'system-cairn-2e', options: { monsterDensity: 'moderate' as const, magicDensity: 'frequent' as const } }
-    const run1 = makePois()
-    sprinkleRealmContent({ pois: run1, ...base, rng: new SeededRandom('det-seed') })
-    const run2 = makePois()
-    sprinkleRealmContent({ pois: run2, ...base, rng: new SeededRandom('det-seed') })
-    // Same seed + same inputs → same monster assignment
-    expect(run1.map((p) => p.monsterRefs)).toEqual(run2.map((p) => p.monsterRefs))
-    // No regions/factions → no treasure or magic
-    expect(run1.every((p) => p.treasure.length === 0)).toBe(true)
+  it('monster placement is independent of magicDensity (child rng decoupling)', () => {
+    // Two runs with identical seed + regions, differing only in magicDensity.
+    // After the child-rng fix, monster streams must be identical.
+    const region = { id: 'r1', terrain: 'forest' } as any
+    const makePois = () => [
+      buildPOI({ regionId: 'r1', name: 'dungeon', type: 'dungeon' }),
+      buildPOI({ regionId: 'r1', name: 'camp', type: 'camp' }),
+      buildPOI({ regionId: 'r1', name: 'landmark', type: 'landmark' }),
+      buildPOI({ regionId: 'r1', name: 'ruin', type: 'ruin' }),
+      buildPOI({ regionId: 'r1', name: 'natural', type: 'natural' }),
+    ]
+    const runOff = makePois()
+    sprinkleRealmContent({
+      pois: runOff,
+      regions: [region],
+      systemId: 'system-cairn-2e',
+      options: { monsterDensity: 'moderate', magicDensity: 'off' },
+      rng: new SeededRandom('det-seed'),
+    })
+    const runFrequent = makePois()
+    sprinkleRealmContent({
+      pois: runFrequent,
+      regions: [region],
+      systemId: 'system-cairn-2e',
+      options: { monsterDensity: 'moderate', magicDensity: 'frequent' },
+      rng: new SeededRandom('det-seed'),
+    })
+    // Monster refs must be identical regardless of magicDensity
+    expect(runOff.map((p) => p.monsterRefs)).toEqual(runFrequent.map((p) => p.monsterRefs))
+    // Sanity: monsters were actually placed (test is not vacuous)
+    expect(runOff.some((p) => p.monsterRefs.length > 0)).toBe(true)
   })
 
   it('faction magic item is unique vs region magic items (shared pool)', () => {
