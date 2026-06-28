@@ -10,7 +10,7 @@ import { LOOT_DENSITY, type LootDensity } from './lootDensity'
 import type { NPC } from '@domain/entities/NPC'
 import type { Region } from '@domain/entities/Region'
 import type { Faction } from '@domain/entities/Faction'
-import { seedRegionLoot, eligibleTreasurePois } from './seedTreasureHelpers'
+import { seedRegionLoot, eligibleTreasurePois, npcsByRegion } from './seedTreasureHelpers'
 
 export interface RealmContentSprinkleOptions {
   treasureDensity?: LootDensity
@@ -85,12 +85,16 @@ export function sprinkleRealmContent(input: SprinkleRealmContentInput): POI[] {
       byRegion.set(p.regionId, a)
     }
 
+    const npcMap = input.npcs ? npcsByRegion(input.npcs) : new Map()
+
     for (const region of input.regions) {
       const holders = byRegion.get(region.id) ?? []
-      if (holders.length === 0) continue
+      const regionNpcs = npcMap.get(region.id) ?? []
+      if (holders.length === 0 && regionNpcs.length === 0) continue
       seedRegionLoot({
         region,
         holders,
+        npcs: regionNpcs,
         treasureMult,
         magicMult,
         takeMagic,

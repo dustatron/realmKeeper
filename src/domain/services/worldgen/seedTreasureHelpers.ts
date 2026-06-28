@@ -1,3 +1,5 @@
+import type { NPC } from '@domain/entities/NPC'
+import type { InventoryItem } from '@domain/value-objects/SystemBlock'
 import type { POI } from '@domain/entities/POI'
 import type { TreasureItem } from '@domain/value-objects/TreasureItem'
 import type { PoiType } from '@shared/constants'
@@ -24,6 +26,48 @@ export function eligibleTreasurePois(pois: POI[]): POI[] {
   })
 }
 
+/** Group NPCs by regionId, skipping those with no regionId. */
+export function npcsByRegion(npcs: NPC[]): Map<string, NPC[]> {
+  const m = new Map<string, NPC[]>()
+  for (const n of npcs) {
+    if (!n.regionId) continue
+    const a = m.get(n.regionId) ?? []
+    a.push(n)
+    m.set(n.regionId, a)
+  }
+  return m
+}
+
+export function pushMagicToNpc(
+  n: NPC,
+  picked: { id: string | null; name: string; description: string } | null,
+  notable: boolean,
+): void {
+  const item: InventoryItem = {
+    name: picked?.name ?? 'Strange Relic',
+    slots: 1,
+    description: picked?.description ?? '',
+    source: 'compendium',
+    compendiumKind: 'magicItem',
+    ...(picked?.id ? { compendiumId: picked.id } : {}),
+    notable,
+  }
+  n.systemBlock.inventory = [...(n.systemBlock.inventory ?? []), item]
+}
+
+export function pushTreasureToNpc(n: NPC, item: TreasureItem): void {
+  const invItem: InventoryItem = {
+    name: item.name,
+    slots: 1,
+    description: item.description,
+    value: item.value,
+    quantity: item.quantity,
+    source: 'treasure',
+    ...(item.notable ? { notable: true } : {}),
+  }
+  n.systemBlock.inventory = [...(n.systemBlock.inventory ?? []), invItem]
+}
+
 const TIER_FACTOR: Record<'easy' | 'tough' | 'perilous', number> = {
   easy: 1,
   tough: 1.5,
@@ -33,9 +77,13 @@ const TIER_FACTOR: Record<'easy' | 'tough' | 'perilous', number> = {
 const BASE_TREASURE = 2
 const BASE_MAGIC = 1
 
+/** Weight: probability that a find goes to an NPC rather than a POI (when NPCs available). */
+const NPC_WEIGHT = 0.3
+
 export interface SeedRegionLootInput {
   region: { id: string; terrain: string }
   holders: POI[]
+  npcs?: NPC[]
   treasureMult: number
   magicMult: number
   takeMagic: () => { id: string; name: string; description: string } | null
@@ -44,12 +92,24 @@ export interface SeedRegionLootInput {
 }
 
 export function seedRegionLoot(input: SeedRegionLootInput): void {
-  const { region, holders, treasureMult, magicMult, takeMagic, rng, pickTreasureItemFn } = input
-  if (holders.length === 0) return
+  const { region, holders, npcs = [], treasureMult, magicMult, takeMagic, rng, pickTreasureItemFn } = input
+  if (holders.length === 0 && npcs.length === 0) return
 
   const rrng = rng.child(`region-${region.id}`)
   const tier = TIER_FACTOR[tierForTerrain(region.terrain)]
   let regionHasNotable = false
+
+  /** Pick an NPC holder with NPC_WEIGHT if NPCs available, else pick from POI holders. */
+  function pickHolder(): { kind: 'poi'; poi: POI } | { kind: 'npc'; npc: NPC } {
+    if (npcs.length > 0 && holders.length > 0 && rrng.next() < NPC_WEIGHT) {
+      return { kind: 'npc', npc: rrng.pick(npcs) }
+    }
+    if (holders.length > 0) {
+      return { kind: 'poi', poi: rrng.pick(holders) }
+    }
+    // Only NPCs available
+    return { kind: 'npc', npc: rrng.pick(npcs) }
+  }
 
   // Magic branch
   if (magicMult > 0) {
@@ -59,30 +119,39 @@ export function seedRegionLoot(input: SeedRegionLootInput): void {
       if (picked === null) {
         if (i === 0 && !regionHasNotable) {
           // Fall back to a notable treasure when magic pool is exhausted
-          const holder = rrng.pick(holders)
+          const h = pickHolder()
           const item = pickTreasureItemFn(rrng)
           item.notable = true
-          holder.treasure = [...holder.treasure, item]
+          if (h.kind === 'poi') {
+            h.poi.treasure = [...h.poi.treasure, item]
+          } else {
+            pushTreasureToNpc(h.npc, item)
+          }
           regionHasNotable = true
         }
         // skip extra slots
         continue
       }
-      const holder = rrng.pick(holders)
-      const treasure: TreasureItem = {
-        id: newId(),
-        name: picked.name,
-        description: picked.description,
-        value: 'priceless',
-        quantity: 1,
-        collected: false,
-        isMagic: true,
-        compendiumId: picked.id,
-        notable: !regionHasNotable,
-      }
-      holder.treasure = [...holder.treasure, treasure]
-      if (!holder.magicItemRefs.some((ref) => ref.id === picked.id)) {
-        holder.magicItemRefs = [...holder.magicItemRefs, { id: picked.id }]
+      const isNotable = !regionHasNotable
+      const h = pickHolder()
+      if (h.kind === 'poi') {
+        const treasure: TreasureItem = {
+          id: newId(),
+          name: picked.name,
+          description: picked.description,
+          value: 'priceless',
+          quantity: 1,
+          collected: false,
+          isMagic: true,
+          compendiumId: picked.id,
+          notable: isNotable,
+        }
+        h.poi.treasure = [...h.poi.treasure, treasure]
+        if (!h.poi.magicItemRefs.some((ref) => ref.id === picked.id)) {
+          h.poi.magicItemRefs = [...h.poi.magicItemRefs, { id: picked.id }]
+        }
+      } else {
+        pushMagicToNpc(h.npc, picked, isNotable)
       }
       regionHasNotable = true
     }
@@ -92,13 +161,17 @@ export function seedRegionLoot(input: SeedRegionLootInput): void {
   if (treasureMult > 0) {
     const count = Math.max(1, Math.round(BASE_TREASURE * treasureMult * tier))
     for (let i = 0; i < count; i++) {
-      const holder = rrng.pick(holders)
+      const h = pickHolder()
       const item = pickTreasureItemFn(rrng)
       if (!regionHasNotable && i === 0) {
         item.notable = true
         regionHasNotable = true
       }
-      holder.treasure = [...holder.treasure, item]
+      if (h.kind === 'poi') {
+        h.poi.treasure = [...h.poi.treasure, item]
+      } else {
+        pushTreasureToNpc(h.npc, item)
+      }
     }
   }
 }

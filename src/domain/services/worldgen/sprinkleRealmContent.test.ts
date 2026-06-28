@@ -57,4 +57,39 @@ describe('sprinkleRealmContent densities', () => {
     expect(allCompendiumIds.length).toBeGreaterThan(0)
     expect(uniqueIds.size).toBe(allCompendiumIds.length)
   })
+
+  it('places some finds on NPC inventories', () => {
+    const regions = [{ id: 'rA', terrain: 'mountains' } as any]
+    const pois = [buildPOI({ regionId: 'rA', name: 'a1', type: 'landmark' })]
+    const npcs = Array.from({ length: 8 }, (_, i) => ({
+      id: 'n' + i, worldId: 'w', name: 'n' + i, factionIds: [], regionId: 'rA', poiId: null,
+      lifeStatus: 'alive', movementStatus: 'present', description: '', traits: [], motivation: '',
+      appearance: '', voice: '', want: '', tags: [], imageUrl: null,
+      systemBlock: { inventory: [] } as any, starred: false, createdAt: 1, updatedAt: 1,
+    })) as any[]
+    sprinkleRealmContent({ pois, npcs, regions, systemId: 'system-shadowdark', options: { treasureDensity: 'frequent', magicDensity: 'frequent', monsterDensity: 'off' }, rng: new SeededRandom('npc-seed') })
+    const held = npcs.flatMap((n) => n.systemBlock.inventory)
+    expect(held.length).toBeGreaterThan(0)
+  })
+
+  it('NPC-held magic compendiumId is unique across POIs and NPCs', () => {
+    const regions = [{ id: 'rA', terrain: 'mountains' } as any]
+    const pois = Array.from({ length: 5 }, (_, i) => buildPOI({ regionId: 'rA', name: 'p' + i, type: 'landmark' }))
+    const npcs = Array.from({ length: 8 }, (_, i) => ({
+      id: 'n' + i, worldId: 'w', name: 'n' + i, factionIds: [], regionId: 'rA', poiId: null,
+      lifeStatus: 'alive', movementStatus: 'present', description: '', traits: [], motivation: '',
+      appearance: '', voice: '', want: '', tags: [], imageUrl: null,
+      systemBlock: { inventory: [] } as any, starred: false, createdAt: 1, updatedAt: 1,
+    })) as any[]
+    sprinkleRealmContent({ pois, npcs, regions, systemId: 'system-shadowdark', options: { treasureDensity: 'frequent', magicDensity: 'frequent', monsterDensity: 'off' }, rng: new SeededRandom('uniq-npc-seed') })
+    const poiMagicIds = pois.flatMap((p) => p.treasure.filter((t) => t.isMagic).map((t) => t.compendiumId!))
+    const npcMagicIds = npcs.flatMap((n) =>
+      (n.systemBlock.inventory ?? [])
+        .filter((item: any) => item.compendiumKind === 'magicItem' && item.compendiumId)
+        .map((item: any) => item.compendiumId as string),
+    )
+    const all = [...poiMagicIds, ...npcMagicIds]
+    expect(all.length).toBeGreaterThan(0)
+    expect(new Set(all).size).toBe(all.length)
+  })
 })
