@@ -394,7 +394,7 @@ export function GenericTemplate({
             onSaveTable={onSaveEncounterTable}
             onRoll={onRollEncounter}
           />
-          {poi.type === "ruin" && (
+          {(rumors.length > 0 || poi.type === "ruin") && (
             <RumorList
               rumors={rumors}
               onToggleUsed={onToggleRumorUsed}
