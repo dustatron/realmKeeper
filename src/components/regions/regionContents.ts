@@ -60,7 +60,7 @@ export function summarizeRegionContents(pois: POI[], npcs: NPC[]): RegionContent
 
   for (const p of pois) {
     // POI treasure items: split by isMagic
-    for (const t of p.treasure) {
+    for (const t of p.treasure ?? []) {
       if (t.isMagic) {
         magic.push({ name: t.name, collected: !!t.collected, poiId: p.id, npcId: null })
       } else {
