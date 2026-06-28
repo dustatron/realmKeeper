@@ -15,6 +15,7 @@ export interface RegionTreasure {
   poiId: string | null
   npcId: string | null
   guardianNpcId: string | null
+  compendiumId: string | null
 }
 
 export interface RegionMagicItem {
@@ -22,6 +23,7 @@ export interface RegionMagicItem {
   collected: boolean
   poiId: string | null
   npcId: string | null
+  compendiumId: string | null
 }
 
 export interface RegionMonsterRow {
@@ -30,6 +32,7 @@ export interface RegionMonsterRow {
   poiId: string | null
   threat: number
   big: boolean
+  compendiumId: string | null
 }
 
 export interface RegionContents {
@@ -62,7 +65,7 @@ export function summarizeRegionContents(pois: POI[], npcs: NPC[]): RegionContent
     // POI treasure items: split by isMagic
     for (const t of p.treasure ?? []) {
       if (t.isMagic) {
-        magic.push({ name: t.name, collected: !!t.collected, poiId: p.id, npcId: null })
+        magic.push({ name: t.name, collected: !!t.collected, poiId: p.id, npcId: null, compendiumId: t.compendiumId ?? null })
       } else {
         treasures.push({
           name: t.name,
@@ -72,6 +75,7 @@ export function summarizeRegionContents(pois: POI[], npcs: NPC[]): RegionContent
           poiId: p.id,
           npcId: null,
           guardianNpcId: t.guardianNpcId ?? null,
+          compendiumId: t.compendiumId ?? null,
         })
       }
     }
@@ -80,7 +84,7 @@ export function summarizeRegionContents(pois: POI[], npcs: NPC[]): RegionContent
     for (const ref of p.magicItemRefs ?? []) {
       const entry = getCompendiumById(ref.id)
       if (!entry) continue
-      magic.push({ name: entry.name, collected: false, poiId: p.id, npcId: null })
+      magic.push({ name: entry.name, collected: false, poiId: p.id, npcId: null, compendiumId: ref.id })
     }
 
     // POI monsterRefs — one row per (poi, ref); skip unresolved
@@ -94,6 +98,7 @@ export function summarizeRegionContents(pois: POI[], npcs: NPC[]): RegionContent
         poiId: p.id,
         threat,
         big: threat >= BIG_MONSTER_THREAT_CUTOFF,
+        compendiumId: ref.id,
       })
     }
   }
@@ -102,7 +107,7 @@ export function summarizeRegionContents(pois: POI[], npcs: NPC[]): RegionContent
   for (const n of npcs) {
     for (const it of n.systemBlock?.inventory ?? []) {
       if (it.compendiumKind === 'magicItem') {
-        magic.push({ name: it.name, collected: false, poiId: null, npcId: n.id })
+        magic.push({ name: it.name, collected: false, poiId: null, npcId: n.id, compendiumId: it.compendiumId ?? null })
       } else if (it.source === 'treasure') {
         treasures.push({
           name: it.name,
@@ -112,6 +117,7 @@ export function summarizeRegionContents(pois: POI[], npcs: NPC[]): RegionContent
           poiId: null,
           npcId: n.id,
           guardianNpcId: null,
+          compendiumId: it.compendiumId ?? null,
         })
       }
     }

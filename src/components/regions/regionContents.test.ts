@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { summarizeRegionContents } from './regionContents'
 import { buildPOI } from '@domain/services/worldgen/buildPoi'
 import { getMagicItemsBySystemId } from '@domain/data/compendium'
+import { getMonstersBySystemId } from '@domain/data/compendium'
 
 describe('summarizeRegionContents', () => {
   it('splits treasures vs magic, retains ids, no double-count', () => {
@@ -84,5 +85,25 @@ describe('summarizeRegionContents', () => {
     // Simulate legacy POI with no treasure array
     ;(poi as any).treasure = undefined
     expect(() => summarizeRegionContents([poi], [])).not.toThrow()
+  })
+
+  it('POI monsterRef carries compendiumId equal to the ref id', () => {
+    const monsters = getMonstersBySystemId('system-cairn-2e')
+    if (monsters.length === 0) return
+    const poi = buildPOI({ regionId: 'r', name: 'Lair', type: 'dungeon' })
+    poi.monsterRefs = [{ id: monsters[0].id, quantity: 1 }]
+    const c = summarizeRegionContents([poi], [])
+    expect(c.monsters).toHaveLength(1)
+    expect(c.monsters[0].compendiumId).toBe(monsters[0].id)
+  })
+
+  it('POI magicItemRefs entry carries compendiumId equal to the ref id', () => {
+    const items = getMagicItemsBySystemId('system-cairn-2e')
+    if (items.length === 0) return
+    const poi = buildPOI({ regionId: 'r', name: 'Shrine', type: 'landmark' })
+    poi.magicItemRefs = [{ id: items[0].id }]
+    const c = summarizeRegionContents([poi], [])
+    expect(c.magic).toHaveLength(1)
+    expect(c.magic[0].compendiumId).toBe(items[0].id)
   })
 })
