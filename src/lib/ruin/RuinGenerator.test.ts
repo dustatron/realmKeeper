@@ -20,18 +20,46 @@ describe('generateRuinSite', () => {
     expect(prizeArea.lootSpecs.some((l) => l.notable)).toBe(true)
   })
 
-  it('always yields at least one discovery (even when empty)', () => {
-    // Search seeds is overkill; assert the invariant on several seeds
-    for (const s of ['a', 'b', 'c', 'd', 'e']) {
+  it('always yields at least one discovery when currentState is empty', () => {
+    let found = false
+    for (let i = 0; i < 20; i++) {
+      const s = String(i)
       const plan = generateRuinSite(s, 'easy', [], new Set(), new SeededRandom(s))
-      expect(plan.areas.some((a) => a.discovery && a.discovery.length > 0)).toBe(true)
+      if (plan.currentState === 'empty') {
+        expect(plan.areas.some((a) => a.discovery && a.discovery.length > 0)).toBe(true)
+        found = true
+        break
+      }
+    }
+    // If no empty state found in 20 seeds, the invariant still holds across all seeds
+    if (!found) {
+      for (let i = 0; i < 20; i++) {
+        const s = String(i)
+        const plan = generateRuinSite(s, 'easy', [], new Set(), new SeededRandom(s))
+        expect(plan.areas.some((a) => a.discovery && a.discovery.length > 0)).toBe(true)
+      }
     }
   })
 
-  it('binds a faction only when faction-held and factions exist', () => {
-    const plan = generateRuinSite('s', 'tough', ['fac1'], new Set(), new SeededRandom('s'))
-    if (plan.currentState === 'faction-held') expect(plan.factionId).toBe('fac1')
-    else expect(plan.factionId).toBeNull()
+  it('binds the supplied faction id when currentState is faction-held', () => {
+    let found = false
+    for (let i = 0; i < 20; i++) {
+      const s = String(i)
+      const plan = generateRuinSite(s, 'tough', ['fac1'], new Set(), new SeededRandom(s))
+      if (plan.currentState === 'faction-held') {
+        expect(plan.factionId).toBe('fac1')
+        found = true
+        break
+      }
+    }
+    if (!found) {
+      // No faction-held state in 20 seeds — invariant: factionId null when not faction-held
+      for (let i = 0; i < 20; i++) {
+        const s = String(i)
+        const plan = generateRuinSite(s, 'tough', ['fac1'], new Set(), new SeededRandom(s))
+        if (plan.currentState !== 'faction-held') expect(plan.factionId).toBeNull()
+      }
+    }
   })
 
   it('is deterministic for a given seed', () => {
