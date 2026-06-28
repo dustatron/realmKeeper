@@ -68,7 +68,10 @@ export function sprinkleRealmContent(input: SprinkleRealmContentInput): POI[] {
   const magicMult = LOOT_DENSITY[options.magicDensity ?? 'off']
 
   // Build realm-wide magic pool (shared by region passes AND faction great-item pass)
-  const magicPool = magicMult > 0 ? rng.shuffle([...getMagicItemsBySystemId(systemId)]) : []
+  // Guard: only shuffle (and consume rng state) when there's actually a magic consumer
+  const magicPool = (magicMult > 0 && ((input.regions?.length ?? 0) > 0 || (input.factions?.length ?? 0) > 0))
+    ? rng.shuffle([...getMagicItemsBySystemId(systemId)])
+    : []
   let magicIndex = 0
   const takeMagic = (): { id: string; name: string; description: string } | null => {
     if (magicIndex >= magicPool.length) return null

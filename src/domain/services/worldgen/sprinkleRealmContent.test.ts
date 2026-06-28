@@ -138,6 +138,19 @@ describe('sprinkleRealmContent densities', () => {
     expect(notable.length).toBeGreaterThanOrEqual(1)
   })
 
+  it('monster seeding is deterministic regardless of magicDensity when no regions/factions', () => {
+    const makePois = () => [poi('dungeon'), poi('camp'), poi('landmark'), poi('ruin'), poi('natural')]
+    const base = { systemId: 'system-cairn-2e', options: { monsterDensity: 'moderate' as const, magicDensity: 'frequent' as const } }
+    const run1 = makePois()
+    sprinkleRealmContent({ pois: run1, ...base, rng: new SeededRandom('det-seed') })
+    const run2 = makePois()
+    sprinkleRealmContent({ pois: run2, ...base, rng: new SeededRandom('det-seed') })
+    // Same seed + same inputs → same monster assignment
+    expect(run1.map((p) => p.monsterRefs)).toEqual(run2.map((p) => p.monsterRefs))
+    // No regions/factions → no treasure or magic
+    expect(run1.every((p) => p.treasure.length === 0)).toBe(true)
+  })
+
   it('faction magic item is unique vs region magic items (shared pool)', () => {
     const hq = buildPOI({ regionId: 'rA', name: 'Hall', type: 'fortification' })
     const regionPoi = buildPOI({ regionId: 'rA', name: 'Shrine', type: 'shrine' })
