@@ -48,9 +48,14 @@ import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
-import { ArrowLeft, RotateCcw } from 'lucide-react'
+import { ArrowLeft, RotateCcw, Coins, Check } from 'lucide-react'
 import { RegionContentsPanel } from '~/components/regions/RegionContentsPanel'
 import { regionDangerTier } from '~/components/regions/regionContents'
+import { DataTable, type DataTableColumn } from '~/components/shared/DataTable'
+import { getCompendiumById } from '@domain/data/compendium'
+import { monsterThreat } from '~/lib/worldgen/compendium-utils'
+import type { CompendiumMonster } from '@domain/entities/Compendium'
+import type { POI } from '@domain/entities/POI'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '~/components/ui/dialog'
 import {
   ChevronRight,
@@ -103,6 +108,15 @@ const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }
   camp: Tent,
   shrine: Sparkles,
   other: MapPin,
+}
+
+function poiMaxThreat(monsterRefs: POI['monsterRefs']): number {
+  let max = 0
+  for (const ref of monsterRefs ?? []) {
+    const e = getCompendiumById(ref.id)
+    if (e?.kind === 'monster') max = Math.max(max, monsterThreat(e as CompendiumMonster))
+  }
+  return max
 }
 
 function RegionDetailPage() {
@@ -190,6 +204,99 @@ function RegionDetailPage() {
 
   // Encounter table for this region
   const encounterTable = useEncounterTable(null, regionId, region?.worldId ?? null)
+
+  // Faction presence map: poiId → faction name (first presence per POI)
+  const presenceByPoi = useLiveQuery(async () => {
+    if (poiIds.length === 0) return {} as Record<string, string>
+    const pres = await db.factionPresences.where('poiId').anyOf(poiIds).toArray()
+    const facs = await db.factions.where('id').anyOf([...new Set(pres.map(p => p.factionId))]).toArray()
+    const nameById: Record<string, string> = {}
+    for (const f of facs) nameById[f.id] = f.name
+    const out: Record<string, string> = {}
+    for (const p of pres) if (!out[p.poiId]) out[p.poiId] = nameById[p.factionId] ?? ''
+    return out
+  }, [poiIds.join(',')]) ?? {}
+
+  // Columns for the Locations DataTable
+  const locationColumns = useMemo<DataTableColumn<POI>[]>(() => [
+    {
+      key: 'name',
+      header: 'Name',
+      sortable: true,
+      sortValue: p => p.name,
+      render: p => (
+        <Link to="/realms/pois/$poiId" params={{ poiId: p.id }} className="text-primary hover:underline font-medium">
+          {p.name}
+        </Link>
+      ),
+    },
+    {
+      key: 'type',
+      header: 'Type',
+      sortable: true,
+      sortValue: p => p.type,
+      render: p => <Badge variant="outline" className="text-xs">{p.type}</Badge>,
+    },
+    {
+      key: 'danger',
+      header: 'Danger',
+      sortable: true,
+      sortValue: p => poiMaxThreat(p.monsterRefs),
+      render: p => {
+        const threat = poiMaxThreat(p.monsterRefs)
+        const label = threat === 0 ? 'none' : threat >= 5 ? 'perilous' : threat >= 3 ? 'tough' : 'easy'
+        const cls = label === 'none'
+          ? 'bg-muted text-muted-foreground border-border'
+          : label === 'easy' ? 'bg-green-600 text-white'
+          : label === 'tough' ? 'bg-amber-600 text-white'
+          : 'bg-red-600 text-white'
+        return <Badge className={`text-xs ${cls}`}>{label}</Badge>
+      },
+    },
+    {
+      key: 'treasure',
+      header: 'Treasure',
+      sortable: true,
+      sortValue: p => (p.treasure ?? []).filter(t => t.notable && !t.collected).length,
+      render: p => {
+        const count = (p.treasure ?? []).filter(t => t.notable && !t.collected).length
+        return (
+          <span className="flex items-center gap-1 text-sm">
+            <Coins className="size-3.5 text-muted-foreground" />
+            {count}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'encounter',
+      header: 'Encounter',
+      sortable: true,
+      sortValue: p => (p.encounterChance != null || (p.wanderingMonsters?.length ?? 0) > 0) ? 1 : 0,
+      render: p => {
+        const has = p.encounterChance != null || (p.wanderingMonsters?.length ?? 0) > 0
+        return has
+          ? <Check className="size-4 text-green-500" />
+          : <span className="text-muted-foreground text-sm">—</span>
+      },
+    },
+    {
+      key: 'faction',
+      header: 'Faction',
+      sortable: true,
+      sortValue: p => presenceByPoi[p.id] ?? '',
+      render: p => <span className="text-sm">{presenceByPoi[p.id] ?? '—'}</span>,
+    },
+    {
+      key: 'visited',
+      header: 'Visited',
+      sortable: true,
+      sortValue: p => p.visited ? 1 : 0,
+      render: p => p.visited
+        ? <Check className="size-4 text-green-500" />
+        : <span className="text-muted-foreground text-sm">—</span>,
+    },
+  ], [presenceByPoi])
 
   // Auto-open edit mode from ?edit=true search param
   useEffect(() => {
@@ -654,44 +761,12 @@ function RegionDetailPage() {
               Add
             </Button>
           </div>
-          {topLevelPOIs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No points of interest.</p>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {topLevelPOIs.map((poi) => {
-                const Icon = POI_TYPE_ICONS[poi.type]
-                return (
-                  <Link
-                    key={poi.id}
-                    to="/realms/pois/$poiId"
-                    params={{ poiId: poi.id }}
-                    className="block"
-                  >
-                    <Card className="cursor-pointer transition-colors hover:bg-accent h-full">
-                      <CardHeader className="pb-2">
-                        <div className="flex items-start gap-2">
-                          <Icon className="size-4 text-muted-foreground shrink-0 mt-0.5" />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate">{poi.name}</div>
-                            <Badge variant="outline" className="text-xs mt-1">
-                              {poi.type}
-                            </Badge>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      {poi.description && (
-                        <CardContent className="pt-0">
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {poi.description}
-                          </p>
-                        </CardContent>
-                      )}
-                    </Card>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
+          <DataTable
+            rows={topLevelPOIs}
+            rowKey={p => p.id}
+            columns={locationColumns}
+            empty={<p className="text-sm text-muted-foreground">No points of interest.</p>}
+          />
         </TabsContent>
 
         {/* NPCs tab */}
