@@ -15,9 +15,16 @@ export function RegionContentsPanel({ pois, npcs }: { pois: POI[]; npcs: NPC[] }
         <span className="flex items-center gap-1"><Skull className="size-4" /> {s.monsters.reduce((a, m) => a + m.count, 0)} monsters</span>
       </div>
       {s.highlights.length > 0 && (
-        <p className="text-xs text-muted-foreground">Notable finds: {s.highlights.map((h) => h.name).join(', ')}</p>
+        <p className="text-xs text-muted-foreground">
+          Notable finds: {s.highlights.map((h) => `${h.name} — ${h.location}`).join(', ')}
+        </p>
       )}
-      {s.monsters.length > 0 && (
+      {s.bigMonsters.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Big monsters: {s.bigMonsters.map((m) => `${m.name} — ${m.location}${m.count > 1 ? ` ×${m.count}` : ''}`).join(', ')}
+        </p>
+      )}
+      {s.monsters.length > 0 && s.bigMonsters.length === 0 && (
         <p className="text-xs text-muted-foreground">Threats: {s.monsters.map((m) => `${m.name}${m.count > 1 ? ` ×${m.count}` : ''}`).join(', ')}</p>
       )}
     </div>
