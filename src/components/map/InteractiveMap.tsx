@@ -67,6 +67,7 @@ import {
   type PathType,
   type TerrainType,
 } from '@shared/constants'
+import { colorForTerrain } from './terrainColors'
 import type { GameMap } from '@domain/entities/GameMap'
 import type { POI } from '@domain/entities/POI'
 import type { Region } from '@domain/entities/Region'
@@ -785,18 +786,6 @@ function POIPopupDialog({
 
 // ─── Region Popup Dialog (shows when clicking a region polygon) ──────
 
-const REGION_COLORS: Record<string, string> = {
-  plains: '#22c55e',
-  forest: '#166534',
-  hills: '#d97706',
-  mountain: '#64748b',
-  swamp: '#713f12',
-  desert: '#fbbf24',
-  coast: '#06b6d4',
-  road: '#78716c',
-  tundra: '#94a3b8',
-  other: '#8b5cf6',
-}
 
 const REGION_PALETTE = [
   null, // terrain default
@@ -834,7 +823,7 @@ function RegionPopupDialog({
 }) {
   if (!region) return null
 
-  const terrainDefault = REGION_COLORS[region.terrain] ?? REGION_COLORS.other
+  const terrainDefault = colorForTerrain(region.terrain)
   const otherRegions = allRegions.filter((r) => r.id !== region.id)
 
   return (
@@ -872,10 +861,13 @@ function RegionPopupDialog({
             <Select value={region.terrain} onValueChange={(v) => onChangeTerrain(region, v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {TERRAIN_TYPES.map((t) => (
+                {(TERRAIN_TYPES.includes(region.terrain as TerrainType)
+                  ? TERRAIN_TYPES
+                  : [region.terrain, ...TERRAIN_TYPES]
+                ).filter(Boolean).map((t) => (
                   <SelectItem key={t} value={t}>
                     <span className="flex items-center gap-2">
-                      <span className="size-3 rounded-full inline-block" style={{ backgroundColor: REGION_COLORS[t] ?? REGION_COLORS.other }} />
+                      <span className="size-3 rounded-full inline-block" style={{ backgroundColor: colorForTerrain(t) }} />
                       {t}
                     </span>
                   </SelectItem>
