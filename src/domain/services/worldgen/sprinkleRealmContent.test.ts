@@ -138,6 +138,61 @@ describe('sprinkleRealmContent densities', () => {
     expect(notable.length).toBeGreaterThanOrEqual(1)
   })
 
+  it('every region gets >=1 monster; perilous notable POI gets a guardian', () => {
+    // Part 1: per-region >=1 monster
+    const regions = [
+      { id: 'rA', terrain: 'grasslands' } as any,
+      { id: 'rB', terrain: 'mountains' } as any,
+    ]
+    const pois = [
+      buildPOI({ regionId: 'rA', name: 'a1', type: 'landmark' }),
+      buildPOI({ regionId: 'rB', name: 'b1', type: 'natural' }),
+    ]
+    sprinkleRealmContent({
+      pois, regions,
+      systemId: 'system-shadowdark',
+      options: { treasureDensity: 'off', magicDensity: 'off', monsterDensity: 'moderate' },
+      rng: new SeededRandom('per-region-mon'),
+    })
+    for (const r of regions) {
+      const refs = pois.filter((p) => p.regionId === r.id).flatMap((p) => p.monsterRefs)
+      expect(refs.length, `region ${r.id} should have >=1 monster`).toBeGreaterThanOrEqual(1)
+    }
+
+    // Part 2: guardian on perilous notable-find POI (deterministic via fixed seed loop)
+    // sparse + perilous: count = max(1, round(1 * 0.5 * 2)) = 1 regular monster
+    // if guardian fires (GUARD_CHANCE.perilous = 0.75), notable POI gets >=2 unique refs
+    const SEEDS = ['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9', 'g10']
+    let guardianSeed: string | null = null
+    for (const seed of SEEDS) {
+      const gPois = [buildPOI({ regionId: 'rP', name: 'notable', type: 'landmark' })]
+      sprinkleRealmContent({
+        pois: gPois,
+        regions: [{ id: 'rP', terrain: 'mountains' } as any],
+        systemId: 'system-shadowdark',
+        options: { treasureDensity: 'moderate', magicDensity: 'off', monsterDensity: 'sparse' },
+        rng: new SeededRandom(seed),
+      })
+      const notablePoi = gPois.find((p) => p.treasure.some((t) => t.notable || t.isMagic))
+      if (notablePoi && notablePoi.monsterRefs.length >= 2) {
+        guardianSeed = seed
+        break
+      }
+    }
+    expect(guardianSeed).not.toBeNull()
+    // Confirm determinism: re-run found seed yields same guardian result
+    const gPois2 = [buildPOI({ regionId: 'rP', name: 'notable', type: 'landmark' })]
+    sprinkleRealmContent({
+      pois: gPois2,
+      regions: [{ id: 'rP', terrain: 'mountains' } as any],
+      systemId: 'system-shadowdark',
+      options: { treasureDensity: 'moderate', magicDensity: 'off', monsterDensity: 'sparse' },
+      rng: new SeededRandom(guardianSeed!),
+    })
+    const notablePoi2 = gPois2.find((p) => p.treasure.some((t) => t.notable || t.isMagic))
+    expect(notablePoi2?.monsterRefs.length).toBeGreaterThanOrEqual(2)
+  })
+
   it('monster seeding is deterministic regardless of magicDensity when no regions/factions', () => {
     const makePois = () => [poi('dungeon'), poi('camp'), poi('landmark'), poi('ruin'), poi('natural')]
     const base = { systemId: 'system-cairn-2e', options: { monsterDensity: 'moderate' as const, magicDensity: 'frequent' as const } }

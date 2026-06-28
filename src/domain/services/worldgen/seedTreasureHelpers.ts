@@ -8,6 +8,24 @@ import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { tierForTerrain } from './regionFlavor'
 import type { Faction } from '@domain/entities/Faction'
 import type { LootDensity } from './lootDensity'
+import { pickTierMonster } from '~/lib/worldgen/compendium-utils'
+
+/** POI types eligible for monster seeding (excludes dungeon/ruin — those have their own generators). */
+export const MONSTER_POI_TYPES = new Set<PoiType>([
+  'camp',
+  'fortification',
+  'landmark',
+  'natural',
+  'shrine',
+])
+
+const BASE_MONSTER = 1
+
+const GUARD_CHANCE: Record<'easy' | 'tough' | 'perilous', number> = {
+  easy: 0,
+  tough: 0.4,
+  perilous: 0.75,
+}
 
 export const TREASURE_POI_TYPES = new Set<PoiType>([
   'building',
@@ -186,6 +204,49 @@ export interface SeedFactionGreatItemsInput {
   takeMagic: () => { id: string; name: string; description: string } | null
   pickTreasureItemFn: (rng: SeededRandom) => TreasureItem
   rng: SeededRandom
+}
+
+/**
+ * Seed monster refs for a single region's POIs.
+ * Every region with eligible POIs gets max(1, round(BASE_MONSTER × monsterMult × tierFactor)) monsters.
+ * The first pick is always high-band. Notable-find POIs in tough/perilous regions get a guardian
+ * with GUARD_CHANCE probability.
+ */
+export function seedRegionMonsters(
+  regionPois: POI[],
+  tier: 'easy' | 'tough' | 'perilous',
+  monsterMult: number,
+  systemId: string,
+  rng: SeededRandom,
+): void {
+  if (monsterMult <= 0) return
+  const eligible = regionPois.filter((p) => MONSTER_POI_TYPES.has(p.type))
+  if (eligible.length === 0) return
+
+  const tierFactor = TIER_FACTOR[tier]
+  const count = Math.max(1, Math.round(BASE_MONSTER * monsterMult * tierFactor))
+
+  for (let i = 0; i < count; i++) {
+    const holder = rng.pick(eligible)
+    const m = pickTierMonster(systemId, tier, rng, { high: i === 0 })
+    if (m && !holder.monsterRefs.some((r) => r.id === m.id)) {
+      holder.monsterRefs = [...holder.monsterRefs, { id: m.id, quantity: rng.between(1, 3) }]
+    }
+  }
+
+  // Guardian pass: notable-find POIs in tough/perilous regions
+  const gc = GUARD_CHANCE[tier]
+  if (gc > 0) {
+    for (const holder of eligible) {
+      const hasNotable = holder.treasure.some((t) => t.notable || t.isMagic)
+      if (hasNotable && rng.chance(gc)) {
+        const g = pickTierMonster(systemId, tier, rng, { high: true })
+        if (g && !holder.monsterRefs.some((r) => r.id === g.id)) {
+          holder.monsterRefs = [...holder.monsterRefs, { id: g.id, quantity: 1 }]
+        }
+      }
+    }
+  }
 }
 
 /**
