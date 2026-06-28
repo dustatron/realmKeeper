@@ -26,6 +26,7 @@ import type { Hook } from '@domain/entities/Hook'
 import { withHookIdDefault, withGameMapKindDefault } from './migrations/v36-defaults'
 import { withTownDefaults } from './migrations/v37-town-defaults'
 import { seedDatabase } from './seed'
+import { newId } from '@shared/ulid'
 
 const cloudUrl = import.meta.env.VITE_DEXIE_CLOUD_URL as string | undefined
 
@@ -755,6 +756,18 @@ db.npcs.hook('reading', (npc) => {
         inventory: sb.inventory ?? [],
         abilities: sb.abilities ?? [],
         notes: sb.notes ?? '',
+      }
+    }
+  }
+  // Backfill inventory item ids for existing records
+  if (rec.systemBlock) {
+    const sb = (npc as unknown as Record<string, unknown>).systemBlock as Record<string, unknown>
+    const inv = (sb.inventory as Array<Record<string, unknown>> | undefined) ?? []
+    if (inv.some((it) => it.id === undefined)) {
+      npc = { ...npc }
+      ;(npc as unknown as Record<string, unknown>).systemBlock = {
+        ...sb,
+        inventory: inv.map((it) => (it.id === undefined ? { ...it, id: newId() } : it)),
       }
     }
   }

@@ -64,6 +64,7 @@ export function pushMagicToNpc(
   notable: boolean,
 ): void {
   const item: InventoryItem = {
+    id: newId(),
     name: picked?.name ?? 'Strange Relic',
     slots: 1,
     description: picked?.description ?? '',
@@ -77,6 +78,7 @@ export function pushMagicToNpc(
 
 export function pushTreasureToNpc(n: NPC, item: TreasureItem): void {
   const invItem: InventoryItem = {
+    id: newId(),
     name: item.name,
     slots: 1,
     description: item.description,

@@ -12,6 +12,7 @@ export interface Attack {
 }
 
 export interface InventoryItem {
+  id: string
   name: string
   slots: number
   description: string

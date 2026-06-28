@@ -1,7 +1,16 @@
 import { describe, it, expect } from 'vitest'
 import { SeededRandom } from '~/lib/dungeon/SeededRandom'
-import { seedRegionMonsters } from './seedTreasureHelpers'
+import { seedRegionMonsters, pushMagicToNpc, pushTreasureToNpc } from './seedTreasureHelpers'
 import { buildPOI } from './buildPoi'
+
+it('pushMagicToNpc and pushTreasureToNpc give items a stable id', () => {
+  const npc: any = { systemBlock: { inventory: [] } }
+  pushMagicToNpc(npc, { id: 'c1', name: 'Ring', description: '' }, true)
+  pushTreasureToNpc(npc, { id: 't', name: 'Gold', description: '', value: '5gp', quantity: 1, collected: false })
+  expect(npc.systemBlock.inventory[0].id).toBeTruthy()
+  expect(npc.systemBlock.inventory[1].id).toBeTruthy()
+  expect(npc.systemBlock.inventory[0].id).not.toBe(npc.systemBlock.inventory[1].id)
+})
 
 describe('seedRegionMonsters — guardian collision handling', () => {
   it('bumps quantity by exactly one when the guardian collides with the regional pick', () => {
