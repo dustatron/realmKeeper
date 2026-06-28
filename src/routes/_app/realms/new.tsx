@@ -108,6 +108,9 @@ function NewRealmPage() {
             pathRepo: container.pathRepo,
             factionPresenceRepo: container.factionPresenceRepo,
             poiEventRepo: container.poiEventRepo,
+            hookRepo: container.hookRepo,
+            rumorRepo: container.rumorRepo,
+            noticeRepo: container.noticeRepo,
           },
         );
         setActiveRealmId(realmId);

@@ -23,6 +23,9 @@ const deps = () => ({
   pathRepo: container.pathRepo,
   factionPresenceRepo: container.factionPresenceRepo,
   poiEventRepo: container.poiEventRepo,
+  hookRepo: container.hookRepo,
+  rumorRepo: container.rumorRepo,
+  noticeRepo: container.noticeRepo,
 })
 
 describe('executeGenerateWorld', () => {
@@ -139,10 +142,13 @@ describe('executeGenerateWorld', () => {
     )
     const npcIds = new Set((await db.npcs.where('worldId').equals(realmId).toArray()).map((n) => n.id))
     const poiIds = new Set((await db.pois.where('mapRef').equals(mapId).toArray()).map((p) => p.id))
-    const hooks = await db.hooks.where('worldId').equals(realmId).toArray()
+    const allHooks = await db.hooks.where('worldId').equals(realmId).toArray()
+    // Filter to world-gen hooks (have a contactNpcId and don't target items);
+    // treasure-lead hooks (item-targeted or notice/tavern-sourced with null contact) are checked in their own test
+    const hooks = allHooks.filter((h) => h.secret.targetType !== 'item' && h.contactNpcId !== null)
     const notices = (await db.notices.toArray()).filter((n) => n.worldId === realmId && n.hookId)
     expect(hooks.length).toBeGreaterThan(0)
-    const hookIds = new Set(hooks.map((h) => h.id))
+    const hookIds = new Set(allHooks.map((h) => h.id))
     for (const h of hooks) {
       // contact is a generated NPC; secret points at a real NPC or POI
       expect(npcIds.has(h.contactNpcId!)).toBe(true)
@@ -262,6 +268,21 @@ describe('executeGenerateWorld', () => {
     const hqPoiIds = new Set(factions.map((f) => f.headquartersPoiId).filter(Boolean) as string[])
     const hqPois = pois.filter((p) => hqPoiIds.has(p.id))
     expect(hqPois.some((p) => p.treasure.some((t) => t.notable))).toBe(true)
+  })
+
+  it('generates treasure leads after world gen (item-targeted hooks + treasure-lead rumors/notices)', async () => {
+    await executeGenerateWorld(
+      { name: 'T', systemId: 'system-cairn-2e', seed: 'leadworld', size: 'medium', worldMagicDensity: 'frequent', worldTreasureDensity: 'frequent', worldMonsterDensity: 'moderate' } as any,
+      deps() as any,
+    )
+    const hooks = await db.hooks.toArray()
+    expect(hooks.some((h) => h.secret.targetType === 'item')).toBe(true)
+    const rumors = await db.rumors.toArray()
+    const notices = await db.notices.toArray()
+    expect(
+      rumors.some((r) => r.tags?.includes('treasure-lead') || r.tags?.includes('faction-seeks')) ||
+      notices.some((n) => n.tags?.includes('treasure-lead') || n.tags?.includes('faction-seeks')),
+    ).toBe(true)
   })
 
   it('is deterministic: same seed + size → same biome layout', async () => {

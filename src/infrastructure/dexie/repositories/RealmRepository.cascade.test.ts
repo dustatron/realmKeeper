@@ -16,6 +16,9 @@ const genDeps = () => ({
   pathRepo: container.pathRepo,
   factionPresenceRepo: container.factionPresenceRepo,
   poiEventRepo: container.poiEventRepo,
+  hookRepo: container.hookRepo,
+  rumorRepo: container.rumorRepo,
+  noticeRepo: container.noticeRepo,
 })
 
 // Every table that holds world-scoped data, with how to count rows for a world.

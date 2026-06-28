@@ -22,6 +22,9 @@ const deps = () => ({
   pathRepo: container.pathRepo,
   factionPresenceRepo: container.factionPresenceRepo,
   poiEventRepo: container.poiEventRepo,
+  hookRepo: container.hookRepo,
+  rumorRepo: container.rumorRepo,
+  noticeRepo: container.noticeRepo,
 })
 
 describe('world gen pre-generates landmarks', () => {
