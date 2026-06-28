@@ -2,7 +2,7 @@
 
 A local-first Progressive Web App for Game Masters running living sandbox worlds. Built for iPad (works anywhere), fully offline, no account or backend required.
 
-**▶ Try it live:** [pointcrawler.dustatron.com](https://pointcrawler.dustatron.com/realms/maps/01KW6PXJQHJTAGKAXM5ZH9C32R) — an example generated realm. All data lives in your browser; generate your own world and it never leaves your device.
+**▶ Try it live:** [pointcrawler.dustatron.com](https://pointcrawler.dustatron.com) — an example generated realm. All data lives in your browser; generate your own world and it never leaves your device.
 
 Currently supports **Cairn 2e** and **Shadowdark**, and is designed to be system-agnostic so any OSR or indie game fits.
 
