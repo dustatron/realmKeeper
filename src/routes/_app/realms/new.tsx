@@ -65,7 +65,8 @@ function NewRealmPage() {
     "medium",
   );
   const [genSeed, setGenSeed] = useState("");
-  const [genFactions, setGenFactions] = useState(4);
+  // null = auto: let the engine scale faction count with map size (settlements/4).
+  const [genFactions, setGenFactions] = useState<number | null>(null);
   const [genPoiDensity, setGenPoiDensity] = useState<
     "sparse" | "normal" | "dense"
   >("normal");
@@ -92,7 +93,7 @@ function NewRealmPage() {
             daysPerWeek: createDaysPerWeek,
             factionTurnTrigger: createFactionTurnTrigger,
             poiDensity: genPoiDensity,
-            factionCount: genFactions,
+            factionCount: genFactions ?? undefined,
             loomingThreat: genLoomingThreat,
             worldTreasureDensity: genTreasureDensity,
             worldMagicDensity: genMagicDensity,
@@ -312,10 +313,12 @@ function NewRealmPage() {
                   type="number"
                   min="0"
                   max="20"
-                  value={genFactions}
-                  onChange={(e) =>
-                    setGenFactions(parseInt(e.target.value) || 0)
-                  }
+                  placeholder="Auto (scales with map)"
+                  value={genFactions ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value.trim()
+                    setGenFactions(v === "" ? null : parseInt(v) || 0)
+                  }}
                   disabled={isCreating}
                 />
               </div>
