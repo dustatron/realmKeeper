@@ -25,7 +25,7 @@ export function summarizeRegionContents(pois: POI[], npcs: NPC[]): RegionContent
         name: it.name,
         magic: it.compendiumKind === 'magicItem',
         notable: !!it.notable,
-        location: (n as any).name ?? '',
+        location: n.name,
       }))
   )
   const all = [...poiItems, ...npcItems]
@@ -33,23 +33,15 @@ export function summarizeRegionContents(pois: POI[], npcs: NPC[]): RegionContent
     .filter((i) => i.magic || i.notable)
     .map((i) => ({ name: i.name, kind: i.magic ? ('magic' as const) : ('notable' as const), location: i.location }))
 
-  const monsterMap = new Map<string, { count: number; locations: Map<string, number> }>()
+  const monsterMap = new Map<string, number>()
   for (const p of pois) {
     for (const ref of p.monsterRefs) {
-      const existing = monsterMap.get(ref.id)
       const qty = ref.quantity ?? 1
-      if (existing) {
-        existing.count += qty
-        existing.locations.set(p.name, (existing.locations.get(p.name) ?? 0) + qty)
-      } else {
-        const locations = new Map<string, number>()
-        locations.set(p.name, qty)
-        monsterMap.set(ref.id, { count: qty, locations })
-      }
+      monsterMap.set(ref.id, (monsterMap.get(ref.id) ?? 0) + qty)
     }
   }
 
-  const monsters = [...monsterMap.entries()].map(([id, { count }]) => ({
+  const monsters = [...monsterMap.entries()].map(([id, count]) => ({
     name: getCompendiumById(id)?.name ?? id,
     count,
   }))

@@ -65,6 +65,7 @@ describe('summarizeRegionContents', () => {
     const s = summarizeRegionContents([p], [])
     // Still in monsters total, but not bigMonsters
     expect(s.monsters.length).toBeGreaterThan(0)
-    expect(s.bigMonsters.every((m) => m.location !== 'Cave' || m.name !== 'Goblin')).toBe(true)
+    expect(s.bigMonsters).toHaveLength(0)
+    expect(s.bigMonsters.find((m) => m.name === 'Goblin')).toBeUndefined()
   })
 })

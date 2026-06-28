@@ -24,7 +24,7 @@ export function RegionContentsPanel({ pois, npcs }: { pois: POI[]; npcs: NPC[] }
           Big monsters: {s.bigMonsters.map((m) => `${m.name} — ${m.location}${m.count > 1 ? ` ×${m.count}` : ''}`).join(', ')}
         </p>
       )}
-      {s.monsters.length > 0 && s.bigMonsters.length === 0 && (
+      {s.monsters.length > 0 && (
         <p className="text-xs text-muted-foreground">Threats: {s.monsters.map((m) => `${m.name}${m.count > 1 ? ` ×${m.count}` : ''}`).join(', ')}</p>
       )}
     </div>
