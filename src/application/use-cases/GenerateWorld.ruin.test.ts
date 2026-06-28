@@ -29,7 +29,7 @@ const deps = () => ({
 
 describe('world gen pre-generates ruins', () => {
   it('at least one ruin has a ruinSite with areas', async () => {
-    await executeGenerateWorld({ seed: 'ruin-seed', systemId: 'system-cairn-2e', name: 'T', size: 'medium' } as any, deps() as any)
+    await executeGenerateWorld({ seed: 'ruin-seed', systemId: 'system-cairn-2e', name: 'T', size: 'medium' }, deps())
     const pois = await db.pois.toArray()
     const ruins = pois.filter((p) => p.type === 'ruin')
     expect(ruins.length).toBeGreaterThan(0)

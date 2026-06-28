@@ -338,17 +338,19 @@ function RegionDetailPage() {
   // exists, so the cascade's lastResult can be saved. Mirrors the POI hook.
   const handleEncounterCascade = async (action: CascadeAction): Promise<EncounterRollResult> => {
     if (!region || !systemConfig) throw new Error('Missing context for encounter cascade')
-    const content = buildRegionEncounterContent({
-      region: { terrain: region.terrain },
-      pois,
-      factions: factions ?? [],
-      systemId: systemConfig.id,
-      rng: new SeededRandom(`${region.id}-encounter`),
-    })
-    const table = encounterTable ?? await executeCreateEncounterTable(
-      { ownerRegionId: region.id, worldId: region.worldId, ...content },
-      { encounterTableRepo: container.encounterTableRepo }
-    )
+    const table = encounterTable ?? await (async () => {
+      const content = buildRegionEncounterContent({
+        region: { terrain: region.terrain },
+        pois,
+        factions: factions ?? [],
+        systemId: systemConfig.id,
+        rng: new SeededRandom(`${region.id}-encounter`),
+      })
+      return executeCreateEncounterTable(
+        { ownerRegionId: region.id, worldId: region.worldId, ...content },
+        { encounterTableRepo: container.encounterTableRepo }
+      )
+    })()
     const ctx: CascadeContext = {
       table,
       poiId: null,

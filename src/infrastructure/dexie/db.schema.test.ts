@@ -7,9 +7,9 @@ beforeAll(async () => {
   await db.open()
 })
 
-describe('db schema v39', () => {
-  it('opens at version 39', () => {
-    expect(db.verno).toBe(39)
+describe('db schema v40', () => {
+  it('opens at version 40', () => {
+    expect(db.verno).toBe(40)
   })
 
   it('round-trips a Connection and queries by both endpoints', async () => {
@@ -36,5 +36,26 @@ describe('db schema v39', () => {
     }
     await db.hooks.put(h)
     expect((await db.hooks.get('h1'))?.title).toBe('Find her')
+  })
+
+  // Note: the v40 upgrade path (writing ids into IndexedDB for existing NPCs) is exercised
+  // only in a real browser with pre-existing data. Simulating that in vitest requires a
+  // database pre-seeded at v39, which is complex and out of scope. The test below covers
+  // the belt-and-suspenders read-hook behaviour instead.
+  it('read-hook backfills inventory item id for a legacy npc', async () => {
+    const legacyNpc = {
+      id: 'npc-legacy', worldId: 'w1', name: 'Old Guard',
+      appearance: '', voice: '', motivation: '', traits: [],
+      factionIds: [], tags: [],
+      systemBlock: {
+        stats: [], attacks: [], inventory: [{ name: 'Rusty Sword', value: '1gp', collected: false }], abilities: [], notes: '',
+      },
+      createdAt: 1, updatedAt: 1,
+    }
+    await db.npcs.put(legacyNpc as any)
+    const read = await db.npcs.get('npc-legacy')
+    const inv = (read?.systemBlock as any)?.inventory ?? []
+    expect(inv).toHaveLength(1)
+    expect(inv[0].id).toBeTruthy()
   })
 })
