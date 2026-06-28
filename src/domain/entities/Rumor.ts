@@ -8,6 +8,7 @@ export interface Rumor {
   isUsed: boolean
   isQuestHook: boolean
   hookId: string | null
+  sourceNpcId?: string | null
   tags: string[]
   createdAt: number
   updatedAt: number
