@@ -7,6 +7,16 @@ export interface NpcHook extends Hook {
   role: 'contact' | 'target'
 }
 
+// All hooks for a given world — used to build resolver maps for GM answer-key reveals.
+export function useHooksByWorld(worldId: string | null): Hook[] {
+  return (
+    useLiveQuery(async () => {
+      if (!worldId) return []
+      return db.hooks.where('worldId').equals(worldId).toArray()
+    }, [worldId]) ?? []
+  )
+}
+
 // Hooks that involve an NPC — either as the contact who offers the quest, or as
 // the subject the secret points at.
 export function useNpcHooks(worldId: string | null, npcId: string | null): NpcHook[] {

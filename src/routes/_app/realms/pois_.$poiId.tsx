@@ -664,6 +664,7 @@ function POIDetailPage() {
             mapSection={mapSection}
             notesSection={notesSection}
             actionBar={poiActionBar}
+            worldId={realm?.id ?? null}
           />
         )
       case 'dungeon':
@@ -764,6 +765,7 @@ function POIDetailPage() {
             onUpdateLocationSeed={actions.handleUpdateLocationSeed}
             mapSection={mapSection}
             notesSection={notesSection}
+            worldId={realm?.id ?? null}
           />
         )
     }
