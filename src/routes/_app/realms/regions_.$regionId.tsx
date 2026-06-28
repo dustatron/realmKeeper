@@ -50,7 +50,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
 import { ArrowLeft, RotateCcw, Coins, Check } from 'lucide-react'
 import { RegionContentsPanel } from '~/components/regions/RegionContentsPanel'
-import { regionDangerTier } from '~/components/regions/regionContents'
+import { regionDangerTier, summarizeRegionContents } from '~/components/regions/regionContents'
+import { terrainLabel } from '~/components/map/terrainColors'
+import { compendiumHref } from '~/components/shared/compendiumHref'
 import { DataTable, type DataTableColumn } from '~/components/shared/DataTable'
 import { getCompendiumById } from '@domain/data/compendium'
 import { monsterThreat } from '~/lib/worldgen/compendium-utils'
@@ -345,6 +347,38 @@ function RegionDetailPage() {
     () => Object.fromEntries(npcs.map(n => [n.id, n.name])),
     [npcs]
   )
+
+  // Overview: key locations (top-level notable POI types)
+  const KEY_LOC_TYPES = new Set(['settlement', 'dungeon', 'ruin', 'landmark', 'fortification'])
+  const keyLocations = useMemo(
+    () => pois.filter(p => p.parentPoiId == null && KEY_LOC_TYPES.has(p.type)),
+    [pois]
+  )
+
+  // Overview: faction leader NPC ids
+  const leaderNpcIds = useMemo(
+    () => new Set(factions.flatMap(f => f.leaderNpcId ? [f.leaderNpcId] : [])),
+    [factions]
+  )
+
+  // Overview: key NPCs — leaders first, then fill to 8 with others
+  const keyNpcs = useMemo(() => {
+    const leaders = npcs.filter(n => leaderNpcIds.has(n.id))
+    const others = npcs.filter(n => !leaderNpcIds.has(n.id)).slice(0, Math.max(0, 8 - leaders.length))
+    return [...leaders, ...others]
+  }, [npcs, leaderNpcIds])
+
+  // Overview: common creatures deduped by compendiumId
+  const regionMonsters = useMemo(() => {
+    const { monsters } = summarizeRegionContents(pois, npcs)
+    const seen = new Set<string>()
+    return monsters.filter(m => {
+      if (!m.compendiumId) return false
+      if (seen.has(m.compendiumId)) return false
+      seen.add(m.compendiumId)
+      return true
+    })
+  }, [pois, npcs])
 
   const STANCE_META: Array<{ min: number; max: number; label: string; cls: string }> = [
     { min: 2, max: Infinity, label: 'ally', cls: 'bg-green-600 text-white' },
@@ -886,7 +920,7 @@ function RegionDetailPage() {
             </Button>
           </div>
 
-          {/* Danger tier */}
+          {/* Danger tier + Terrain */}
           {(() => {
             const tier = regionDangerTier(pois, region.terrain)
             const tierClass =
@@ -894,11 +928,17 @@ function RegionDetailPage() {
               tier === 'tough' ? 'bg-amber-600' :
               'bg-red-600'
             return (
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Danger</span>
                 <Badge className={`text-xs ${tierClass}`}>
                   {tier.charAt(0).toUpperCase() + tier.slice(1)}
                 </Badge>
+                {region.terrain && (
+                  <>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground ml-3">Terrain</span>
+                    <Badge variant="secondary" className="text-xs">{terrainLabel(region.terrain)}</Badge>
+                  </>
+                )}
               </div>
             )
           })()}
@@ -961,6 +1001,58 @@ function RegionDetailPage() {
                 {region.people.map((p, i) => (
                   <Badge key={i} variant="secondary">{p}</Badge>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Key Locations */}
+          {keyLocations.length > 0 && (
+            <div className="mt-4">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Key Locations</span>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {keyLocations.map(p => (
+                  <Link key={p.id} to="/realms/pois/$poiId" params={{ poiId: p.id }}>
+                    <Badge variant="outline" className="text-xs hover:bg-accent cursor-pointer">{p.name}</Badge>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Key NPCs */}
+          {keyNpcs.length > 0 && (
+            <div className="mt-4">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Key NPCs</span>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {keyNpcs.map(n => (
+                  <span key={n.id} className="flex items-center gap-1">
+                    <Link to="/realms/npcs/$npcId" params={{ npcId: n.id }}>
+                      <Badge variant="outline" className="text-xs hover:bg-accent cursor-pointer">{n.name}</Badge>
+                    </Link>
+                    {leaderNpcIds.has(n.id) && (
+                      <Badge className="text-xs bg-amber-600 text-white">leader</Badge>
+                    )}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Common Creatures */}
+          {regionMonsters.length > 0 && (
+            <div className="mt-4">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Common Creatures</span>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {regionMonsters.map(m => {
+                  const href = compendiumHref(m.compendiumId)
+                  return href ? (
+                    <Link key={m.compendiumId} to={href.to as never} params={href.params as never}>
+                      <Badge variant="outline" className="text-xs hover:bg-accent cursor-pointer">{m.name}</Badge>
+                    </Link>
+                  ) : (
+                    <Badge key={m.compendiumId ?? m.name} variant="secondary" className="text-xs">{m.name}</Badge>
+                  )
+                })}
               </div>
             </div>
           )}

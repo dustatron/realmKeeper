@@ -18,3 +18,9 @@ export function colorForTerrain(terrain: string | null | undefined): string {
   if (!terrain) return REGION_COLORS.other
   return REGION_COLORS[terrain] ?? (BIOME_COLORS as Record<string, string>)[terrain] ?? REGION_COLORS.other
 }
+
+/** Title-cases a terrain/biome key for display (e.g. "mountains" → "Mountains"). */
+export function terrainLabel(t: string | null | undefined): string {
+  if (!t) return 'Unknown'
+  return t.charAt(0).toUpperCase() + t.slice(1)
+}
