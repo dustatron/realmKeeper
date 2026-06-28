@@ -7,12 +7,38 @@ import { tierForTerrain, type Tier } from '@domain/services/worldgen/regionFlavo
 
 const BIG_MONSTER_THREAT_CUTOFF = 4
 
+export interface RegionTreasure {
+  name: string
+  value: string
+  notable: boolean
+  collected: boolean
+  poiId: string | null
+  npcId: string | null
+  guardianNpcId: string | null
+}
+
+export interface RegionMagicItem {
+  name: string
+  collected: boolean
+  poiId: string | null
+  npcId: string | null
+}
+
+export interface RegionMonsterRow {
+  name: string
+  count: number
+  poiId: string | null
+  threat: number
+  big: boolean
+}
+
 export interface RegionContents {
+  treasures: RegionTreasure[]
+  magic: RegionMagicItem[]
+  monsters: RegionMonsterRow[]
   treasureCount: number
   magicCount: number
-  highlights: { name: string; kind: 'magic' | 'notable'; location: string }[]
-  bigMonsters: { name: string; location: string; count: number }[]
-  monsters: { name: string; count: number }[]
+  monsterCount: number
 }
 
 export function regionDangerTier(pois: POI[], terrain: string): Tier {
@@ -28,55 +54,75 @@ export function regionDangerTier(pois: POI[], terrain: string): Tier {
 }
 
 export function summarizeRegionContents(pois: POI[], npcs: NPC[]): RegionContents {
-  const poiItems = pois.flatMap((p) =>
-    p.treasure.map((t) => ({ name: t.name, magic: !!t.isMagic, notable: !!t.notable, location: p.name }))
-  )
-  const npcItems = npcs.flatMap((n) =>
-    (n.systemBlock?.inventory ?? [])
-      .filter((it) => it.notable === true || it.compendiumKind === 'magicItem' || it.source === 'treasure')
-      .map((it) => ({
-        name: it.name,
-        magic: it.compendiumKind === 'magicItem',
-        notable: !!it.notable,
-        location: n.name,
-      }))
-  )
-  const all = [...poiItems, ...npcItems]
-  const highlights = all
-    .filter((i) => i.magic || i.notable)
-    .map((i) => ({ name: i.name, kind: i.magic ? ('magic' as const) : ('notable' as const), location: i.location }))
+  const treasures: RegionTreasure[] = []
+  const magic: RegionMagicItem[] = []
+  const monsters: RegionMonsterRow[] = []
 
-  const monsterMap = new Map<string, number>()
   for (const p of pois) {
-    for (const ref of p.monsterRefs) {
-      const qty = ref.quantity ?? 1
-      monsterMap.set(ref.id, (monsterMap.get(ref.id) ?? 0) + qty)
+    // POI treasure items: split by isMagic
+    for (const t of p.treasure) {
+      if (t.isMagic) {
+        magic.push({ name: t.name, collected: !!t.collected, poiId: p.id, npcId: null })
+      } else {
+        treasures.push({
+          name: t.name,
+          value: t.value,
+          notable: !!t.notable,
+          collected: !!t.collected,
+          poiId: p.id,
+          npcId: null,
+          guardianNpcId: t.guardianNpcId ?? null,
+        })
+      }
+    }
+
+    // POI magicItemRefs — resolve name via compendium; skip unresolved
+    for (const ref of p.magicItemRefs ?? []) {
+      const entry = getCompendiumById(ref.id)
+      if (!entry) continue
+      magic.push({ name: entry.name, collected: false, poiId: p.id, npcId: null })
+    }
+
+    // POI monsterRefs — one row per (poi, ref); skip unresolved
+    for (const ref of p.monsterRefs ?? []) {
+      const entry = getCompendiumById(ref.id)
+      if (!entry) continue
+      const threat = entry.kind === 'monster' ? monsterThreat(entry as CompendiumMonster) : 0
+      monsters.push({
+        name: entry.name,
+        count: ref.quantity ?? 1,
+        poiId: p.id,
+        threat,
+        big: threat >= BIG_MONSTER_THREAT_CUTOFF,
+      })
     }
   }
 
-  const monsters = [...monsterMap.entries()].map(([id, count]) => ({
-    name: getCompendiumById(id)?.name ?? id,
-    count,
-  }))
-
-  // Build bigMonsters: per-POI entries for high-threat monsters
-  const bigMonsters: { name: string; location: string; count: number }[] = []
-  for (const p of pois) {
-    for (const ref of p.monsterRefs) {
-      const entry = getCompendiumById(ref.id)
-      if (!entry || entry.kind !== 'monster') continue
-      const monster = entry as CompendiumMonster
-      if (monsterThreat(monster) >= BIG_MONSTER_THREAT_CUTOFF) {
-        bigMonsters.push({ name: monster.name, location: p.name, count: ref.quantity ?? 1 })
+  // NPC inventory items
+  for (const n of npcs) {
+    for (const it of n.systemBlock?.inventory ?? []) {
+      if (it.compendiumKind === 'magicItem') {
+        magic.push({ name: it.name, collected: false, poiId: null, npcId: n.id })
+      } else if (it.source === 'treasure') {
+        treasures.push({
+          name: it.name,
+          value: it.value ?? '',
+          notable: !!it.notable,
+          collected: false,
+          poiId: null,
+          npcId: n.id,
+          guardianNpcId: null,
+        })
       }
     }
   }
 
   return {
-    treasureCount: all.length,
-    magicCount: all.filter((i) => i.magic).length,
-    highlights,
-    bigMonsters,
+    treasures,
+    magic,
     monsters,
+    treasureCount: treasures.length,
+    magicCount: magic.length,
+    monsterCount: monsters.reduce((a, m) => a + m.count, 0),
   }
 }
