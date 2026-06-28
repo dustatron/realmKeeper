@@ -3,7 +3,8 @@ import { Link } from '@tanstack/react-router'
 import type { POI } from '@domain/entities/POI'
 import type { NPC } from '@domain/entities/NPC'
 import { Badge } from '~/components/ui/badge'
-import { Button } from '~/components/ui/button'
+import { Switch } from '~/components/ui/switch'
+import { Label } from '~/components/ui/label'
 import { summarizeRegionContents } from './regionContents'
 import { poiBreadcrumb } from './poiBreadcrumb'
 import { compendiumHref } from '~/components/shared/compendiumHref'
@@ -24,7 +25,7 @@ interface ContentRow {
 }
 
 export function RegionContentsPanel({ pois, npcs }: { pois: POI[]; npcs: NPC[] }) {
-  const [showMundane, setShowMundane] = useState(false)
+  const [showMundane, setShowMundane] = useState(true)
 
   const c = summarizeRegionContents(pois, npcs)
   if (c.treasures.length === 0 && c.magic.length === 0 && c.monsters.length === 0) return null
@@ -205,14 +206,10 @@ export function RegionContentsPanel({ pois, npcs }: { pois: POI[]; npcs: NPC[] }
           What's Here
         </span>
         {hasTreasures && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-5 px-1.5 text-xs text-muted-foreground"
-            onClick={() => setShowMundane((v) => !v)}
-          >
-            {showMundane ? 'Hide mundane' : 'Show mundane'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Switch id="show-mundane" checked={showMundane} onCheckedChange={setShowMundane} />
+            <Label htmlFor="show-mundane" className="text-xs text-muted-foreground">Show mundane items</Label>
+          </div>
         )}
       </div>
       <DataTable columns={columns} rows={rows} rowKey={(r) => r.key} />
