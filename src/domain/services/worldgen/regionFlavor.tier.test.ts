@@ -14,4 +14,20 @@ describe('tierForTerrain', () => {
     expect(tierForTerrain('mountains')).toBe('perilous')
     expect(tierForTerrain('not-a-biome')).toBe('easy')
   })
+
+  it('maps edit-UI terrain words (not just biome keys)', () => {
+    // singular 'mountain' (UI) vs 'mountains' (biome) — both perilous now
+    expect(tierForTerrain('mountain')).toBe('perilous')
+    expect(tierForTerrain('tundra')).toBe('perilous')
+    expect(tierForTerrain('swamp')).toBe('tough')
+    expect(tierForTerrain('wetlands')).toBe('tough')
+    expect(tierForTerrain('coast')).toBe('tough')
+    expect(tierForTerrain('highlands')).toBe('tough')
+    expect(tierForTerrain('plains')).toBe('easy')
+    expect(tierForTerrain('fields')).toBe('easy')
+    expect(tierForTerrain('road')).toBe('easy')
+    // case-insensitive + true unknowns still default easy
+    expect(tierForTerrain('Mountain')).toBe('perilous')
+    expect(tierForTerrain('xyzzy')).toBe('easy')
+  })
 })
