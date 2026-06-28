@@ -67,8 +67,8 @@ export function sprinkleRealmContent(input: SprinkleRealmContentInput): POI[] {
   const treasureMult = LOOT_DENSITY[options.treasureDensity ?? 'off']
   const magicMult = LOOT_DENSITY[options.magicDensity ?? 'off']
 
-  // Per-region treasure + magic seeding
-  if (treasureMult > 0 || magicMult > 0) {
+  // Per-region treasure + magic seeding — requires explicit regions
+  if ((treasureMult > 0 || magicMult > 0) && input.regions?.length) {
     // Build realm-wide magic pool (shuffled, unique draw via closure)
     const magicPool = magicMult > 0 ? rng.shuffle([...getMagicItemsBySystemId(systemId)]) : []
     let magicIndex = 0
@@ -85,13 +85,7 @@ export function sprinkleRealmContent(input: SprinkleRealmContentInput): POI[] {
       byRegion.set(p.regionId, a)
     }
 
-    // Use provided regions or derive pseudo-regions from POI regionIds
-    const regions: Array<{ id: string; terrain: string }> =
-      input.regions && input.regions.length > 0
-        ? input.regions
-        : Array.from(byRegion.keys()).map((id) => ({ id, terrain: 'grasslands' }))
-
-    for (const region of regions) {
+    for (const region of input.regions) {
       const holders = byRegion.get(region.id) ?? []
       if (holders.length === 0) continue
       seedRegionLoot({

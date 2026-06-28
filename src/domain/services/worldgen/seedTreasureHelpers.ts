@@ -15,10 +15,11 @@ export const TREASURE_POI_TYPES = new Set<PoiType>([
 ])
 
 /** Filter POIs eligible for treasure seeding: correct type, not a dungeon child. */
-export function eligibleTreasurePois(pois: POI[], dungeonIds?: Set<string>): POI[] {
+export function eligibleTreasurePois(pois: POI[]): POI[] {
+  const dungeonIds = new Set(pois.filter((p) => p.type === 'dungeon').map((p) => p.id))
   return pois.filter((p) => {
     if (!TREASURE_POI_TYPES.has(p.type)) return false
-    if (dungeonIds && p.parentPoiId && dungeonIds.has(p.parentPoiId)) return false
+    if (p.parentPoiId && dungeonIds.has(p.parentPoiId)) return false
     return true
   })
 }

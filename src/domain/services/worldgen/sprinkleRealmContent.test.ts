@@ -14,7 +14,7 @@ describe('sprinkleRealmContent densities', () => {
 
   it('treasure density adds treasure to eligible POIs', () => {
     const pois = Array.from({ length: 10 }, () => poi('landmark'))
-    sprinkleRealmContent({ pois, systemId: 'system-cairn-2e', options: { treasureDensity: 'frequent', magicDensity: 'off', monsterDensity: 'off' }, rng: new SeededRandom('s') })
+    sprinkleRealmContent({ pois, regions: [{ id: 'r1', terrain: 'mountains' } as any], systemId: 'system-cairn-2e', options: { treasureDensity: 'frequent', magicDensity: 'off', monsterDensity: 'off' }, rng: new SeededRandom('s') })
     expect(pois.some((p) => p.treasure.length > 0)).toBe(true)
   })
 
@@ -27,6 +27,7 @@ describe('sprinkleRealmContent densities', () => {
       buildPOI({ regionId: 'rA', name: 'a1', type: 'landmark' }),
       buildPOI({ regionId: 'rB', name: 'b1', type: 'camp' }),
       buildPOI({ regionId: 'rB', name: 'dungeon', type: 'dungeon' }), // ineligible
+      buildPOI({ regionId: 'rB', name: 'ruin', type: 'ruin' }), // ineligible
     ]
     sprinkleRealmContent({ pois, regions, systemId: 'system-cairn-2e', options: { treasureDensity: 'moderate', magicDensity: 'moderate', monsterDensity: 'off' }, rng: new SeededRandom('s') })
     for (const rid of ['rA', 'rB']) {
@@ -34,8 +35,9 @@ describe('sprinkleRealmContent densities', () => {
       expect(regionItems.length).toBeGreaterThan(0)
       expect(regionItems.some((t) => t.notable || t.isMagic)).toBe(true)
     }
-    // dungeon POI never seeded
+    // dungeon and ruin POIs never seeded
     expect(pois.find((p) => p.type === 'dungeon')!.treasure.length).toBe(0)
+    expect(pois.find((p) => p.type === 'ruin')!.treasure.length).toBe(0)
   })
 
   it('magic items are unique across regions (no duplicate compendiumId)', () => {

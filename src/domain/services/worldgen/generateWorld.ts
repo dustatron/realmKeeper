@@ -567,6 +567,7 @@ export function generateWorld(
       systemId: opts.systemId,
       options: opts.realmContent,
       rng: rng.child('realm-content'),
+      regions,
     })
   }
 
