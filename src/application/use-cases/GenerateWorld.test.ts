@@ -238,6 +238,32 @@ describe('executeGenerateWorld', () => {
     expect(seasons.size).toBe(4) // every season represented
   })
 
+  it('seeds treasure on non-dungeon POIs and produces notable finds via per-region path', async () => {
+    const { mapId, realmId } = await executeGenerateWorld(
+      {
+        name: 'T',
+        systemId: 'system-cairn-2e',
+        seed: 'seed-loot',
+        size: 'medium',
+        worldTreasureDensity: 'frequent',
+        worldMagicDensity: 'moderate',
+        worldMonsterDensity: 'moderate',
+      },
+      deps(),
+    )
+    const pois = await db.pois.where('mapRef').equals(mapId).toArray()
+    // At least one non-dungeon/ruin POI has treasure
+    const seeded = pois.filter((p) => p.type !== 'dungeon' && p.type !== 'ruin' && p.treasure.length > 0)
+    expect(seeded.length).toBeGreaterThan(0)
+    // Per-region path marks items notable; flat fallback does not
+    expect(pois.some((p) => p.treasure.some((t) => t.notable))).toBe(true)
+    // Faction great-item pass: at least one faction's HQ POI holds a notable item
+    const factions = (await db.factions.where('worldId').equals(realmId).toArray()).filter((f) => !f.isParty)
+    const hqPoiIds = new Set(factions.map((f) => f.headquartersPoiId).filter(Boolean) as string[])
+    const hqPois = pois.filter((p) => hqPoiIds.has(p.id))
+    expect(hqPois.some((p) => p.treasure.some((t) => t.notable))).toBe(true)
+  })
+
   it('is deterministic: same seed + size → same biome layout', async () => {
     const a = await executeGenerateWorld({ name: 'A', systemId: 'system-cairn-2e', seed: 'fixed', size: 'small' }, deps())
     const b = await executeGenerateWorld({ name: 'B', systemId: 'system-cairn-2e', seed: 'fixed', size: 'small' }, deps())
