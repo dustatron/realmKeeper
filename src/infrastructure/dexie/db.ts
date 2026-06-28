@@ -26,6 +26,7 @@ import type { Hook } from '@domain/entities/Hook'
 import { withHookIdDefault, withGameMapKindDefault } from './migrations/v36-defaults'
 import { withTownDefaults } from './migrations/v37-town-defaults'
 import { seedDatabase } from './seed'
+import { newId } from '@shared/ulid'
 
 const cloudUrl = import.meta.env.VITE_DEXIE_CLOUD_URL as string | undefined
 
@@ -654,6 +655,35 @@ db.version(38).stores(storesV36).upgrade(async (tx) => {
   }
 })
 
+const storesV39 = { ...storesV36, rumors: 'id, poiId, regionId, worldId, isUsed, hookId, sourceNpcId' }
+
+// v39: Rumor.sourceNpcId (indexed) + backfill null on existing rumors
+db.version(39).stores(storesV39).upgrade(async (tx) => {
+  const rumors = await tx.table('rumors').toArray()
+  for (const r of rumors) {
+    if (r.sourceNpcId === undefined) await tx.table('rumors').put({ ...r, sourceNpcId: null })
+  }
+})
+
+// v40: Persist InventoryItem.id for legacy NPCs (backfill non-persistently by read-hook; now writing back)
+db.version(40).stores(storesV39).upgrade(async (tx) => {
+  const npcs = await tx.table('npcs').toArray()
+  for (const npc of npcs) {
+    const sb = npc.systemBlock as Record<string, unknown> | undefined
+    if (!sb) continue
+    const inv = (sb.inventory as Array<Record<string, unknown>> | undefined) ?? []
+    if (inv.some((it) => it.id === undefined)) {
+      await tx.table('npcs').put({
+        ...npc,
+        systemBlock: {
+          ...sb,
+          inventory: inv.map((it) => (it.id === undefined ? { ...it, id: newId() } : it)),
+        },
+      })
+    }
+  }
+})
+
 // Normalize Realms on read — ensures starred arrays have defaults
 db.worlds.hook('reading', (realm) => {
   if (!realm) return realm
@@ -759,7 +789,30 @@ db.npcs.hook('reading', (npc) => {
       }
     }
   }
+  // Backfill inventory item ids for existing records
+  if (rec.systemBlock) {
+    const sb = (npc as unknown as Record<string, unknown>).systemBlock as Record<string, unknown>
+    const inv = (sb.inventory as Array<Record<string, unknown>> | undefined) ?? []
+    if (inv.some((it) => it.id === undefined)) {
+      npc = { ...npc }
+      ;(npc as unknown as Record<string, unknown>).systemBlock = {
+        ...sb,
+        inventory: inv.map((it) => (it.id === undefined ? { ...it, id: newId() } : it)),
+      }
+    }
+  }
   return npc
+})
+
+// Normalize Rumors on read — ensures sourceNpcId has a default
+db.rumors.hook('reading', (rumor) => {
+  if (!rumor) return rumor
+  const rec = rumor as unknown as Record<string, unknown>
+  if (rec.sourceNpcId === undefined) {
+    rumor = { ...rumor }
+    ;(rumor as unknown as Record<string, unknown>).sourceNpcId = null
+  }
+  return rumor
 })
 
 // Seed system configs on first DB creation

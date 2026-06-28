@@ -23,6 +23,10 @@ export class RumorRepository implements IRumorRepository {
     await db.rumors.put(rumor)
   }
 
+  async bulkCreate(rumors: Rumor[]): Promise<void> {
+    await db.rumors.bulkPut(rumors)
+  }
+
   async update(rumor: Rumor): Promise<void> {
     await db.rumors.put(rumor)
   }

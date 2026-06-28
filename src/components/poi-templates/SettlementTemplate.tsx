@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
+import { useHooksByWorld } from "~/ui/hooks/useHooks";
 import { Link } from "@tanstack/react-router";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import {
@@ -378,6 +379,7 @@ interface SettlementTemplateProps {
   mapSection: React.ReactNode;
   notesSection?: React.ReactNode;
   actionBar?: React.ReactNode;
+  worldId?: string | null;
 }
 
 interface TreasureManifestEntry {
@@ -680,7 +682,15 @@ export function SettlementTemplate({
   mapSection,
   notesSection,
   actionBar,
+  worldId,
 }: SettlementTemplateProps) {
+  const worldHooks = useHooksByWorld(worldId ?? null);
+  const hooksById = useMemo(
+    () => new Map(worldHooks.map((h) => [h.id, h])),
+    [worldHooks],
+  );
+  const resolveTarget = (id: string) => hooksById.get(id)?.secret.detail ?? null;
+
   // Group child NPCs by their poiId
   const npcsByPoiId = useMemo(() => {
     const map: Record<string, NPC[]> = {};
@@ -1250,12 +1260,14 @@ export function SettlementTemplate({
             onToggleUsed={onToggleRumorUsed}
             onCreate={onCreateRumor}
             onDelete={onDeleteRumor}
+            resolveTarget={resolveTarget}
           />
           <NoticeBoard
             notices={notices}
             onToggleUsed={onToggleNoticeUsed}
             onCreate={onCreateNotice}
             onDelete={onDeleteNotice}
+            resolveTarget={resolveTarget}
           />
         </TabsContent>
 

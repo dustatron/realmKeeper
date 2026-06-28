@@ -6,6 +6,7 @@ export interface INoticeRepository {
   getByRegionId(regionId: string): Promise<Notice[]>
   getByRealmId(worldId: string): Promise<Notice[]>
   create(notice: Notice): Promise<void>
+  bulkCreate(notices: Notice[]): Promise<void>
   update(notice: Notice): Promise<void>
   delete(id: string): Promise<void>
 }

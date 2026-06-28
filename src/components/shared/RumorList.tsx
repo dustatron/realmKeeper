@@ -19,9 +19,10 @@ interface RumorListProps {
   onToggleUsed: (rumor: Rumor) => void
   onCreate: (input: { text: string; source: string; isQuestHook: boolean }) => void
   onDelete: (id: string) => void
+  resolveTarget?: (hookId: string) => string | null
 }
 
-export function RumorList({ rumors, onToggleUsed, onCreate, onDelete }: RumorListProps) {
+export function RumorList({ rumors, onToggleUsed, onCreate, onDelete, resolveTarget }: RumorListProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [form, setForm] = useState({ text: '', source: '', isQuestHook: false })
 
@@ -68,6 +69,9 @@ export function RumorList({ rumors, onToggleUsed, onCreate, onDelete }: RumorLis
                     <Badge className="text-xs bg-amber-600 hover:bg-amber-600">Quest</Badge>
                   )}
                 </div>
+                {rumor.hookId && resolveTarget?.(rumor.hookId) && (
+                  <p className="text-xs text-muted-foreground">🔑 Points to: {resolveTarget(rumor.hookId)}</p>
+                )}
               </div>
               <Button
                 variant="ghost"

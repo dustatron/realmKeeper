@@ -35,9 +35,10 @@ interface NoticeBoardProps {
   onToggleUsed: (notice: Notice) => void
   onCreate: (input: { title: string; description: string; type: NoticeType; reward: string }) => void
   onDelete: (id: string) => void
+  resolveTarget?: (hookId: string) => string | null
 }
 
-export function NoticeBoard({ notices, onToggleUsed, onCreate, onDelete }: NoticeBoardProps) {
+export function NoticeBoard({ notices, onToggleUsed, onCreate, onDelete, resolveTarget }: NoticeBoardProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [form, setForm] = useState({
     title: '',
@@ -92,6 +93,9 @@ export function NoticeBoard({ notices, onToggleUsed, onCreate, onDelete }: Notic
                 )}
                 {notice.reward && (
                   <p className="text-xs text-amber-600 mt-0.5">Reward: {notice.reward}</p>
+                )}
+                {notice.hookId && resolveTarget?.(notice.hookId) && (
+                  <p className="text-xs text-muted-foreground">🔑 Points to: {resolveTarget(notice.hookId)}</p>
                 )}
               </div>
               <Button

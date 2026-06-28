@@ -16,6 +16,7 @@ import {
   type CascadeEffects,
   type CascadeSection,
 } from '@domain/services/encounterCascade'
+import { matchRegionLocation } from '@domain/services/matchRegionLocation'
 
 export interface CascadeContext {
   table: EncounterTable | null
@@ -23,6 +24,7 @@ export interface CascadeContext {
   regionId: string | null
   worldId: string
   systemConfig: SystemConfig
+  regionPois?: { id: string; name: string }[]
 }
 
 export interface CascadeUseCaseDeps {
@@ -60,6 +62,7 @@ export function buildCascadeEffects(
         { tableRepo: deps.tableRepo },
       ),
     matchMonster: (text) => matchCompendiumMonster(text, ctx.systemConfig.id),
+    matchLocation: ctx.regionPois ? (text) => matchRegionLocation(text, ctx.regionPois!) : undefined,
     now: () => Date.now(),
   }
 }

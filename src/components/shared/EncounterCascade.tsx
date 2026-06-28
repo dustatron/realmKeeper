@@ -29,6 +29,7 @@ interface EncounterCascadeProps {
   onSaveNpc?: () => Promise<void>;
   onSaveTable?: (entries: SavePayload) => void;
   onRoll: () => Promise<RollEncounterResult>;
+  onRegenerateFromRegion?: () => Promise<void>;
 }
 
 /** Build a one-line summary of the persisted result for the banner. */
@@ -43,6 +44,7 @@ export function EncounterCascade({
   onSaveNpc,
   onSaveTable,
   onRoll,
+  onRegenerateFromRegion,
 }: EncounterCascadeProps) {
   const [mode, setMode] = useState<"roll" | "edit">("roll");
   const [pending, setPending] = useState(false);
@@ -68,7 +70,8 @@ export function EncounterCascade({
 
   return (
     <div className="space-y-3">
-      {/* 1. Mode toggle */}
+      {/* 1. Mode toggle + optional regenerate */}
+      <div className="flex items-center gap-2 flex-wrap">
       <div className="inline-flex rounded-md border p-0.5 bg-muted/30">
         <button
           onClick={() => setMode("roll")}
@@ -92,6 +95,26 @@ export function EncounterCascade({
           <Pencil className="size-3.5" />
           Edit tables
         </button>
+      </div>
+      {onRegenerateFromRegion && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={async () => {
+            if (pending) return;
+            setPending(true);
+            try {
+              await onRegenerateFromRegion();
+            } finally {
+              setPending(false);
+            }
+          }}
+          disabled={pending}
+        >
+          <RotateCcw className="mr-1.5 size-3.5" />
+          Regenerate from region
+        </Button>
+      )}
       </div>
 
       {mode === "edit" ? (

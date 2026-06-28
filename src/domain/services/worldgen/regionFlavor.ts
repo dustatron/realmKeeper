@@ -34,6 +34,30 @@ export function biomeTier(biome: Biome): Tier {
   return BIOME_TIER[biome]
 }
 
+const VALID_BIOMES = new Set<string>(Object.keys(BIOME_TIER))
+
+// The region edit UI uses TERRAIN_TYPES words (plains, mountain, swamp, …) which
+// are NOT biome keys, so they must be mapped to a tier explicitly — otherwise a
+// manually-edited region falls through to 'easy' regardless of its terrain.
+const TERRAIN_TIER: Record<string, Tier> = {
+  plains: 'easy',
+  fields: 'easy',
+  grassland: 'easy',
+  road: 'easy',
+  other: 'easy',
+  coast: 'tough',
+  swamp: 'tough',
+  wetlands: 'tough',
+  highlands: 'tough',
+  mountain: 'perilous',
+  tundra: 'perilous',
+}
+
+export function tierForTerrain(terrain: string): Tier {
+  if (VALID_BIOMES.has(terrain)) return BIOME_TIER[terrain as Biome]
+  return TERRAIN_TIER[terrain.toLowerCase()] ?? 'easy'
+}
+
 // Cairn has no generic "region danger" table; derive danger from a Lair (its
 // type + feature) and, when the region's people are themselves a threat, from
 // them too.

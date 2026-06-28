@@ -5,17 +5,25 @@ import { executeGenerateLandmark } from '@application/use-cases/GenerateLandmark
 import { executeGenerateRuin } from '@application/use-cases/GenerateRuin'
 import { generateWorld } from '@domain/services/worldgen/generateWorld'
 import type { PoiDensity } from '@domain/services/worldgen/generateWorld'
+import type { LootDensity } from '@domain/services/worldgen/lootDensity'
 import type { POI } from '@domain/entities/POI'
 import type { IRealmRepository } from '@application/ports/IRealmRepository'
 import type { IFactionRepository } from '@application/ports/IFactionRepository'
 import type { IRealmNoteRepository } from '@application/ports/IRealmNoteRepository'
 import type { IRegionRepository } from '@application/ports/IRegionRepository'
+import type { IHookRepository } from '@application/ports/IHookRepository'
+import type { IRumorRepository } from '@application/ports/IRumorRepository'
+import type { INoticeRepository } from '@application/ports/INoticeRepository'
+import { executeGenerateTreasureLeads } from './GenerateTreasureLeads'
 
 export interface GenerateWorldDeps extends GenerateDungeonDeps {
   realmRepo: IRealmRepository
   factionRepo: IFactionRepository
   realmNoteRepo: IRealmNoteRepository
   regionRepo: IRegionRepository
+  hookRepo: IHookRepository
+  rumorRepo: IRumorRepository
+  noticeRepo: INoticeRepository
 }
 
 // Cap how many dungeons are fully built at world creation; the rest stay lazy
@@ -49,9 +57,9 @@ export interface GenerateWorldInput {
   poiDensity?: PoiDensity
   factionCount?: number
   loomingThreat?: boolean
-  autoTreasure?: boolean
-  autoMagicItems?: boolean
-  autoMonsters?: boolean
+  worldTreasureDensity?: LootDensity
+  worldMagicDensity?: LootDensity
+  worldMonsterDensity?: LootDensity
 }
 
 export async function executeGenerateWorld(
@@ -100,9 +108,9 @@ export async function executeGenerateWorld(
       systemConfig,
       loomingThreat: input.loomingThreat ?? true,
       realmContent: {
-        treasure: input.autoTreasure ?? false,
-        magicItems: input.autoMagicItems ?? false,
-        monsters: input.autoMonsters ?? false,
+        treasureDensity: input.worldTreasureDensity ?? 'moderate',
+        magicDensity: input.worldMagicDensity ?? 'moderate',
+        monsterDensity: input.worldMonsterDensity ?? 'moderate',
       },
       clock: {
         year: realm.currentYear,
@@ -167,6 +175,12 @@ export async function executeGenerateWorld(
       { poiRepo: deps.poiRepo, npcRepo: deps.npcRepo, regionRepo: deps.regionRepo, factionRepo: deps.factionRepo }
     )
   }
+
+  // Post-pass: generate treasure leads now that POIs/NPCs are fully seeded
+  await executeGenerateTreasureLeads(
+    { worldId: realmId, seed: `${input.seed}-leads` },
+    { poiRepo: deps.poiRepo, npcRepo: deps.npcRepo, regionRepo: deps.regionRepo, hookRepo: deps.hookRepo, rumorRepo: deps.rumorRepo, noticeRepo: deps.noticeRepo, factionRepo: deps.factionRepo },
+  )
 
   return { realmId, mapId }
 }

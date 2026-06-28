@@ -23,6 +23,9 @@ const deps = () => ({
   pathRepo: container.pathRepo,
   factionPresenceRepo: container.factionPresenceRepo,
   poiEventRepo: container.poiEventRepo,
+  hookRepo: container.hookRepo,
+  rumorRepo: container.rumorRepo,
+  noticeRepo: container.noticeRepo,
 })
 
 describe('executeGenerateWorld', () => {
@@ -139,10 +142,13 @@ describe('executeGenerateWorld', () => {
     )
     const npcIds = new Set((await db.npcs.where('worldId').equals(realmId).toArray()).map((n) => n.id))
     const poiIds = new Set((await db.pois.where('mapRef').equals(mapId).toArray()).map((p) => p.id))
-    const hooks = await db.hooks.where('worldId').equals(realmId).toArray()
+    const allHooks = await db.hooks.where('worldId').equals(realmId).toArray()
+    // Filter to world-gen hooks (have a contactNpcId and don't target items);
+    // treasure-lead hooks (item-targeted or notice/tavern-sourced with null contact) are checked in their own test
+    const hooks = allHooks.filter((h) => h.secret.targetType !== 'item' && h.contactNpcId !== null)
     const notices = (await db.notices.toArray()).filter((n) => n.worldId === realmId && n.hookId)
     expect(hooks.length).toBeGreaterThan(0)
-    const hookIds = new Set(hooks.map((h) => h.id))
+    const hookIds = new Set(allHooks.map((h) => h.id))
     for (const h of hooks) {
       // contact is a generated NPC; secret points at a real NPC or POI
       expect(npcIds.has(h.contactNpcId!)).toBe(true)
@@ -213,9 +219,9 @@ describe('executeGenerateWorld', () => {
         seed: 'seed-loot',
         size: 'medium',
         poiDensity: 'dense',
-        autoTreasure: true,
-        autoMagicItems: true,
-        autoMonsters: true,
+        worldTreasureDensity: 'moderate',
+        worldMagicDensity: 'moderate',
+        worldMonsterDensity: 'moderate',
       },
       deps(),
     )
@@ -238,11 +244,74 @@ describe('executeGenerateWorld', () => {
     expect(seasons.size).toBe(4) // every season represented
   })
 
+  it('seeds treasure on non-dungeon POIs and produces notable finds via per-region path', async () => {
+    const { mapId, realmId } = await executeGenerateWorld(
+      {
+        name: 'T',
+        systemId: 'system-cairn-2e',
+        seed: 'seed-loot',
+        size: 'medium',
+        worldTreasureDensity: 'frequent',
+        worldMagicDensity: 'moderate',
+        worldMonsterDensity: 'moderate',
+      },
+      deps(),
+    )
+    const pois = await db.pois.where('mapRef').equals(mapId).toArray()
+    // At least one non-dungeon/ruin POI has treasure
+    const seeded = pois.filter((p) => p.type !== 'dungeon' && p.type !== 'ruin' && p.treasure.length > 0)
+    expect(seeded.length).toBeGreaterThan(0)
+    // Per-region path marks items notable; flat fallback does not
+    expect(pois.some((p) => p.treasure.some((t) => t.notable))).toBe(true)
+    // Faction great-item pass: at least one faction's HQ POI holds a notable item
+    const factions = (await db.factions.where('worldId').equals(realmId).toArray()).filter((f) => !f.isParty)
+    const hqPoiIds = new Set(factions.map((f) => f.headquartersPoiId).filter(Boolean) as string[])
+    const hqPois = pois.filter((p) => hqPoiIds.has(p.id))
+    expect(hqPois.some((p) => p.treasure.some((t) => t.notable))).toBe(true)
+  })
+
+  it('generates treasure leads after world gen (item-targeted hooks + treasure-lead rumors/notices)', async () => {
+    await executeGenerateWorld(
+      { name: 'T', systemId: 'system-cairn-2e', seed: 'leadworld', size: 'medium', worldMagicDensity: 'frequent', worldTreasureDensity: 'frequent', worldMonsterDensity: 'moderate' } as any,
+      deps() as any,
+    )
+    const hooks = await db.hooks.toArray()
+    expect(hooks.some((h) => h.secret.targetType === 'item')).toBe(true)
+    const rumors = await db.rumors.toArray()
+    const notices = await db.notices.toArray()
+    expect(
+      rumors.some((r) => r.tags?.includes('treasure-lead') || r.tags?.includes('faction-seeks')) ||
+      notices.some((n) => n.tags?.includes('treasure-lead') || n.tags?.includes('faction-seeks')),
+    ).toBe(true)
+  })
+
   it('is deterministic: same seed + size → same biome layout', async () => {
     const a = await executeGenerateWorld({ name: 'A', systemId: 'system-cairn-2e', seed: 'fixed', size: 'small' }, deps())
     const b = await executeGenerateWorld({ name: 'B', systemId: 'system-cairn-2e', seed: 'fixed', size: 'small' }, deps())
     const mapA = await db.gameMaps.get(a.mapId)
     const mapB = await db.gameMaps.get(b.mapId)
     expect(mapA?.hexCells?.map((c) => c.biome)).toEqual(mapB?.hexCells?.map((c) => c.biome))
+  })
+})
+
+describe('faction count auto-scales with map size when factionCount is omitted', () => {
+  it('a large world generates more factions than a small one (engine default)', async () => {
+    await executeGenerateWorld(
+      { name: 'SmallRealm', systemId: 'system-cairn-2e', seed: 'fac-scale', size: 'small' },
+      deps(),
+    )
+    const small = (await db.factions.toArray()).length
+    await Promise.all([
+      db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.factionRelationships.clear(),
+      db.npcs.clear(), db.connections.clear(), db.hooks.clear(), db.notices.clear(), db.rumors.clear(),
+      db.worldEvents.clear(), db.poiEvents.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear(),
+    ])
+    await executeGenerateWorld(
+      { name: 'LargeRealm', systemId: 'system-cairn-2e', seed: 'fac-scale', size: 'large' },
+      deps(),
+    )
+    const large = (await db.factions.toArray()).length
+    expect(small).toBeGreaterThanOrEqual(2)
+    expect(large).toBeGreaterThan(small)
   })
 })

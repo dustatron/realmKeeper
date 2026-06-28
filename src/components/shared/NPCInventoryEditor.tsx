@@ -34,6 +34,7 @@ import type {
   CompendiumMagicItem,
 } from '@domain/entities/Compendium'
 import type { InventoryItem } from '@domain/value-objects/SystemBlock'
+import { newId } from '@shared/ulid'
 
 type InventoryCompendiumKind = 'magicItem' | 'equipment'
 type InventoryCompendiumEntry = CompendiumMagicItem | CompendiumEquipment
@@ -104,6 +105,7 @@ function inventoryItemFromEntry(
   compendiumSource: 'system' | 'custom',
 ): InventoryItem {
   return {
+    id: newId(),
     name: entry.name,
     slots: slotsForEntry(entry),
     description: descriptionForEntry(entry),
@@ -119,6 +121,7 @@ function inventoryItemFromTreasure(table: typeof treasureTables[number]): Invent
   const result = rollOnTable(table, rollDice)
   const valueMatch = result.entry.text.match(/\(([^)]+)\)/)
   return {
+    id: newId(),
     name: result.entry.text,
     slots: 0,
     description: `Rolled ${result.diceResult.total} on ${result.tableName}`,
@@ -222,7 +225,7 @@ export function NPCInventoryEditor({
   }, [customEntries, searchKind, searchQuery, systemId])
 
   const addManualItem = () => {
-    onChange([...inventory, { name: '', slots: 1, description: '', source: 'manual' }])
+    onChange([...inventory, { id: newId(), name: '', slots: 1, description: '', source: 'manual' }])
   }
 
   const addCompendiumItem = (entry: InventoryCompendiumEntry) => {

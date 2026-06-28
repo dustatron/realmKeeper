@@ -19,12 +19,15 @@ import { executeCreatePOIEvent } from '@application/use-cases/CreatePOIEvent'
 import { executeRollEncounter } from '@application/use-cases/RollEncounter'
 import { executeCreateEncounterTable } from '@application/use-cases/CreateEncounterTable'
 import { executeUpdateEncounterTable } from '@application/use-cases/UpdateEncounterTable'
+import { executeRegenerateRegionEncounter } from '@application/use-cases/RegenerateRegionEncounter'
 import {
   executeEncounterCascade,
   type CascadeAction,
   type CascadeContext,
   type CascadeUseCaseDeps,
 } from '@application/use-cases/RollEncounterCascade'
+import { buildRegionEncounterContent } from '@domain/services/worldgen/regionEncounter'
+import { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { useEncounterTable } from '~/ui/hooks/useEncounterTable'
 import { EncounterCascade } from '~/components/shared/EncounterCascade'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
@@ -45,6 +48,7 @@ import { Textarea } from '~/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
 import { ArrowLeft } from 'lucide-react'
+import { RegionContentsPanel } from '~/components/regions/RegionContentsPanel'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '~/components/ui/dialog'
 import {
   ChevronRight,
@@ -334,24 +338,45 @@ function RegionDetailPage() {
   // exists, so the cascade's lastResult can be saved. Mirrors the POI hook.
   const handleEncounterCascade = async (action: CascadeAction): Promise<EncounterRollResult> => {
     if (!region || !systemConfig) throw new Error('Missing context for encounter cascade')
-    const table = encounterTable
-      ? encounterTable
-      : await executeCreateEncounterTable(
-          { ownerRegionId: region.id, worldId: region.worldId },
-          { encounterTableRepo: container.encounterTableRepo }
-        )
+    const table = encounterTable ?? await (async () => {
+      const content = buildRegionEncounterContent({
+        region: { terrain: region.terrain },
+        pois,
+        factions: factions ?? [],
+        systemId: systemConfig.id,
+        rng: new SeededRandom(`${region.id}-encounter`),
+      })
+      return executeCreateEncounterTable(
+        { ownerRegionId: region.id, worldId: region.worldId, ...content },
+        { encounterTableRepo: container.encounterTableRepo }
+      )
+    })()
     const ctx: CascadeContext = {
       table,
       poiId: null,
       regionId: region.id,
       worldId: region.worldId,
       systemConfig,
+      regionPois: pois.map((p) => ({ id: p.id, name: p.name })),
     }
     const deps: CascadeUseCaseDeps = {
       encounterTableRepo: container.encounterTableRepo,
       tableRepo: container.tableRepo,
     }
     return executeEncounterCascade(action, ctx, deps)
+  }
+
+  const handleRegenerateEncounter = async () => {
+    if (!region || !systemConfig) return
+    await executeRegenerateRegionEncounter(
+      { regionId: region.id, worldId: region.worldId, systemId: systemConfig.id },
+      {
+        encounterTableRepo: container.encounterTableRepo,
+        poiRepo: container.poiRepo,
+        factionRepo: container.factionRepo,
+        regionRepo: container.regionRepo,
+      },
+    )
   }
 
   if (region === undefined) {
@@ -535,6 +560,10 @@ function RegionDetailPage() {
               </div>
             </div>
           )}
+
+          <div className="mt-4">
+            <RegionContentsPanel pois={pois} npcs={npcs} />
+          </div>
         </TabsContent>
 
         {/* Locations tab */}
@@ -688,6 +717,7 @@ function RegionDetailPage() {
             onRollCascade={handleEncounterCascade}
             onSaveTable={handleSaveEncounterTable}
             onRoll={handleRollEncounter}
+            onRegenerateFromRegion={handleRegenerateEncounter}
           />
         </TabsContent>
 

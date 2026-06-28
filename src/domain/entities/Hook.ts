@@ -6,8 +6,10 @@ export type HookStatus = 'open' | 'active' | 'resolved' | 'abandoned'
 
 export interface HookSecret {
   kind: 'captive' | 'hidden_item' | 'culprit' | 'destination' | 'truth'
-  targetType: 'poi' | 'npc' | 'faction'
+  targetType: 'poi' | 'npc' | 'faction' | 'item'
   targetId: string
+  containerType?: 'poi' | 'npc'
+  containerId?: string
   detail: string
 }
 

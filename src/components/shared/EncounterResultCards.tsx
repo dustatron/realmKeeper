@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Dices, Save, Shield, Heart } from "lucide-react";
@@ -81,6 +82,15 @@ export function EncounterResultCards({
         {result.reaction && <ReactionTag disposition={result.reaction} />}
       </div>
       <p className="text-sm font-medium">{result.entryText}</p>
+      {result.locationMatch && (
+        <Link
+          to="/realms/pois/$poiId"
+          params={{ poiId: result.locationMatch.poiId }}
+          className="text-xs text-primary underline"
+        >
+          🔎 {result.locationMatch.name}
+        </Link>
+      )}
     </div>
   );
 }

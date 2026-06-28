@@ -564,6 +564,9 @@ export function generateWorld(
   if (opts.systemId && opts.realmContent) {
     sprinkleRealmContent({
       pois,
+      npcs,
+      regions,
+      factions,
       systemId: opts.systemId,
       options: opts.realmContent,
       rng: rng.child('realm-content'),

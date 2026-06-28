@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react'
 import { useNPC, useNPCs } from '~/ui/hooks/useNPCs'
 import { useNpcConnections } from '~/ui/hooks/useConnections'
 import { useNpcHooks } from '~/ui/hooks/useHooks'
+import { useNpcRumors } from '~/ui/hooks/useNpcRumors'
 import { useFactions } from '~/ui/hooks/useFactions'
 import { useRegion, useRegions } from '~/ui/hooks/useRegions'
 import { usePOI, useRealmPOIs } from '~/ui/hooks/usePOIs'
@@ -24,7 +25,7 @@ import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
-import { ArrowLeft, Heart, Shield, Skull, Swords, Package, Sparkles, Handshake, Pencil, MapPin, ChevronUp, ChevronDown, Trash2, Plus, ChevronsUpDown, Check, Star, Dices } from 'lucide-react'
+import { ArrowLeft, Heart, Shield, Skull, Swords, Package, Sparkles, Handshake, Pencil, MapPin, ChevronUp, ChevronDown, Trash2, Plus, ChevronsUpDown, Check, Star, Dices, MessageCircle } from 'lucide-react'
 import { db } from '@infrastructure/dexie/db'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '~/components/ui/command'
@@ -62,6 +63,7 @@ function NPCDetailPage() {
   const allNpcs = useNPCs(activeRealmId)
   const connections = useNpcConnections(npc?.worldId ?? null, npcId)
   const hooks = useNpcHooks(npc?.worldId ?? null, npcId)
+  const npcRumors = useNpcRumors(npc?.worldId ?? null, npcId)
   const container = useContainer()
 
   // Build POI breadcrumb: walk parentPoiId chain from npc's poi up to root
@@ -975,6 +977,28 @@ function NPCDetailPage() {
                   })()}
                   {h.rewardText && (
                     <p className="text-xs text-muted-foreground">Reward: {h.rewardText}</p>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Rumors They Know */}
+        {npcRumors.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <MessageCircle className="size-4" />
+                Rumors They Know ({npcRumors.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {npcRumors.map((r) => (
+                <div key={r.id} className="space-y-1">
+                  <p className="text-sm">{r.text}</p>
+                  {r.source && (
+                    <p className="text-xs text-muted-foreground">{r.source}</p>
                   )}
                 </div>
               ))}

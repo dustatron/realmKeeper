@@ -10,7 +10,7 @@ describe('buildHumanoidFlavor', () => {
     expect(a).toEqual(b)
   })
 
-  it('fills appearance, voice, traits[2], and motivation as non-empty strings', () => {
+  it('fills appearance, voice, traits (length 2), and motivation', () => {
     const f = buildHumanoidFlavor(new SeededRandom('flavor-check'))
     expect(f.appearance.length).toBeGreaterThan(0)
     expect(f.voice.length).toBeGreaterThan(0)

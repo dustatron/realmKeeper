@@ -15,6 +15,7 @@ export interface CascadeEffects {
   rollReaction: () => { roll: number; disposition: Disposition }
   generateNpc: () => Promise<NPC>
   matchMonster: (text: string) => { compendiumId: string; name: string } | null
+  matchLocation?: (text: string) => { poiId: string; name: string } | null
   now: () => number
 }
 
@@ -56,6 +57,9 @@ async function buildResult(
     }
   }
 
+  if (section.category === 'signOmen' || section.category === 'discovery') {
+    return { ...base, locationMatch: fx.matchLocation?.(entryText) ?? null }
+  }
   return base
 }
 

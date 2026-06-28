@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import type { LootDensity } from "@domain/services/worldgen/lootDensity";
 import { PageHeader } from "~/components/shared/PageHeader";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -97,14 +98,15 @@ function NewRealmPage() {
     "medium",
   );
   const [genSeed, setGenSeed] = useState("");
-  const [genFactions, setGenFactions] = useState(4);
+  // null = auto: let the engine scale faction count with map size (settlements/4).
+  const [genFactions, setGenFactions] = useState<number | null>(null);
   const [genPoiDensity, setGenPoiDensity] = useState<
     "sparse" | "normal" | "dense"
   >("normal");
   const [genLoomingThreat, setGenLoomingThreat] = useState(true);
-  const [genAutoTreasure, setGenAutoTreasure] = useState(true);
-  const [genAutoMagicItems, setGenAutoMagicItems] = useState(true);
-  const [genAutoMonsters, setGenAutoMonsters] = useState(true);
+  const [genTreasureDensity, setGenTreasureDensity] = useState<LootDensity>('moderate');
+  const [genMagicDensity, setGenMagicDensity] = useState<LootDensity>('moderate');
+  const [genMonsterDensity, setGenMonsterDensity] = useState<LootDensity>('moderate');
 
   const handleCreateRealm = async () => {
     if (!createName.trim() || !createSystem) return;
@@ -125,11 +127,11 @@ function NewRealmPage() {
             moonCycleLength: createMoonCycleLength,
             factionTurnTrigger: createFactionTurnTrigger,
             poiDensity: genPoiDensity,
-            factionCount: genFactions,
+            factionCount: genFactions ?? undefined,
             loomingThreat: genLoomingThreat,
-            autoTreasure: genAutoTreasure,
-            autoMagicItems: genAutoMagicItems,
-            autoMonsters: genAutoMonsters,
+            worldTreasureDensity: genTreasureDensity,
+            worldMagicDensity: genMagicDensity,
+            worldMonsterDensity: genMonsterDensity,
           },
           {
             realmRepo: container.realmRepo,
@@ -141,6 +143,9 @@ function NewRealmPage() {
             pathRepo: container.pathRepo,
             factionPresenceRepo: container.factionPresenceRepo,
             poiEventRepo: container.poiEventRepo,
+            hookRepo: container.hookRepo,
+            rumorRepo: container.rumorRepo,
+            noticeRepo: container.noticeRepo,
           },
         );
         setActiveRealmId(realmId);
@@ -363,10 +368,12 @@ function NewRealmPage() {
               inputMode="numeric"
                   min="0"
                   max="20"
-                  value={genFactions}
-                  onChange={(e) =>
-                    setGenFactions(parseInt(e.target.value) || 0)
-                  }
+                  placeholder="Auto (scales with map)"
+                  value={genFactions ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value.trim()
+                    setGenFactions(v === "" ? null : parseInt(v) || 0)
+                  }}
                   disabled={isCreating}
                 />
               </div>
@@ -407,49 +414,40 @@ function NewRealmPage() {
               <p className="text-xs font-medium">Realm content</p>
               <div className="grid gap-2">
                 <div className="flex items-center justify-between gap-3">
-                  <Label
-                    htmlFor="gen-treasure"
-                    className="flex items-center gap-2 text-xs"
-                  >
-                    <Gem className="size-3.5" />
-                    Auto add treasure
-                  </Label>
-                  <Switch
-                    id="gen-treasure"
-                    checked={genAutoTreasure}
-                    onCheckedChange={setGenAutoTreasure}
-                    disabled={isCreating}
-                  />
+                  <Label htmlFor="gen-treasure" className="flex items-center gap-2 text-xs"><Gem className="size-3.5" /> Treasure</Label>
+                  <Select value={genTreasureDensity} onValueChange={(v) => setGenTreasureDensity(v as LootDensity)} disabled={isCreating}>
+                    <SelectTrigger id="gen-treasure" className="w-32"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="off">Off</SelectItem>
+                      <SelectItem value="sparse">Sparse</SelectItem>
+                      <SelectItem value="moderate">Moderate</SelectItem>
+                      <SelectItem value="frequent">Frequent</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <Label
-                    htmlFor="gen-magic-items"
-                    className="flex items-center gap-2 text-xs"
-                  >
-                    <Sparkles className="size-3.5" />
-                    Sprinkle magic items
-                  </Label>
-                  <Switch
-                    id="gen-magic-items"
-                    checked={genAutoMagicItems}
-                    onCheckedChange={setGenAutoMagicItems}
-                    disabled={isCreating}
-                  />
+                  <Label htmlFor="gen-magic-items" className="flex items-center gap-2 text-xs"><Sparkles className="size-3.5" /> Magic items</Label>
+                  <Select value={genMagicDensity} onValueChange={(v) => setGenMagicDensity(v as LootDensity)} disabled={isCreating}>
+                    <SelectTrigger id="gen-magic-items" className="w-32"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="off">Off</SelectItem>
+                      <SelectItem value="sparse">Sparse</SelectItem>
+                      <SelectItem value="moderate">Moderate</SelectItem>
+                      <SelectItem value="frequent">Frequent</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <Label
-                    htmlFor="gen-monsters"
-                    className="flex items-center gap-2 text-xs"
-                  >
-                    <Skull className="size-3.5" />
-                    Sprinkle monsters
-                  </Label>
-                  <Switch
-                    id="gen-monsters"
-                    checked={genAutoMonsters}
-                    onCheckedChange={setGenAutoMonsters}
-                    disabled={isCreating}
-                  />
+                  <Label htmlFor="gen-monsters" className="flex items-center gap-2 text-xs"><Skull className="size-3.5" /> Monsters</Label>
+                  <Select value={genMonsterDensity} onValueChange={(v) => setGenMonsterDensity(v as LootDensity)} disabled={isCreating}>
+                    <SelectTrigger id="gen-monsters" className="w-32"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="off">Off</SelectItem>
+                      <SelectItem value="sparse">Sparse</SelectItem>
+                      <SelectItem value="moderate">Moderate</SelectItem>
+                      <SelectItem value="frequent">Frequent</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

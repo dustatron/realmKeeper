@@ -1,16 +1,21 @@
-import { getMagicItemsBySystemId, getMonstersBySystemId } from '@domain/data/compendium'
+import { getMagicItemsBySystemId } from '@domain/data/compendium'
 import { treasureTableDefs } from '@domain/data/treasure-tables'
 import type { POI } from '@domain/entities/POI'
 import type { TreasureItem } from '@domain/value-objects/TreasureItem'
 import type { TableDef } from '@domain/entities/TableDef'
-import type { PoiType } from '@shared/constants'
 import { newId } from '@shared/ulid'
 import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
+import { LOOT_DENSITY, type LootDensity } from './lootDensity'
+import type { NPC } from '@domain/entities/NPC'
+import type { Region } from '@domain/entities/Region'
+import type { Faction } from '@domain/entities/Faction'
+import { seedRegionLoot, eligibleTreasurePois, npcsByRegion, seedFactionGreatItems, seedRegionMonsters } from './seedTreasureHelpers'
+import { tierForTerrain } from './regionFlavor'
 
 export interface RealmContentSprinkleOptions {
-  treasure?: boolean
-  magicItems?: boolean
-  monsters?: boolean
+  treasureDensity?: LootDensity
+  magicDensity?: LootDensity
+  monsterDensity?: LootDensity
 }
 
 interface SprinkleRealmContentInput {
@@ -18,32 +23,9 @@ interface SprinkleRealmContentInput {
   systemId: string
   options: RealmContentSprinkleOptions
   rng: SeededRandom
-}
-
-const TREASURE_POI_TYPES = new Set<PoiType>([
-  'building',
-  'camp',
-  'dungeon',
-  'fortification',
-  'landmark',
-  'natural',
-  'ruin',
-  'shrine',
-])
-
-const MONSTER_POI_TYPES = new Set<PoiType>([
-  'camp',
-  'dungeon',
-  'fortification',
-  'landmark',
-  'natural',
-  'ruin',
-  'shrine',
-])
-
-function targetCount(eligibleCount: number, ratio: number, min: number, max: number): number {
-  if (eligibleCount === 0) return 0
-  return Math.min(eligibleCount, max, Math.max(min, Math.round(eligibleCount * ratio)))
+  npcs?: NPC[]
+  regions?: Region[]
+  factions?: Faction[]
 }
 
 function pickTreasureTable(rng: SeededRandom): TableDef {
@@ -64,64 +46,93 @@ function pickTreasureItem(rng: SeededRandom): TreasureItem {
   }
 }
 
-export function sprinkleRealmContent({
-  pois,
-  systemId,
-  options,
-  rng,
-}: SprinkleRealmContentInput): POI[] {
-  const treasurePois = pois.filter((poi) => TREASURE_POI_TYPES.has(poi.type))
-  const monsterPois = pois.filter((poi) => MONSTER_POI_TYPES.has(poi.type))
+export function sprinkleRealmContent(input: SprinkleRealmContentInput): POI[] {
+  const { pois, systemId, options, rng } = input
 
-  if (options.treasure) {
-    const targets = rng.sample(
-      treasurePois,
-      targetCount(treasurePois.length, 0.45, 5, 32),
-    )
-    for (const poi of targets) {
-      poi.treasure = [...poi.treasure, pickTreasureItem(rng.child(`treasure-${poi.id}`))]
+  const treasureMult = LOOT_DENSITY[options.treasureDensity ?? 'off']
+  const magicMult = LOOT_DENSITY[options.magicDensity ?? 'off']
+  const monsterMult = LOOT_DENSITY[options.monsterDensity ?? 'off']
+
+  // Build realm-wide magic pool (shared by region passes AND faction great-item pass)
+  // Use a dedicated child RNG so the parent state is never mutated by the magic pool shuffle,
+  // keeping monster/treasure streams independent of magicDensity.
+  const magicPool = magicMult > 0
+    ? rng.child('magic-pool').shuffle([...getMagicItemsBySystemId(systemId)])
+    : []
+  let magicIndex = 0
+  const takeMagic = (): { id: string; name: string; description: string } | null => {
+    if (magicIndex >= magicPool.length) return null
+    return magicPool[magicIndex++]
+  }
+
+  // Per-region treasure, magic, and monster seeding — requires explicit regions
+  if ((treasureMult > 0 || magicMult > 0 || monsterMult > 0) && input.regions?.length) {
+    // Treasure/magic: eligible POIs only
+    const elig = eligibleTreasurePois(pois)
+    const byRegion = new Map<string, POI[]>()
+    for (const p of elig) {
+      const a = byRegion.get(p.regionId) ?? []
+      a.push(p)
+      byRegion.set(p.regionId, a)
+    }
+
+    // Monsters: all POIs (seedRegionMonsters filters by MONSTER_POI_TYPES internally)
+    const allByRegion = new Map<string, POI[]>()
+    for (const p of pois) {
+      const a = allByRegion.get(p.regionId) ?? []
+      a.push(p)
+      allByRegion.set(p.regionId, a)
+    }
+
+    const npcMap = input.npcs ? npcsByRegion(input.npcs) : new Map()
+
+    for (const region of input.regions) {
+      const holders = byRegion.get(region.id) ?? []
+      const regionNpcs = npcMap.get(region.id) ?? []
+
+      // Treasure + magic pass
+      if ((treasureMult > 0 || magicMult > 0) && (holders.length > 0 || regionNpcs.length > 0)) {
+        seedRegionLoot({
+          region,
+          holders,
+          npcs: regionNpcs,
+          treasureMult,
+          magicMult,
+          takeMagic,
+          rng,
+          pickTreasureItemFn: pickTreasureItem,
+        })
+      }
+
+      // Monster pass — runs after treasure/magic so guardian check sees notable finds
+      if (monsterMult > 0) {
+        const regionAllPois = allByRegion.get(region.id) ?? []
+        if (regionAllPois.length > 0) {
+          seedRegionMonsters(
+            regionAllPois,
+            tierForTerrain(region.terrain),
+            monsterMult,
+            systemId,
+            rng.child(`monsters-region-${region.id}`),
+          )
+        }
+      }
     }
   }
 
-  if (options.magicItems) {
-    const magicItems = getMagicItemsBySystemId(systemId)
-    const targets = rng.sample(
-      treasurePois,
-      targetCount(treasurePois.length, 0.18, 3, 12),
-    )
-    for (const poi of targets) {
-      if (magicItems.length === 0) break
-      const item = rng.pick(magicItems)
-      const treasure: TreasureItem = {
-        id: newId(),
-        name: item.name,
-        description: item.description,
-        value: 'priceless',
-        quantity: 1,
-        collected: false,
-        isMagic: true,
-        compendiumId: item.id,
-      }
-      poi.treasure = [...poi.treasure, treasure]
-      if (!poi.magicItemRefs.some((ref) => ref.id === item.id)) {
-        poi.magicItemRefs = [...poi.magicItemRefs, { id: item.id }]
-      }
-    }
-  }
-
-  if (options.monsters) {
-    const monsters = getMonstersBySystemId(systemId)
-    const targets = rng.sample(
-      monsterPois,
-      targetCount(monsterPois.length, 0.45, 5, 32),
-    )
-    for (const poi of targets) {
-      if (monsters.length === 0) break
-      const monster = rng.pick(monsters)
-      if (!poi.monsterRefs.some((ref) => ref.id === monster.id)) {
-        poi.monsterRefs = [...poi.monsterRefs, { id: monster.id, quantity: rng.between(1, 4) }]
-      }
-    }
+  // Faction great-item guarantee — runs after region loop, draws from the same takeMagic pool
+  if (input.factions?.length) {
+    const poiById = new Map(pois.map((p) => [p.id, p]))
+    const npcById = new Map((input.npcs ?? []).map((n) => [n.id, n]))
+    seedFactionGreatItems({
+      factions: input.factions,
+      poiById,
+      npcById,
+      magicDensity: options.magicDensity,
+      takeMagic,
+      pickTreasureItemFn: pickTreasureItem,
+      rng: rng.child('faction-great-items'),
+    })
   }
 
   return pois

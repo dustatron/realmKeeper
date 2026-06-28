@@ -17,5 +17,7 @@ export interface EncounterRollResult {
   npcSavedId?: string | null
   /** creature category: matched compendium monster */
   monsterMatch?: { compendiumId: string; name: string } | null
+  /** signOmen/discovery only: matched region POI */
+  locationMatch?: { poiId: string; name: string } | null
   rolledAt: number
 }

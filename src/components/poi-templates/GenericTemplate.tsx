@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useHooksByWorld } from "~/ui/hooks/useHooks";
 import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import { markdownOptions } from "~/shared/markdown";
@@ -84,6 +85,7 @@ interface GenericTemplateProps {
   onUpdateLocationSeed: (seed: LocationSeed) => void;
   mapSection: React.ReactNode;
   notesSection?: React.ReactNode;
+  worldId?: string | null;
 }
 
 export function GenericTemplate({
@@ -114,8 +116,16 @@ export function GenericTemplate({
   onUpdateLocationSeed,
   mapSection,
   notesSection,
+  worldId,
 }: GenericTemplateProps) {
   const activeEvents = poiEvents.filter((e) => e.isActive).length;
+
+  const worldHooks = useHooksByWorld(worldId ?? null);
+  const hooksById = useMemo(
+    () => new Map(worldHooks.map((h) => [h.id, h])),
+    [worldHooks],
+  );
+  const resolveTarget = (id: string) => hooksById.get(id)?.secret.detail ?? null;
   const [linkNPCOpen, setLinkNPCOpen] = useState(false);
 
   // Roll up NPCs from child locations (e.g. NPCs in a fort's buildings), labeled by location.
@@ -394,12 +404,13 @@ export function GenericTemplate({
             onSaveTable={onSaveEncounterTable}
             onRoll={onRollEncounter}
           />
-          {poi.type === "ruin" && (
+          {(rumors.length > 0 || poi.type === "ruin") && (
             <RumorList
               rumors={rumors}
               onToggleUsed={onToggleRumorUsed}
               onCreate={onCreateRumor}
               onDelete={onDeleteRumor}
+              resolveTarget={resolveTarget}
             />
           )}
         </TabsContent>

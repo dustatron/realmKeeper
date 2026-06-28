@@ -12,6 +12,7 @@ export interface Attack {
 }
 
 export interface InventoryItem {
+  id: string
   name: string
   slots: number
   description: string
@@ -21,6 +22,7 @@ export interface InventoryItem {
   compendiumId?: string
   compendiumKind?: 'magicItem' | 'equipment'
   compendiumSource?: 'system' | 'custom'
+  notable?: boolean
 }
 
 export interface NpcConnection {

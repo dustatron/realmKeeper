@@ -8,7 +8,7 @@ const container = createContainer()
 
 beforeEach(async () => {
   await db.open()
-  await Promise.all([db.worlds.clear(), db.regions.clear(), db.pois.clear(), db.npcs.clear(), db.factions.clear(), db.paths.clear()])
+  await Promise.all([db.worlds.clear(), db.gameMaps.clear(), db.factions.clear(), db.factionRelationships.clear(), db.npcs.clear(), db.connections.clear(), db.hooks.clear(), db.notices.clear(), db.rumors.clear(), db.worldEvents.clear(), db.poiEvents.clear(), db.regions.clear(), db.pois.clear(), db.paths.clear()])
   await db.systemConfigs.put(cairnSystemConfig)
 })
 
@@ -22,6 +22,9 @@ const deps = () => ({
   pathRepo: container.pathRepo,
   factionPresenceRepo: container.factionPresenceRepo,
   poiEventRepo: container.poiEventRepo,
+  hookRepo: container.hookRepo,
+  rumorRepo: container.rumorRepo,
+  noticeRepo: container.noticeRepo,
 })
 
 describe('world gen pre-generates landmarks', () => {
