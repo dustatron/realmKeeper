@@ -22,4 +22,24 @@ describe('summarizeRegionContents', () => {
     const s = summarizeRegionContents([], [])
     expect(s).toEqual({ treasureCount: 0, magicCount: 0, highlights: [], monsters: [] })
   })
+
+  it('does not count authored NPC gear toward treasureCount — only seeded/findable items', () => {
+    const npc: any = {
+      systemBlock: {
+        inventory: [
+          // Authored starting gear — must NOT count
+          { name: 'Boots', slots: 1, description: '', source: 'manual' },
+          { name: 'Rope', slots: 1, description: '' },
+          // Seeded items — MUST count
+          { name: 'Old Coin Purse', slots: 1, description: '', source: 'treasure', notable: false },
+          { name: 'Ember Ring', slots: 1, description: '', source: 'compendium', compendiumKind: 'magicItem', notable: true },
+        ],
+      },
+    }
+    const s = summarizeRegionContents([], [npc])
+    // Only 'Old Coin Purse' (source:'treasure') and 'Ember Ring' (compendiumKind:'magicItem') count
+    expect(s.treasureCount).toBe(2)
+    expect(s.magicCount).toBe(1)
+    expect(s.highlights.map((h) => h.name)).toContain('Ember Ring')
+  })
 })

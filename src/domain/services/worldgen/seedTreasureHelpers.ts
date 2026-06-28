@@ -206,11 +206,21 @@ export interface SeedFactionGreatItemsInput {
   rng: SeededRandom
 }
 
+type PickMonsterFn = (
+  systemId: string,
+  tier: 'easy' | 'tough' | 'perilous',
+  rng: SeededRandom,
+  opts: { high: boolean },
+) => { id: string; name: string } | null
+
 /**
  * Seed monster refs for a single region's POIs.
  * Every region with eligible POIs gets max(1, round(BASE_MONSTER × monsterMult × tierFactor)) monsters.
  * The first pick is always high-band. Notable-find POIs in tough/perilous regions get a guardian
  * with GUARD_CHANCE probability.
+ *
+ * @param pickMonsterFn - Optional injected picker (defaults to pickTierMonster). Enables deterministic
+ *   testing without a real compendium.
  */
 export function seedRegionMonsters(
   regionPois: POI[],
@@ -218,6 +228,7 @@ export function seedRegionMonsters(
   monsterMult: number,
   systemId: string,
   rng: SeededRandom,
+  pickMonsterFn: PickMonsterFn = pickTierMonster,
 ): void {
   if (monsterMult <= 0) return
   const eligible = regionPois.filter((p) => MONSTER_POI_TYPES.has(p.type))
@@ -228,22 +239,41 @@ export function seedRegionMonsters(
 
   for (let i = 0; i < count; i++) {
     const holder = rng.pick(eligible)
-    const m = pickTierMonster(systemId, tier, rng, { high: i === 0 })
+    const m = pickMonsterFn(systemId, tier, rng, { high: i === 0 })
     if (m && !holder.monsterRefs.some((r) => r.id === m.id)) {
       holder.monsterRefs = [...holder.monsterRefs, { id: m.id, quantity: rng.between(1, 3) }]
     }
   }
 
-  // Guardian pass: notable-find POIs in tough/perilous regions
+  // Guardian pass: notable-find POIs in tough/perilous regions.
+  // Retry up to 5 times to find an id not already on the holder; if all attempts collide,
+  // bump the existing ref's quantity instead of silently dropping the guardian.
   const gc = GUARD_CHANCE[tier]
   if (gc > 0) {
     for (const holder of eligible) {
       const hasNotable = holder.treasure.some((t) => t.notable || t.isMagic)
-      if (hasNotable && rng.chance(gc)) {
-        const g = pickTierMonster(systemId, tier, rng, { high: true })
-        if (g && !holder.monsterRefs.some((r) => r.id === g.id)) {
-          holder.monsterRefs = [...holder.monsterRefs, { id: g.id, quantity: 1 }]
-        }
+      if (!hasNotable || !rng.chance(gc)) continue
+
+      let g = pickMonsterFn(systemId, tier, rng, { high: true })
+      if (!g) continue
+
+      let attempts = 0
+      while (attempts < 4 && holder.monsterRefs.some((r) => r.id === g!.id)) {
+        g = pickMonsterFn(systemId, tier, rng, { high: true })
+        if (!g) break
+        attempts++
+      }
+
+      if (!g) continue
+
+      const existing = holder.monsterRefs.find((r) => r.id === g!.id)
+      if (existing) {
+        // All retries collided — bump quantity to ensure the guardian is reflected
+        holder.monsterRefs = holder.monsterRefs.map((r) =>
+          r.id === g!.id ? { ...r, quantity: (r.quantity ?? 1) + 1 } : r
+        )
+      } else {
+        holder.monsterRefs = [...holder.monsterRefs, { id: g.id, quantity: 1 }]
       }
     }
   }

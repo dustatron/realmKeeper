@@ -14,11 +14,13 @@ export function summarizeRegionContents(pois: POI[], npcs: NPC[]): RegionContent
     p.treasure.map((t) => ({ name: t.name, magic: !!t.isMagic, notable: !!t.notable }))
   )
   const npcItems = npcs.flatMap((n) =>
-    (n.systemBlock?.inventory ?? []).map((it) => ({
-      name: it.name,
-      magic: it.compendiumKind === 'magicItem',
-      notable: !!it.notable,
-    }))
+    (n.systemBlock?.inventory ?? [])
+      .filter((it) => it.notable === true || it.compendiumKind === 'magicItem' || it.source === 'treasure')
+      .map((it) => ({
+        name: it.name,
+        magic: it.compendiumKind === 'magicItem',
+        notable: !!it.notable,
+      }))
   )
   const all = [...poiItems, ...npcItems]
   const highlights = all
