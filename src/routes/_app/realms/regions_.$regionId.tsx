@@ -40,6 +40,11 @@ import { WysiwygEditor } from "~/components/shared/WysiwygEditor";
 import { ImagePicker } from "~/components/shared/ImagePicker";
 import { CloudinaryImage } from "~/components/shared/CloudinaryImage";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "~/components/ui/collapsible";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -87,6 +92,7 @@ import {
 } from "~/components/ui/dialog";
 import {
   ChevronRight,
+  ChevronDown,
   Pencil,
   Trash2,
   MapPin,
@@ -192,6 +198,8 @@ function RegionDetailPage() {
   const [assignFactionId, setAssignFactionId] = useState<string>("");
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [isGeneratingNPC, setIsGeneratingNPC] = useState(false);
+  const [rerollProblemConfirmOpen, setRerollProblemConfirmOpen] = useState(false);
+  const [loreOpen, setLoreOpen] = useState(false);
 
   const [editForm, setEditForm] = useState({
     name: "",
@@ -1235,7 +1243,13 @@ function RegionDetailPage() {
                 variant="ghost"
                 size="sm"
                 className="shrink-0 h-7 px-2"
-                onClick={handleRerollProblem}
+                onClick={() => {
+                  if (region.problem) {
+                    setRerollProblemConfirmOpen(true);
+                  } else {
+                    handleRerollProblem();
+                  }
+                }}
               >
                 <RotateCcw className="size-3.5 mr-1" />
                 Reroll
@@ -1277,86 +1291,107 @@ function RegionDetailPage() {
             );
           })()}
 
-          {/* Chip groups */}
-          {(region.dangers ?? []).length > 0 && (
-            <div className="mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Dangers
-              </span>
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {region.dangers.map((d, i) => (
-                  <Badge key={i} variant="secondary">
-                    {d}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-          {(region.features ?? []).length > 0 && (
-            <div className="mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Features
-              </span>
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {region.features.map((f, i) => (
-                  <Badge key={i} variant="secondary">
-                    {f}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-          {(region.resources ?? []).length > 0 && (
-            <div className="mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Resources
-              </span>
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {region.resources.map((r, i) => (
-                  <Badge key={i} variant="secondary">
-                    {r}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-          {(region.settlements ?? []).length > 0 && (
-            <div className="mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Settlements
-              </span>
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {region.settlements.map((s, i) => (
-                  <Badge key={i} variant="secondary">
-                    {s}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
           {region.description ? (
             <div
-              className="tiptap prose prose-sm dark:prose-invert max-w-none"
+              className="tiptap prose prose-sm dark:prose-invert max-w-none mb-4"
               dangerouslySetInnerHTML={{ __html: region.description }}
             />
           ) : (
-            <p className="text-sm text-muted-foreground">No description.</p>
+            <p className="text-sm text-muted-foreground mb-4">No description.</p>
           )}
 
-          {(region.people ?? []).length > 0 && (
-            <div className="mt-4">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                People
-              </span>
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {region.people.map((p, i) => (
-                  <Badge key={i} variant="secondary">
-                    {p}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+          {/* Collapsible lore chip groups */}
+          {((region.dangers ?? []).length > 0 ||
+            (region.features ?? []).length > 0 ||
+            (region.resources ?? []).length > 0 ||
+            (region.settlements ?? []).length > 0 ||
+            (region.people ?? []).length > 0) && (
+            <Collapsible open={loreOpen} onOpenChange={setLoreOpen} className="mb-4">
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-muted-foreground hover:text-foreground w-full justify-start gap-1"
+                >
+                  <ChevronDown
+                    className={`size-3.5 transition-transform ${loreOpen ? "rotate-180" : ""}`}
+                  />
+                  Lore &amp; details
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-3 pt-2">
+                {(region.dangers ?? []).length > 0 && (
+                  <div>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Dangers
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {region.dangers.map((d, i) => (
+                        <Badge key={i} variant="secondary">
+                          {d}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(region.features ?? []).length > 0 && (
+                  <div>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Features
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {region.features.map((f, i) => (
+                        <Badge key={i} variant="secondary">
+                          {f}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(region.resources ?? []).length > 0 && (
+                  <div>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Resources
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {region.resources.map((r, i) => (
+                        <Badge key={i} variant="secondary">
+                          {r}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(region.settlements ?? []).length > 0 && (
+                  <div>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Settlements
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {region.settlements.map((s, i) => (
+                        <Badge key={i} variant="secondary">
+                          {s}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(region.people ?? []).length > 0 && (
+                  <div>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      People
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {region.people.map((p, i) => (
+                        <Badge key={i} variant="secondary">
+                          {p}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
           )}
 
           {/* Key Locations */}
@@ -1911,6 +1946,19 @@ function RegionDetailPage() {
         confirmLabel="Delete"
         variant="destructive"
         onConfirm={handleDelete}
+      />
+
+      {/* Reroll Problem Confirm Dialog */}
+      <ConfirmDialog
+        open={rerollProblemConfirmOpen}
+        onOpenChange={setRerollProblemConfirmOpen}
+        title="Reroll the region problem?"
+        description="This replaces the current problem with a new one."
+        confirmLabel="Reroll"
+        onConfirm={() => {
+          setRerollProblemConfirmOpen(false);
+          handleRerollProblem();
+        }}
       />
     </div>
   );
