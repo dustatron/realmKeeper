@@ -48,7 +48,7 @@ import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu'
-import { ArrowLeft, RotateCcw, Coins, Check } from 'lucide-react'
+import { ArrowLeft, RotateCcw, Coins, Check, AlertTriangle } from 'lucide-react'
 import { RegionContentsPanel } from '~/components/regions/RegionContentsPanel'
 import { regionDangerTier, summarizeRegionContents } from '~/components/regions/regionContents'
 import { terrainLabel } from '~/components/map/terrainColors'
@@ -908,17 +908,24 @@ function RegionDetailPage() {
             />
           )}
 
-          {/* Problem callout */}
-          <div className="flex items-start justify-between gap-2 rounded-md border border-muted bg-muted/40 px-3 py-2 mb-4">
-            <div className="flex-1 min-w-0">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Problem</span>
-              <p className="text-sm mt-0.5">{region.problem || 'No problem set.'}</p>
-            </div>
-            <Button variant="ghost" size="sm" className="shrink-0 h-7 px-2" onClick={handleRerollProblem}>
-              <RotateCcw className="size-3.5 mr-1" />
-              Reroll
-            </Button>
-          </div>
+          {/* Problem callout — styled like the dashboard's doom card so it pops */}
+          <Card className="border-warning/40 bg-card mb-4">
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between gap-2">
+                <CardTitle className="flex items-center gap-2 text-warning text-base">
+                  <AlertTriangle className="size-5" />
+                  Problem
+                </CardTitle>
+                <Button variant="ghost" size="sm" className="shrink-0 h-7 px-2" onClick={handleRerollProblem}>
+                  <RotateCcw className="size-3.5 mr-1" />
+                  Reroll
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm">{region.problem || 'No problem set.'}</p>
+            </CardContent>
+          </Card>
 
           {/* Danger tier + Terrain */}
           {(() => {
