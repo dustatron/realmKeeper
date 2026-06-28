@@ -48,6 +48,14 @@ export function pickSpellScroll(systemId: string, rng: SeededRandom): { id: stri
   return { id: picked.id, name: `Scroll of ${picked.name}`, description: picked.description }
 }
 
+/** Pick a random equipment item from the system compendium */
+export function pickEquipment(systemId: string, rng: SeededRandom): { id: string; name: string; description: string } | null {
+  const items = getEquipmentBySystemId(systemId)
+  if (items.length === 0) return null
+  const picked = rng.pick(items)
+  return { id: picked.id, name: picked.name, description: picked.description }
+}
+
 /** Pick a random magic item from the system compendium */
 export function pickMagicItem(systemId: string, rng: SeededRandom): { id: string | null; name: string; description: string } | null {
   const items = getMagicItemsBySystemId(systemId)

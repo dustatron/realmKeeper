@@ -9,7 +9,7 @@ import { LOOT_DENSITY, type LootDensity } from './lootDensity'
 import type { NPC } from '@domain/entities/NPC'
 import type { Region } from '@domain/entities/Region'
 import type { Faction } from '@domain/entities/Faction'
-import { seedRegionLoot, eligibleTreasurePois, npcsByRegion, seedFactionGreatItems, seedRegionMonsters } from './seedTreasureHelpers'
+import { seedRegionLoot, eligibleTreasurePois, npcsByRegion, seedFactionGreatItems, seedRegionMonsters, seedRegionGear } from './seedTreasureHelpers'
 import { tierForTerrain } from './regionFlavor'
 
 export interface RealmContentSprinkleOptions {
@@ -66,7 +66,7 @@ export function sprinkleRealmContent(input: SprinkleRealmContentInput): POI[] {
   }
 
   // Per-region treasure, magic, and monster seeding — requires explicit regions
-  if ((treasureMult > 0 || magicMult > 0 || monsterMult > 0) && input.regions?.length) {
+  if (input.regions?.length) {
     // Treasure/magic: eligible POIs only
     const elig = eligibleTreasurePois(pois)
     const byRegion = new Map<string, POI[]>()
@@ -117,6 +117,9 @@ export function sprinkleRealmContent(input: SprinkleRealmContentInput): POI[] {
           )
         }
       }
+
+      // Gear pass — runs unconditionally (no density knob), own child RNG
+      seedRegionGear(holders, regionNpcs, systemId, rng.child(`gear-region-${region.id}`))
     }
   }
 
