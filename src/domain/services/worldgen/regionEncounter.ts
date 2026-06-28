@@ -47,11 +47,13 @@ export function buildRegionEncounterContent(input: {
     pois.flatMap((p) => p.monsterRefs).map((r) => getCompendiumById(r.id)?.name ?? ''),
   )
   const creature = [...monsterNames]
-  for (let i = 0; creature.length < 6 && i < 12; i++) {
+  let attempts = 0
+  while (creature.length < 6 && attempts++ < 30) {
     const m = pickTierMonster(systemId, tier, rng)
     if (m && !creature.includes(m.name)) creature.push(m.name)
   }
-  if (creature.length === 0) creature.push('Wandering beasts')
+  // Guarantee >=6 even when the tier band / compendium is tiny:
+  while (creature.length < 6) creature.push(`Wandering beast ${creature.length + 1}`)
 
   // discovery: the region's real notable sites
   const sites = dedup(

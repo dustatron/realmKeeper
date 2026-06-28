@@ -21,6 +21,11 @@ describe('buildRegionEncounterContent', () => {
     // every category non-empty
     for (const k of ['creature','signOmen','loss','npc','discovery','treasure'] as const) expect(c[k].length).toBeGreaterThan(0)
   })
+  it('guarantees creature.length >= 6 with no region monsters (empty pois)', () => {
+    const c = buildRegionEncounterContent({ region: { terrain: 'swamp' }, pois: [], systemId: 'system-cairn-2e', rng: new SeededRandom('no-monsters') })
+    expect(c.creature.length).toBeGreaterThanOrEqual(6)
+    for (const k of ['creature','signOmen','loss','npc','discovery','treasure'] as const) expect(c[k].length).toBeGreaterThan(0)
+  })
   it('is deterministic', () => {
     const a = buildRegionEncounterContent({ region: { terrain: 'forest' }, pois: [], systemId: 'system-shadowdark', rng: new SeededRandom('z') })
     const b = buildRegionEncounterContent({ region: { terrain: 'forest' }, pois: [], systemId: 'system-shadowdark', rng: new SeededRandom('z') })
