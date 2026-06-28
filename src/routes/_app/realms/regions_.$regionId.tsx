@@ -177,14 +177,31 @@ function RegionDetailPage() {
       const basedHere = await db.factions.where('worldId').equals(region?.worldId ?? '').toArray()
       const regionFactions = basedHere.filter(f => f.regionId === regionId)
 
-      if (poiIds.length === 0) return regionFactions
-      const presences = await db.factionPresences.where('poiId').anyOf(poiIds).toArray()
-      const presenceFactionIds = new Set(presences.map(p => p.factionId))
-      const regionFactionIds = new Set(regionFactions.map(f => f.id))
-      const presenceOnlyIds = [...presenceFactionIds].filter(id => !regionFactionIds.has(id))
-      if (presenceOnlyIds.length === 0) return regionFactions
-      const presenceFactions = await db.factions.where('id').anyOf(presenceOnlyIds).toArray()
-      return [...regionFactions, ...presenceFactions]
+      // Belt-and-suspenders: also include factions whose HQ POI sits in this
+      // region. Fixes existing realms where FactionPresence was never seeded.
+      const poiIdSet = new Set(poiIds)
+      const hqFactions = basedHere.filter(
+        f => f.headquartersPoiId != null && poiIdSet.has(f.headquartersPoiId),
+      )
+
+      // Merge regionFactions + hqFactions, then add presence-based factions.
+      // Use a plain object for dedup — lucide's Map import shadows the JS Map.
+      const merged: Record<string, typeof regionFactions[number]> = {}
+      for (const f of regionFactions) merged[f.id] = f
+      for (const f of hqFactions) merged[f.id] = f
+
+      if (poiIds.length > 0) {
+        const presences = await db.factionPresences.where('poiId').anyOf(poiIds).toArray()
+        const presenceOnlyIds = presences
+          .map(p => p.factionId)
+          .filter(id => !(id in merged))
+        if (presenceOnlyIds.length > 0) {
+          const presenceFactions = await db.factions.where('id').anyOf(presenceOnlyIds).toArray()
+          for (const f of presenceFactions) merged[f.id] = f
+        }
+      }
+
+      return Object.values(merged)
     },
     [regionId, region?.worldId, poiIds.join(',')]
   ) ?? []

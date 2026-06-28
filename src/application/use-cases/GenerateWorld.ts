@@ -85,7 +85,7 @@ export async function executeGenerateWorld(
   // async context) and the hex map all commit together or roll back together —
   // no orphaned realm if a later write fails. Tables listed = every table the
   // enclosed writes touch.
-  await db.transaction('rw', [db.worlds, db.factions, db.factionRelationships, db.npcs, db.connections, db.hooks, db.notices, db.rumors, db.worldEvents, db.poiEvents, db.realmNotes, db.gameMaps, db.regions, db.pois, db.paths], async () => {
+  await db.transaction('rw', [db.worlds, db.factions, db.factionPresences, db.factionRelationships, db.npcs, db.connections, db.hooks, db.notices, db.rumors, db.worldEvents, db.poiEvents, db.realmNotes, db.gameMaps, db.regions, db.pois, db.paths], async () => {
     const realm = await executeCreateRealm(
       {
         name: input.name,
@@ -99,7 +99,7 @@ export async function executeGenerateWorld(
       },
       deps
     )
-    const { gameMap, regions, pois, paths, factions, factionRelationships, npcs, connections, hooks, notices, rumors, worldEvents, poiEvents } = generateWorld(realm.id, input.seed, {
+    const { gameMap, regions, pois, paths, factions, factionPresences, factionRelationships, npcs, connections, hooks, notices, rumors, worldEvents, poiEvents } = generateWorld(realm.id, input.seed, {
       cols: preset.cols,
       rows: preset.rows,
       systemId: input.systemId,
@@ -126,6 +126,7 @@ export async function executeGenerateWorld(
     await db.pois.bulkPut(pois)
     await db.paths.bulkPut(paths)
     await db.factions.bulkPut(factions)
+    await db.factionPresences.bulkPut(factionPresences)
     await db.factionRelationships.bulkPut(factionRelationships)
     await db.npcs.bulkPut(npcs)
     await db.connections.bulkPut(connections)

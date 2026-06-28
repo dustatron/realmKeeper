@@ -35,6 +35,7 @@ import type { Rumor } from '@domain/entities/Rumor'
 import type { WorldEvent } from '@domain/entities/WorldEvent'
 import type { POIEvent } from '@domain/entities/POIEvent'
 import type { SystemConfig } from '@domain/entities/SystemConfig'
+import type { FactionPresence } from '@domain/entities/FactionPresence'
 import { newId } from '@shared/ulid'
 
 export type PoiDensity = 'sparse' | 'normal' | 'dense'
@@ -68,6 +69,7 @@ export function generateWorld(
   pois: POI[]
   paths: Path[]
   factions: Faction[]
+  factionPresences: FactionPresence[]
   factionRelationships: FactionRelationship[]
   npcs: NPC[]
   connections: Connection[]
@@ -452,6 +454,21 @@ export function generateWorld(
     ),
   )
 
+  // Seed a FactionPresence row for each faction's HQ so the region Factions tab
+  // can find it via presence lookup (not only via f.regionId, which misses factions
+  // whose HQ is in a different region from their assigned regionId).
+  const factionPresences: FactionPresence[] = factions
+    .filter((f) => f.headquartersPoiId)
+    .map((f) => ({
+      id: newId(),
+      factionId: f.id,
+      poiId: f.headquartersPoiId as string,
+      type: 'controls' as const,
+      notes: '',
+      createdAt: now,
+      updatedAt: now,
+    }))
+
   // Step 8b: faction leaders + agents. Only runs when the realm's system config
   // is supplied (the SystemBlock is rolled for that system). Each faction gets
   // one leader and 1-3 agents, all headquartered with the faction; the faction's
@@ -580,6 +597,7 @@ export function generateWorld(
     pois,
     paths,
     factions,
+    factionPresences,
     factionRelationships,
     npcs,
     connections,
