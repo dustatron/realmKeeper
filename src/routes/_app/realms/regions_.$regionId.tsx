@@ -208,6 +208,21 @@ function RegionDetailPage() {
     [regionId, region?.worldId, poiIds.join(',')]
   ) ?? []
 
+  // Party faction + stance toward party for each region faction
+  const partyFaction = useLiveQuery(async () =>
+    region?.worldId
+      ? (await db.factions.where('worldId').equals(region.worldId).toArray()).find(f => f.isParty) ?? null
+      : null,
+    [region?.worldId]
+  )
+  const stanceByFaction = useLiveQuery(async () => {
+    if (!partyFaction || factions.length === 0) return {} as Record<string, number>
+    const rels = await db.factionRelationships.where('factionId').anyOf(factions.map(f => f.id)).toArray()
+    const out: Record<string, number> = {}
+    for (const r of rels) if (r.targetId === partyFaction.id) out[r.factionId] = r.score
+    return out
+  }, [partyFaction?.id, factions.map(f => f.id).join(',')]) ?? {}
+
   // Realm factions not already in this region (for "assign existing" dialog)
   const factionIds = new Set(factions.map(f => f.id))
   const unassignedFactions = useLiveQuery(
@@ -326,6 +341,96 @@ function RegionDetailPage() {
     () => Object.fromEntries(factions.map(f => [f.id, f])),
     [factions]
   )
+  const npcName = useMemo<Record<string, string>>(
+    () => Object.fromEntries(npcs.map(n => [n.id, n.name])),
+    [npcs]
+  )
+
+  const STANCE_META: Array<{ min: number; max: number; label: string; cls: string }> = [
+    { min: 2, max: Infinity, label: 'ally', cls: 'bg-green-600 text-white' },
+    { min: 1, max: 1, label: 'friendly', cls: 'bg-blue-500 text-white' },
+    { min: 0, max: 0, label: 'neutral', cls: 'bg-muted text-muted-foreground border-border' },
+    { min: -1, max: -1, label: 'wary', cls: 'bg-amber-500 text-white' },
+    { min: -Infinity, max: -2, label: 'hostile', cls: 'bg-red-600 text-white' },
+  ]
+
+  const factionColumns = useMemo<DataTableColumn<Faction>[]>(() => [
+    {
+      key: 'name',
+      header: 'Name',
+      sortable: true,
+      sortValue: f => f.name,
+      render: f => (
+        <span className="flex items-center gap-1.5">
+          <Link to="/realms/factions/$factionId" params={{ factionId: f.id }} className="text-primary hover:underline font-medium">
+            {f.name}
+          </Link>
+          {f.isParty && <Badge variant="outline" className="text-xs">Party</Badge>}
+        </span>
+      ),
+    },
+    {
+      key: 'stance',
+      header: 'Stance',
+      sortable: true,
+      sortValue: f => f.isParty ? Infinity : (stanceByFaction[f.id] ?? 0),
+      render: f => {
+        if (f.isParty) return <span className="text-muted-foreground text-sm">—</span>
+        const score = stanceByFaction[f.id] ?? 0
+        const meta = STANCE_META.find(m => score >= m.min && score <= m.max) ?? STANCE_META[2]
+        return <Badge className={`text-xs capitalize ${meta.cls}`}>{meta.label}</Badge>
+      },
+    },
+    {
+      key: 'hq',
+      header: 'HQ',
+      sortable: true,
+      sortValue: f => f.headquartersPoiId ? (poiName[f.headquartersPoiId] ?? '') : '',
+      render: f => f.headquartersPoiId && poiName[f.headquartersPoiId]
+        ? <Link to="/realms/pois/$poiId" params={{ poiId: f.headquartersPoiId }} className="text-primary hover:underline text-sm">{poiName[f.headquartersPoiId]}</Link>
+        : <span className="text-muted-foreground text-sm">—</span>,
+    },
+    {
+      key: 'leader',
+      header: 'Leader',
+      sortable: true,
+      sortValue: f => f.leaderNpcId ? (npcName[f.leaderNpcId] ?? '') : '',
+      render: f => f.leaderNpcId && npcName[f.leaderNpcId]
+        ? <Link to="/realms/npcs/$npcId" params={{ npcId: f.leaderNpcId }} className="text-primary hover:underline text-sm">{npcName[f.leaderNpcId]}</Link>
+        : <span className="text-muted-foreground text-sm">—</span>,
+    },
+    {
+      key: 'agenda',
+      header: 'Agenda',
+      render: f => {
+        const goals = f.agendaGoals ?? []
+        const goal = goals.find(g => g.timeframe === 'immediate' && !g.completed) ?? goals.find(g => !g.completed)
+        if (!goal) return <span className="text-muted-foreground text-sm">—</span>
+        const progress = goal.segments != null
+          ? ` (${goal.progress ?? 0}/${goal.segments})`
+          : ''
+        return <span className="text-sm text-muted-foreground max-w-[18rem] truncate block">{goal.description}{progress}</span>
+      },
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortable: true,
+      sortValue: f => f.status,
+      render: f => (
+        <Badge
+          className={`text-xs ${
+            f.status === 'active' ? 'bg-green-600' :
+            f.status === 'dormant' ? 'bg-yellow-600' :
+            f.status === 'disbanded' ? 'bg-orange-600' :
+            f.status === 'destroyed' ? 'bg-red-600' : 'bg-gray-600'
+          }`}
+        >
+          {f.status.charAt(0).toUpperCase() + f.status.slice(1)}
+        </Badge>
+      ),
+    },
+  ], [poiName, npcName, stanceByFaction])
 
   const DISPOSITION_COLORS: Record<string, string> = {
     hostile: 'bg-red-500/15 text-red-500 border-red-500/30',
@@ -922,38 +1027,12 @@ function RegionDetailPage() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          {factions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No factions in this region.</p>
-          ) : (
-            <div className="space-y-1">
-              {factions.map((faction) => (
-                <div key={faction.id} className="flex items-center justify-between py-1">
-                  <Link
-                    to="/realms/factions/$factionId"
-                    params={{ factionId: faction.id }}
-                    className="text-sm text-primary hover:underline font-medium"
-                  >
-                    {faction.name}
-                  </Link>
-                  <div className="flex items-center gap-1">
-                    {faction.type && (
-                      <Badge variant="outline" className="text-xs">{faction.type}</Badge>
-                    )}
-                    <Badge
-                      className={`text-xs ${
-                        faction.status === 'active' ? 'bg-green-600' :
-                        faction.status === 'dormant' ? 'bg-yellow-600' :
-                        faction.status === 'disbanded' ? 'bg-orange-600' :
-                        faction.status === 'destroyed' ? 'bg-red-600' : 'bg-gray-600'
-                      }`}
-                    >
-                      {faction.status.charAt(0).toUpperCase() + faction.status.slice(1)}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <DataTable
+            rows={factions}
+            rowKey={f => f.id}
+            columns={factionColumns}
+            empty={<p className="text-sm text-muted-foreground">No factions in this region.</p>}
+          />
         </TabsContent>
 
         {/* Encounters tab */}
