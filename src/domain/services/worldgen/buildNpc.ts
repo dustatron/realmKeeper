@@ -158,10 +158,9 @@ export function buildNpc(
     ? vr.pick(pool(input.tables, NPC_VILLAIN_TRAIT_TABLE_ID, NPC_VILLAIN_TRAITS))
     : null
 
-  // Description = who they are: role + temperament (virtue/vice). The personality
-  // tell is intentionally omitted — it overlapped with virtue/vice and read long.
-  const description =
-    `${article} ${race} ${roleLabel} — ${flavor.traits[0].toLowerCase()} but ${flavor.traits[1].toLowerCase()}.`
+  // Description = who they are (identity). Temperament lives in the Traits row
+  // (virtue/vice) and isn't repeated here.
+  const description = `${article} ${race} ${roleLabel}.`
 
   // Notable = quick GM behavioral beats kept out of the looks/description: a
   // flaw, a mannerism, a carried item, a secret. One per line so the UI can
