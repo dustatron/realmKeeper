@@ -10,6 +10,7 @@ import { shopTableSets, shopTableDefs } from './worldgen/shops.tables'
 import { plotHookTableSets, plotHookTableDefs } from './worldgen/plotHooks'
 import { npcTableSets, npcTableDefs } from './worldgen/npc.tables'
 import { settlementTableSets, settlementTableDefs } from './worldgen/settlement.tables'
+import { travelTableSets, travelTableDefs } from './worldgen/travel.tables'
 
 // ---------------------------------------------------------------------------
 // Aggregate all system tables (add more systems here later)
@@ -23,8 +24,8 @@ import { settlementTableSets, settlementTableDefs } from './worldgen/settlement.
 // Tables UI auto-shows anything registered here via getAllSystemSets().
 // ---------------------------------------------------------------------------
 
-const allSystemSets: TableSet[] = [...cairnTableSets, ...shadowdarkTableSets, ...treasureTableSets, ...settlementProblemTableSets, ...ruinLandmarkTableSets, ...nameTableSets, ...worldgenExtraTableSets, ...shopTableSets, ...plotHookTableSets, ...npcTableSets, ...settlementTableSets]
-const allSystemDefs: TableDef[] = [...cairnTableDefs, ...shadowdarkTableDefs, ...treasureTableDefs, ...settlementProblemTableDefs, ...ruinLandmarkTableDefs, ...nameTableDefs, ...worldgenExtraTableDefs, ...shopTableDefs, ...plotHookTableDefs, ...npcTableDefs, ...settlementTableDefs]
+const allSystemSets: TableSet[] = [...cairnTableSets, ...shadowdarkTableSets, ...treasureTableSets, ...settlementProblemTableSets, ...ruinLandmarkTableSets, ...nameTableSets, ...worldgenExtraTableSets, ...shopTableSets, ...plotHookTableSets, ...npcTableSets, ...settlementTableSets, ...travelTableSets]
+const allSystemDefs: TableDef[] = [...cairnTableDefs, ...shadowdarkTableDefs, ...treasureTableDefs, ...settlementProblemTableDefs, ...ruinLandmarkTableDefs, ...nameTableDefs, ...worldgenExtraTableDefs, ...shopTableDefs, ...plotHookTableDefs, ...npcTableDefs, ...settlementTableDefs, ...travelTableDefs]
 
 // Pre-built lookup maps for O(1) access
 const defById = new Map<string, TableDef>(allSystemDefs.map((d) => [d.id, d]))
