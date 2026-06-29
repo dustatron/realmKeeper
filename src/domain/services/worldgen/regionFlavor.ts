@@ -2,6 +2,16 @@ import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { pickBiomeFeature, biomeLabel, type Biome } from '@domain/data/worldgen/biomes'
 import { pickCairn, sampleCairn } from './cairnPick'
 import type { ResolvedTables } from './TableProvider'
+import {
+  DEITY_TABLE_ID, DEITIES,
+  CULTURE_QUIRK_TABLE_ID, CULTURE_QUIRKS,
+  MAGICAL_LANDSCAPE_TABLE_ID, MAGICAL_LANDSCAPES,
+} from '@domain/data/worldgen/world-flavor.tables'
+import { DISEASE_TABLE_ID, DISEASES } from '@domain/data/worldgen/conditions.tables'
+
+function lcFirst(s: string): string {
+  return s ? s.charAt(0).toLowerCase() + s.slice(1) : s
+}
 
 export const REGION_PROBLEMS_TABLE_ID = 'table-rk-region-problem'
 export const REGION_RUMORS_TABLE_ID = 'table-rk-region-rumor'
@@ -167,10 +177,26 @@ export function buildRegionFlavor(biome: Biome, rng: SeededRandom, tables?: Reso
     rumorPool && rumorPool.length > 0 ? rumorPool : REGION_RUMORS,
   )
 
+  // Additive worldbuilding flavor (religion, custom, the occasional wonder or
+  // sickness). All from CHILD rngs so downstream seeded output stays stable.
+  const poolOf = (id: string, fb: readonly string[]) => {
+    const t = tables?.texts(id)
+    return t && t.length > 0 ? t : fb
+  }
+  const deity = rng.child('region-deity').pick(poolOf(DEITY_TABLE_ID, DEITIES))
+  const culture = rng.child('region-culture').pick(poolOf(CULTURE_QUIRK_TABLE_ID, CULTURE_QUIRKS))
+  const lr = rng.child('region-landscape')
+  const landscape = lr.chance(0.4) ? lr.pick(poolOf(MAGICAL_LANDSCAPE_TABLE_ID, MAGICAL_LANDSCAPES)) : null
+  const dr = rng.child('region-disease')
+  const disease = dr.chance(0.2) ? dr.pick(poolOf(DISEASE_TABLE_ID, DISEASES)) : null
+
   const description =
     `A region of ${biomeLabel(biome)}, marked by ${landmark.toLowerCase()}. ` +
     `Home to ${people[0].toLowerCase()}, prized for its ${resourcePhrase.toLowerCase()}. ` +
-    `Travelers speak of ${dangers[0]}. Folk say ${rumor}.`
+    `Travelers speak of ${dangers[0]}. Folk say ${rumor}. ` +
+    `The faithful here honor ${deity} ${culture}` +
+    `${landscape ? ` ${landscape}` : ''}` +
+    `${disease ? ` A sickness lingers in these parts — ${lcFirst(disease)}` : ''}`
 
   return { description, features, dangers, resources, people, problem }
 }

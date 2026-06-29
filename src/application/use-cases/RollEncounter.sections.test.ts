@@ -27,3 +27,28 @@ describe('getActiveSections category metadata', () => {
     expect(getActiveSections(table).some((s) => s.category === 'treasure')).toBe(false)
   })
 })
+
+describe('getActiveSections terrain/locale section', () => {
+  it('adds no terrain section without context', () => {
+    expect(getActiveSections(table).some((s) => s.category === 'terrain-flavor')).toBe(false)
+  })
+
+  it('appends a biome section for a known terrain, last in order', () => {
+    const sections = getActiveSections(table, { terrain: 'swamp' })
+    const terrain = sections.find((s) => s.category === 'terrain-flavor')
+    expect(terrain?.label).toBe('Swamp')
+    expect(terrain?.isCustom).toBe(true)
+    expect(terrain!.entries.length).toBeGreaterThan(0)
+    expect(sections[sections.length - 1]).toBe(terrain)
+  })
+
+  it('prefers the town-street section for settlement POIs over terrain', () => {
+    const terrain = getActiveSections(table, { terrain: 'swamp', poiType: 'settlement' })
+      .find((s) => s.category === 'terrain-flavor')
+    expect(terrain?.label).toBe('Town Street')
+  })
+
+  it('adds nothing for an unmapped terrain', () => {
+    expect(getActiveSections(table, { terrain: 'other' }).some((s) => s.category === 'terrain-flavor')).toBe(false)
+  })
+})

@@ -14,6 +14,11 @@ import {
 } from '@domain/data/worldgen/plotHooks'
 import { SETTLEMENT_PROBLEM_TABLE_ID, settlementProblemTexts } from '@domain/data/worldgen/settlementProblems'
 import { THIEVES_GUILD_QUEST_TABLE_ID, THIEVES_GUILD_QUESTS } from '@domain/data/worldgen/guildQuests.tables'
+import {
+  HOOKS_MYSTERY_TABLE_ID, HOOKS_MYSTERY,
+  HOOKS_SIDE_QUEST_TABLE_ID, HOOKS_SIDE_QUEST,
+  HOOKS_CITY_TABLE_ID, HOOKS_CITY,
+} from '@domain/data/worldgen/hooks-extra.tables'
 
 function pool(tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): readonly string[] {
   const t = tables?.texts(id)
@@ -240,6 +245,22 @@ export function buildHooks(
       'Paid in full, in secret — and a debt owed by the faction.',
     )
   }
+
+  // --- Extra public hooks: a side-quest, an unsolved mystery, and (sometimes) an
+  // urban job posted to each settlement's board. Drawn via CHILD rngs keyed per
+  // settlement so they're additive — existing hooks/notices stay byte-identical. ---
+  const sideQuestPool = pool(tables, HOOKS_SIDE_QUEST_TABLE_ID, HOOKS_SIDE_QUEST)
+  const mysteryPool = pool(tables, HOOKS_MYSTERY_TABLE_ID, HOOKS_MYSTERY)
+  const cityPool = pool(tables, HOOKS_CITY_TABLE_ID, HOOKS_CITY)
+  pois.filter((p) => p.type === 'settlement').forEach((settlement, i) => {
+    const hr = rng.child(`extra-hooks-${i}`)
+    const posterId = proprietorBySettlement.get(settlement.id) ?? null
+    const posterName = posterId ? nameOf.get(posterId) : null
+    const title = posterName ? `Posted by ${posterName}` : 'Posted on the board'
+    if (hr.chance(0.6)) addNotice(null, settlement.id, settlement.regionId, 'job', title, hr.pick(sideQuestPool), posterId, reward)
+    if (hr.chance(0.35)) addNotice(null, settlement.id, settlement.regionId, 'job', 'An unsolved matter', hr.pick(mysteryPool), posterId, reward)
+    if (hr.chance(0.25)) addNotice(null, settlement.id, settlement.regionId, 'job', title, hr.pick(cityPool), posterId, reward)
+  })
 
   return { hooks, notices, rumors }
 }

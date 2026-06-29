@@ -4,6 +4,40 @@ import { biomeLabel } from '@domain/data/worldgen/biomes'
 import { pickSettlementProblem } from '@domain/data/worldgen/settlementProblems'
 import { pickCairn } from './cairnPick'
 import type { ResolvedTables } from './TableProvider'
+import {
+  DUNGEON_GRAFFITI_TABLE_ID, DUNGEON_GRAFFITI,
+  STATUE_TABLE_ID, STATUES,
+  EPITAPH_TABLE_ID, EPITAPHS,
+} from '@domain/data/worldgen/dressing-extra.tables'
+import {
+  MAGICAL_FOUNTAIN_TABLE_ID, MAGICAL_FOUNTAINS,
+  DEITY_TABLE_ID, DEITIES,
+} from '@domain/data/worldgen/world-flavor.tables'
+
+function poolOf(tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): readonly string[] {
+  const texts = tables?.texts(id)
+  return texts && texts.length > 0 ? texts : fallback
+}
+
+// A kind-appropriate dressing detail (graffiti, statue, epitaph, fountain, or a
+// patron deity). Drawn from a CHILD rng so it never advances the main seeded
+// stream — the type/feature/trouble/mood picks stay byte-identical.
+function poiDressing(kind: PoiKind, rng: SeededRandom, tables?: ResolvedTables): string {
+  const dr = rng.child('poi-dressing')
+  const pick = (id: string, fb: readonly string[]) => dr.pick(poolOf(tables, id, fb))
+  switch (kind) {
+    case 'dungeon':
+      return ` ${pick(DUNGEON_GRAFFITI_TABLE_ID, DUNGEON_GRAFFITI)} ${pick(STATUE_TABLE_ID, STATUES)}`
+    case 'ruin':
+      return ` A worn inscription reads: ${pick(EPITAPH_TABLE_ID, EPITAPHS)} ${pick(STATUE_TABLE_ID, STATUES)}`
+    case 'landmark':
+      return ` ${pick(STATUE_TABLE_ID, STATUES)}${dr.chance(0.5) ? ` ${pick(MAGICAL_FOUNTAIN_TABLE_ID, MAGICAL_FOUNTAINS)}` : ''}`
+    case 'settlement':
+      return ` The townsfolk honor ${pick(DEITY_TABLE_ID, DEITIES)}`
+    default:
+      return ''
+  }
+}
 
 // Each POI kind maps to a Cairn type + feature table pair. Cairn has no "ruin"
 // table, so ruins borrow the Lair tables (crumbling forts, ruined towns, …) and
@@ -71,7 +105,7 @@ export function buildPoiFlavor(
   return {
     subtypeLabel: type,
     tags: [feature],
-    description: `${cap(art)} ${lowerType} in the ${where}.`,
+    description: `${cap(art)} ${lowerType} in the ${where}.${poiDressing(kind, rng, tables)}`,
     readAloud: `${name} is ${art} ${lowerType} set in the ${where}.`,
     trouble: isSettlement ? pickSettlementProblem(rng, null, tables) : '',
     mood: isSettlement ? rng.pick(SETTLEMENT_MOODS) : '',

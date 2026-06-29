@@ -50,6 +50,8 @@ import type { EncounterRollResult } from "@domain/value-objects/EncounterRollRes
 
 interface GenericTemplateProps {
   poi: POI;
+  /** Region terrain — adds matching biome encounters to the cascade. */
+  terrain?: string | null;
   children: POI[];
   npcs: NPC[];
   /** NPCs that live in this POI's child locations; rolled up into the denizen list. */
@@ -93,6 +95,7 @@ interface GenericTemplateProps {
 
 export function GenericTemplate({
   poi,
+  terrain,
   children: childPois,
   npcs,
   childNPCs,
@@ -402,6 +405,8 @@ export function GenericTemplate({
             onSaveNpc={onSaveEncounterNpc}
             onSaveTable={onSaveEncounterTable}
             onRoll={onRollEncounter}
+            poiType={poi.type}
+            terrain={terrain}
           />
           {(rumors.length > 0 || poi.type === "ruin") && (
             <RumorList

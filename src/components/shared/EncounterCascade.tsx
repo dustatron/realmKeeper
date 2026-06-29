@@ -30,6 +30,10 @@ interface EncounterCascadeProps {
   onSaveTable?: (entries: SavePayload) => void;
   onRoll: () => Promise<RollEncounterResult>;
   onRegenerateFromRegion?: () => Promise<void>;
+  /** Region terrain — adds a matching biome section to the master roll. */
+  terrain?: string | null;
+  /** POI type — 'settlement' adds the town-street section. */
+  poiType?: string | null;
 }
 
 /** Build a one-line summary of the persisted result for the banner. */
@@ -45,11 +49,13 @@ export function EncounterCascade({
   onSaveTable,
   onRoll,
   onRegenerateFromRegion,
+  terrain,
+  poiType,
 }: EncounterCascadeProps) {
   const [mode, setMode] = useState<"roll" | "edit">("roll");
   const [pending, setPending] = useState(false);
 
-  const sections = getActiveSections(table ?? null);
+  const sections = getActiveSections(table ?? null, { terrain, poiType });
   const lastResult = table?.lastResult;
 
   const runAction = async (action: CascadeAction) => {

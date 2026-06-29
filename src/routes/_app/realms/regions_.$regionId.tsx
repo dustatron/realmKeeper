@@ -1010,6 +1010,7 @@ function RegionDetailPage() {
       worldId: region.worldId,
       systemConfig,
       regionPois: pois.map((p) => ({ id: p.id, name: p.name })),
+      terrain: region.terrain,
     };
     const deps: CascadeUseCaseDeps = {
       encounterTableRepo: container.encounterTableRepo,
@@ -1584,6 +1585,7 @@ function RegionDetailPage() {
             onSaveTable={handleSaveEncounterTable}
             onRoll={handleRollEncounter}
             onRegenerateFromRegion={handleRegenerateEncounter}
+            terrain={region.terrain}
           />
         </TabsContent>
 

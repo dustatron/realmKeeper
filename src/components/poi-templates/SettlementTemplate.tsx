@@ -334,6 +334,8 @@ function LocationDetailPanel({
 
 interface SettlementTemplateProps {
   poi: POI;
+  /** Region terrain — present for prop parity; settlement POIs surface town-street encounters. */
+  terrain?: string | null;
   children: POI[];
   npcs: NPC[];
   childNPCs: NPC[];
@@ -668,6 +670,7 @@ function OverviewRoutes({
 
 export function SettlementTemplate({
   poi,
+  terrain,
   children: childPois,
   npcs,
   childNPCs,
@@ -1387,6 +1390,8 @@ export function SettlementTemplate({
             onSaveNpc={onSaveEncounterNpc}
             onSaveTable={onSaveEncounterTable}
             onRoll={onRollEncounter}
+            poiType={poi.type}
+            terrain={terrain}
           />
         </TabsContent>
 

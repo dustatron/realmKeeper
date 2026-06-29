@@ -25,6 +25,10 @@ export interface CascadeContext {
   worldId: string
   systemConfig: SystemConfig
   regionPois?: { id: string; name: string }[]
+  /** Region terrain — drives the cascade's locale (biome) section. */
+  terrain?: string | null
+  /** POI type — 'settlement' surfaces the town-street locale section. */
+  poiType?: string | null
 }
 
 export interface CascadeUseCaseDeps {
@@ -68,7 +72,7 @@ export function buildCascadeEffects(
 }
 
 function sectionsOf(ctx: CascadeContext): CascadeSection[] {
-  return getActiveSections(ctx.table)
+  return getActiveSections(ctx.table, { terrain: ctx.terrain, poiType: ctx.poiType })
 }
 
 export async function executeEncounterCascade(

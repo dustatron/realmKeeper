@@ -16,6 +16,13 @@ import {
   NPC_FAVOR_TABLE_ID, NPC_PURSUIT_TABLE_ID, NPC_FLAW_TABLE_ID, NPC_FLAWS,
   NPC_PROFESSION_TABLE_ID, NPC_ARTISAN_TABLE_ID, PROFESSIONS, ARTISAN_TRADES,
 } from '@domain/data/worldgen/npc.tables'
+import {
+  NPC_APPEARANCE_TABLE_ID, NPC_APPEARANCES,
+  NPC_MANNERISM_TABLE_ID, NPC_MANNERISMS,
+  NPC_POCKET_ITEM_TABLE_ID, NPC_POCKET_ITEMS,
+  NPC_SECRET_TABLE_ID, NPC_SECRETS,
+  NPC_VILLAIN_TRAIT_TABLE_ID, NPC_VILLAIN_TRAITS,
+} from '@domain/data/worldgen/npc-extra.tables'
 
 function pool(tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): readonly string[] {
   const t = tables?.texts(id)
@@ -123,6 +130,34 @@ export function buildNpc(
     ? rng.pick(flawPool && flawPool.length > 0 ? flawPool : NPC_FLAWS)
     : null
 
+  // --- Extra flavor ---
+  // All drawn via CHILD RNGs so they're deterministic per-NPC but never advance
+  // the main seeded stream (keeps name/traits/stats/want/flaw byte-identical).
+  const lookHook = rng.child('npc-look').pick(pool(input.tables, NPC_APPEARANCE_TABLE_ID, NPC_APPEARANCES))
+  const appearance = `${flavor.appearance} ${lookHook}`
+
+  const mr = rng.child('npc-mannerism')
+  const mannerism = mr.chance(0.6) ? mr.pick(pool(input.tables, NPC_MANNERISM_TABLE_ID, NPC_MANNERISMS)) : null
+  const pr = rng.child('npc-pocket')
+  const pocket = pr.chance(0.5) ? pr.pick(pool(input.tables, NPC_POCKET_ITEM_TABLE_ID, NPC_POCKET_ITEMS)) : null
+  const sr = rng.child('npc-secret')
+  const secret = sr.chance(0.4) ? sr.pick(pool(input.tables, NPC_SECRET_TABLE_ID, NPC_SECRETS)) : null
+  const vr = rng.child('npc-villain')
+  const villain = (role === 'leader' || role === 'agent') && vr.chance(0.5)
+    ? vr.pick(pool(input.tables, NPC_VILLAIN_TRAIT_TABLE_ID, NPC_VILLAIN_TRAITS))
+    : null
+
+  const extra = [
+    mannerism,
+    villain,
+    pocket ? `On their person: ${pocket}` : null,
+    secret ? `Secret: ${secret}` : null,
+  ].filter(Boolean).join(' ')
+
+  const baseDescription =
+    `${article} ${race} ${roleLabel} — ${flavor.traits[0].toLowerCase()} but ${flavor.traits[1].toLowerCase()}. ` +
+    `${flavor.personality}.${flaw ? ` ${flaw}.` : ''}`
+
   return {
     id: newId(),
     worldId: input.worldId,
@@ -133,10 +168,10 @@ export function buildNpc(
     poiId: input.poiId ?? null,
     lifeStatus: 'alive',
     movementStatus: 'present',
-    description: `${article} ${race} ${roleLabel} — ${flavor.traits[0].toLowerCase()} but ${flavor.traits[1].toLowerCase()}. ${flavor.personality}.${flaw ? ` ${flaw}.` : ''}`,
+    description: extra ? `${baseDescription} ${extra}` : baseDescription,
     traits: flavor.traits,
     motivation: flavor.motivation,
-    appearance: flavor.appearance,
+    appearance,
     voice: flavor.voice,
     // Faction NPCs carry their agenda goal; everyone else gets a want from the
     // NPC wants table (a favor to ask the party, or a personal pursuit), so

@@ -145,6 +145,10 @@ export function usePOIActions(poi: POI | null | undefined, region: Region | null
       regionId: poi.regionId,
       worldId: region.worldId,
       systemConfig,
+      // Locale section: settlement POIs → town street; any other POI → its
+      // region's terrain encounters (swamp/forest/…). See getTerrainEncounterSection.
+      terrain: region.terrain,
+      poiType: poi.type,
     }
     const deps: CascadeUseCaseDeps = {
       encounterTableRepo: container.encounterTableRepo,

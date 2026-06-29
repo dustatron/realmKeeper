@@ -32,6 +32,8 @@ import type { EncounterRollResult } from "@domain/value-objects/EncounterRollRes
 
 interface BuildingTemplateProps {
   poi: POI;
+  /** Region terrain — adds matching biome encounters to the cascade. */
+  terrain?: string | null;
   children: POI[];
   npcs: NPC[];
   factionPresences: FactionPresence[];
@@ -60,6 +62,7 @@ interface BuildingTemplateProps {
 
 export function BuildingTemplate({
   poi,
+  terrain,
   children: childPois,
   npcs,
   factionPresences,
@@ -250,6 +253,8 @@ export function BuildingTemplate({
             onSaveNpc={onSaveEncounterNpc}
             onSaveTable={onSaveEncounterTable}
             onRoll={onRollEncounter}
+            poiType={poi.type}
+            terrain={terrain}
           />
         </TabsContent>
 
