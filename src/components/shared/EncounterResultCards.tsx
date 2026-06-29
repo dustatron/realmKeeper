@@ -156,8 +156,32 @@ function NpcResultCard({
         <p className="text-xs text-muted-foreground capitalize">{classLine}</p>
       )}
 
+      {sb && sb.stats.length > 0 && (
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs font-mono text-muted-foreground">
+          {sb.stats.map((s) => (
+            <span key={s.key} className="uppercase">
+              {s.key} {s.value}
+              {s.modifier != null
+                ? ` (${s.modifier >= 0 ? "+" : ""}${s.modifier})`
+                : ""}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {npc.appearance && (
+        <p className="text-xs italic text-muted-foreground">{npc.appearance}</p>
+      )}
+
       {npc.description && (
         <p className="text-xs text-muted-foreground">{npc.description}</p>
+      )}
+
+      {npc.notable && (
+        <p className="text-xs">
+          <span className="font-medium">Notable:</span>{" "}
+          <span className="text-muted-foreground">{npc.notable}</span>
+        </p>
       )}
 
       {npc.want && (

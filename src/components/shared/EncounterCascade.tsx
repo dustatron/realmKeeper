@@ -180,7 +180,17 @@ export function EncounterCascade({
             </div>
           )}
 
-          {/* 3. Master Table card */}
+          {/* 3. Result cards — show the rolled NPC/creature/flavor up top. */}
+          {lastResult && (
+            <EncounterResultCards
+              result={lastResult}
+              onSaveNpc={onSaveNpc}
+              onRerollNpc={() => runAction({ kind: "rerollNpc" })}
+              pending={pending}
+            />
+          )}
+
+          {/* 4. Master Table card */}
           <div className="rounded-md border overflow-hidden">
             <div className="flex items-center justify-between px-2 py-1.5 border-b bg-muted/50">
               <span className="text-xs font-semibold">
@@ -310,15 +320,6 @@ export function EncounterCascade({
             </div>
           )}
 
-          {/* 6. Result cards */}
-          {lastResult && (
-            <EncounterResultCards
-              result={lastResult}
-              onSaveNpc={onSaveNpc}
-              onRerollNpc={() => runAction({ kind: "rerollNpc" })}
-              pending={pending}
-            />
-          )}
         </>
       )}
     </div>

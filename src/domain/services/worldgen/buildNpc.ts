@@ -157,14 +157,15 @@ export function buildNpc(
     ? vr.pick(pool(input.tables, NPC_VILLAIN_TRAIT_TABLE_ID, NPC_VILLAIN_TRAITS))
     : null
 
-  const extra = [
+  // Quick-read GM details kept OUT of the prose description so cards stay legible.
+  const notable = [
     mannerism,
     villain,
     pocket ? `On their person: ${pocket}` : null,
     secret ? `Secret: ${secret}` : null,
   ].filter(Boolean).join(' ')
 
-  const baseDescription =
+  const description =
     `${article} ${race} ${roleLabel} — ${flavor.traits[0].toLowerCase()} but ${flavor.traits[1].toLowerCase()}. ` +
     `${flavor.personality}.${flaw ? ` ${flaw}.` : ''}`
 
@@ -178,7 +179,8 @@ export function buildNpc(
     poiId: input.poiId ?? null,
     lifeStatus: 'alive',
     movementStatus: 'present',
-    description: extra ? `${baseDescription} ${extra}` : baseDescription,
+    description,
+    notable: notable || undefined,
     traits: flavor.traits,
     motivation: flavor.motivation,
     appearance,

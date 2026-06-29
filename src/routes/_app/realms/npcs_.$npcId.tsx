@@ -246,6 +246,17 @@ function NPCDetailPage() {
           </div>
 
           <div className="space-y-1.5">
+            <Label htmlFor="notable">Notable</Label>
+            <Textarea
+              id="notable"
+              value={editingNPC.notable ?? ''}
+              onChange={(e) => updateField('notable', e.target.value)}
+              placeholder="Mannerism, a carried item, a secret…"
+              rows={2}
+            />
+          </div>
+
+          <div className="space-y-1.5">
             <Label>Traits</Label>
             <TagInput
               tags={editingNPC.traits}
@@ -696,6 +707,12 @@ function NPCDetailPage() {
               <div>
                 <span className="text-sm font-medium text-muted-foreground">Description</span>
                 <p className="text-sm mt-1 whitespace-pre-wrap">{npc.description}</p>
+              </div>
+            )}
+            {npc.notable && (
+              <div>
+                <span className="text-sm font-medium text-muted-foreground">Notable</span>
+                <p className="text-sm mt-1 whitespace-pre-wrap">{npc.notable}</p>
               </div>
             )}
             {npc.appearance && (
