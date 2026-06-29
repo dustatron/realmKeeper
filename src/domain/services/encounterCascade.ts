@@ -30,8 +30,12 @@ async function buildResult(
   section: CascadeSection,
   fx: CascadeEffects,
   preservedReaction?: { roll: number; disposition: Disposition },
+  forcedEntryIndex?: number,
 ): Promise<EncounterRollResult> {
-  const { entryText, entryIndex } = pickEntry(section, fx)
+  const { entryText, entryIndex } =
+    forcedEntryIndex != null && section.entries[forcedEntryIndex] != null
+      ? { entryText: section.entries[forcedEntryIndex], entryIndex: forcedEntryIndex }
+      : pickEntry(section, fx)
   const base: EncounterRollResult = {
     masterRoll,
     category: section.category,
@@ -100,4 +104,47 @@ export async function rerollNpc(prev: EncounterRollResult, fx: CascadeEffects): 
   if (prev.category !== 'npc') return prev
   const npc = await fx.generateNpc()
   return { ...prev, npc, entryText: npc.name, npcSavedId: null }
+}
+
+/**
+ * Manually select a master section (clicking its row): land on that category and
+ * roll an entry within it (or generate the NPC, for the npc category).
+ */
+export async function pickMaster(
+  category: string,
+  sections: CascadeSection[],
+  fx: CascadeEffects,
+): Promise<EncounterRollResult> {
+  const idx = sections.findIndex((s) => s.category === category)
+  if (idx < 0) return rollCascade(sections, fx)
+  return buildResult(idx + 1, sections[idx], fx)
+}
+
+/**
+ * Manually select a specific entry within the current section (clicking its row):
+ * keep the master/category and force the chosen entry, preserving any reaction.
+ */
+export async function pickEntryAt(
+  prev: EncounterRollResult,
+  sections: CascadeSection[],
+  fx: CascadeEffects,
+  entryIndex: number,
+): Promise<EncounterRollResult> {
+  const section = sections.find((s) => s.category === prev.category)
+  if (!section) return rollCascade(sections, fx)
+  const preserved =
+    prev.reaction && prev.reactionRoll != null
+      ? { roll: prev.reactionRoll, disposition: prev.reaction }
+      : undefined
+  return buildResult(prev.masterRoll, section, fx, preserved, entryIndex)
+}
+
+/** Manually select a creature reaction (clicking its row). */
+export function pickReaction(
+  prev: EncounterRollResult,
+  disposition: Disposition,
+  roll: number,
+): EncounterRollResult {
+  if (prev.category !== 'creature') return prev
+  return { ...prev, reaction: disposition, reactionRoll: roll }
 }

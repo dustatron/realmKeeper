@@ -13,9 +13,13 @@ import {
   rerollEntry,
   rerollReaction,
   rerollNpc,
+  pickMaster,
+  pickEntryAt,
+  pickReaction,
   type CascadeEffects,
   type CascadeSection,
 } from '@domain/services/encounterCascade'
+import type { Disposition } from '@shared/constants'
 import { matchRegionLocation } from '@domain/services/matchRegionLocation'
 
 export interface CascadeContext {
@@ -43,6 +47,9 @@ export type CascadeAction =
   | { kind: 'rerollEntry' }
   | { kind: 'rerollReaction' }
   | { kind: 'rerollNpc' }
+  | { kind: 'pickMaster'; category: string }
+  | { kind: 'pickEntry'; entryIndex: number }
+  | { kind: 'pickReaction'; disposition: Disposition; roll: number }
 
 /**
  * Pure effect binder: wires the domain cascade engine to real dice, reaction
@@ -102,6 +109,15 @@ export async function executeEncounterCascade(
       break
     case 'rerollNpc':
       result = prev ? await rerollNpc(prev, fx) : await rollCascade(sections, fx)
+      break
+    case 'pickMaster':
+      result = await pickMaster(action.category, sections, fx)
+      break
+    case 'pickEntry':
+      result = prev ? await pickEntryAt(prev, sections, fx, action.entryIndex) : await rollCascade(sections, fx)
+      break
+    case 'pickReaction':
+      result = prev ? pickReaction(prev, action.disposition, action.roll) : await rollCascade(sections, fx)
       break
   }
 

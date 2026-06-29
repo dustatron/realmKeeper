@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   rollCascade, rerollEntry, rerollReaction, rerollNpc,
+  pickMaster, pickEntryAt, pickReaction,
   type CascadeSection, type CascadeEffects,
 } from './encounterCascade'
 import type { NPC } from '@domain/entities/NPC'
@@ -90,5 +91,36 @@ describe('reroll slices', () => {
     const r = await rerollNpc({ ...prev, npcSavedId: 'saved-x' }, fx({ generateNpc: async () => other }))
     expect(r.npc).toBe(other)
     expect(r.npcSavedId).toBeNull()
+  })
+})
+
+describe('manual row selection', () => {
+  it('pickMaster lands on the chosen category and rolls within it', async () => {
+    const r = await pickMaster('discovery', sections, fx({ rollDie: () => 1 }))
+    expect(r.category).toBe('discovery')
+    expect(r.masterRoll).toBe(3) // discovery is the 3rd section
+    expect(r.entryText).toBe('A locked chest')
+  })
+
+  it('pickMaster on the npc category generates the npc', async () => {
+    const r = await pickMaster('npc', sections, fx())
+    expect(r.category).toBe('npc')
+    expect(r.npc).toBe(fakeNpc)
+    expect(r.reaction).toBeUndefined()
+  })
+
+  it('pickEntryAt forces the chosen entry, keeping the category', async () => {
+    const prev = await rollCascade(sections, fx({ rollDie: () => 1 })) // creature → Goblin
+    const r = await pickEntryAt(prev, sections, fx(), 1)
+    expect(r.category).toBe('creature')
+    expect(r.entryIndex).toBe(1)
+    expect(r.entryText).toBe('Wolf')
+  })
+
+  it('pickReaction sets the chosen disposition for a creature', async () => {
+    const prev = await rollCascade(sections, fx({ rollDie: () => 1 }))
+    const r = pickReaction(prev, 'hostile', 2)
+    expect(r.reaction).toBe('hostile')
+    expect(r.reactionRoll).toBe(2)
   })
 })

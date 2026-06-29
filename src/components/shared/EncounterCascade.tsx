@@ -223,7 +223,8 @@ export function EncounterCascade({
                   return (
                     <tr
                       key={section.category}
-                      className={`border-b last:border-0 ${isHit ? "bg-amber-500/10" : ""}`}
+                      onClick={() => runAction({ kind: "pickMaster", category: section.category })}
+                      className={`border-b last:border-0 cursor-pointer hover:bg-muted/50 ${isHit ? "bg-amber-500/10" : ""}`}
                     >
                       <td className="p-2 font-mono text-muted-foreground w-10">
                         {i + 1}
@@ -261,7 +262,8 @@ export function EncounterCascade({
                     return (
                       <tr
                         key={i}
-                        className={`border-b last:border-0 ${isHit ? "bg-amber-500/10" : ""}`}
+                        onClick={() => runAction({ kind: "pickEntry", entryIndex: i })}
+                        className={`border-b last:border-0 cursor-pointer hover:bg-muted/50 ${isHit ? "bg-amber-500/10" : ""}`}
                       >
                         <td className="p-2 font-mono text-muted-foreground w-10">
                           {i + 1}
@@ -311,7 +313,8 @@ export function EncounterCascade({
                     return (
                       <tr
                         key={range.disposition}
-                        className={`border-b last:border-0 ${isHit ? "bg-amber-500/10" : ""}`}
+                        onClick={() => runAction({ kind: "pickReaction", disposition: range.disposition, roll: range.min })}
+                        className={`border-b last:border-0 cursor-pointer hover:bg-muted/50 ${isHit ? "bg-amber-500/10" : ""}`}
                       >
                         <td className="p-2 font-mono text-muted-foreground w-12">
                           {label}
