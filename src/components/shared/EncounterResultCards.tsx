@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Dices, Save, Shield, Heart } from "lucide-react";
+import { Dices, Save } from "lucide-react";
 import type { Disposition } from "@shared/constants";
 import type { EncounterRollResult } from "@domain/value-objects/EncounterRollResult";
 import { MonsterStatBlock } from "~/components/shared/MonsterSearchTab";
 import { getMonsterStats } from "~/components/shared/wanderingMonsterUtils";
+import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
 
 const DISPOSITION_COLORS: Record<Disposition, string> = {
   hostile: "bg-red-500/15 text-red-500 border-red-500/30",
@@ -107,7 +108,6 @@ function NpcResultCard({
   pending: boolean;
 }) {
   const npc = result.npc!;
-  const sb = npc.systemBlock;
   const [saving, setSaving] = useState(false);
   const saved = !!result.npcSavedId;
 
@@ -121,77 +121,11 @@ function NpcResultCard({
     }
   };
 
-  const classLine = [npc.race, sb?.className, sb?.level != null ? `Level ${sb.level}` : null]
-    .filter(Boolean)
-    .join(" · ");
-
+  // One shared NPC card (NPCMiniCard); it isn't saved yet, so don't link it.
   return (
-    <div className="rounded-md border bg-card/50 p-3 space-y-2">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="font-medium text-amber-500 text-sm">{npc.name}</span>
-        <Badge variant="outline" className="text-xs">
-          NPC
-        </Badge>
-        {npc.disposition && <ReactionTag disposition={npc.disposition} />}
-        {/* Stats */}
-        {sb && (
-          <span className="ml-auto flex items-center gap-1.5 shrink-0">
-            {sb.maxHp > 0 && (
-              <Badge variant="outline" className="text-xs font-mono px-2 py-0.5 gap-1">
-                <Heart className="size-3" />
-                {sb.hp}/{sb.maxHp}
-              </Badge>
-            )}
-            {sb.armor > 0 && (
-              <Badge variant="outline" className="text-xs font-mono px-2 py-0.5 gap-1">
-                <Shield className="size-3" />
-                {sb.armor}
-              </Badge>
-            )}
-          </span>
-        )}
-      </div>
-
-      {classLine && (
-        <p className="text-xs text-muted-foreground capitalize">{classLine}</p>
-      )}
-
-      {sb && sb.stats.length > 0 && (
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs font-mono text-muted-foreground">
-          {sb.stats.map((s) => (
-            <span key={s.key} className="uppercase">
-              {s.key} {s.value}
-              {s.modifier != null
-                ? ` (${s.modifier >= 0 ? "+" : ""}${s.modifier})`
-                : ""}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {npc.appearance && (
-        <p className="text-xs italic text-muted-foreground">{npc.appearance}</p>
-      )}
-
-      {npc.description && (
-        <p className="text-xs text-muted-foreground">{npc.description}</p>
-      )}
-
-      {npc.notable && (
-        <p className="text-xs">
-          <span className="font-medium">Notable:</span>{" "}
-          <span className="text-muted-foreground">{npc.notable}</span>
-        </p>
-      )}
-
-      {npc.want && (
-        <p className="text-xs">
-          <span className="font-medium">Wants:</span>{" "}
-          <span className="text-muted-foreground">{npc.want}</span>
-        </p>
-      )}
-
-      <div className="flex items-center gap-2 pt-1">
+    <div className="space-y-2">
+      <NPCMiniCard npc={npc} linkToDetail={false} />
+      <div className="flex items-center gap-2">
         {onSaveNpc && (
           <Button
             size="sm"

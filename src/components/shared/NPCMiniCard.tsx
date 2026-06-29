@@ -14,6 +14,8 @@ interface NPCMiniCardProps {
   npc: NPC;
   poiName?: string;
   onUpdateNPC?: (npc: NPC) => void;
+  /** Link the name/portrait to the NPC detail page. Off for not-yet-saved NPCs. */
+  linkToDetail?: boolean;
 }
 
 const LIFE_CYCLE: LifeStatus[] = ["alive", "dead", "undead", "ghost"];
@@ -31,7 +33,7 @@ function FactionBadge({ factionId }: { factionId: string }) {
   );
 }
 
-export function NPCMiniCard({ npc, poiName, onUpdateNPC }: NPCMiniCardProps) {
+export function NPCMiniCard({ npc, poiName, onUpdateNPC, linkToDetail = true }: NPCMiniCardProps) {
   const raceColor = useRaceColor(npc.race);
   const sb = npc.systemBlock;
   const hasStats =
@@ -78,7 +80,9 @@ export function NPCMiniCard({ npc, poiName, onUpdateNPC }: NPCMiniCardProps) {
   );
 
   const hasRoleplay =
+    !!npc.description ||
     !!npc.appearance ||
+    !!npc.notable ||
     !!npc.voice ||
     !!npc.motivation ||
     npc.traits.length > 0 ||
@@ -90,14 +94,25 @@ export function NPCMiniCard({ npc, poiName, onUpdateNPC }: NPCMiniCardProps) {
       style={raceColor ? { borderLeftColor: raceColor, borderLeftWidth: "3px" } : undefined}
     >
       {npc.imageUrl && (
-        <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="shrink-0">
-          <CloudinaryImage
-            src={npc.imageUrl}
-            alt={npc.name}
-            width={150}
-            className="w-28 h-full object-cover"
-          />
-        </Link>
+        linkToDetail ? (
+          <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="shrink-0">
+            <CloudinaryImage
+              src={npc.imageUrl}
+              alt={npc.name}
+              width={150}
+              className="w-28 h-full object-cover"
+            />
+          </Link>
+        ) : (
+          <div className="shrink-0">
+            <CloudinaryImage
+              src={npc.imageUrl}
+              alt={npc.name}
+              width={150}
+              className="w-28 h-full object-cover"
+            />
+          </div>
+        )
       )}
 
       <div className="flex flex-col min-w-0 flex-1">
@@ -218,8 +233,18 @@ export function NPCMiniCard({ npc, poiName, onUpdateNPC }: NPCMiniCardProps) {
         {/* Roleplay zone — secondary, dimmed */}
         {hasRoleplay && (
           <div className="px-3 pb-2 pt-2 space-y-1 border-t border-border/40 text-xs text-muted-foreground">
+            {npc.description && (
+              <p className="leading-snug">{npc.description}</p>
+            )}
             {npc.appearance && (
-              <p className="italic leading-snug">&ldquo;{npc.appearance}&rdquo;</p>
+              <p>
+                <span className="font-medium text-foreground/70">Appearance</span> {npc.appearance}
+              </p>
+            )}
+            {npc.notable && (
+              <p>
+                <span className="font-medium text-foreground/70">Notable</span> {npc.notable}
+              </p>
             )}
             {npc.voice && (
               <p>

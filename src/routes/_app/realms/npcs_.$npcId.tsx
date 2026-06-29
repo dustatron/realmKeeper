@@ -709,16 +709,16 @@ function NPCDetailPage() {
                 <p className="text-sm mt-1 whitespace-pre-wrap">{npc.description}</p>
               </div>
             )}
-            {npc.notable && (
-              <div>
-                <span className="text-sm font-medium text-muted-foreground">Notable</span>
-                <p className="text-sm mt-1 whitespace-pre-wrap">{npc.notable}</p>
-              </div>
-            )}
             {npc.appearance && (
               <div className="flex items-start gap-2">
                 <span className="text-sm font-medium text-muted-foreground w-24 shrink-0">Appearance</span>
                 <span className="text-sm">{npc.appearance}</span>
+              </div>
+            )}
+            {npc.notable && (
+              <div>
+                <span className="text-sm font-medium text-muted-foreground">Notable</span>
+                <p className="text-sm mt-1 whitespace-pre-wrap">{npc.notable}</p>
               </div>
             )}
             {npc.voice && (

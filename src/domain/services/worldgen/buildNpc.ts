@@ -142,8 +142,9 @@ export function buildNpc(
 
   // --- Extra flavor ---
   // All drawn via CHILD RNGs so they're deterministic per-NPC but never advance
-  // the main seeded stream (keeps name/traits/stats/want/flaw byte-identical).
+  // the main seeded stream (keeps name/traits/stats/want byte-identical).
   const lookHook = rng.child('npc-look').pick(pool(input.tables, NPC_APPEARANCE_TABLE_ID, NPC_APPEARANCES))
+  // Appearance = what they look like (physical traits + a memorable hook).
   const appearance = `${flavor.appearance} ${lookHook}`
 
   const mr = rng.child('npc-mannerism')
@@ -157,17 +158,20 @@ export function buildNpc(
     ? vr.pick(pool(input.tables, NPC_VILLAIN_TRAIT_TABLE_ID, NPC_VILLAIN_TRAITS))
     : null
 
-  // Quick-read GM details kept OUT of the prose description so cards stay legible.
+  // Description = who they are: role + temperament (virtue/vice) + personality tell.
+  const description =
+    `${article} ${race} ${roleLabel} — ${flavor.traits[0].toLowerCase()} but ${flavor.traits[1].toLowerCase()}. ` +
+    `${flavor.personality}.`
+
+  // Notable = quick GM behavioral beats kept out of the looks/description: a
+  // flaw, a mannerism, a carried item, a secret.
   const notable = [
+    flaw ? `${flaw}.` : null,
     mannerism,
     villain,
     pocket ? `On their person: ${pocket}` : null,
     secret ? `Secret: ${secret}` : null,
   ].filter(Boolean).join(' ')
-
-  const description =
-    `${article} ${race} ${roleLabel} — ${flavor.traits[0].toLowerCase()} but ${flavor.traits[1].toLowerCase()}. ` +
-    `${flavor.personality}.${flaw ? ` ${flaw}.` : ''}`
 
   return {
     id: newId(),
