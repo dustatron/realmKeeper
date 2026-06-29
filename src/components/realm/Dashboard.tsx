@@ -101,6 +101,9 @@ const WEATHER_SEVERITY_COLORS: Record<string, string> = {
   extreme: "bg-red-500/10 text-red-700 border-red-500/20",
 };
 
+const STAT_CARD_CLASS =
+  "h-full transition-colors hover:border-primary hover:bg-accent/40";
+
 export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -317,103 +320,115 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
 
             {/* Stats Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                    <Calendar className="size-4" />
-                    Current Date
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Badge className={SEASON_COLORS[realm.currentSeason]}>
-                    {realm.currentSeason.charAt(0).toUpperCase() + realm.currentSeason.slice(1)}
-                  </Badge>
-                  <div className="text-2xl font-bold mt-2">Year {realm.currentYear}</div>
-                  <div className="text-sm text-muted-foreground">
-                    Day {realm.currentDay} • Watch {realm.currentWatch}
-                  </div>
-                </CardContent>
-              </Card>
+              <Link to="/realms/calendar" className="block">
+                <Card className={STAT_CARD_CLASS}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                      <Calendar className="size-4" />
+                      Current Date
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Badge className={SEASON_COLORS[realm.currentSeason]}>
+                      {realm.currentSeason.charAt(0).toUpperCase() + realm.currentSeason.slice(1)}
+                    </Badge>
+                    <div className="text-2xl font-bold mt-2">Year {realm.currentYear}</div>
+                    <div className="text-sm text-muted-foreground">
+                      Day {realm.currentDay} • Watch {realm.currentWatch}
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                    <MapPin className="size-4" />
-                    Sites
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{siteCount}</div>
-                  <div className="text-sm text-muted-foreground">Locations on the map</div>
-                </CardContent>
-              </Card>
+              <Link to="/realms/locations/pois" className="block">
+                <Card className={STAT_CARD_CLASS}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                      <MapPin className="size-4" />
+                      Sites
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{siteCount}</div>
+                    <div className="text-sm text-muted-foreground">Locations on the map</div>
+                  </CardContent>
+                </Card>
+              </Link>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                    <Compass className="size-4" />
-                    Regions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{regions.length}</div>
-                  <div className="text-sm text-muted-foreground">Mapped regions</div>
-                </CardContent>
-              </Card>
+              <Link to="/realms/locations/regions" className="block">
+                <Card className={STAT_CARD_CLASS}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                      <Compass className="size-4" />
+                      Regions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{regions.length}</div>
+                    <div className="text-sm text-muted-foreground">Mapped regions</div>
+                  </CardContent>
+                </Card>
+              </Link>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                    <Swords className="size-4" />
-                    Factions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{data.factionCount}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {data.activeFactions.length} active
-                  </div>
-                </CardContent>
-              </Card>
+              <Link to="/realms/factions" className="block">
+                <Card className={STAT_CARD_CLASS}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                      <Swords className="size-4" />
+                      Factions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{data.factionCount}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {data.activeFactions.length} active
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                    <Users className="size-4" />
-                    NPCs
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{data.npcCount}</div>
-                  <div className="text-sm text-muted-foreground">Total characters</div>
-                </CardContent>
-              </Card>
+              <Link to="/realms/npcs" className="block">
+                <Card className={STAT_CARD_CLASS}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                      <Users className="size-4" />
+                      NPCs
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{data.npcCount}</div>
+                    <div className="text-sm text-muted-foreground">Total characters</div>
+                  </CardContent>
+                </Card>
+              </Link>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                    <CloudRain className="size-4" />
-                    Weather
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {latestWeather ? (
-                    <>
-                      <div className="text-2xl font-bold capitalize">{latestWeather.condition}</div>
-                      <Badge
-                        className={
-                          WEATHER_SEVERITY_COLORS[latestWeather.severity] ||
-                          WEATHER_SEVERITY_COLORS.clear
-                        }
-                      >
-                        {latestWeather.severity}
-                      </Badge>
-                    </>
-                  ) : (
-                    <div className="text-sm text-muted-foreground">No weather data</div>
-                  )}
-                </CardContent>
-              </Card>
+              <Link to="/realms/calendar" className="block">
+                <Card className={STAT_CARD_CLASS}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                      <CloudRain className="size-4" />
+                      Weather
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {latestWeather ? (
+                      <>
+                        <div className="text-2xl font-bold capitalize">{latestWeather.condition}</div>
+                        <Badge
+                          className={
+                            WEATHER_SEVERITY_COLORS[latestWeather.severity] ||
+                            WEATHER_SEVERITY_COLORS.clear
+                          }
+                        >
+                          {latestWeather.severity}
+                        </Badge>
+                      </>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">No weather data</div>
+                    )}
+                  </CardContent>
+                </Card>
+              </Link>
             </div>
 
             {/* Recent Events */}
