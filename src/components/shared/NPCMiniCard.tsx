@@ -242,9 +242,14 @@ export function NPCMiniCard({ npc, poiName, onUpdateNPC, linkToDetail = true }: 
               </p>
             )}
             {npc.notable && (
-              <p>
-                <span className="font-medium text-foreground/70">Notable</span> {npc.notable}
-              </p>
+              <div>
+                <span className="font-medium text-foreground/70">Notable</span>
+                <ul className="list-disc pl-4 space-y-0.5 mt-0.5">
+                  {npc.notable.split("\n").filter(Boolean).map((line, i) => (
+                    <li key={i}>{line}</li>
+                  ))}
+                </ul>
+              </div>
             )}
             {npc.voice && (
               <p>

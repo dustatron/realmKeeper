@@ -164,14 +164,15 @@ export function buildNpc(
     `${flavor.personality}.`
 
   // Notable = quick GM behavioral beats kept out of the looks/description: a
-  // flaw, a mannerism, a carried item, a secret.
+  // flaw, a mannerism, a carried item, a secret. One per line so the UI can
+  // render them as separate bullet points.
   const notable = [
     flaw ? `${flaw}.` : null,
     mannerism,
     villain,
     pocket ? `On their person: ${pocket}` : null,
     secret ? `Secret: ${secret}` : null,
-  ].filter(Boolean).join(' ')
+  ].filter(Boolean).join('\n')
 
   return {
     id: newId(),

@@ -718,7 +718,11 @@ function NPCDetailPage() {
             {npc.notable && (
               <div>
                 <span className="text-sm font-medium text-muted-foreground">Notable</span>
-                <p className="text-sm mt-1 whitespace-pre-wrap">{npc.notable}</p>
+                <ul className="text-sm mt-1 list-disc pl-5 space-y-0.5">
+                  {npc.notable.split("\n").filter(Boolean).map((line, i) => (
+                    <li key={i}>{line}</li>
+                  ))}
+                </ul>
               </div>
             )}
             {npc.voice && (
