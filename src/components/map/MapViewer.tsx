@@ -9,7 +9,7 @@ import { colorForTerrain } from './terrainColors'
 import type { POI } from '@domain/entities/POI'
 import type { Path } from '@domain/entities/Path'
 import type { Region } from '@domain/entities/Region'
-import type { PoiType } from '@shared/constants'
+import type { PoiType, PoiStatus } from '@shared/constants'
 import { Button } from '~/components/ui/button'
 import {
   Building2,
@@ -26,9 +26,9 @@ import {
   Sparkles,
   Aperture,
   MapPin,
-  Maximize,
-  Minimize,
   RotateCcw,
+  Check,
+  CheckCheck,
 } from 'lucide-react'
 import { createRoot } from 'react-dom/client'
 
@@ -85,6 +85,8 @@ function MarkerIcon({
   hasOwnMaps,
   showLabel,
   isHighlighted,
+  status,
+  dangerLevel,
 }: {
   type: PoiType
   name: string
@@ -92,21 +94,54 @@ function MarkerIcon({
   hasOwnMaps?: boolean
   showLabel?: boolean
   isHighlighted?: boolean
+  status?: PoiStatus
+  dangerLevel?: number | null
 }) {
   const Icon = POI_TYPE_ICONS[type] || MapPin
-  const markerColor = isHighlighted ? '#facc15' : color
+  const explored = status === 'explored'
+  const cleared = status === 'cleared'
+  // Exploration state tints the marker when the GM hasn't set a custom color,
+  // and always adds a colored ring + corner badge so the state reads at a glance.
+  const stateColor = cleared ? '#64748b' : explored ? '#10b981' : null
+  const markerColor = isHighlighted ? '#facc15' : (color ?? stateColor)
+  const ringClass = isHighlighted
+    ? 'border-amber-200 ring-2 ring-amber-400'
+    : cleared
+      ? 'border-background ring-2 ring-slate-400'
+      : explored
+        ? 'border-background ring-2 ring-emerald-400'
+        : 'border-background'
+  const dangerous = dangerLevel != null && dangerLevel >= 4
   return (
     <div className="group relative flex flex-col items-center cursor-pointer" role="button" style={{ touchAction: 'manipulation' }}>
       <div
         className={`relative flex items-center justify-center size-9 rounded-full shadow-md border-2 hover:scale-110 transition-transform ${
-          markerColor ? '' : 'border-background bg-primary text-primary-foreground'
-        } ${isHighlighted ? 'scale-110 border-amber-200 ring-2 ring-amber-400' : 'border-background'}`}
+          markerColor ? '' : 'bg-primary text-primary-foreground'
+        } ${ringClass} ${cleared ? 'opacity-70' : ''} ${isHighlighted ? 'scale-110' : ''}`}
         style={markerColor ? { backgroundColor: markerColor, color: isHighlighted ? '#111827' : '#fff' } : undefined}
       >
         <Icon className="size-4" />
         {hasOwnMaps && (
           <div className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full bg-blue-500 border border-background flex items-center justify-center">
             <MapIcon className="size-2 text-white" />
+          </div>
+        )}
+        {(explored || cleared) && (
+          <div
+            className={`absolute -top-1 -right-1 size-3.5 rounded-full border border-background flex items-center justify-center ${
+              cleared ? 'bg-slate-500' : 'bg-emerald-500'
+            }`}
+            title={cleared ? 'Cleared' : 'Visited'}
+          >
+            {cleared ? <CheckCheck className="size-2 text-white" /> : <Check className="size-2 text-white" />}
+          </div>
+        )}
+        {dangerous && (
+          <div
+            className="absolute -top-1 -left-1 size-3.5 rounded-full bg-red-600 border border-background flex items-center justify-center"
+            title={`Danger ${dangerLevel}`}
+          >
+            <span className="text-[8px] font-bold leading-none text-white">!</span>
           </div>
         )}
       </div>
@@ -141,7 +176,7 @@ export function MapViewer({
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map())
   const markerRootsRef = useRef<Map<string, ReturnType<typeof createRoot>>>(new Map())
-  const markerDataRef = useRef<Map<string, { type: string; name: string; color: string | null; showLabel: boolean; isHighlighted: boolean }>>(new Map())
+  const markerDataRef = useRef<Map<string, { type: string; name: string; color: string | null; showLabel: boolean; isHighlighted: boolean; status: PoiStatus; dangerLevel: number | null }>>(new Map())
   const imageUrlRef = useRef<string | null>(null)
   const onPoiClickRef = useRef(onPoiClick)
   onPoiClickRef.current = onPoiClick
@@ -414,10 +449,10 @@ export function MapViewer({
         const isHighlighted = poi.id === activeHighlightId
         // Re-render if marker content or selected state changed.
         const prev = markerDataRef.current.get(poi.id)
-        if (prev && (prev.type !== poi.type || prev.name !== poi.name || prev.color !== (poi.markerColor ?? null) || prev.showLabel !== !!showLabels || prev.isHighlighted !== isHighlighted)) {
+        if (prev && (prev.type !== poi.type || prev.name !== poi.name || prev.color !== (poi.markerColor ?? null) || prev.showLabel !== !!showLabels || prev.isHighlighted !== isHighlighted || prev.status !== poi.status || prev.dangerLevel !== (poi.dangerLevel ?? null))) {
           const root = markerRootsRef.current.get(poi.id)
-          root?.render(<MarkerIcon type={poi.type} name={poi.name} color={poi.markerColor} showLabel={showLabels} isHighlighted={isHighlighted} />)
-          markerDataRef.current.set(poi.id, { type: poi.type, name: poi.name, color: poi.markerColor ?? null, showLabel: !!showLabels, isHighlighted })
+          root?.render(<MarkerIcon type={poi.type} name={poi.name} color={poi.markerColor} showLabel={showLabels} isHighlighted={isHighlighted} status={poi.status} dangerLevel={poi.dangerLevel} />)
+          markerDataRef.current.set(poi.id, { type: poi.type, name: poi.name, color: poi.markerColor ?? null, showLabel: !!showLabels, isHighlighted, status: poi.status, dangerLevel: poi.dangerLevel ?? null })
         }
         return
       }
@@ -427,9 +462,9 @@ export function MapViewer({
       el.className = 'map-marker-container'
       const root = createRoot(el)
       const isHighlighted = poi.id === activeHighlightId
-      root.render(<MarkerIcon type={poi.type} name={poi.name} color={poi.markerColor} showLabel={showLabels} isHighlighted={isHighlighted} />)
+      root.render(<MarkerIcon type={poi.type} name={poi.name} color={poi.markerColor} showLabel={showLabels} isHighlighted={isHighlighted} status={poi.status} dangerLevel={poi.dangerLevel} />)
       markerRootsRef.current.set(poi.id, root)
-      markerDataRef.current.set(poi.id, { type: poi.type, name: poi.name, color: poi.markerColor ?? null, showLabel: !!showLabels, isHighlighted })
+      markerDataRef.current.set(poi.id, { type: poi.type, name: poi.name, color: poi.markerColor ?? null, showLabel: !!showLabels, isHighlighted, status: poi.status, dangerLevel: poi.dangerLevel ?? null })
 
       const marker = new maplibregl.Marker({
         element: el,
@@ -1002,49 +1037,24 @@ export function MapViewer({
     }
   }, [activeHighlightId, highlightPoiId, mapReady, pois])
 
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const [isFullscreen, setIsFullscreen] = useState(false)
-
-  useEffect(() => {
-    const handler = () => setIsFullscreen(!!document.fullscreenElement)
-    document.addEventListener('fullscreenchange', handler)
-    return () => document.removeEventListener('fullscreenchange', handler)
-  }, [])
-
-  const toggleFullscreen = () => {
-    if (!wrapperRef.current) return
-    if (document.fullscreenElement) {
-      document.exitFullscreen()
-    } else {
-      wrapperRef.current.requestFullscreen()
-    }
-  }
-
   const handleResetView = () => {
     fitToImageRef.current?.(300)
   }
 
-  // Resize map when entering/exiting fullscreen
+  // Fullscreen is toggled from the toolbar (lifted to InteractiveMap); here we
+  // only need to resize the map canvas whenever the fullscreen state changes.
   useEffect(() => {
-    const instance = mapRef.current
-    if (instance) {
-      setTimeout(() => instance.resize(), 50)
+    const handler = () => {
+      const instance = mapRef.current
+      if (instance) setTimeout(() => instance.resize(), 50)
     }
-  }, [isFullscreen])
+    document.addEventListener('fullscreenchange', handler)
+    return () => document.removeEventListener('fullscreenchange', handler)
+  }, [])
 
   return (
-    <div ref={wrapperRef} className="relative w-full h-full min-h-[200px]">
+    <div className="relative w-full h-full min-h-[200px]">
       <div ref={containerRef} className="w-full h-full" />
-      <Button
-        size="icon"
-        variant="secondary"
-        className="absolute bottom-2 left-2 size-8 z-10 shadow-md"
-        onClick={toggleFullscreen}
-        title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-        aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-      >
-        {isFullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
-      </Button>
       {showResetControl && (
         <Button
           size="icon"

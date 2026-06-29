@@ -52,6 +52,30 @@ export const POI_TYPES = [
 ] as const;
 export type PoiType = (typeof POI_TYPES)[number];
 
+/** Exploration lifecycle for a POI. Clearable sites (dungeons/ruins) cycle
+ * through all three; other types use unexplored/explored as a visited flag. */
+export const POI_STATUSES = ["unexplored", "explored", "cleared"] as const;
+export type PoiStatus = (typeof POI_STATUSES)[number];
+
+/** POI types that use the full 3-state explore→clear lifecycle. Everything
+ * else treats status as a simple visited toggle (unexplored ↔ explored). */
+export const EXPLORABLE_POI_TYPES: PoiType[] = [
+  "dungeon",
+  "ruin",
+  "interior",
+  "fortification",
+];
+
+/** GM-set threat rating, 1 (safe) → 5 (deadly). null = unrated. */
+export const DANGER_LEVELS = [1, 2, 3, 4, 5] as const;
+export const DANGER_LABELS: Record<number, string> = {
+  1: "Safe",
+  2: "Low",
+  3: "Risky",
+  4: "Dangerous",
+  5: "Deadly",
+};
+
 export const PATH_TYPES = [
   "road",
   "trail",

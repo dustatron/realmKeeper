@@ -26,6 +26,7 @@ import { useUIStore } from '~/ui/stores/uiStore'
 import { usePOIActions } from '~/ui/hooks/usePOIActions'
 import { executeDeletePOI } from '@application/use-cases/DeletePOI'
 import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
+import { visitedPatch } from '@domain/services/poiStatus'
 import { executeGetOrCreateTownMap } from '@application/use-cases/GetOrCreateTownMap'
 import { executeUpdateGameMap } from '@application/use-cases/UpdateGameMap'
 import { executePlacePOIOnMap } from '@application/use-cases/PlacePOIOnMap'
@@ -500,7 +501,7 @@ function POIDetailPage() {
       <Button
         size="sm"
         variant="outline"
-        onClick={() => db.pois.update(poi.id, { visited: !poi.visited, updatedAt: Date.now() })}
+        onClick={() => db.pois.update(poi.id, { ...visitedPatch(poi, !poi.visited), updatedAt: Date.now() })}
         title={poi.visited ? 'Mark as unvisited' : 'Mark as visited'}
         aria-pressed={poi.visited}
       >

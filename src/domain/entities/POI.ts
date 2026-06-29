@@ -1,4 +1,5 @@
-import type { PoiType } from '@shared/constants'
+import type { PoiType, PoiStatus } from '@shared/constants'
+import type { WorldDate } from '@domain/value-objects/WorldDate'
 import type { Service } from '@domain/value-objects/Service'
 import type { Trap } from '@domain/value-objects/Trap'
 import type { TreasureItem } from '@domain/value-objects/TreasureItem'
@@ -42,6 +43,14 @@ export interface POI {
   roomWidth: number | null
   roomLength: number | null
   visited: boolean
+  /** Exploration lifecycle. Kept in sync with `visited` (visited === status !== 'unexplored'). */
+  status: PoiStatus
+  /** World-date the party last visited; stamped when marked visited/explored. */
+  lastVisitedDate: WorldDate | null
+  /** GM threat rating 1 (safe) – 5 (deadly). null = unrated. */
+  dangerLevel: number | null
+  /** Who/what currently holds this place right now (living-world state). */
+  currentOccupant: string | null
   lightLevel: 'bright' | 'dim' | 'dark' | null
   wanderingMonsters: WanderingMonsterEntry[]
   /** Encounter-check chance denominator: roll 1dN, encounter on a 1. null = default (6). */

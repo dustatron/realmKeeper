@@ -684,6 +684,23 @@ db.version(40).stores(storesV39).upgrade(async (tx) => {
   }
 })
 
+// v41: POI exploration lifecycle + living-world fields.
+// Backfill status (from visited), lastVisitedDate, dangerLevel, currentOccupant.
+db.version(41).stores(storesV39).upgrade(async (tx) => {
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.status === undefined) {
+      await tx.table('pois').put({
+        ...poi,
+        status: poi.visited ? 'explored' : 'unexplored',
+        lastVisitedDate: null,
+        dangerLevel: null,
+        currentOccupant: null,
+      })
+    }
+  }
+})
+
 // Normalize Realms on read — ensures starred arrays have defaults
 db.worlds.hook('reading', (realm) => {
   if (!realm) return realm
@@ -730,12 +747,20 @@ db.pois.hook('reading', (poi) => {
     ruinSite: null,
     landmarkLore: null,
     poiGenOptions: null,
+    lastVisitedDate: null,
+    dangerLevel: null,
+    currentOccupant: null,
   }
   for (const [key, val] of Object.entries(defaults)) {
     if (rec[key] === undefined) {
       if (!patched) { poi = { ...poi }; patched = true }
       ;(poi as unknown as Record<string, unknown>)[key] = val
     }
+  }
+  // Derive exploration status from the legacy `visited` flag when absent.
+  if (rec.status === undefined) {
+    if (!patched) { poi = { ...poi }; patched = true }
+    ;(poi as unknown as Record<string, unknown>).status = rec.visited ? 'explored' : 'unexplored'
   }
   // Migrate wanderingMonsters from old string[] format to WanderingMonsterEntry[]
   const wm = rec.wanderingMonsters
