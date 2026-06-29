@@ -3,6 +3,8 @@ import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { GameMap } from '@domain/entities/GameMap'
 import { BIOME_COLORS } from '~/lib/hexmap/hexLayout'
+import { terrainTileForBiome } from '~/lib/hexmap/tileMapping'
+import { TERRAIN_TILE_URLS } from '~/lib/hexmap/tileAssets'
 import { colorForTerrain } from './terrainColors'
 import type { POI } from '@domain/entities/POI'
 import type { Path } from '@domain/entities/Path'
@@ -22,6 +24,7 @@ import {
   Landmark,
   Tent,
   Sparkles,
+  Aperture,
   MapPin,
   Maximize,
   Minimize,
@@ -71,6 +74,7 @@ const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }
   ruin: Landmark,
   camp: Tent,
   shrine: Sparkles,
+  portal: Aperture,
   other: MapPin,
 }
 
@@ -269,6 +273,9 @@ export function MapViewer({
       markerRootsRef.current.clear()
       markerDataRef.current.clear()
       mapInstance.remove()
+      // Null the ref so any in-flight async work (e.g. tile image onload) can
+      // detect this map is gone and skip touching the removed instance.
+      mapRef.current = null
       imageUrlRef.current = null
       fitToImageRef.current = null
       setLoadedMapKey((current) => current === mapLoadKey ? null : current)
@@ -428,6 +435,9 @@ export function MapViewer({
         element: el,
         draggable: mode === 'place-poi',
         anchor: 'bottom',
+        // Lift the pin into the upper part of the hex so it stops covering the
+        // center of the hand-drawn feature tile (the doodle's distinctive bit).
+        offset: [0, -14],
       })
         .setLngLat([lng, lat])
         .addTo(instance)
@@ -519,7 +529,8 @@ export function MapViewer({
         type: 'line',
         source: lineSourceId,
         paint: {
-          'line-color': '#1e293b',
+          // Portals read as a distinct planar link (violet), roads as dark.
+          'line-color': ['case', ['==', ['get', 'type'], 'portal'], '#a855f7', '#1e293b'],
           'line-width': 6,
           'line-dasharray': [2, 1],
           'line-opacity': 0.9,
@@ -610,7 +621,9 @@ export function MapViewer({
         source: fillSourceId,
         paint: {
           'fill-color': ['get', 'color'],
-          'fill-opacity': 0.15,
+          // Kept low so the hand-drawn terrain tiles stay the dominant layer
+          // (region grouping still reads via the outline + label).
+          'fill-opacity': 0.1,
         },
       }, beforeLayer)
       instance.addLayer({
@@ -750,6 +763,115 @@ export function MapViewer({
       )
     }
 
+    // Hand-drawn tile overlay: one centered icon per hex (cell.tile, falling back
+    // to the biome's terrain tile). Sits just above the color fill, which shows
+    // through transparent tiles and covers biomes with no tile (desert/frozen).
+    const tileSourceId = 'hex-tiles'
+    const tileLayerId = 'hex-tiles-symbol'
+
+    const tileFeatures = map.hexCells
+      .map((cell) => {
+        const tile = cell.tile ?? terrainTileForBiome(cell.biome) ?? null
+        if (!tile || !TERRAIN_TILE_URLS[tile]) return null
+        // Centroid of the hex from its corners.
+        const cx = cell.corners.reduce((s, c) => s + c.x, 0) / cell.corners.length
+        const cy = cell.corners.reduce((s, c) => s + c.y, 0) / cell.corners.length
+        return {
+          type: 'Feature' as const,
+          properties: { icon: `tile-${tile}` },
+          geometry: { type: 'Point' as const, coordinates: pxToLngLat(cx, cy) },
+        }
+      })
+      .filter(Boolean)
+    const tileGeojson = { type: 'FeatureCollection' as const, features: tileFeatures }
+
+    // Load each needed tile image once (async), then repaint so it appears.
+    const neededTiles = new Set(
+      map.hexCells
+        .map((cell) => cell.tile ?? terrainTileForBiome(cell.biome) ?? null)
+        .filter((t): t is string => !!t && !!TERRAIN_TILE_URLS[t]),
+    )
+    for (const tile of neededTiles) {
+      const imageId = `tile-${tile}`
+      if (instance.hasImage(imageId)) continue
+      const img = new Image()
+      img.onload = () => {
+        // Bail if the map was unmounted or switched while this image loaded —
+        // `instance` would be a removed map (style undefined) and throw.
+        if (mapRef.current !== instance) return
+        if (!instance.hasImage(imageId)) {
+          instance.addImage(imageId, img)
+          instance.triggerRepaint()
+        }
+      }
+      img.onerror = () => {} // missing tile: leave the color fill showing through
+      img.src = TERRAIN_TILE_URLS[tile]
+    }
+
+    // icon-size tracks geography: a pointy-top hex is (2 * hexSize) world-px tall;
+    // the source PNG is ~330px. Exponential-base-2 interpolation makes the icon
+    // double each zoom level, matching MapLibre's geographic scaling.
+    const hexSize = map.hexSize ?? 40
+    const TILE_SRC_PX = 330
+    const TILE_FUDGE = 1.08 // slight overscale so adjacent tiles cover seams
+    const baseSize = ((2 * hexSize * scale * 512) / 360 / TILE_SRC_PX) * TILE_FUDGE
+    // On-screen tile px at zoom z == (baseSize * TILE_SRC_PX) * 2^z. Hide the
+    // layer once that drops below ~28px (fully zoomed out): the doodles turn to
+    // noise at that size, so the biome color fill carries the read instead.
+    const iconPxAtZ0 = baseSize * TILE_SRC_PX
+    const tileMinZoom = Math.max(0, Math.log2(28 / iconPxAtZ0))
+
+    // The tile doodles belong just above the color fill but BELOW the region
+    // fill/outline/labels and the road/path lines — so labels and roads stay
+    // legible on top. Insert before the lowest of those upper layers.
+    const aboveTiles = [
+      'regions-fill',
+      'regions-outline',
+      'paths-layer',
+      'path-labels-layer',
+      'region-labels-layer',
+    ]
+    const tileBeforeId = aboveTiles.find((id) => instance.getLayer(id))
+
+    if (instance.getSource(tileSourceId)) {
+      ;(instance.getSource(tileSourceId) as maplibregl.GeoJSONSource).setData(
+        tileGeojson as GeoJSON.FeatureCollection,
+      )
+      // Keep it under the labels/roads even if those layers were (re)added later.
+      if (tileBeforeId && instance.getLayer(tileLayerId)) {
+        instance.moveLayer(tileLayerId, tileBeforeId)
+      }
+    } else {
+      instance.addSource(tileSourceId, {
+        type: 'geojson',
+        data: tileGeojson as GeoJSON.FeatureCollection,
+      })
+      instance.addLayer(
+        {
+          id: tileLayerId,
+          type: 'symbol',
+          source: tileSourceId,
+          minzoom: tileMinZoom,
+          layout: {
+            'icon-image': ['get', 'icon'],
+            'icon-size': [
+              'interpolate',
+              ['exponential', 2],
+              ['zoom'],
+              0,
+              baseSize,
+              22,
+              baseSize * Math.pow(2, 22),
+            ],
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+            'icon-anchor': 'center',
+          },
+        },
+        tileBeforeId,
+      )
+    }
+
     // No teardown cleanup — matches the region/path effects in this file. The
     // init effect's `mapInstance.remove()` destroys all sources/layers on unmount
     // or map switch. A cleanup here would call `instance.getLayer(...)` on an
@@ -757,7 +879,7 @@ export function MapViewer({
     // "Cannot read properties of undefined (reading 'getLayer')" when navigating
     // away. Re-runs while the same map persists are handled idempotently by the
     // getSource→setData branch above.
-  }, [map.kind, map.hexCells, mapReady, pxToLngLat])
+  }, [map.kind, map.hexCells, map.hexSize, mapReady, pxToLngLat, scale])
 
   // Render draw-region preview polygon
   useEffect(() => {

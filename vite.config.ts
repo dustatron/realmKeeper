@@ -23,6 +23,12 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'explore.png'],
+      // workbox's default globPatterns is js/wasm/css/html only — without this the
+      // hashed hex-tile PNGs (and other image/font assets) are NOT precached, so
+      // the map renders blank tiles offline. Include images + fonts explicitly.
+      workbox: {
+        globPatterns: ['**/*.{js,wasm,css,html,png,svg,ico,woff,woff2}'],
+      },
       manifest: {
         name: 'Realm Keeper',
         short_name: 'RealmKeeper',

@@ -115,6 +115,7 @@ import {
   Landmark,
   Tent,
   Sparkles,
+  Aperture,
 } from "lucide-react";
 import {
   POI_TYPES,
@@ -164,6 +165,7 @@ const POI_TYPE_ICONS: Record<
   ruin: Landmark,
   camp: Tent,
   shrine: Sparkles,
+  portal: Aperture,
   other: MapPin,
 };
 

@@ -155,7 +155,9 @@ export function AtAGlancePanel({
                   params={{ poiId: destId }}
                   className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent transition-colors group min-w-0"
                 >
-                  {displayDir ? (
+                  {path.type === 'portal' ? (
+                    <span className="text-sm shrink-0 w-8 text-center" title="Planar gate">🌀</span>
+                  ) : displayDir ? (
                     <Badge variant="secondary" className="text-xs font-mono shrink-0 w-8 justify-center">
                       {displayDir.toUpperCase()}
                     </Badge>
@@ -163,7 +165,7 @@ export function AtAGlancePanel({
                     <span className="text-xs text-muted-foreground shrink-0 w-8 text-center">→</span>
                   )}
                   <span className="text-sm font-medium group-hover:underline truncate min-w-0">
-                    {dest}
+                    {path.type === 'portal' ? `leads to ${dest}` : dest}
                   </span>
                   {path.hasDoor && (
                     <span className="text-sm shrink-0" title={path.doorDescription || (path.isLocked ? 'Locked door' : 'Door')}>
@@ -175,7 +177,7 @@ export function AtAGlancePanel({
                       ? `${formatDistance(path.hexes)} · ${path.baseTravelWatches} ${path.baseTravelWatches === 1 ? 'watch' : 'watches'}`
                       : `${path.baseTravelWatches} ${path.baseTravelWatches === 1 ? 'watch' : 'watches'}`}
                   </span>
-                  <Badge variant="outline" className="text-[10px] shrink-0 ml-auto whitespace-nowrap">{path.type}</Badge>
+                  <Badge variant="outline" className={`text-[10px] shrink-0 ml-auto whitespace-nowrap ${path.type === 'portal' ? 'border-purple-400/60 text-purple-300' : ''}`}>{path.type}</Badge>
                 </Link>
               )
             })}

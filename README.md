@@ -102,3 +102,7 @@ bd ready          # find unblocked work
 bd show <id>      # view issue details
 bd prime          # full workflow context
 ```
+
+## Credits
+
+- **Hex tile art** — *Hex Tiles Fantasy* by [cmartins](https://cmartins.itch.io/hex-tiles-fantasy), licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). Tiles were renamed and packed into a sprite atlas; these adaptations are likewise CC BY-SA 4.0. See `src/assets/hex-tiles/CREDITS.md`.

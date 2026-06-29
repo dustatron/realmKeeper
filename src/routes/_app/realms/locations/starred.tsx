@@ -24,6 +24,7 @@ import {
   Landmark,
   Tent,
   Sparkles,
+  Aperture,
   MapPin,
 } from 'lucide-react'
 
@@ -44,6 +45,7 @@ const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }
   ruin: Landmark,
   camp: Tent,
   shrine: Sparkles,
+  portal: Aperture,
   other: MapPin,
 }
 

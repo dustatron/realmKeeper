@@ -47,6 +47,7 @@ export const POI_TYPES = [
   "ruin",
   "camp",
   "shrine",
+  "portal",
   "other",
 ] as const;
 export type PoiType = (typeof POI_TYPES)[number];
