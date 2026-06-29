@@ -57,6 +57,7 @@ export interface GenerateWorldInput {
   poiDensity?: PoiDensity
   factionCount?: number
   loomingThreat?: boolean
+  portals?: boolean
   worldTreasureDensity?: LootDensity
   worldMagicDensity?: LootDensity
   worldMonsterDensity?: LootDensity
@@ -107,6 +108,7 @@ export async function executeGenerateWorld(
       factionCount: input.factionCount,
       systemConfig,
       loomingThreat: input.loomingThreat ?? true,
+      portals: input.portals ?? true,
       realmContent: {
         treasureDensity: input.worldTreasureDensity ?? 'moderate',
         magicDensity: input.worldMagicDensity ?? 'moderate',

@@ -68,6 +68,7 @@ export function generateWorld(
     systemConfig?: SystemConfig
     clock?: DoomClock
     loomingThreat?: boolean
+    portals?: boolean
     realmContent?: RealmContentSprinkleOptions
   }
 ): {
@@ -474,7 +475,8 @@ export function generateWorld(
   // a handful of regions get one: a single pair (A↔B) on small maps, a closed
   // ring (A→B→C→…→A) on larger ones. Links are Path rows of type 'portal' (1
   // watch), so stepping through a gate surfaces as a connection on the POI page
-  // and on the map.
+  // and on the map. Skipped entirely when portals are toggled off at creation.
+  const portalsEnabled = opts.portals !== false
   const portalTarget =
     cellMetas.length <= 100 ? 2 : Math.min(4, 2 + Math.round(cellMetas.length / 160))
   // One candidate clean land cell per region (so a region hosts at most one gate).
@@ -483,7 +485,7 @@ export function generateWorld(
     .filter((cells) => cells.length > 0)
     .map((cells) => rng.pick(cells))
   const portalNodes: { poi: POI; q: number; r: number }[] = []
-  if (portalRegionCells.length >= 2) {
+  if (portalsEnabled && portalRegionCells.length >= 2) {
     const chosenCells = rng.sample(portalRegionCells, Math.min(portalTarget, portalRegionCells.length))
     const portalNames = rng.sample(PORTAL_NAMES, Math.min(chosenCells.length, PORTAL_NAMES.length))
     chosenCells.forEach((cell, i) => {

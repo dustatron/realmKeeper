@@ -21,6 +21,7 @@ import {
   CollapsibleTrigger,
 } from "~/components/ui/collapsible";
 import {
+  Aperture,
   ChevronDown,
   Gem,
   Settings,
@@ -104,6 +105,7 @@ function NewRealmPage() {
     "sparse" | "normal" | "dense"
   >("normal");
   const [genLoomingThreat, setGenLoomingThreat] = useState(true);
+  const [genPortals, setGenPortals] = useState(true);
   const [genTreasureDensity, setGenTreasureDensity] = useState<LootDensity>('moderate');
   const [genMagicDensity, setGenMagicDensity] = useState<LootDensity>('moderate');
   const [genMonsterDensity, setGenMonsterDensity] = useState<LootDensity>('moderate');
@@ -129,6 +131,7 @@ function NewRealmPage() {
             poiDensity: genPoiDensity,
             factionCount: genFactions ?? undefined,
             loomingThreat: genLoomingThreat,
+            portals: genPortals,
             worldTreasureDensity: genTreasureDensity,
             worldMagicDensity: genMagicDensity,
             worldMonsterDensity: genMonsterDensity,
@@ -355,7 +358,7 @@ function NewRealmPage() {
             <p className="text-xs text-muted-foreground">
               Fine-tune what gets generated: how many factions vie for power,
               how densely the map is dotted with points of interest, and whether
-              a looming threat hangs over the realm.
+              a realm-wide doom event builds toward a climax.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1.5">
@@ -399,14 +402,35 @@ function NewRealmPage() {
                 </Select>
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="gen-threat" className="text-xs">
-                Looming threat
-              </Label>
+            <div className="flex items-start justify-between gap-3">
+              <div className="grid gap-0.5">
+                <Label htmlFor="gen-threat" className="text-xs">
+                  Doom event
+                </Label>
+                <span className="text-[11px] text-muted-foreground">
+                  A realm-wide threat that builds toward a climax over time.
+                </span>
+              </div>
               <Switch
                 id="gen-threat"
                 checked={genLoomingThreat}
                 onCheckedChange={setGenLoomingThreat}
+                disabled={isCreating}
+              />
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="grid gap-0.5">
+                <Label htmlFor="gen-portals" className="flex items-center gap-2 text-xs">
+                  <Aperture className="size-3.5" /> Portals
+                </Label>
+                <span className="text-[11px] text-muted-foreground">
+                  Rare planar gates linking distant regions for fast travel.
+                </span>
+              </div>
+              <Switch
+                id="gen-portals"
+                checked={genPortals}
+                onCheckedChange={setGenPortals}
                 disabled={isCreating}
               />
             </div>
