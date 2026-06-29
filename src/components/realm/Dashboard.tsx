@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { useUIStore } from "~/ui/stores/uiStore";
 import { useActiveRealm } from "~/ui/hooks/useActiveRealm";
+import { usePartyLocation } from "~/ui/hooks/usePartyLocation";
 import { useTimeline } from "~/ui/hooks/useTimeline";
 import { useRecentWeather } from "~/ui/hooks/useWeather";
 import { useRecentVisitedPOIs, useStarredPOIs, useRealmPOIs } from "~/ui/hooks/usePOIs";
@@ -62,6 +63,7 @@ import {
   ChevronRight,
   Calendar,
   MapPin,
+  Footprints,
   Settings,
   Save,
   Star,
@@ -127,6 +129,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
   const recentPOIs = useRecentVisitedPOIs(worldId, 5);
   const regions = useRegions(worldId);
   const allPois = useRealmPOIs(worldId);
+  const partyLocation = usePartyLocation(worldId);
   // "Sites" = top-level overworld locations (settlements, dungeons, ruins, …).
   const siteCount = allPois.filter((p) => p.parentPoiId == null && p.mapRef).length;
   const doom = useLiveQuery(
@@ -339,6 +342,45 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                   </CardContent>
                 </Card>
               </Link>
+
+              {partyLocation ? (
+                <Link
+                  to="/realms/pois/$poiId"
+                  params={{ poiId: partyLocation.poi.id }}
+                  className="block"
+                >
+                  <Card className={STAT_CARD_CLASS}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                        <Footprints className="size-4" />
+                        Party Location
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold leading-tight">{partyLocation.poi.name}</div>
+                      {partyLocation.trail.length > 1 && (
+                        <div className="text-sm text-muted-foreground mt-1 truncate">
+                          {partyLocation.trail.slice(0, -1).map((t) => t.name).join(" › ")}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Link>
+              ) : (
+                <Card className={STAT_CARD_CLASS}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                      <Footprints className="size-4" />
+                      Party Location
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-muted-foreground">
+                      Not set. Open a location and tap “Move party here.”
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <Link to="/realms/locations/pois" className="block">
                 <Card className={STAT_CARD_CLASS}>
