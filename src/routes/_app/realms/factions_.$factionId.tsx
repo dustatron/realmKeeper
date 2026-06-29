@@ -184,7 +184,7 @@ function FactionDetailPage() {
   const longTermGoals = f.agendaGoals.filter((g) => g.timeframe === 'long-term')
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         title={
           <span className="flex flex-col">
@@ -221,7 +221,7 @@ function FactionDetailPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Overview</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             {f.motivation && (
               <p className="text-sm text-muted-foreground">{f.motivation}</p>
             )}
@@ -422,7 +422,7 @@ function FactionDetailPage() {
 
         {/* Resources: Advantages + Obstacles — reference color, kept below the agenda */}
         <Card>
-          <CardContent className="pt-5">
+          <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-500 mb-2">Advantages ({(f.advantages ?? []).length})</h4>
