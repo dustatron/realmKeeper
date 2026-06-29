@@ -25,7 +25,12 @@ export interface Faction {
   id: string
   worldId: string
   name: string
+  /** Short subheading, e.g. "Crimson Syndicate" (<trait> <type>). */
   description: string
+  /** What the faction ultimately seeks (a one-line drive). */
+  motivation?: string
+  /** Noble Houses only: a scandalous/dangerous secret. */
+  secret?: string
   type: string
   status: FactionStatus
   isParty: boolean

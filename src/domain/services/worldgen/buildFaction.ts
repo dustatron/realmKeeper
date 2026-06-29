@@ -88,22 +88,22 @@ export function buildFaction(input: BuildFactionInput, rng: SeededRandom): Facti
     input.usedNames.add(name)
   }
 
-  // Motivation (all factions) + a secret (Noble Houses). Drawn from CHILD rngs so
-  // they don't advance the main stream — faction names stay deterministic.
-  const motivation = pickFlavor(rng.child('faction-motivation'), input.tables, FACTION_MOTIVATION_TABLE_ID, FACTION_MOTIVATIONS)
+  // Short subheading ("Crimson Syndicate") stays clean. Motivation + secret live
+  // in their own fields. Drawn from CHILD rngs so they don't advance the main
+  // stream — faction names stay deterministic.
+  const description = (traits[0] ? `${traits[0]} ${resolvedType}` : resolvedType).trim()
+  const motivation = `They seek to ${pickFlavor(rng.child('faction-motivation'), input.tables, FACTION_MOTIVATION_TABLE_ID, FACTION_MOTIVATIONS)}.`
   const secret = resolvedType === 'Noble House'
     ? pickFlavor(rng.child('noble-secret'), input.tables, NOBLE_SECRET_TABLE_ID, NOBLE_SECRETS)
-    : null
-  const description =
-    (traits[0] ? `${traits[0]} ${resolvedType}` : resolvedType).trim() +
-    ` They seek to ${motivation}.` +
-    (secret ? ` Secret: ${secret}.` : '')
+    : undefined
 
   return {
     id: newId(),
     worldId: input.worldId,
     name,
     description,
+    motivation,
+    secret,
     type: resolvedType,
     status: 'active',
     isParty: false,

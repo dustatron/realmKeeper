@@ -319,6 +319,20 @@ function FactionDetailPage() {
           </CardContent>
         </Card>
 
+        {(f.motivation || f.secret) && (
+          <div className="space-y-2">
+            {f.motivation && (
+              <p className="text-sm text-muted-foreground">{f.motivation}</p>
+            )}
+            {f.secret && (
+              <p className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm">
+                <span className="font-semibold text-rose-600 dark:text-rose-400">Secret (GM) </span>
+                {f.secret}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Agenda — always shown so an empty faction still prompts you to add goals (via Edit) */}
         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Agenda</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
