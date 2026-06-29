@@ -5,6 +5,8 @@ import {
   Route,
   Upload,
   Maximize,
+  Expand,
+  Shrink,
   Tag,
   Hexagon,
   Layers,
@@ -23,6 +25,8 @@ interface MapToolbarProps {
   onToggleRegions: () => void
   onUpload: () => void
   onZoomToFit: () => void
+  isFullscreen?: boolean
+  onToggleFullscreen?: () => void
   /** When true, clicking markers selects rooms instead of opening popup */
   poiSelectMode?: boolean
   onTogglePoiSelectMode?: () => void
@@ -40,6 +44,8 @@ export function MapToolbar({
   onToggleRegions,
   onUpload,
   onZoomToFit,
+  isFullscreen,
+  onToggleFullscreen,
   poiSelectMode,
   onTogglePoiSelectMode,
   leftSlot,
@@ -126,6 +132,19 @@ export function MapToolbar({
       <Button variant="outline" size="sm" className="shrink-0" onClick={onZoomToFit} title="Zoom to fit">
         <Maximize className="size-4" />
       </Button>
+
+      {onToggleFullscreen && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0"
+          onClick={onToggleFullscreen}
+          title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+        >
+          {isFullscreen ? <Shrink className="size-4" /> : <Expand className="size-4" />}
+        </Button>
+      )}
 
       <Button variant="outline" size="sm" className="shrink-0" onClick={onUpload} title="Replace image">
         <Upload className="size-4" />

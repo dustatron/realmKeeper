@@ -1,10 +1,16 @@
-import { useState, useCallback, useRef, type ReactNode } from 'react'
+import { useState, useCallback, useRef, useMemo, useEffect, type ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { usePOIsOnMap, usePathsOnMap, usePOIMaps } from '~/ui/hooks/useGameMaps'
 import { useRealmPOIs } from '~/ui/hooks/usePOIs'
 import { useRegions } from '~/ui/hooks/useRegions'
+import { useRealm } from '~/ui/hooks/useRealms'
+import { useFactions } from '~/ui/hooks/useFactions'
+import { useNPCsByPoi } from '~/ui/hooks/useNPCsByPoi'
+import { useFactionPresencesByPoi } from '~/ui/hooks/useFactionPresences'
+import { formatWorldDate, type WorldDate } from '@domain/value-objects/WorldDate'
+import { statusPatch } from '@domain/services/poiStatus'
 import { executePlacePOIOnMap } from '@application/use-cases/PlacePOIOnMap'
 import { executeRemovePOIFromMap } from '@application/use-cases/RemovePOIFromMap'
 import { executeCreatePOI } from '@application/use-cases/CreatePOI'
@@ -58,13 +64,29 @@ import {
   Aperture,
   MapPin,
   Trash2,
-  X,
+  Star,
+  CheckCircle2,
+  CircleDashed,
+  Check,
+  CheckCheck,
+  ScrollText,
+  ShieldAlert,
+  User,
+  Crown,
+  Sun,
+  CloudSun,
+  Moon,
+  Settings2,
 } from 'lucide-react'
 import {
   POI_TYPES,
+  POI_STATUSES,
+  EXPLORABLE_POI_TYPES,
+  DANGER_LABELS,
   PATH_TYPES,
   TERRAIN_TYPES,
   type PoiType,
+  type PoiStatus,
   type PathType,
   type TerrainType,
 } from '@shared/constants'
@@ -130,6 +152,15 @@ export function InteractiveMap({
   const allPois = useRealmPOIs(mapRealmId)
   const isRealmMap = !gameMap.ownerPoiId
   const regions = useRegions(mapRealmId)
+  const realm = useRealm(mapRealmId)
+  const factions = useFactions(mapRealmId)
+  const factionNames = useMemo(
+    () => Object.fromEntries(factions.map((f) => [f.id, f.name])),
+    [factions],
+  )
+  const currentWorldDate: WorldDate | null = realm
+    ? { year: realm.currentYear, season: realm.currentSeason, day: realm.currentDay }
+    : null
 
   const mapHandleRef = useRef<MapViewerHandle | null>(null)
   const showLabels = useUIStore((s) => s.mapShowLabels)
@@ -322,8 +353,22 @@ export function InteractiveMap({
     setPathForm({ name: '', type: 'road', terrain: 'plains', baseTravelWatches: 3 })
   }
 
+  // Fullscreen toggles the whole map area (toolbar included) so the exit
+  // control stays reachable. Lifted here from MapViewer so the toolbar can own it.
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', handler)
+    return () => document.removeEventListener('fullscreenchange', handler)
+  }, [])
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) document.exitFullscreen()
+    else rootRef.current?.requestFullscreen()
+  }
+
   return (
-    <div className={`flex flex-col ${className ?? ''}`} style={style}>
+    <div ref={rootRef} className={`flex flex-col bg-background ${className ?? ''}`} style={style}>
       {/* Status hints */}
       {(mode === 'place-poi' || mode === 'draw-path' || mode === 'draw-region') && (
         <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-muted/50">
@@ -355,6 +400,8 @@ export function InteractiveMap({
         onToggleRegions={() => setShowRegions(!showRegions)}
         onUpload={() => {}}
         onZoomToFit={() => mapHandleRef.current?.zoomToFit()}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={toggleFullscreen}
         poiSelectMode={onPoiSelect ? poiSelectMode : undefined}
         onTogglePoiSelectMode={onPoiSelect ? () => setPoiSelectMode((v) => !v) : undefined}
         leftSlot={toolbarLeftSlot}
@@ -383,19 +430,22 @@ export function InteractiveMap({
         />
       </div>
 
-      {/* POI Popup Dialog */}
+      {/* POI Popup (centered dialog) */}
       <POIPopupDialog
         poi={poiPopup}
+        currentWorldDate={currentWorldDate}
+        factionNames={factionNames}
         onClose={() => setPoiPopup(null)}
         onNavigateToPoi={(poiId) => navigate({ to: '/realms/pois/$poiId', params: { poiId } })}
         onNavigateToMap={(mId) => navigate({ to: '/realms/maps/$mapId', params: { mapId: mId } })}
-        onChangeType={async (poi, newType) => {
-          await executeUpdatePOI({ ...poi, type: newType }, { poiRepo: container.poiRepo })
-          setPoiPopup({ ...poi, type: newType })
-        }}
-        onChangeColor={async (poi, color) => {
-          await executeUpdatePOI({ ...poi, markerColor: color }, { poiRepo: container.poiRepo })
-          setPoiPopup({ ...poi, markerColor: color })
+        onNavigateToNpc={(npcId) => navigate({ to: '/realms/npcs/$npcId', params: { npcId } })}
+        onUpdatePoi={async (poi, patch) => {
+          // Read the live record first so toggling status/star can't clobber
+          // fields that changed elsewhere (faction turns, occupant updates).
+          const current = (await container.poiRepo.getById(poi.id)) ?? poi
+          const next = { ...current, ...patch }
+          await executeUpdatePOI(next, { poiRepo: container.poiRepo })
+          setPoiPopup(next)
         }}
         onRemoveFromMap={handleRemovePoi}
       />
@@ -647,138 +697,322 @@ const MARKER_COLORS = [
   '#ffffff', // white
 ]
 
+const LIGHT_ICONS: Record<'bright' | 'dim' | 'dark', React.ComponentType<{ className?: string }>> = {
+  bright: Sun,
+  dim: CloudSun,
+  dark: Moon,
+}
+
+const STATUS_META: Record<PoiStatus, { label: string; icon: React.ComponentType<{ className?: string }>; active: string }> = {
+  unexplored: { label: 'Unexplored', icon: CircleDashed, active: 'border-input bg-accent text-foreground' },
+  explored: { label: 'Explored', icon: Check, active: 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
+  cleared: { label: 'Cleared', icon: CheckCheck, active: 'border-slate-400 bg-slate-400/10 text-slate-600 dark:text-slate-300' },
+}
+
 function POIPopupDialog({
   poi,
+  currentWorldDate,
+  factionNames,
   onClose,
   onNavigateToPoi,
   onNavigateToMap,
-  onChangeType,
-  onChangeColor,
+  onNavigateToNpc,
+  onUpdatePoi,
   onRemoveFromMap,
 }: {
   poi: POI | null
+  currentWorldDate: WorldDate | null
+  factionNames: Record<string, string>
   onClose: () => void
   onNavigateToPoi: (poiId: string) => void
   onNavigateToMap: (mapId: string) => void
-  onChangeType: (poi: POI, newType: PoiType) => void
-  onChangeColor: (poi: POI, color: string | null) => void
+  onNavigateToNpc: (npcId: string) => void
+  onUpdatePoi: (poi: POI, patch: Partial<POI>) => void
   onRemoveFromMap: (poiId: string) => void
 }) {
   const poiMaps = usePOIMaps(poi?.id ?? null)
+  const npcs = useNPCsByPoi(poi?.id ?? null)
+  const presences = useFactionPresencesByPoi(poi?.id ?? null)
+  const [showCustomize, setShowCustomize] = useState(false)
 
   if (!poi) return null
 
   const CurrentIcon = POI_TYPE_ICONS[poi.type] || MapPin
+  const explorable = EXPLORABLE_POI_TYPES.includes(poi.type)
+  const LightIcon = poi.lightLevel ? LIGHT_ICONS[poi.lightLevel] : null
+
+  const setStatus = (status: PoiStatus) => {
+    onUpdatePoi(poi, statusPatch(poi, status, currentWorldDate))
+  }
+
+  // Compact status control shown in the title row. Explorable sites cycle
+  // unexplored→explored→cleared; everything else toggles visited on/off.
+  const onStatusClick = () =>
+    setStatus(
+      explorable
+        ? poi.status === 'unexplored' ? 'explored' : poi.status === 'explored' ? 'cleared' : 'unexplored'
+        : poi.status === 'unexplored' ? 'explored' : 'unexplored',
+    )
+  const statusActive = explorable ? poi.status !== 'unexplored' : poi.visited
+  const StatusIcon = explorable ? STATUS_META[poi.status].icon : poi.visited ? CheckCircle2 : CircleDashed
+  const statusLabel = explorable ? STATUS_META[poi.status].label : poi.visited ? 'Visited' : 'Visit'
+  const statusPillColor = !statusActive
+    ? 'border-input text-muted-foreground hover:bg-accent'
+    : poi.status === 'cleared'
+      ? 'border-slate-400 text-slate-600 dark:text-slate-300'
+      : 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+  const statusTitle = explorable
+    ? `Status: ${STATUS_META[poi.status].label} — tap to cycle`
+    : poi.visited ? 'Visited — tap to unmark' : 'Not visited — tap to mark'
 
   return (
     <Dialog open={!!poi} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-h-[85vh] max-w-md gap-0 overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CurrentIcon className="size-4" />
-            {poi.name}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          {poi.description && (
-            <p className="text-sm text-muted-foreground line-clamp-3">{poi.description}</p>
+          <div className="flex items-center gap-2 pr-6">
+            <CurrentIcon className="size-5 shrink-0" />
+            <DialogTitle className="max-w-[40%] shrink-0 truncate text-lg leading-tight">{poi.name}</DialogTitle>
+            {/* Subtype tag, centered in the title bar */}
+            <div className="flex flex-1 justify-center">
+              <Badge variant="outline" className="capitalize">{poi.subtypeLabel || poi.type}</Badge>
+            </div>
+            {/* Simple POIs get a compact visited toggle next to the star.
+                Explorable sites use the 3-state buttons in the body instead. */}
+            {!explorable && (
+              <button
+                type="button"
+                onClick={onStatusClick}
+                title={statusTitle}
+                aria-label={statusTitle}
+                aria-pressed={statusActive}
+                className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium transition-colors ${statusPillColor}`}
+              >
+                <StatusIcon className="size-3.5" />{statusLabel}
+              </button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 shrink-0"
+              onClick={() => onUpdatePoi(poi, { starred: !poi.starred })}
+              title={poi.starred ? 'Unstar' : 'Star'}
+              aria-pressed={poi.starred}
+            >
+              <Star className={`size-4 ${poi.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+            </Button>
+          </div>
+          {(poi.lightLevel || poi.dangerLevel != null || poi.lastVisitedDate) && (
+            <div className="flex flex-wrap items-center gap-1.5 pl-7">
+              {poi.lightLevel && LightIcon && (
+                <Badge variant="outline" className="gap-1 capitalize">
+                  <LightIcon className="size-3" />{poi.lightLevel}
+                </Badge>
+              )}
+              {poi.dangerLevel != null && (
+                <Badge
+                  variant="outline"
+                  className={`gap-1 ${poi.dangerLevel >= 4 ? 'border-red-500 text-red-600 dark:text-red-400' : ''}`}
+                >
+                  <ShieldAlert className="size-3" />{DANGER_LABELS[poi.dangerLevel] ?? `Danger ${poi.dangerLevel}`}
+                </Badge>
+              )}
+              {poi.lastVisitedDate && (
+                <span className="text-xs text-muted-foreground">
+                  Last visited {formatWorldDate(poi.lastVisitedDate)}
+                </span>
+              )}
+            </div>
           )}
+        </DialogHeader>
 
-          {/* Icon / Type picker */}
-          <div>
-            <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">Icon</h4>
-            <div className="flex flex-wrap gap-1">
-              {POI_TYPES.map((t) => {
-                const Icon = POI_TYPE_ICONS[t]
+        <div className="space-y-3 pt-3">
+          {/* Exploration status — 3-state segmented control for explorable sites */}
+          {explorable && (
+            <div className="grid grid-cols-3 gap-1">
+              {POI_STATUSES.map((s) => {
+                const meta = STATUS_META[s]
+                const Icon = meta.icon
+                const active = poi.status === s
                 return (
                   <button
-                    key={t}
-                    className={`flex items-center justify-center size-8 rounded-md transition-colors ${
-                      poi.type === t
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-accent text-muted-foreground'
+                    key={s}
+                    onClick={() => setStatus(s)}
+                    aria-pressed={active}
+                    className={`flex items-center justify-center gap-1 rounded-md border py-2 text-xs font-medium transition-colors ${
+                      active ? meta.active : 'border-input text-muted-foreground hover:bg-accent'
                     }`}
-                    onClick={() => onChangeType(poi, t)}
-                    title={t}
                   >
-                    <Icon className="size-4" />
+                    <Icon className="size-3.5" />{meta.label}
                   </button>
                 )
               })}
             </div>
-          </div>
+          )}
 
-          {/* Color picker */}
-          <div>
-            <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">Color</h4>
-            <div className="flex flex-wrap gap-1">
-              {MARKER_COLORS.map((c) => (
+          {/* Read-aloud hero (falls back to description) */}
+          {poi.readAloud ? (
+            <div className="rounded-md border-l-4 border-primary bg-muted/50 p-3">
+              <div className="mb-1 flex items-center gap-1 text-xs font-semibold uppercase text-muted-foreground">
+                <ScrollText className="size-3" /> Read aloud
+              </div>
+              <p className="whitespace-pre-wrap text-sm italic">{poi.readAloud}</p>
+            </div>
+          ) : poi.description ? (
+            <p className="text-sm text-muted-foreground">{poi.description}</p>
+          ) : null}
+
+          {/* Trouble / mood */}
+          {poi.trouble && (
+            <p className="text-sm">
+              <span className="font-semibold text-destructive">Trouble: </span>{poi.trouble}
+            </p>
+          )}
+          {poi.mood && (
+            <p className="text-sm"><span className="font-semibold">Mood: </span>{poi.mood}</p>
+          )}
+
+          {/* Who's here now */}
+          {(poi.currentOccupant || npcs.length > 0 || presences.length > 0) && (
+            <div className="space-y-1.5">
+              <h4 className="text-xs font-semibold uppercase text-muted-foreground">Here now</h4>
+              {poi.currentOccupant && (
+                <p className="flex items-center gap-1.5 text-sm">
+                  <Crown className="size-3.5 text-amber-500" />{poi.currentOccupant}
+                </p>
+              )}
+              {(npcs.length > 0 || presences.length > 0) && (
+                <div className="flex flex-wrap gap-1">
+                  {npcs.map((n) => (
+                    <button
+                      key={n.id}
+                      onClick={() => { onClose(); onNavigateToNpc(n.id) }}
+                      className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs hover:bg-accent"
+                    >
+                      <User className="size-3" />{n.name}
+                    </button>
+                  ))}
+                  {presences.map((p) => (
+                    <Badge key={p.id} variant="secondary" className="gap-1 text-xs" title={p.type}>
+                      <Flag className="size-3" />{factionNames[p.factionId] ?? 'Faction'}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Facts row */}
+          {(poi.services.length > 0 || poi.encounterChance != null) && (
+            <div className="flex flex-wrap gap-1.5">
+              {poi.services.map((s, i) => (
+                <Badge key={`${s.name}-${i}`} variant="outline" className="text-xs">{s.name}</Badge>
+              ))}
+              {poi.encounterChance != null && (
+                <Badge variant="outline" className="gap-1 text-xs">
+                  <Skull className="size-3" />1-in-{poi.encounterChance}
+                </Badge>
+              )}
+            </div>
+          )}
+
+          {/* Child maps */}
+          {poiMaps.length > 0 && (
+            <div className="space-y-1">
+              <h4 className="text-xs font-semibold uppercase text-muted-foreground">Maps</h4>
+              {poiMaps.map((m) => (
                 <button
-                  key={c ?? 'default'}
-                  className={`size-6 rounded-full border-2 transition-transform hover:scale-110 ${
-                    (poi.markerColor ?? null) === c
-                      ? 'border-foreground scale-110'
-                      : 'border-transparent'
-                  }`}
-                  style={c ? { backgroundColor: c } : undefined}
-                  onClick={() => onChangeColor(poi, c)}
-                  title={c ?? 'Default'}
+                  key={m.id}
+                  className="flex w-full items-center gap-2 rounded-md p-2 text-left text-sm transition-colors hover:bg-accent"
+                  onClick={() => { onClose(); onNavigateToMap(m.id) }}
                 >
-                  {!c && (
-                    <span className="flex items-center justify-center size-full rounded-full bg-primary text-primary-foreground text-[9px] font-bold">A</span>
-                  )}
+                  <MapIcon className="size-4 text-muted-foreground" />
+                  <span className="truncate">{m.name}</span>
+                  <ExternalLink className="ml-auto size-3 text-muted-foreground" />
                 </button>
               ))}
             </div>
-          </div>
-
-          {poiMaps.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">Maps</h4>
-              <div className="space-y-1">
-                {poiMaps.map((m) => (
-                  <button
-                    key={m.id}
-                    className="w-full flex items-center gap-2 rounded-md p-2 text-left hover:bg-accent transition-colors text-sm"
-                    onClick={() => {
-                      onClose()
-                      onNavigateToMap(m.id)
-                    }}
-                  >
-                    <MapIcon className="size-4 text-muted-foreground" />
-                    <span className="truncate">{m.name}</span>
-                    <ExternalLink className="size-3 text-muted-foreground ml-auto" />
-                  </button>
-                ))}
-              </div>
-            </div>
           )}
+
+          {/* Customize marker (prep-time edits, hidden by default) */}
+          <div className="border-t pt-2">
+            <button
+              onClick={() => setShowCustomize((v) => !v)}
+              className="flex w-full items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+            >
+              <Settings2 className="size-3.5" /> Customize marker
+            </button>
+            {showCustomize && (
+              <div className="mt-2 space-y-3">
+                <div>
+                  <h4 className="mb-1.5 text-xs font-semibold text-muted-foreground">Icon</h4>
+                  <div className="flex flex-wrap gap-1">
+                    {POI_TYPES.map((t) => {
+                      const Icon = POI_TYPE_ICONS[t]
+                      return (
+                        <button
+                          key={t}
+                          className={`flex size-9 items-center justify-center rounded-md transition-colors ${
+                            poi.type === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'
+                          }`}
+                          onClick={() => {
+                            // Switching to a non-explorable type strands a 'cleared'
+                            // status (no UI to reach it), so normalize it down to 'explored'.
+                            const patch: Partial<POI> = { type: t }
+                            if (poi.status === 'cleared' && !EXPLORABLE_POI_TYPES.includes(t)) {
+                              Object.assign(patch, statusPatch(poi, 'explored', currentWorldDate))
+                            }
+                            onUpdatePoi(poi, patch)
+                          }}
+                          title={t}
+                        >
+                          <Icon className="size-4" />
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="mb-1.5 text-xs font-semibold text-muted-foreground">Color</h4>
+                  <div className="flex flex-wrap gap-1.5">
+                    {MARKER_COLORS.map((c) => (
+                      <button
+                        key={c ?? 'default'}
+                        className={`size-7 rounded-full border-2 transition-transform hover:scale-110 ${
+                          (poi.markerColor ?? null) === c ? 'scale-110 border-foreground' : 'border-transparent'
+                        }`}
+                        style={c ? { backgroundColor: c } : undefined}
+                        onClick={() => onUpdatePoi(poi, { markerColor: c })}
+                        title={c ?? 'Default'}
+                      >
+                        {!c && (
+                          <span className="flex size-full items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">A</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => { onRemoveFromMap(poi.id); onClose() }}
+                >
+                  <MapPinned className="mr-2 size-4" /> Unplace from map
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
-        <DialogFooter>
-          <Button
-            variant="destructive"
-            size="sm"
-            className="mr-auto"
-            onClick={() => {
-              onRemoveFromMap(poi.id)
-              onClose()
-            }}
-          >
-            <MapPinned className="mr-2 size-4" />
-            Unplace
-          </Button>
-          <Button variant="outline" size="sm" onClick={onClose}>
+
+        <DialogFooter className="flex-row gap-2 pt-3">
+          <Button variant="outline" size="sm" className="flex-1" onClick={onClose}>
             Close
           </Button>
           <Button
             size="sm"
-            onClick={() => {
-              onClose()
-              onNavigateToPoi(poi.id)
-            }}
+            className="flex-1"
+            onClick={() => { onClose(); onNavigateToPoi(poi.id) }}
           >
-            <Eye className="mr-2 size-4" />
-            View Details
+            <Eye className="mr-2 size-4" /> View Details
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -823,6 +1057,8 @@ function RegionPopupDialog({
   onReassignBoundary: (fromRegion: Region, toRegionId: string) => void
   onNavigateToRegion: (regionId: string) => void
 }) {
+  const [showCustomize, setShowCustomize] = useState(false)
+
   if (!region) return null
 
   const terrainDefault = colorForTerrain(region.terrain)
@@ -830,103 +1066,119 @@ function RegionPopupDialog({
 
   return (
     <Dialog open={!!region} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-h-[85vh] max-w-md gap-0 overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{region.name}</DialogTitle>
+          <div className="flex items-center gap-2 pr-6">
+            <span
+              className="size-4 shrink-0 rounded-full border border-background"
+              style={{ backgroundColor: region.color ?? terrainDefault }}
+            />
+            <DialogTitle className="max-w-[45%] shrink-0 truncate text-lg leading-tight">{region.name}</DialogTitle>
+            {/* Terrain tag, centered in the title bar */}
+            <div className="flex flex-1 justify-center">
+              <Badge variant="outline" className="capitalize">{region.terrain}</Badge>
+            </div>
+          </div>
         </DialogHeader>
-        <div className="space-y-3">
+
+        <div className="space-y-3 pt-3">
           {region.description && (
-            <p className="text-sm text-muted-foreground line-clamp-3">{region.description}</p>
+            <p className="text-sm text-muted-foreground">{region.description}</p>
           )}
 
-          {/* Region reassign */}
-          {otherRegions.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">Assign to Region</h4>
-              <Select value={region.id} onValueChange={(v) => onReassignBoundary(region, v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={region.id}>{region.name} (current)</SelectItem>
-                  {otherRegions.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.name}{r.boundary ? ' (replace boundary)' : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          {/* Customize region (prep-time edits, hidden by default) */}
+          <div className="border-t pt-2">
+            <button
+              onClick={() => setShowCustomize((v) => !v)}
+              className="flex w-full items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+            >
+              <Settings2 className="size-3.5" /> Customize region
+            </button>
+            {showCustomize && (
+              <div className="mt-2 space-y-3">
+                {/* Region reassign */}
+                {otherRegions.length > 0 && (
+                  <div>
+                    <h4 className="mb-1.5 text-xs font-semibold text-muted-foreground">Assign to Region</h4>
+                    <Select value={region.id} onValueChange={(v) => onReassignBoundary(region, v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={region.id}>{region.name} (current)</SelectItem>
+                        {otherRegions.map((r) => (
+                          <SelectItem key={r.id} value={r.id}>
+                            {r.name}{r.boundary ? ' (replace boundary)' : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-          {/* Terrain picker */}
-          <div>
-            <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">Terrain</h4>
-            <Select value={region.terrain} onValueChange={(v) => onChangeTerrain(region, v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {(TERRAIN_TYPES.includes(region.terrain as TerrainType)
-                  ? TERRAIN_TYPES
-                  : [region.terrain, ...TERRAIN_TYPES]
-                ).filter(Boolean).map((t) => (
-                  <SelectItem key={t} value={t}>
-                    <span className="flex items-center gap-2">
-                      <span className="size-3 rounded-full inline-block" style={{ backgroundColor: colorForTerrain(t) }} />
-                      {t}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                {/* Terrain picker */}
+                <div>
+                  <h4 className="mb-1.5 text-xs font-semibold text-muted-foreground">Terrain</h4>
+                  <Select value={region.terrain} onValueChange={(v) => onChangeTerrain(region, v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(TERRAIN_TYPES.includes(region.terrain as TerrainType)
+                        ? TERRAIN_TYPES
+                        : [region.terrain, ...TERRAIN_TYPES]
+                      ).filter(Boolean).map((t) => (
+                        <SelectItem key={t} value={t}>
+                          <span className="flex items-center gap-2">
+                            <span className="inline-block size-3 rounded-full" style={{ backgroundColor: colorForTerrain(t) }} />
+                            {t}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Color picker */}
+                <div>
+                  <h4 className="mb-1.5 text-xs font-semibold text-muted-foreground">Color</h4>
+                  <div className="flex flex-wrap gap-1.5">
+                    {REGION_PALETTE.map((c) => {
+                      const isSelected = (region.color ?? null) === c
+                      const displayColor = c ?? terrainDefault
+                      return (
+                        <button
+                          key={c ?? 'default'}
+                          className={`size-7 rounded-full border-2 transition-transform hover:scale-110 ${
+                            isSelected ? 'scale-110 border-foreground' : 'border-transparent'
+                          }`}
+                          style={{ backgroundColor: displayColor }}
+                          onClick={() => onChangeColor(region, c)}
+                          title={c ?? `Terrain default (${region.terrain})`}
+                        >
+                          {!c && (
+                            <span className="flex size-full items-center justify-center rounded-full text-[9px] font-bold text-white">T</span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <Button variant="destructive" size="sm" onClick={() => onDeleteBoundary(region)}>
+                  <Trash2 className="mr-2 size-4" /> Delete Boundary
+                </Button>
+              </div>
+            )}
           </div>
-
-          {/* Color picker */}
-          <div>
-            <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">Color</h4>
-            <div className="flex flex-wrap gap-1">
-              {REGION_PALETTE.map((c) => {
-                const isSelected = (region.color ?? null) === c
-                const displayColor = c ?? terrainDefault
-                return (
-                  <button
-                    key={c ?? 'default'}
-                    className={`size-6 rounded-full border-2 transition-transform hover:scale-110 ${
-                      isSelected ? 'border-foreground scale-110' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: displayColor }}
-                    onClick={() => onChangeColor(region, c)}
-                    title={c ?? `Terrain default (${region.terrain})`}
-                  >
-                    {!c && (
-                      <span className="flex items-center justify-center size-full rounded-full text-white text-[9px] font-bold">T</span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
         </div>
-        <DialogFooter>
-          <Button
-            variant="destructive"
-            size="sm"
-            className="mr-auto"
-            onClick={() => onDeleteBoundary(region)}
-          >
-            <Trash2 className="mr-2 size-4" />
-            Delete Boundary
-          </Button>
-          <Button variant="outline" size="sm" onClick={onClose}>
+
+        <DialogFooter className="flex-row gap-2 pt-3">
+          <Button variant="outline" size="sm" className="flex-1" onClick={onClose}>
             Close
           </Button>
           <Button
             size="sm"
-            onClick={() => {
-              onClose()
-              onNavigateToRegion(region.id)
-            }}
+            className="flex-1"
+            onClick={() => { onClose(); onNavigateToRegion(region.id) }}
           >
-            <Eye className="mr-2 size-4" />
-            View Details
+            <Eye className="mr-2 size-4" /> View Details
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -30,6 +30,8 @@ export interface BuildPOIInput {
   ruinSite?: RuinSite | null
   landmarkLore?: LandmarkLore | null
   poiGenOptions?: { seed: string } | null
+  dangerLevel?: number | null
+  currentOccupant?: string | null
 }
 
 export function buildPOI(input: BuildPOIInput): POI {
@@ -60,6 +62,10 @@ export function buildPOI(input: BuildPOIInput): POI {
     roomWidth: null,
     roomLength: null,
     visited: false,
+    status: 'unexplored',
+    lastVisitedDate: null,
+    dangerLevel: input.dangerLevel ?? null,
+    currentOccupant: input.currentOccupant ?? null,
     lightLevel: null,
     wanderingMonsters: [],
     encounterChance: null,

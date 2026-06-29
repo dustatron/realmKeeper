@@ -45,6 +45,7 @@ import { EncounterCascade } from "~/components/shared/EncounterCascade";
 import { AtAGlancePanel } from "~/components/shared/AtAGlancePanel";
 import { WanderingMonsterTable } from "~/components/shared/WanderingMonsterTable";
 import { db } from "@infrastructure/dexie/db";
+import { visitedPatch } from "@domain/services/poiStatus";
 import { getTagEmojis, getUnmappedTags } from "~/shared/room-card-utils";
 import type { POI } from "@domain/entities/POI";
 import type { NPC } from "@domain/entities/NPC";
@@ -1026,7 +1027,7 @@ export function DungeonTemplate({
                             title={child.visited ? "Mark unvisited" : "Mark visited"}
                             onClick={(e) => {
                               e.stopPropagation();
-                              db.pois.update(child.id, { visited: !child.visited, updatedAt: Date.now() });
+                              db.pois.update(child.id, { ...visitedPatch(child, !child.visited), updatedAt: Date.now() });
                             }}
                           >
                             {child.visited ? (
