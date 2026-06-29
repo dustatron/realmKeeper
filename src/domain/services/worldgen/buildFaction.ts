@@ -3,6 +3,7 @@ import type { Faction, AgendaGoal } from '@domain/entities/Faction'
 import { newId } from '@shared/ulid'
 import { pickCairn, sampleCairn, cairnTexts } from './cairnPick'
 import { pickFactionName } from '~/domain/data/worldgen/names'
+import type { ResolvedTables } from './TableProvider'
 
 export interface BuildFactionInput {
   worldId: string
@@ -10,6 +11,8 @@ export interface BuildFactionInput {
   regionId: string
   /** When provided, the generated name is kept unique within the set (and added). */
   usedNames?: Set<string>
+  /** Central table registry, so faction-name pools can be customized. */
+  tables?: ResolvedTables
 }
 
 // Cairn's advantage-quantity roll: 1d20 → 1-7=1, 8-12=2, 13-17=3, 18-20=4.
@@ -64,7 +67,7 @@ export function buildFaction(input: BuildFactionInput, rng: SeededRandom): Facti
   // within the world when a usedNames set is supplied. The old "<Trait> <Type>"
   // phrase becomes the description/subtitle.
   const resolvedType = type || (cairnTexts('table-cairn-faction-type')[0] ?? '')
-  const makeName = (): string => pickFactionName(resolvedType, rng)
+  const makeName = (): string => pickFactionName(resolvedType, rng, input.tables)
   let name = makeName()
   if (input.usedNames) {
     for (let i = 0; i < 20 && input.usedNames.has(name); i++) name = makeName()

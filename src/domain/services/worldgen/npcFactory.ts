@@ -3,6 +3,11 @@ import type { NPC } from '@domain/entities/NPC'
 import type { Disposition } from '@shared/constants'
 import { newId } from '@shared/ulid'
 import { pickCairn } from './cairnPick'
+import type { ResolvedTables } from './TableProvider'
+import {
+  MOTIVATIONS, PERSONALITIES, PHYSICAL_TRAITS,
+  NPC_MOTIVATION_TABLE_ID, NPC_PERSONALITY_TABLE_ID, NPC_PHYSICAL_TRAIT_TABLE_ID,
+} from '@domain/data/worldgen/npc.tables'
 import {
   getMonsterDescription,
   systemBlockFromMonster,
@@ -19,17 +24,25 @@ export const CREATURE_WANTS = [
 export interface HumanoidFlavor {
   appearance: string
   voice: string
-  traits: string[]   // [virtue, vice]
-  motivation: string // virtue
+  traits: string[]    // [virtue, vice]
+  motivation: string  // a drive from the NPC motivation table
+  personality: string // a behavior tell
+}
+
+// Resolve a pool from the provider (editable custom tables drive generation),
+// falling back to the built-in array. Same order keeps seeded output stable.
+function flavorPool(tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): readonly string[] {
+  const texts = tables?.texts(id)
+  return texts && texts.length > 0 ? texts : fallback
 }
 
 /**
- * Universal humanoid flavor from the Cairn trait tables.
- * IMPORTANT: the rng.pick call ORDER below EXACTLY matches the order in
- * buildNpc.ts (physique, skin, hair, face, speech, clothing, virtue, vice)
- * so existing seeded worldgen output is unchanged.
+ * Universal humanoid flavor from the Cairn trait tables plus a personality tell,
+ * a drive, and a notable physical quirk from the Realm Keeper NPC tables. The
+ * Cairn picks come first (unchanged order) so the appearance/voice/traits of a
+ * given seed are stable; the three new picks follow.
  */
-export function buildHumanoidFlavor(rng: SeededRandom): HumanoidFlavor {
+export function buildHumanoidFlavor(rng: SeededRandom, tables?: ResolvedTables): HumanoidFlavor {
   const physique = pickCairn(rng, 'table-cairn-trait-physique')
   const skin = pickCairn(rng, 'table-cairn-trait-skin')
   const hair = pickCairn(rng, 'table-cairn-trait-hair')
@@ -39,12 +52,16 @@ export function buildHumanoidFlavor(rng: SeededRandom): HumanoidFlavor {
   const virtue = pickCairn(rng, 'table-cairn-trait-virtue')
   const vice = pickCairn(rng, 'table-cairn-trait-vice')
 
+  const personality = rng.pick(flavorPool(tables, NPC_PERSONALITY_TABLE_ID, PERSONALITIES))
+  const motivation = rng.pick(flavorPool(tables, NPC_MOTIVATION_TABLE_ID, MOTIVATIONS))
+  const quirk = rng.pick(flavorPool(tables, NPC_PHYSICAL_TRAIT_TABLE_ID, PHYSICAL_TRAITS))
+
   const hairDesc = hair === 'Bald' ? 'a bald head' : `${hair.toLowerCase()} hair`
   const appearance =
     `${physique}, with ${skin.toLowerCase()} skin, ${hairDesc}, and ${face.toLowerCase()} features. ` +
-    `Wears ${clothing.toLowerCase()} clothes.`
+    `Wears ${clothing.toLowerCase()} clothes. Notably ${quirk.toLowerCase()}.`
 
-  return { appearance, voice: speech, traits: [virtue, vice], motivation: virtue }
+  return { appearance, voice: speech, traits: [virtue, vice], motivation, personality }
 }
 
 export interface BuildCreatureNpcInput {

@@ -1,6 +1,9 @@
 import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { pickBiomeFeature, biomeLabel, type Biome } from '@domain/data/worldgen/biomes'
 import { pickCairn, sampleCairn } from './cairnPick'
+import type { ResolvedTables } from './TableProvider'
+
+export const REGION_PROBLEMS_TABLE_ID = 'table-rk-region-problem'
 
 export const REGION_PROBLEMS = [
   'A blight creeps out of the wilds, fouling wells and crops',
@@ -103,7 +106,7 @@ const THREATENING_PEOPLE = new Set([
   'Restless soldiers',
 ])
 
-export function buildRegionFlavor(biome: Biome, rng: SeededRandom): RegionFlavor {
+export function buildRegionFlavor(biome: Biome, rng: SeededRandom, tables?: ResolvedTables): RegionFlavor {
   const tier = BIOME_TIER[biome]
 
   // Features: the biome's own evocative feature plus a Cairn landmark.
@@ -124,7 +127,8 @@ export function buildRegionFlavor(biome: Biome, rng: SeededRandom): RegionFlavor
   const dangers = [`${lairFeature} ${lair}`.toLowerCase()]
   if (THREATENING_PEOPLE.has(people[0])) dangers.push(people[0].toLowerCase())
 
-  const problem = rng.pick(REGION_PROBLEMS)
+  const problemPool = tables?.texts(REGION_PROBLEMS_TABLE_ID)
+  const problem = rng.pick(problemPool && problemPool.length > 0 ? problemPool : REGION_PROBLEMS)
 
   const resourcePhrase =
     resources.length === 2

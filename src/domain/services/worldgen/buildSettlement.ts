@@ -5,16 +5,11 @@ import type { NPC } from '@domain/entities/NPC'
 import { buildPOI } from './buildPoi'
 import { buildNpc } from './buildNpc'
 import { settlementSize } from '@domain/data/worldgen/settlementSize'
+import type { ResolvedTables } from './TableProvider'
+import { SHOP_TYPES_TABLE_ID, SHOP_NAMES_TABLE_ID, SHOP_TYPES } from '@domain/data/worldgen/shops.tables'
 
-// Re-authored settlement building types. Each becomes a child POI of the
-// settlement with a proprietor living in it.
-const BUILDING_TYPES = [
-  'Tavern', 'Smithy', 'Temple', 'Market', 'Granary', 'Barracks', 'Apothecary',
-  'Stables', 'Mill', 'Tannery', 'Guildhall', 'Warehouse', 'Shrine', 'Bathhouse',
-  'Trading Post', 'Watchtower', 'Inn', 'Bakery', 'Brewery', 'General Store',
-]
-
-// The proprietor's trade, by building type.
+// The proprietor's trade, by building type (for the common civic types; other
+// shop types fall back to the lowercased type name as the occupation).
 const BUILDING_OCCUPATIONS: Record<string, string> = {
   Tavern: 'tavernkeeper', Inn: 'innkeeper', Smithy: 'blacksmith',
   Temple: 'priest', Shrine: 'shrinekeeper', Market: 'merchant',
@@ -37,25 +32,36 @@ export interface SettlementBuild {
   proprietors: NPC[]
 }
 
-// Pure, seeded settlement interior: child building POIs scaled by the
-// settlement's size, each with a proprietor NPC living in it.
+// Pure, seeded settlement interior: child building POIs (shops) scaled by the
+// settlement's size, each with a proprietor NPC living in it. Shop types and
+// flavorful names are drawn from the central table registry (live custom tables
+// drive generation), falling back to the built-in shop pools / a generic name.
 export function buildSettlementBuildings(
   settlement: POI,
   worldId: string,
   systemConfig: SystemConfig,
   rng: SeededRandom,
+  tables?: ResolvedTables,
 ): SettlementBuild {
-  const count = Math.min(BUILDING_TYPES.length, buildingCount(settlement.subtypeLabel, rng))
-  const types = rng.sample(BUILDING_TYPES, count)
+  const typePool = tables?.texts(SHOP_TYPES_TABLE_ID)
+  const types_ = typePool && typePool.length > 0 ? typePool : SHOP_TYPES
+  const namePool = tables?.texts(SHOP_NAMES_TABLE_ID) ?? []
+
+  const count = Math.min(types_.length, buildingCount(settlement.subtypeLabel, rng))
+  const types = rng.sample(types_, count)
+  // Distinct flavorful names when the pool is large enough; else fall back per
+  // building to a generic "The <type>".
+  const names = namePool.length >= count ? rng.sample(namePool, count) : null
 
   const buildings: POI[] = []
   const proprietors: NPC[] = []
-  for (const type of types) {
+  types.forEach((type, i) => {
+    const name = names ? names[i] : `The ${type.toLowerCase()}`
     const building = buildPOI({
       regionId: settlement.regionId,
       parentPoiId: settlement.id,
-      name: `The ${type.toLowerCase()}`,
-      description: `The ${type.toLowerCase()} of ${settlement.name}.`,
+      name,
+      description: `${name} — a ${type.toLowerCase()} in ${settlement.name}.`,
       type: 'building',
       subtypeLabel: type,
     })
@@ -67,12 +73,13 @@ export function buildSettlementBuildings(
           regionId: settlement.regionId ?? undefined,
           poiId: building.id,
           role: 'inhabitant',
-          occupation: BUILDING_OCCUPATIONS[type] ?? type.toLowerCase() + ' keeper',
+          occupation: BUILDING_OCCUPATIONS[type] ?? type.toLowerCase(),
+          tables,
         },
         systemConfig,
         rng,
       ),
     )
-  }
+  })
   return { buildings, proprietors }
 }

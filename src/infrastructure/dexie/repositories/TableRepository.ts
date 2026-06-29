@@ -7,11 +7,21 @@ import {
   getSystemTablesByTag,
   getSystemTablesBySetId,
   getAllSystemSets,
+  getAllSystemTables,
   getSystemSetById,
   isSystemSetId,
 } from '@domain/data/system-tables'
+import { createTableProvider, type ResolvedTables } from '@domain/services/worldgen/TableProvider'
 
 export class TableRepository implements ITableRepository {
+  async resolveAll(): Promise<ResolvedTables> {
+    // Static built-ins first, then Dexie custom tables — createTableProvider's
+    // insertion-order Map lets a custom table override a built-in with the same
+    // id (live tables drive generation).
+    const dbDefs = await db.tableDefs.toArray()
+    return createTableProvider([...getAllSystemTables(), ...dbDefs])
+  }
+
   async getTableById(id: string): Promise<TableDef | undefined> {
     return getSystemTableById(id) ?? db.tableDefs.get(id)
   }

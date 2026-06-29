@@ -14,6 +14,7 @@ import type { IRegionRepository } from '@application/ports/IRegionRepository'
 import type { IHookRepository } from '@application/ports/IHookRepository'
 import type { IRumorRepository } from '@application/ports/IRumorRepository'
 import type { INoticeRepository } from '@application/ports/INoticeRepository'
+import type { ITableRepository } from '@application/ports/ITableRepository'
 import { executeGenerateTreasureLeads } from './GenerateTreasureLeads'
 
 export interface GenerateWorldDeps extends GenerateDungeonDeps {
@@ -24,6 +25,7 @@ export interface GenerateWorldDeps extends GenerateDungeonDeps {
   hookRepo: IHookRepository
   rumorRepo: IRumorRepository
   noticeRepo: INoticeRepository
+  tableRepo: ITableRepository
 }
 
 // Cap how many dungeons are fully built at world creation; the rest stay lazy
@@ -81,6 +83,11 @@ export async function executeGenerateWorld(
   // gracefully (no NPCs) if the system is somehow missing.
   const systemConfig = await db.systemConfigs.get(input.systemId)
 
+  // Resolve the table registry (built-ins + user custom tables) once, then pass
+  // the pure snapshot into the domain generator. Live custom-table edits drive
+  // generation; built-ins are the fallback.
+  const tables = await deps.tableRepo.resolveAll()
+
   // One atomic transaction: the realm (+ its party faction and main note,
   // written by executeCreateRealm via the repos, which join this transaction's
   // async context) and the hex map all commit together or roll back together —
@@ -107,6 +114,7 @@ export async function executeGenerateWorld(
       poiDensity: input.poiDensity ?? 'normal',
       factionCount: input.factionCount,
       systemConfig,
+      tables,
       loomingThreat: input.loomingThreat ?? true,
       portals: input.portals ?? true,
       realmContent: {

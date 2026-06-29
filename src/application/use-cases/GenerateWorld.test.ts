@@ -26,6 +26,7 @@ const deps = () => ({
   hookRepo: container.hookRepo,
   rumorRepo: container.rumorRepo,
   noticeRepo: container.noticeRepo,
+  tableRepo: container.tableRepo,
 })
 
 describe('executeGenerateWorld', () => {

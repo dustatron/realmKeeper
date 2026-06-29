@@ -1,18 +1,46 @@
 import { SeededRandom } from '~/lib/dungeon/SeededRandom'
+import type { ResolvedTables } from '@domain/services/worldgen/TableProvider'
 
 export type NameKind = 'settlement' | 'dungeon' | 'ruin' | 'landmark' | 'region'
 export const NAME_KINDS: NameKind[] = ['settlement', 'dungeon', 'ruin', 'landmark', 'region']
 
-const SETTLEMENT_PREFIX = ['Ash', 'Black', 'Grey', 'Oak', 'Stone', 'Thorn', 'Wind', 'Salt', 'Fern', 'Crow']
-const SETTLEMENT_SUFFIX = ['ford', 'haven', 'bury', 'wick', 'moor', 'hollow', 'gate', 'reach', 'mill', 'fall']
+// Stable table ids for the name component pools. Defined here (not in the view
+// file) so the generator and the view share one source without a circular
+// import. Per-key families (biome/faction-type) slug the key.
+const slug = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+export const NAME_TABLE_IDS = {
+  settlementPrefix: 'table-rk-names-settlement-prefix',
+  settlementSuffix: 'table-rk-names-settlement-suffix',
+  dungeonPrefix: 'table-rk-names-dungeon-prefix',
+  dungeonNoun: 'table-rk-names-dungeon-noun',
+  ruinPrefix: 'table-rk-names-ruin-prefix',
+  ruinNoun: 'table-rk-names-ruin-noun',
+  landmark: 'table-rk-names-landmark',
+  regionAdj: 'table-rk-names-region-adj',
+  regionNoun: 'table-rk-names-region-noun',
+  regionRoot: 'table-rk-names-region-root',
+  regionRootSuffix: 'table-rk-names-region-root-suffix',
+  regionAdjBiome: (b: string) => `table-rk-names-region-adj-${slug(b)}`,
+  regionNounBiome: (b: string) => `table-rk-names-region-noun-${slug(b)}`,
+  factionAdj: 'table-rk-names-faction-adj',
+  factionEmblem: 'table-rk-names-faction-emblem',
+  factionCollectiveDefault: 'table-rk-names-faction-collective',
+  factionCollectiveByType: (t: string) => `table-rk-names-faction-collective-${slug(t)}`,
+} as const
 
-const DUNGEON_PREFIX = ['Tomb of', 'Vault of', 'Pit of', 'Halls of', 'Warren of', 'Crypt of', 'Den of']
-const DUNGEON_NOUN = ['the Forgotten', 'the Pale King', 'Vël', 'the Worm', 'Ashes', 'the Drowned', 'the Gaunt']
+// Name component pools. Exported so names.tables.ts can expose them as browsable
+// TableDefs (single source) and so the generator can fall back to them when a
+// table isn't present in the provider.
+export const SETTLEMENT_PREFIX = ['Ash', 'Black', 'Grey', 'Oak', 'Stone', 'Thorn', 'Wind', 'Salt', 'Fern', 'Crow']
+export const SETTLEMENT_SUFFIX = ['ford', 'haven', 'bury', 'wick', 'moor', 'hollow', 'gate', 'reach', 'mill', 'fall']
 
-const RUIN_PREFIX = ['Broken', 'Sunken', 'Shattered', 'Hollow', 'Weeping', 'Fallen']
-const RUIN_NOUN = ['Spire', 'Keep', 'Temple', 'Bastion', 'Arch', 'Manse']
+export const DUNGEON_PREFIX = ['Tomb of', 'Vault of', 'Pit of', 'Halls of', 'Warren of', 'Crypt of', 'Den of']
+export const DUNGEON_NOUN = ['the Forgotten', 'the Pale King', 'Vël', 'the Worm', 'Ashes', 'the Drowned', 'the Gaunt']
 
-const LANDMARK = [
+export const RUIN_PREFIX = ['Broken', 'Sunken', 'Shattered', 'Hollow', 'Weeping', 'Fallen']
+export const RUIN_NOUN = ['Spire', 'Keep', 'Temple', 'Bastion', 'Arch', 'Manse']
+
+export const LANDMARK = [
   'the Standing Stones', 'the Hanged Oak', 'Gallows Hill', 'the Weeping Falls',
   'the Bone Bridge', 'the Salt Pillar', 'the Watcher\'s Cairn', 'the Black Tarn',
 ]
@@ -20,29 +48,29 @@ const LANDMARK = [
 // Region naming draws from several sentence templates over large word pools so
 // generated worlds don't read as a wall of "<Adj> <Noun>" repeats. An optional
 // biome biases the word choice toward terrain-appropriate flavor.
-const REGION_ADJ = [
+export const REGION_ADJ = [
   'Old', 'Wild', 'Far', 'Grim', 'Lost', 'High', 'Low', 'Broken',
   'Hidden', 'Sunken', 'Forgotten', 'Shrouded', 'Riven', 'Wandering',
   'Endless', 'Silent', 'Weeping', 'Forsaken',
 ]
-const REGION_NOUN = [
+export const REGION_NOUN = [
   'Marches', 'Reaches', 'Downs', 'Wilds', 'Expanse', 'Hinterlands', 'Verge',
   'Barrens', 'Frontier', 'Vale', 'Weald', 'Fells', 'Heath', 'Moors', 'Holt',
   'Scar', 'Steppe', 'Wastes', 'Borderlands', 'Marshes', 'Spurs', 'Hollow',
 ]
 // Invented proper-name roots, recombined into place names.
-const REGION_ROOT = [
+export const REGION_ROOT = [
   'Vael', 'Cael', 'Dun', 'Mor', 'Thal', 'Bryn', 'Garr', 'Esk', 'Orn', 'Kell',
   'Vane', 'Ardh', 'Surn', 'Brae', 'Hesp', 'Lorn', 'Wend', 'Tarn', 'Quor',
   'Ulth', 'Drane', 'Fenn', 'Maur', 'Sable',
 ]
-const REGION_ROOT_SUFFIX = [
+export const REGION_ROOT_SUFFIX = [
   'moor', 'hollow', 'mark', 'fell', 'reach', 'wold', 'gard', 'mere', 'fen',
   'dale', 'heath', 'wick', 'crest', 'march',
 ]
 
 // Terrain-flavored nouns/adjectives, merged into the pools when a biome is known.
-const BIOME_REGION_NOUN: Record<string, string[]> = {
+export const BIOME_REGION_NOUN: Record<string, string[]> = {
   forest: ['Weald', 'Holt', 'Thornwood', 'Greenmarch'],
   mountains: ['Crags', 'Peaks', 'Spurs', 'Highfells'],
   grasslands: ['Steppe', 'Plains', 'Meadows', 'Downs'],
@@ -54,7 +82,7 @@ const BIOME_REGION_NOUN: Record<string, string[]> = {
   jungle: ['Tangle', 'Greenmaw', 'Deepwood', 'Riverlands'],
   lake: ['Shallows', 'Meres', 'Watershed', 'Lakelands'],
 }
-const BIOME_REGION_ADJ: Record<string, string[]> = {
+export const BIOME_REGION_ADJ: Record<string, string[]> = {
   forest: ['Verdant', 'Tangled', 'Shaded'],
   mountains: ['Craggy', 'Windswept', 'Sheer'],
   grasslands: ['Open', 'Rolling', 'Windblown'],
@@ -67,26 +95,39 @@ const BIOME_REGION_ADJ: Record<string, string[]> = {
   lake: ['Misted', 'Reed-Choked', 'Still'],
 }
 
-function pickRegionName(rng: SeededRandom, biome?: string): string {
+// Resolve a pool from the table provider (live custom tables drive generation),
+// falling back to the literal array. Returns a non-empty array so rng.pick never
+// throws; identical order to the literal keeps seeded output deterministic.
+function pool(tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): readonly string[] {
+  if (!tables) return fallback
+  const texts = tables.texts(id)
+  return texts.length > 0 ? texts : fallback
+}
+
+function pickRegionName(rng: SeededRandom, biome?: string, tables?: ResolvedTables): string {
+  const baseAdj = pool(tables, NAME_TABLE_IDS.regionAdj, REGION_ADJ)
+  const baseNoun = pool(tables, NAME_TABLE_IDS.regionNoun, REGION_NOUN)
+  const roots = pool(tables, NAME_TABLE_IDS.regionRoot, REGION_ROOT)
+  const rootSuffix = pool(tables, NAME_TABLE_IDS.regionRootSuffix, REGION_ROOT_SUFFIX)
   const adj = biome
-    ? [...REGION_ADJ, ...(BIOME_REGION_ADJ[biome] ?? [])]
-    : REGION_ADJ
+    ? [...baseAdj, ...pool(tables, NAME_TABLE_IDS.regionAdjBiome(biome), BIOME_REGION_ADJ[biome] ?? [])]
+    : baseAdj
   const noun = biome
-    ? [...REGION_NOUN, ...(BIOME_REGION_NOUN[biome] ?? [])]
-    : REGION_NOUN
+    ? [...baseNoun, ...pool(tables, NAME_TABLE_IDS.regionNounBiome(biome), BIOME_REGION_NOUN[biome] ?? [])]
+    : baseNoun
 
   const template = rng.between(0, 4)
   switch (template) {
     case 0:
       return `The ${rng.pick(adj)} ${rng.pick(noun)}`
     case 1:
-      return `${rng.pick(noun)} of ${rng.pick(REGION_ROOT)}`
+      return `${rng.pick(noun)} of ${rng.pick(roots)}`
     case 2:
-      return `${rng.pick(REGION_ROOT)}${rng.pick(REGION_ROOT_SUFFIX)}`
+      return `${rng.pick(roots)}${rng.pick(rootSuffix)}`
     case 3:
-      return `The ${rng.pick(REGION_ROOT)} ${rng.pick(noun)}`
+      return `The ${rng.pick(roots)} ${rng.pick(noun)}`
     default:
-      return `${rng.pick(adj)} ${rng.pick(REGION_ROOT)}`
+      return `${rng.pick(adj)} ${rng.pick(roots)}`
   }
 }
 
@@ -96,18 +137,18 @@ function pickRegionName(rng: SeededRandom, biome?: string): string {
 // biases toward a fitting collective noun, combined with adjective / emblem /
 // proper-root pools (the same REGION_ROOT roots double as surnames) across a few
 // templates, with signature patterns for Noble Houses, Tribes, and Nomads.
-const FACTION_ADJ = [
+export const FACTION_ADJ = [
   'Crimson', 'Gilded', 'Iron', 'Ashen', 'Hollow', 'Pale', 'Golden', 'Black',
   'Emerald', 'Thorned', 'Veiled', 'Broken', 'Eternal', 'Grey', 'Silent',
   'Bronze', 'Sable', 'Verdant', 'Scarlet', 'Obsidian',
 ]
-const FACTION_EMBLEM = [
+export const FACTION_EMBLEM = [
   'Hand', 'Crow', 'Serpent', 'Coin', 'Key', 'Thorn', 'Lantern', 'Star', 'Veil',
   'Oath', 'Wheel', 'Flame', 'Spire', 'Eye', 'Chain', 'Crown', 'Fang', 'Raven',
   'Ember', 'Sun', 'Moon', 'Tide', 'Gate', 'Antler', 'Talon',
 ]
-const FACTION_COLLECTIVE_DEFAULT = ['Order', 'Circle', 'League', 'Pact', 'Company', 'Covenant']
-const FACTION_COLLECTIVE_BY_TYPE: Record<string, string[]> = {
+export const FACTION_COLLECTIVE_DEFAULT = ['Order', 'Circle', 'League', 'Pact', 'Company', 'Covenant']
+export const FACTION_COLLECTIVE_BY_TYPE: Record<string, string[]> = {
   Artisans: ['Guild', 'Workshop', 'Makers', 'Hands'],
   Cabal: ['Cabal', 'Circle', 'Conclave', 'Coven'],
   Commoners: ['Folk', 'Union', 'Commons', 'League'],
@@ -130,11 +171,14 @@ const FACTION_COLLECTIVE_BY_TYPE: Record<string, string[]> = {
   Wizards: ['Circle', 'Conclave', 'Coven', 'Order'],
 }
 
-export function pickFactionName(type: string, rng: SeededRandom): string {
-  const collective = rng.pick(FACTION_COLLECTIVE_BY_TYPE[type] ?? FACTION_COLLECTIVE_DEFAULT)
-  const adj = rng.pick(FACTION_ADJ)
-  const emblem = rng.pick(FACTION_EMBLEM)
-  const root = rng.pick(REGION_ROOT)
+export function pickFactionName(type: string, rng: SeededRandom, tables?: ResolvedTables): string {
+  const collectivePool = FACTION_COLLECTIVE_BY_TYPE[type]
+    ? pool(tables, NAME_TABLE_IDS.factionCollectiveByType(type), FACTION_COLLECTIVE_BY_TYPE[type])
+    : pool(tables, NAME_TABLE_IDS.factionCollectiveDefault, FACTION_COLLECTIVE_DEFAULT)
+  const collective = rng.pick(collectivePool)
+  const adj = rng.pick(pool(tables, NAME_TABLE_IDS.factionAdj, FACTION_ADJ))
+  const emblem = rng.pick(pool(tables, NAME_TABLE_IDS.factionEmblem, FACTION_EMBLEM))
+  const root = rng.pick(pool(tables, NAME_TABLE_IDS.regionRoot, REGION_ROOT))
 
   // Signature patterns for types with a strong naming convention.
   if (type === 'Noble House') {
@@ -167,6 +211,7 @@ export function pickFactionName(type: string, rng: SeededRandom): string {
 
 export interface PickNameOptions {
   biome?: string
+  tables?: ResolvedTables
 }
 
 export function pickName(
@@ -174,16 +219,17 @@ export function pickName(
   rng: SeededRandom,
   opts: PickNameOptions = {},
 ): string {
+  const { tables } = opts
   switch (kind) {
     case 'settlement':
-      return `${rng.pick(SETTLEMENT_PREFIX)}${rng.pick(SETTLEMENT_SUFFIX)}`
+      return `${rng.pick(pool(tables, NAME_TABLE_IDS.settlementPrefix, SETTLEMENT_PREFIX))}${rng.pick(pool(tables, NAME_TABLE_IDS.settlementSuffix, SETTLEMENT_SUFFIX))}`
     case 'dungeon':
-      return `${rng.pick(DUNGEON_PREFIX)} ${rng.pick(DUNGEON_NOUN)}`
+      return `${rng.pick(pool(tables, NAME_TABLE_IDS.dungeonPrefix, DUNGEON_PREFIX))} ${rng.pick(pool(tables, NAME_TABLE_IDS.dungeonNoun, DUNGEON_NOUN))}`
     case 'ruin':
-      return `The ${rng.pick(RUIN_PREFIX)} ${rng.pick(RUIN_NOUN)}`
+      return `The ${rng.pick(pool(tables, NAME_TABLE_IDS.ruinPrefix, RUIN_PREFIX))} ${rng.pick(pool(tables, NAME_TABLE_IDS.ruinNoun, RUIN_NOUN))}`
     case 'landmark':
-      return rng.pick(LANDMARK)
+      return rng.pick(pool(tables, NAME_TABLE_IDS.landmark, LANDMARK))
     case 'region':
-      return pickRegionName(rng, opts.biome)
+      return pickRegionName(rng, opts.biome, tables)
   }
 }

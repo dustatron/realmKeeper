@@ -7,6 +7,11 @@ import type { Hook } from '@domain/entities/Hook'
 import type { Notice } from '@domain/entities/Notice'
 import type { Rumor } from '@domain/entities/Rumor'
 import { newId } from '@shared/ulid'
+import type { ResolvedTables } from './TableProvider'
+import {
+  PLOT_HOOKS_JOB_TABLE_ID, PLOT_HOOKS_ILLICIT_TABLE_ID,
+  PLOT_HOOKS_JOB, PLOT_HOOKS_ILLICIT,
+} from '@domain/data/worldgen/plotHooks'
 
 export interface HookBundle {
   hooks: Hook[]
@@ -29,6 +34,7 @@ export function buildHooks(
   connections: Connection[],
   worldId: string,
   rng: SeededRandom,
+  tables?: ResolvedTables,
 ): HookBundle {
   const now = Date.now()
   const nameOf = new Map(npcs.map((n) => [n.id, n.name]))
@@ -47,7 +53,7 @@ export function buildHooks(
   const rumors: Rumor[] = []
 
   const addNotice = (
-    hookId: string,
+    hookId: string | null,
     poiId: string | null,
     regionId: string | null,
     type: Notice['type'],
@@ -168,6 +174,55 @@ export function buildHooks(
       `Word is that ${contactName} will pay well for someone willing to move against ${targetName}.`,
       conn.fromId,
       'Coin now, and a powerful debt owed.',
+    )
+  }
+
+  // --- Plot-hook job board: public, mundane postings from the job-hook table,
+  // anchored to each settlement so they surface on its Notices board. ---
+  const jobPool = tables?.texts(PLOT_HOOKS_JOB_TABLE_ID)
+  const jobHooks = jobPool && jobPool.length > 0 ? jobPool : PLOT_HOOKS_JOB
+  // A proprietor to name as the poster, if the settlement has one.
+  const buildingParent = new Map(pois.filter((p) => p.type === 'building').map((p) => [p.id, p.parentPoiId]))
+  const proprietorBySettlement = new Map<string, string>()
+  for (const n of npcs) {
+    const settId = n.poiId ? buildingParent.get(n.poiId) : null
+    if (settId && !proprietorBySettlement.has(settId)) proprietorBySettlement.set(settId, n.id)
+  }
+  for (const settlement of pois.filter((p) => p.type === 'settlement')) {
+    const count = rng.between(0, 2)
+    if (count === 0 || jobHooks.length === 0) continue
+    for (const text of rng.sample(jobHooks, Math.min(count, jobHooks.length))) {
+      addNotice(
+        null,
+        settlement.id,
+        settlement.regionId,
+        'job',
+        'Posted on the board',
+        text,
+        proprietorBySettlement.get(settlement.id) ?? null,
+        'Negotiable — speak to the poster.',
+      )
+    }
+  }
+
+  // --- Illicit patron hooks: extreme schemes a public board would never carry.
+  // Delivered privately by a faction leader (contactNpcId set, poiId null so it
+  // never lands on a settlement's board). ---
+  const illicitPool = tables?.texts(PLOT_HOOKS_ILLICIT_TABLE_ID)
+  const illicitHooks = illicitPool && illicitPool.length > 0 ? illicitPool : PLOT_HOOKS_ILLICIT
+  for (const faction of factions) {
+    if (!faction.leaderNpcId || illicitHooks.length === 0) continue
+    if (!rng.chance(0.5)) continue
+    const contactName = nameOf.get(faction.leaderNpcId) ?? 'A patron'
+    addNotice(
+      null,
+      null,
+      faction.regionId,
+      'bounty',
+      `A discreet commission from ${contactName}`,
+      rng.pick(illicitHooks),
+      faction.leaderNpcId,
+      'Paid in full, in secret — and a debt owed by the faction.',
     )
   }
 

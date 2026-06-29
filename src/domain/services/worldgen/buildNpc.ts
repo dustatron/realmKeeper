@@ -11,6 +11,8 @@ import { pickCairn } from './cairnPick'
 import { makeSeededDice } from './seededDice'
 import { pickNpcWant } from '@domain/data/worldgen/npcWants'
 import { buildHumanoidFlavor } from './npcFactory'
+import type { ResolvedTables } from './TableProvider'
+import { NPC_FAVOR_TABLE_ID, NPC_PURSUIT_TABLE_ID } from '@domain/data/worldgen/npc.tables'
 
 export type NpcRole = 'leader' | 'agent' | 'inhabitant'
 
@@ -24,6 +26,18 @@ export interface BuildNpcInput {
   want?: string
   /** A profession label (e.g. "blacksmith") used in place of the bare role. */
   occupation?: string
+  /** Central table registry, so flavor/want pools can be customized. */
+  tables?: ResolvedTables
+}
+
+// A want (the NPC's quest hook / general drive): a favor to ask or a personal
+// pursuit, drawn from the editable NPC tables, falling back to the built-ins.
+function pickWant(rng: SeededRandom, tables?: ResolvedTables): string {
+  if (tables) {
+    const combined = [...tables.texts(NPC_FAVOR_TABLE_ID), ...tables.texts(NPC_PURSUIT_TABLE_ID)]
+    if (combined.length > 0) return rng.pick(combined)
+  }
+  return pickNpcWant(rng)
 }
 
 // Races weighted toward human, matching the rest of the app's NPC generation.
@@ -58,7 +72,7 @@ export function buildNpc(
   // --- Flavor (Cairn character traits) ---
   // Consumed in exact order (physique, skin, hair, face, speech, clothing, virtue, vice)
   // so seeded worldgen output is unchanged.
-  const flavor = buildHumanoidFlavor(rng)
+  const flavor = buildHumanoidFlavor(rng, input.tables)
 
   // --- SystemBlock (rolled for the realm's actual system) ---
   const block = buildDefaultSystemBlock(systemConfig)
@@ -85,7 +99,7 @@ export function buildNpc(
     poiId: input.poiId ?? null,
     lifeStatus: 'alive',
     movementStatus: 'present',
-    description: `${article} ${race} ${roleLabel} — ${flavor.traits[0].toLowerCase()} but ${flavor.traits[1].toLowerCase()}.`,
+    description: `${article} ${race} ${roleLabel} — ${flavor.traits[0].toLowerCase()} but ${flavor.traits[1].toLowerCase()}. ${flavor.personality}.`,
     traits: flavor.traits,
     motivation: flavor.motivation,
     appearance: flavor.appearance,
@@ -93,7 +107,7 @@ export function buildNpc(
     // Faction NPCs carry their agenda goal; everyone else gets a want from the
     // NPC wants table (a favor to ask the party, or a personal pursuit), so
     // every NPC is a potential quest-giver.
-    want: input.want ?? pickNpcWant(rng),
+    want: input.want ?? pickWant(rng, input.tables),
     tags: [role],
     imageUrl: null,
     systemBlock: block,
