@@ -109,6 +109,9 @@ function SortableRow({ faction, onClick, onEditClick }: {
         </div>
       </TableCell>
       <TableCell>{faction.type || '—'}</TableCell>
+      <TableCell className="max-w-[260px] text-xs text-muted-foreground">
+        {faction.motivation || '—'}
+      </TableCell>
       <TableCell>
         {faction.traits.length > 0 ? (
           <div className="flex flex-wrap gap-1">
@@ -172,6 +175,9 @@ function StaticRow({ faction, onClick, onEditClick }: {
         </div>
       </TableCell>
       <TableCell>{faction.type || '—'}</TableCell>
+      <TableCell className="max-w-[260px] text-xs text-muted-foreground">
+        {faction.motivation || '—'}
+      </TableCell>
       <TableCell>
         {faction.traits.length > 0 ? (
           <div className="flex flex-wrap gap-1">
@@ -389,6 +395,7 @@ function FactionsPage() {
                 <TableHead className="w-8"></TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
+                <TableHead>Motivation</TableHead>
                 <TableHead>Traits</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-center">Adv</TableHead>

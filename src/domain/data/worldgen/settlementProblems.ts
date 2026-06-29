@@ -1,5 +1,8 @@
 import type { TableDef, TableSet } from '@domain/entities/TableDef'
 import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
+import type { ResolvedTables } from '@domain/services/worldgen/TableProvider'
+
+export const SETTLEMENT_PROBLEM_TABLE_ID = 'table-worldgen-settlement-problem'
 
 export const settlementProblemTexts = [
   'Werewolves are taking livestock first, and everyone knows people are next.',
@@ -32,6 +35,42 @@ export const settlementProblemTexts = [
   'The river changed course overnight and exposed old bones under the mill.',
   'A local feud is being pushed toward murder by anonymous letters.',
   'Travelers arrive safely, then vanish from locked rooms before morning.',
+  'Trolls have moved in upriver and are fouling the town\'s water supply.',
+  'Marauding goblinoids raid the outlying farms and steal what they can carry.',
+  'A rival\'s blockade is choking off a shipment of vital supplies.',
+  'A plague spreads, and the only antidote lies a hard journey away.',
+  'Two prominent townsfolk feud, and daily business grinds to a halt.',
+  'A long-forgotten curse on the land is stirring awake.',
+  'A sealed cursed relic nearby leaks its malice into the streets.',
+  'The town sits between two warring giant clans and bears the fallout.',
+  'A faction claims the town\'s land as a holy site and demands it back.',
+  'Extreme, sometimes magical, weather batters the region.',
+  'A rival\'s lies have soured every guild against the town.',
+  'A jealous rival has put a bounty on a beloved local\'s head.',
+  'The soil has gone bad; nothing grows but potatoes and weeds.',
+  'A once-a-generation migration of magical beasts is passing through.',
+  'Hill giants want to "trade" but don\'t grasp the concept of money.',
+  'A sea serpent has grown infatuated with the new lighthouse.',
+  'Houses are collapsing into the earth — a giant badger has burrowed beneath.',
+  'Bored pixies and faerie dragons escalate their pranks on the townsfolk.',
+  'Wood-boring insects infest the buildings; the only repellent comes from far off.',
+  'Every night the livestock wander north, called by something unseen.',
+  'A large predator stalks the roads, leaving only scraps of its kills.',
+  'The miller is accused of cheating the village at the grindstone.',
+  'A plague was unearthed in the mine.',
+  'The whole village cannot sleep, and no one knows why.',
+  'The roads rearrange themselves overnight; outsiders call the land cursed.',
+  'A goldrush has drawn outlaws and vagrants — and the ore may be fake.',
+  'The sun no longer touches this stretch of land.',
+  'Dragons in merchant\'s guise offer to buy the whole town outright.',
+  'A bandit gang has decided this town is their destiny.',
+  'A demonic skeleton was unearthed, and the village youth act strangely.',
+  'A spurned druid sabotages the farms built on sacred ground.',
+  'Mercenaries "protect" the town and won\'t leave until it sells out to a lord.',
+  'The lord died without an heir, and the town fights over who leads.',
+  'An eclipse has begun — and refuses to end.',
+  'A mysterious circus has rolled into town, and folk who enter don\'t come out the same.',
+  'The cats, improbably, appear to be organizing into a crime syndicate.',
 ]
 
 function entries(items: string[]) {
@@ -50,7 +89,7 @@ export const settlementProblemTableSets: TableSet[] = [
 
 export const settlementProblemTableDefs: TableDef[] = [
   {
-    id: 'table-worldgen-settlement-problem',
+    id: SETTLEMENT_PROBLEM_TABLE_ID,
     setId: 'tableset-worldgen-settlement-problems',
     name: 'Settlement Problem',
     diceFormula: `1d${settlementProblemTexts.length}`,
@@ -60,10 +99,10 @@ export const settlementProblemTableDefs: TableDef[] = [
   },
 ]
 
-export function pickSettlementProblem(rng: SeededRandom, current?: string | null): string {
+export function pickSettlementProblem(rng: SeededRandom, current?: string | null, tables?: ResolvedTables): string {
+  const provided = tables?.texts(SETTLEMENT_PROBLEM_TABLE_ID)
+  const pool = provided && provided.length > 0 ? provided : settlementProblemTexts
   const currentText = current?.trim()
-  const candidates = currentText
-    ? settlementProblemTexts.filter((problem) => problem !== currentText)
-    : settlementProblemTexts
-  return rng.pick(candidates.length > 0 ? candidates : settlementProblemTexts)
+  const candidates = currentText ? pool.filter((problem) => problem !== currentText) : pool
+  return rng.pick(candidates.length > 0 ? candidates : pool)
 }

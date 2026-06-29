@@ -16,7 +16,10 @@ export interface NPC {
   motivation: string
   appearance: string
   voice: string
+  /** A personal goal/hook for this NPC (varied per NPC). */
   want: string
+  /** For faction members: what they're currently doing for the faction. */
+  factionAction?: string
   tags: string[]
   imageUrl: string | null
   systemBlock: SystemBlock

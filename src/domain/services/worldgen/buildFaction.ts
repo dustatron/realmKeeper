@@ -3,6 +3,16 @@ import type { Faction, AgendaGoal } from '@domain/entities/Faction'
 import { newId } from '@shared/ulid'
 import { pickCairn, sampleCairn, cairnTexts } from './cairnPick'
 import { pickFactionName } from '~/domain/data/worldgen/names'
+import type { ResolvedTables } from './TableProvider'
+import {
+  FACTION_MOTIVATION_TABLE_ID, NOBLE_SECRET_TABLE_ID,
+  FACTION_MOTIVATIONS, NOBLE_SECRETS,
+} from '~/domain/data/worldgen/faction.tables'
+
+function pickFlavor(rng: SeededRandom, tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): string {
+  const t = tables?.texts(id)
+  return rng.pick(t && t.length > 0 ? t : fallback)
+}
 
 export interface BuildFactionInput {
   worldId: string
@@ -10,6 +20,8 @@ export interface BuildFactionInput {
   regionId: string
   /** When provided, the generated name is kept unique within the set (and added). */
   usedNames?: Set<string>
+  /** Central table registry, so faction-name pools can be customized. */
+  tables?: ResolvedTables
 }
 
 // Cairn's advantage-quantity roll: 1d20 → 1-7=1, 8-12=2, 13-17=3, 18-20=4.
@@ -64,7 +76,7 @@ export function buildFaction(input: BuildFactionInput, rng: SeededRandom): Facti
   // within the world when a usedNames set is supplied. The old "<Trait> <Type>"
   // phrase becomes the description/subtitle.
   const resolvedType = type || (cairnTexts('table-cairn-faction-type')[0] ?? '')
-  const makeName = (): string => pickFactionName(resolvedType, rng)
+  const makeName = (): string => pickFactionName(resolvedType, rng, input.tables)
   let name = makeName()
   if (input.usedNames) {
     for (let i = 0; i < 20 && input.usedNames.has(name); i++) name = makeName()
@@ -76,13 +88,22 @@ export function buildFaction(input: BuildFactionInput, rng: SeededRandom): Facti
     input.usedNames.add(name)
   }
 
+  // Short subheading ("Crimson Syndicate") stays clean. Motivation + secret live
+  // in their own fields. Drawn from CHILD rngs so they don't advance the main
+  // stream — faction names stay deterministic.
   const description = (traits[0] ? `${traits[0]} ${resolvedType}` : resolvedType).trim()
+  const motivation = `They seek to ${pickFlavor(rng.child('faction-motivation'), input.tables, FACTION_MOTIVATION_TABLE_ID, FACTION_MOTIVATIONS)}.`
+  const secret = resolvedType === 'Noble House'
+    ? pickFlavor(rng.child('noble-secret'), input.tables, NOBLE_SECRET_TABLE_ID, NOBLE_SECRETS)
+    : undefined
 
   return {
     id: newId(),
     worldId: input.worldId,
     name,
     description,
+    motivation,
+    secret,
     type: resolvedType,
     status: 'active',
     isParty: false,

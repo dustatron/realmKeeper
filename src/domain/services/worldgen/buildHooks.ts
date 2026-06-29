@@ -7,6 +7,18 @@ import type { Hook } from '@domain/entities/Hook'
 import type { Notice } from '@domain/entities/Notice'
 import type { Rumor } from '@domain/entities/Rumor'
 import { newId } from '@shared/ulid'
+import type { ResolvedTables } from './TableProvider'
+import {
+  PLOT_HOOKS_JOB_TABLE_ID, PLOT_HOOKS_ILLICIT_TABLE_ID,
+  PLOT_HOOKS_JOB, PLOT_HOOKS_ILLICIT,
+} from '@domain/data/worldgen/plotHooks'
+import { SETTLEMENT_PROBLEM_TABLE_ID, settlementProblemTexts } from '@domain/data/worldgen/settlementProblems'
+import { THIEVES_GUILD_QUEST_TABLE_ID, THIEVES_GUILD_QUESTS } from '@domain/data/worldgen/guildQuests.tables'
+
+function pool(tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): readonly string[] {
+  const t = tables?.texts(id)
+  return t && t.length > 0 ? t : fallback
+}
 
 export interface HookBundle {
   hooks: Hook[]
@@ -29,6 +41,7 @@ export function buildHooks(
   connections: Connection[],
   worldId: string,
   rng: SeededRandom,
+  tables?: ResolvedTables,
 ): HookBundle {
   const now = Date.now()
   const nameOf = new Map(npcs.map((n) => [n.id, n.name]))
@@ -47,7 +60,7 @@ export function buildHooks(
   const rumors: Rumor[] = []
 
   const addNotice = (
-    hookId: string,
+    hookId: string | null,
     poiId: string | null,
     regionId: string | null,
     type: Notice['type'],
@@ -168,6 +181,63 @@ export function buildHooks(
       `Word is that ${contactName} will pay well for someone willing to move against ${targetName}.`,
       conn.fromId,
       'Coin now, and a powerful debt owed.',
+    )
+  }
+
+  // --- Plot-hook job board: public postings on each settlement's Notices board.
+  // One is seeded from the settlement's OWN trouble (so the board reflects the
+  // town), the rest from a combined pool of job hooks + settlement troubles for
+  // variety. Every settlement gets at least one. ---
+  const jobHooks = pool(tables, PLOT_HOOKS_JOB_TABLE_ID, PLOT_HOOKS_JOB)
+  const troubles = pool(tables, SETTLEMENT_PROBLEM_TABLE_ID, settlementProblemTexts)
+  const jobPoolCombined = [...jobHooks, ...troubles]
+  // A proprietor to name as the poster, if the settlement has one.
+  const buildingParent = new Map(pois.filter((p) => p.type === 'building').map((p) => [p.id, p.parentPoiId]))
+  const proprietorBySettlement = new Map<string, string>()
+  for (const n of npcs) {
+    const settId = n.poiId ? buildingParent.get(n.poiId) : null
+    if (settId && !proprietorBySettlement.has(settId)) proprietorBySettlement.set(settId, n.id)
+  }
+  const reward = 'Negotiable — speak to the poster.'
+  for (const settlement of pois.filter((p) => p.type === 'settlement')) {
+    const posterId = proprietorBySettlement.get(settlement.id) ?? null
+    const posterName = posterId ? nameOf.get(posterId) : null
+    const title = posterName ? `Posted by ${posterName}` : 'Posted on the board'
+    let posted = 0
+    const trouble = settlement.trouble?.trim()
+    if (trouble) {
+      addNotice(null, settlement.id, settlement.regionId, 'job', title, trouble, posterId, reward)
+      posted++
+    }
+    const extra = rng.between(posted > 0 ? 0 : 1, 2)
+    if (extra > 0 && jobPoolCombined.length > 0) {
+      for (const text of rng.sample(jobPoolCombined, Math.min(extra, jobPoolCombined.length))) {
+        addNotice(null, settlement.id, settlement.regionId, 'job', title, text, posterId, reward)
+      }
+    }
+  }
+
+  // --- Illicit patron hooks: extreme schemes a public board would never carry.
+  // Delivered privately by a faction leader (contactNpcId set, poiId null so it
+  // never lands on a settlement's board). ---
+  // Patron commissions draw from illicit hooks plus thieves'-guild jobs.
+  const illicitHooks = [
+    ...pool(tables, PLOT_HOOKS_ILLICIT_TABLE_ID, PLOT_HOOKS_ILLICIT),
+    ...pool(tables, THIEVES_GUILD_QUEST_TABLE_ID, THIEVES_GUILD_QUESTS),
+  ]
+  for (const faction of factions) {
+    if (!faction.leaderNpcId || illicitHooks.length === 0) continue
+    if (!rng.chance(0.5)) continue
+    const contactName = nameOf.get(faction.leaderNpcId) ?? 'A patron'
+    addNotice(
+      null,
+      null,
+      faction.regionId,
+      'bounty',
+      `A discreet commission from ${contactName}`,
+      rng.pick(illicitHooks),
+      faction.leaderNpcId,
+      'Paid in full, in secret — and a debt owed by the faction.',
     )
   }
 

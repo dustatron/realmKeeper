@@ -1,5 +1,6 @@
 import {
   Book,
+  Heart,
   LayoutDashboard,
   Map,
   MapPinned,
@@ -39,6 +40,7 @@ export function getSidebarData(_worldId?: string): { navGroups: NavGroup[] } {
           { title: "Compendium", url: "/realms/compendium", icon: Book },
           { title: "Tables", url: "/realms/tables", icon: TableProperties },
           { title: "Notes", url: "/realms/notes", icon: NotebookPen },
+          { title: "Credits", url: "/credits", icon: Heart },
         ],
       },
     ],

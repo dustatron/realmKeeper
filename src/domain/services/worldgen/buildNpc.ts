@@ -11,6 +11,31 @@ import { pickCairn } from './cairnPick'
 import { makeSeededDice } from './seededDice'
 import { pickNpcWant } from '@domain/data/worldgen/npcWants'
 import { buildHumanoidFlavor } from './npcFactory'
+import type { ResolvedTables } from './TableProvider'
+import {
+  NPC_FAVOR_TABLE_ID, NPC_PURSUIT_TABLE_ID, NPC_FLAW_TABLE_ID, NPC_FLAWS,
+  NPC_PROFESSION_TABLE_ID, NPC_ARTISAN_TABLE_ID, PROFESSIONS, ARTISAN_TRADES,
+} from '@domain/data/worldgen/npc.tables'
+
+function pool(tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): readonly string[] {
+  const t = tables?.texts(id)
+  return t && t.length > 0 ? t : fallback
+}
+
+// A first name / surname from the (editable) Cairn name tables, falling back to
+// the static Cairn data.
+function liveCairn(rng: SeededRandom, tables: ResolvedTables | undefined, id: string): string {
+  const t = tables?.texts(id)
+  return t && t.length > 0 ? rng.pick(t) : pickCairn(rng, id)
+}
+
+// A general profession for townsfolk who aren't tied to a specific shop. Mirrors
+// the source's profession → artisan-specialty cascade.
+function pickProfession(rng: SeededRandom, tables: ResolvedTables | undefined): string {
+  const prof = rng.pick(pool(tables, NPC_PROFESSION_TABLE_ID, PROFESSIONS))
+  if (/artisan/i.test(prof)) return rng.pick(pool(tables, NPC_ARTISAN_TABLE_ID, ARTISAN_TRADES))
+  return prof
+}
 
 export type NpcRole = 'leader' | 'agent' | 'inhabitant'
 
@@ -22,8 +47,22 @@ export interface BuildNpcInput {
   role?: NpcRole
   /** A concrete objective (the "side-quest hook" surfaced on the NPC page). */
   want?: string
+  /** For faction members: what they're doing for the faction (shown alongside want). */
+  factionAction?: string
   /** A profession label (e.g. "blacksmith") used in place of the bare role. */
   occupation?: string
+  /** Central table registry, so flavor/want pools can be customized. */
+  tables?: ResolvedTables
+}
+
+// A want (the NPC's quest hook / general drive): a favor to ask or a personal
+// pursuit, drawn from the editable NPC tables, falling back to the built-ins.
+function pickWant(rng: SeededRandom, tables?: ResolvedTables): string {
+  if (tables) {
+    const combined = [...tables.texts(NPC_FAVOR_TABLE_ID), ...tables.texts(NPC_PURSUIT_TABLE_ID)]
+    if (combined.length > 0) return rng.pick(combined)
+  }
+  return pickNpcWant(rng)
 }
 
 // Races weighted toward human, matching the rest of the app's NPC generation.
@@ -51,14 +90,14 @@ export function buildNpc(
   // --- Identity ---
   const gender: 'male' | 'female' = rng.chance(0.5) ? 'male' : 'female'
   const race = rng.pick(RACE_POOL)
-  const firstName = pickCairn(rng, nameTableId(race, gender))
-  const surname = race === 'human' ? pickCairn(rng, 'table-cairn-surnames') : ''
+  const firstName = liveCairn(rng, input.tables, nameTableId(race, gender))
+  const surname = race === 'human' ? liveCairn(rng, input.tables, 'table-cairn-surnames') : ''
   const name = [firstName, surname].filter(Boolean).join(' ') || 'Unnamed'
 
   // --- Flavor (Cairn character traits) ---
   // Consumed in exact order (physique, skin, hair, face, speech, clothing, virtue, vice)
   // so seeded worldgen output is unchanged.
-  const flavor = buildHumanoidFlavor(rng)
+  const flavor = buildHumanoidFlavor(rng, input.tables)
 
   // --- SystemBlock (rolled for the realm's actual system) ---
   const block = buildDefaultSystemBlock(systemConfig)
@@ -72,8 +111,17 @@ export function buildNpc(
   block.maxHp = block.hp
 
   const role: NpcRole = input.role ?? 'inhabitant'
-  const roleLabel = input.occupation ?? role
+  // Shop proprietors arrive with an occupation; faction leaders/agents keep their
+  // role. Other townsfolk draw a general profession so they aren't just "an
+  // inhabitant."
+  const roleLabel = input.occupation ?? (role === 'inhabitant' ? pickProfession(rng, input.tables).toLowerCase() : role)
   const article = /^[aeiou]/i.test(race) ? 'An' : 'A'
+
+  // ~1 in 3 NPCs carries an ironic/tragic flaw — a memorable, playable hook.
+  const flawPool = input.tables?.texts(NPC_FLAW_TABLE_ID)
+  const flaw = rng.chance(0.34)
+    ? rng.pick(flawPool && flawPool.length > 0 ? flawPool : NPC_FLAWS)
+    : null
 
   return {
     id: newId(),
@@ -85,7 +133,7 @@ export function buildNpc(
     poiId: input.poiId ?? null,
     lifeStatus: 'alive',
     movementStatus: 'present',
-    description: `${article} ${race} ${roleLabel} — ${flavor.traits[0].toLowerCase()} but ${flavor.traits[1].toLowerCase()}.`,
+    description: `${article} ${race} ${roleLabel} — ${flavor.traits[0].toLowerCase()} but ${flavor.traits[1].toLowerCase()}. ${flavor.personality}.${flaw ? ` ${flaw}.` : ''}`,
     traits: flavor.traits,
     motivation: flavor.motivation,
     appearance: flavor.appearance,
@@ -93,7 +141,8 @@ export function buildNpc(
     // Faction NPCs carry their agenda goal; everyone else gets a want from the
     // NPC wants table (a favor to ask the party, or a personal pursuit), so
     // every NPC is a potential quest-giver.
-    want: input.want ?? pickNpcWant(rng),
+    want: input.want ?? pickWant(rng, input.tables),
+    factionAction: input.factionAction,
     tags: [role],
     imageUrl: null,
     systemBlock: block,

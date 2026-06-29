@@ -21,6 +21,7 @@ const genDeps = () => ({
   hookRepo: container.hookRepo,
   rumorRepo: container.rumorRepo,
   noticeRepo: container.noticeRepo,
+  tableRepo: container.tableRepo,
 })
 
 const exportImportDeps = () => ({

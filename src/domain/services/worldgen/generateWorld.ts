@@ -1,4 +1,5 @@
 import { SeededRandom } from '~/lib/dungeon/SeededRandom'
+import type { ResolvedTables } from './TableProvider'
 import { hexDistance, hexNeighbors, hexLine } from '~/lib/hexmap/hex'
 import {
   layoutHexGrid,
@@ -69,6 +70,8 @@ export function generateWorld(
     clock?: DoomClock
     loomingThreat?: boolean
     portals?: boolean
+    /** Central table registry snapshot (built-ins + user custom tables). */
+    tables?: ResolvedTables
     realmContent?: RealmContentSprinkleOptions
   }
 ): {
@@ -108,14 +111,14 @@ export function generateWorld(
   const usedRegionNames = new Set<string>()
   const uniqueRegionName = (biome: Biome): string => {
     for (let i = 0; i < 20; i++) {
-      const candidate = pickName('region', rng, { biome })
+      const candidate = pickName('region', rng, { biome, tables: opts.tables })
       if (!usedRegionNames.has(candidate)) {
         usedRegionNames.add(candidate)
         return candidate
       }
     }
     // Name pool exhausted for this map — disambiguate with a numeral.
-    const base = pickName('region', rng, { biome })
+    const base = pickName('region', rng, { biome, tables: opts.tables })
     let name = base
     let k = 2
     while (usedRegionNames.has(name)) name = `${base} ${k++}`
@@ -125,7 +128,7 @@ export function generateWorld(
   let regions: Region[] = centers.map((center, idx) => {
     const id = newId()
     const name = uniqueRegionName(center.biome)
-    const flavor = buildRegionFlavor(center.biome, rng)
+    const flavor = buildRegionFlavor(center.biome, rng, opts.tables)
     return {
       id,
       worldId: realmId,
@@ -276,10 +279,10 @@ export function generateWorld(
     const kind = rng.pickWeighted(POI_KIND_TABLE)
     const type = poiKindToType(kind)
     const nameKind = kind === 'landmark' ? 'landmark' : kind
-    const name = pickName(nameKind, rng)
+    const name = pickName(nameKind, rng, { tables: opts.tables })
     // Every POI gets structured flavor: the Cairn type as a subtype label, its
     // feature as a tag, plus a clean description and read-aloud.
-    const flavor = buildPoiFlavor(kind, name, cell.biome, rng)
+    const flavor = buildPoiFlavor(kind, name, cell.biome, rng, opts.tables)
     const dungeonSeedId = newId()
 
     // Art-driven landmarks: assign a tile-backed subtype (volcano, floating
@@ -551,6 +554,7 @@ export function generateWorld(
         hqPoiId: node.poi.id,
         regionId: node.poi.regionId,
         usedNames: usedFactionNames,
+        tables: opts.tables,
       },
       rng,
     ),
@@ -584,16 +588,18 @@ export function generateWorld(
         regionId: faction.regionId ?? undefined,
         poiId: faction.headquartersPoiId ?? undefined,
       }
-      // Each faction NPC's "want" points at a real faction objective, so the
-      // hook on their page is grounded in a faction agenda (leaders pursue a
-      // long-term aim; agents work an immediate tactical goal).
+      // Every faction NPC gets their OWN personal want (varied — buildNpc draws
+      // from the NPC wants pool), PLUS a faction action: what they're currently
+      // doing for the faction. Leaders drive a long-term aim; agents work an
+      // immediate goal. (Previously the agenda goal WAS the want, so a faction's
+      // agents all parroted the same 1-2 immediate goals.)
       const longTermGoals = faction.agendaGoals.filter((g) => g.timeframe === 'long-term')
       const immediateGoals = faction.agendaGoals.filter((g) => g.timeframe === 'immediate')
-      const wantFrom = (pool: typeof faction.agendaGoals): string =>
+      const actionFrom = (pool: typeof faction.agendaGoals): string =>
         (pool.length > 0 ? rng.pick(pool) : faction.agendaGoals[0])?.description ?? ''
 
       const leader = buildNpc(
-        { ...link, role: 'leader', want: wantFrom(longTermGoals) },
+        { ...link, role: 'leader', factionAction: actionFrom(longTermGoals), tables: opts.tables },
         opts.systemConfig,
         rng,
       )
@@ -604,7 +610,7 @@ export function generateWorld(
       const agentCount = rng.between(1, 3)
       for (let i = 0; i < agentCount; i++) {
         const agent = buildNpc(
-          { ...link, role: 'agent', want: wantFrom(immediateGoals) },
+          { ...link, role: 'agent', factionAction: actionFrom(immediateGoals), tables: opts.tables },
           opts.systemConfig,
           rng,
         )
@@ -624,12 +630,13 @@ export function generateWorld(
         realmId,
         opts.systemConfig,
         rng,
+        opts.tables,
       )
       pois.push(...buildings)
       npcs.push(...proprietors)
       npcs.push(
         buildNpc(
-          { worldId: realmId, regionId: node.poi.regionId, poiId: node.poi.id, role: 'inhabitant' },
+          { worldId: realmId, regionId: node.poi.regionId, poiId: node.poi.id, role: 'inhabitant', tables: opts.tables },
           opts.systemConfig,
           rng,
         ),
@@ -653,7 +660,7 @@ export function generateWorld(
   // Step 11: quest Hooks (structured secrets) + their public Notice/Rumor
   // projections at real POIs. Needs NPCs, so only when a system config is given.
   const { hooks, notices, rumors } = opts.systemConfig
-    ? buildHooks(factions, npcs, pois, connections, realmId, rng)
+    ? buildHooks(factions, npcs, pois, connections, realmId, rng, opts.tables)
     : { hooks: [], notices: [], rumors: [] }
 
   // Step 12: the looming doom — a faction's agenda escalates into a dated

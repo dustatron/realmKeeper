@@ -264,22 +264,28 @@ describe('generateWorld', () => {
     }
   })
 
-  it("gives faction NPCs a want drawn from their faction's agenda", () => {
+  it('gives faction NPCs a varied personal want plus an agenda-based faction action', () => {
     const { factions, npcs } = generateWorld(REALM, 'seed-a', {
       cols: 16,
       rows: 16,
       factionCount: 4,
       systemConfig: cairnSystemConfig,
     })
-    const factionById = new Map(factions.map((f) => [f.id, f]))
     const factionNpcs = npcs.filter((n) => n.factionIds.length > 0)
     expect(factionNpcs.length).toBeGreaterThan(0)
+    const factionById = new Map(factions.map((f) => [f.id, f]))
     for (const npc of factionNpcs) {
+      // A personal want...
       expect(npc.want.length).toBeGreaterThan(0)
-      const faction = factionById.get(npc.factionIds[0])!
-      const goalDescriptions = faction.agendaGoals.map((g) => g.description)
-      expect(goalDescriptions).toContain(npc.want)
+      // ...plus a faction action drawn from the faction's agenda.
+      expect(npc.factionAction && npc.factionAction.length).toBeTruthy()
+      const goals = factionById.get(npc.factionIds[0])!.agendaGoals.map((g) => g.description)
+      expect(goals).toContain(npc.factionAction)
     }
+    // Personal wants are varied (regression guard: agents used to all share
+    // their faction's single immediate goal as their want).
+    const distinctWants = new Set(factionNpcs.map((n) => n.want))
+    expect(distinctWants.size).toBeGreaterThanOrEqual(3)
   })
 
   it('gives every settlement at least one resident NPC (locations are rarely empty)', () => {

@@ -149,6 +149,7 @@ function NewRealmPage() {
             hookRepo: container.hookRepo,
             rumorRepo: container.rumorRepo,
             noticeRepo: container.noticeRepo,
+            tableRepo: container.tableRepo,
           },
         );
         setActiveRealmId(realmId);

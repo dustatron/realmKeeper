@@ -1,6 +1,34 @@
 import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { pickBiomeFeature, biomeLabel, type Biome } from '@domain/data/worldgen/biomes'
 import { pickCairn, sampleCairn } from './cairnPick'
+import type { ResolvedTables } from './TableProvider'
+
+export const REGION_PROBLEMS_TABLE_ID = 'table-rk-region-problem'
+export const REGION_RUMORS_TABLE_ID = 'table-rk-region-rumor'
+
+// Evocative region rumors — idea sparks surfaced on the region page.
+export const REGION_RUMORS = [
+  'the old road shifts its course by night',
+  'a star fell in the far hills, and none who sought it returned',
+  'the deep woods are quiet in a way that feels watched',
+  'an old king\'s gold lies under the third cairn',
+  'the river ran red for a day last spring, and no one knows why',
+  'a door stands in a field where no house ever was',
+  'shepherds hear bells from a valley with no chapel',
+  'the dead are buried face-down here, and no one will say why',
+  'a green light walks the marsh on moonless nights',
+  'every seventh winter, something comes down from the heights',
+  'the standing stones are said to count the living',
+  'a hermit up the pass trades secrets for bread',
+  'cattle won\'t graze the eastern meadow anymore',
+  'a drowned village surfaces when the water runs low',
+  'travelers vanish on the bridge, but only going north',
+  'the foxes here are too clever by half',
+  'an old pact keeps the wolves away — for now',
+  'the hills hum before a storm',
+  'a faceless rider has been seen at the crossroads',
+  'the wells all taste of iron since the comet passed',
+]
 
 export const REGION_PROBLEMS = [
   'A blight creeps out of the wilds, fouling wells and crops',
@@ -103,11 +131,11 @@ const THREATENING_PEOPLE = new Set([
   'Restless soldiers',
 ])
 
-export function buildRegionFlavor(biome: Biome, rng: SeededRandom): RegionFlavor {
+export function buildRegionFlavor(biome: Biome, rng: SeededRandom, tables?: ResolvedTables): RegionFlavor {
   const tier = BIOME_TIER[biome]
 
   // Features: the biome's own evocative feature plus a Cairn landmark.
-  const biomeFeature = pickBiomeFeature(biome, rng)
+  const biomeFeature = pickBiomeFeature(biome, rng, tables)
   const landmark = pickCairn(rng, `table-cairn-landmark-${tier}`)
   const features = [biomeFeature, landmark]
 
@@ -124,16 +152,25 @@ export function buildRegionFlavor(biome: Biome, rng: SeededRandom): RegionFlavor
   const dangers = [`${lairFeature} ${lair}`.toLowerCase()]
   if (THREATENING_PEOPLE.has(people[0])) dangers.push(people[0].toLowerCase())
 
-  const problem = rng.pick(REGION_PROBLEMS)
+  const problemPool = tables?.texts(REGION_PROBLEMS_TABLE_ID)
+  const problem = rng.pick(problemPool && problemPool.length > 0 ? problemPool : REGION_PROBLEMS)
 
   const resourcePhrase =
     resources.length === 2
       ? `${resources[0]} and ${resources[1]}`
       : resources[0]
+  // Rumor: an additive flavor line. Picked from a CHILD rng so it doesn't
+  // advance the main stream — keeps downstream seeded output (faction names,
+  // etc.) byte-identical whether or not rumors are present.
+  const rumorPool = tables?.texts(REGION_RUMORS_TABLE_ID)
+  const rumor = rng.child('region-rumor').pick(
+    rumorPool && rumorPool.length > 0 ? rumorPool : REGION_RUMORS,
+  )
+
   const description =
     `A region of ${biomeLabel(biome)}, marked by ${landmark.toLowerCase()}. ` +
     `Home to ${people[0].toLowerCase()}, prized for its ${resourcePhrase.toLowerCase()}. ` +
-    `Travelers speak of ${dangers[0]}.`
+    `Travelers speak of ${dangers[0]}. Folk say ${rumor}.`
 
   return { description, features, dangers, resources, people, problem }
 }

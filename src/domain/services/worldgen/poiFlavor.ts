@@ -3,6 +3,7 @@ import type { PoiKind } from '@domain/data/worldgen/poiKinds'
 import { biomeLabel } from '@domain/data/worldgen/biomes'
 import { pickSettlementProblem } from '@domain/data/worldgen/settlementProblems'
 import { pickCairn } from './cairnPick'
+import type { ResolvedTables } from './TableProvider'
 
 // Each POI kind maps to a Cairn type + feature table pair. Cairn has no "ruin"
 // table, so ruins borrow the Lair tables (crumbling forts, ruined towns, …) and
@@ -58,6 +59,7 @@ export function buildPoiFlavor(
   name: string,
   biome: string,
   rng: SeededRandom,
+  tables?: ResolvedTables,
 ): PoiFlavor {
   const ids = KIND_TABLES[kind]
   const type = pickCairn(rng, ids.type)
@@ -71,7 +73,7 @@ export function buildPoiFlavor(
     tags: [feature],
     description: `${cap(art)} ${lowerType} in the ${where}.`,
     readAloud: `${name} is ${art} ${lowerType} set in the ${where}.`,
-    trouble: isSettlement ? pickSettlementProblem(rng) : '',
+    trouble: isSettlement ? pickSettlementProblem(rng, null, tables) : '',
     mood: isSettlement ? rng.pick(SETTLEMENT_MOODS) : '',
     sensory: isSettlement ? rng.pick(SETTLEMENT_SENSORY) : '',
   }
