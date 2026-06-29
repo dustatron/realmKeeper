@@ -218,7 +218,13 @@ function FactionDetailPage() {
       <div className="space-y-4">
         {/* Overview — one card for identity + resources */}
         <Card>
-          <CardContent className="pt-5 space-y-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {f.motivation && (
+              <p className="text-sm text-muted-foreground">{f.motivation}</p>
+            )}
             {/* Top row: Type + Status + Traits inline */}
             <div className="flex flex-wrap items-center gap-2">
               {f.type && <Badge variant="outline" className="text-xs">{f.type}</Badge>}
@@ -319,18 +325,11 @@ function FactionDetailPage() {
           </CardContent>
         </Card>
 
-        {(f.motivation || f.secret) && (
-          <div className="space-y-2">
-            {f.motivation && (
-              <p className="text-sm text-muted-foreground">{f.motivation}</p>
-            )}
-            {f.secret && (
-              <p className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm">
-                <span className="font-semibold text-rose-600 dark:text-rose-400">Secret (GM) </span>
-                {f.secret}
-              </p>
-            )}
-          </div>
+        {f.secret && (
+          <p className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm">
+            <span className="font-semibold text-rose-600 dark:text-rose-400">Secret (GM) </span>
+            {f.secret}
+          </p>
         )}
 
         {/* Agenda — always shown so an empty faction still prompts you to add goals (via Edit) */}
