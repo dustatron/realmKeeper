@@ -22,6 +22,16 @@ const INSPIRATIONS: Resource[] = [
     by: "Casey Willis",
     note: "Random-table categories that inspired several of our generators — faction motivations, noble secrets, forest / roadside / settlement encounters, trinkets, curses, crypt dressings, harmless denizens, thieves'-guild quests, and more. OSR Vault's content is all rights reserved; our table entries are original wording, written to fit Realm Keeper.",
   },
+  {
+    name: "Dndspeak",
+    url: "https://www.dndspeak.com/items-and-treasures/",
+    note: "A deep well of d100 item & treasure lists that inspire our loot and trinket tables. Dndspeak's content is all rights reserved; our entries are original wording, not copied.",
+  },
+  {
+    name: "Hexroll",
+    url: "https://hexroll.app/",
+    note: "A procedural sandbox / hexcrawl generator whose 'whole living region at once' approach inspired Realm Keeper's world generation.",
+  },
 ];
 
 const COMMUNITY: Resource[] = [
