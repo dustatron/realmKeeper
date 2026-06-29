@@ -4,6 +4,15 @@ import { newId } from '@shared/ulid'
 import { pickCairn, sampleCairn, cairnTexts } from './cairnPick'
 import { pickFactionName } from '~/domain/data/worldgen/names'
 import type { ResolvedTables } from './TableProvider'
+import {
+  FACTION_MOTIVATION_TABLE_ID, NOBLE_SECRET_TABLE_ID,
+  FACTION_MOTIVATIONS, NOBLE_SECRETS,
+} from '~/domain/data/worldgen/faction.tables'
+
+function pickFlavor(rng: SeededRandom, tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): string {
+  const t = tables?.texts(id)
+  return rng.pick(t && t.length > 0 ? t : fallback)
+}
 
 export interface BuildFactionInput {
   worldId: string
@@ -79,7 +88,16 @@ export function buildFaction(input: BuildFactionInput, rng: SeededRandom): Facti
     input.usedNames.add(name)
   }
 
-  const description = (traits[0] ? `${traits[0]} ${resolvedType}` : resolvedType).trim()
+  // Motivation (all factions) + a secret (Noble Houses). Drawn from CHILD rngs so
+  // they don't advance the main stream — faction names stay deterministic.
+  const motivation = pickFlavor(rng.child('faction-motivation'), input.tables, FACTION_MOTIVATION_TABLE_ID, FACTION_MOTIVATIONS)
+  const secret = resolvedType === 'Noble House'
+    ? pickFlavor(rng.child('noble-secret'), input.tables, NOBLE_SECRET_TABLE_ID, NOBLE_SECRETS)
+    : null
+  const description =
+    (traits[0] ? `${traits[0]} ${resolvedType}` : resolvedType).trim() +
+    ` They seek to ${motivation}.` +
+    (secret ? ` Secret: ${secret}.` : '')
 
   return {
     id: newId(),
