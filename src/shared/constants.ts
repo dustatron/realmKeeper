@@ -67,7 +67,6 @@ export const EXPLORABLE_POI_TYPES: PoiType[] = [
 ];
 
 /** GM-set threat rating, 1 (safe) → 5 (deadly). null = unrated. */
-export const DANGER_LEVELS = [1, 2, 3, 4, 5] as const;
 export const DANGER_LABELS: Record<number, string> = {
   1: "Safe",
   2: "Low",
