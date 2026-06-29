@@ -58,6 +58,8 @@ export interface BuildNpcInput {
   factionAction?: string
   /** A profession label (e.g. "blacksmith") used in place of the bare role. */
   occupation?: string
+  /** Extra races (from the realm) added to the weighted race pool. */
+  customRaces?: string[]
   /** Central table registry, so flavor/want pools can be customized. */
   tables?: ResolvedTables
 }
@@ -76,10 +78,17 @@ function pickWant(rng: SeededRandom, tables?: ResolvedTables): string {
 const RACE_POOL = ['human', 'human', 'human', 'human', 'elf', 'dwarf', 'halfling', 'half-orc', 'half-elf', 'goblin']
 const SD_CLASSES = ['Fighter', 'Priest', 'Thief', 'Wizard']
 
-// Cairn name tables are id'd by race + gender; humans use the generic name +
-// surname tables, other races have their own first-name tables (no surname).
+// Races that have their own first-name tables. Anything else (human + custom
+// realm races) draws from the generic human name + surname tables.
+const NAMED_RACES = new Set(['elf', 'dwarf', 'halfling', 'half-orc', 'half-elf', 'goblin'])
+function usesHumanNames(race: string): boolean {
+  return !NAMED_RACES.has(race)
+}
+
+// Cairn name tables are id'd by race + gender; humans (and custom races) use the
+// generic name + surname tables, the named races have their own first-name tables.
 function nameTableId(race: string, gender: 'male' | 'female'): string {
-  if (race === 'human') return `table-cairn-names-${gender}`
+  if (usesHumanNames(race)) return `table-cairn-names-${gender}`
   return `table-cairn-names-${race}-${gender}`
 }
 
@@ -96,9 +105,10 @@ export function buildNpc(
 
   // --- Identity ---
   const gender: 'male' | 'female' = rng.chance(0.5) ? 'male' : 'female'
-  const race = rng.pick(RACE_POOL)
+  const racePool = input.customRaces?.length ? [...RACE_POOL, ...input.customRaces] : RACE_POOL
+  const race = rng.pick(racePool)
   const firstName = liveCairn(rng, input.tables, nameTableId(race, gender))
-  const surname = race === 'human' ? liveCairn(rng, input.tables, 'table-cairn-surnames') : ''
+  const surname = usesHumanNames(race) ? liveCairn(rng, input.tables, 'table-cairn-surnames') : ''
   const name = [firstName, surname].filter(Boolean).join(' ') || 'Unnamed'
 
   // --- Flavor (Cairn character traits) ---
