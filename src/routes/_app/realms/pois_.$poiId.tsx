@@ -101,6 +101,8 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { POI_TYPE_ICONS } from '@shared/poi-icons'
+import { featureTileForPoi } from '~/lib/hexmap/tileMapping'
+import { iconTileUrl } from '~/lib/hexmap/tileAssets'
 import { OPPOSITE_DIRECTION } from '@shared/constants'
 import type { POI } from '@domain/entities/POI'
 import type { NPC } from '@domain/entities/NPC'
@@ -389,6 +391,9 @@ function POIDetailPage() {
   if (poi === null) return <div className="py-8 text-center text-muted-foreground">POI not found.</div>
 
   const Icon = POI_TYPE_ICONS[poi.type]
+  // Hand-drawn hex doodle for this POI, derived from its type + subtype (the
+  // same mapping the map uses). Falls back to the lucide type icon if none.
+  const poiTileIconUrl = iconTileUrl(featureTileForPoi(poi.type, { subtype: poi.subtypeLabel }))
   // POI type implies a default generator; the user can still pick either in the Add Map dialog.
   const impliedGenerator = poi.type === 'settlement' ? 'mfcg' as const : poi.type === 'dungeon' ? 'opd' as const : null
   // Render whatever generator was actually saved on this POI, regardless of type.
@@ -459,7 +464,11 @@ function POIDetailPage() {
 
   const poiHeading = (
     <span className="mr-auto flex flex-wrap items-center gap-2">
-      <Icon className="size-5" />
+      {poiTileIconUrl ? (
+        <img src={poiTileIconUrl} alt="" className="size-7 object-contain" />
+      ) : (
+        <Icon className="size-5" />
+      )}
       <span className="font-medium">{poi.name}</span>
       <Badge variant="outline" className="text-xs">{poi.type}</Badge>
       {poi.type === 'dungeon' && poi.spatialDungeon && (

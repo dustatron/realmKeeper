@@ -10,6 +10,8 @@ import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
 import { executeDeletePOI } from '@application/use-cases/DeletePOI'
 import type { POI } from '@domain/entities/POI'
 import { POI_TYPES, type PoiType } from '@shared/constants'
+import { featureTileForPoi } from '~/lib/hexmap/tileMapping'
+import { iconTileUrl } from '~/lib/hexmap/tileAssets'
 import { EmptyState } from '~/components/shared/EmptyState'
 import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { TagInput } from '~/components/shared/TagInput'
@@ -446,6 +448,7 @@ function POIsPage() {
             <tbody className="divide-y divide-border/50">
               {topLevelPois.map((poi, i) => {
                 const Icon = POI_TYPE_ICONS[poi.type]
+                const poiTileIconUrl = iconTileUrl(featureTileForPoi(poi.type, { subtype: poi.subtypeLabel }))
                 const region = regions.find((r) => r.id === poi.regionId)
                 const parent = poi.parentPoiId ? allPois.find((p) => p.id === poi.parentPoiId) : null
                 const childCount = getChildCount(poi.id)
@@ -457,7 +460,11 @@ function POIsPage() {
                         params={{ poiId: poi.id }}
                         className="flex items-center gap-2 font-medium hover:underline"
                       >
-                        <Icon className={`size-3.5 shrink-0 ${parent?.type === 'dungeon' ? 'text-muted-foreground/60' : 'text-muted-foreground'}`} />
+                        {poiTileIconUrl ? (
+                          <img src={poiTileIconUrl} alt="" className="size-5 shrink-0 object-contain" />
+                        ) : (
+                          <Icon className={`size-3.5 shrink-0 ${parent?.type === 'dungeon' ? 'text-muted-foreground/60' : 'text-muted-foreground'}`} />
+                        )}
                         <span className={parent?.type === 'dungeon' ? 'text-muted-foreground' : ''}>{poi.name}</span>
                         {poi.starred && <Star className="size-3 fill-yellow-400 text-yellow-400 shrink-0" />}
                       </Link>

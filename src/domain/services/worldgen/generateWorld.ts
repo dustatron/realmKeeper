@@ -6,6 +6,7 @@ import {
   hexClusterOutline,
 } from '~/lib/hexmap/hexLayout'
 import { BIOMES, type Biome } from '~/domain/data/worldgen/biomes'
+import { terrainTileForBiome, featureTileForPoi } from '~/lib/hexmap/tileMapping'
 import { pickName } from '~/domain/data/worldgen/names'
 import { POI_KIND_TABLE, poiKindToType, DUNGEON_THEMES } from '~/domain/data/worldgen/poiKinds'
 import { buildPOI } from './buildPoi'
@@ -227,13 +228,18 @@ export function generateWorld(
     region.boundary = ring.length >= 3 ? ring : null
   }
 
-  // Step 5: build GameMap
+  // Step 5: build GameMap. Each cell carries its terrain tile (by biome); cells
+  // that host a POI get their tile overwritten with that POI's feature tile in
+  // step 6. Lookup map lets step 6 find a cell's HexCell by coordinates.
   const hexCells: HexCell[] = cellMetas.map((cm) => ({
     q: cm.q,
     r: cm.r,
     biome: cm.biome,
     corners: cm.corners,
+    tile: terrainTileForBiome(cm.biome) ?? undefined,
   }))
+  const hexCellByCoord = new Map<string, HexCell>()
+  for (const hc of hexCells) hexCellByCoord.set(`${hc.q},${hc.r}`, hc)
 
   const gameMap: GameMap = {
     id: newId(),
@@ -268,6 +274,15 @@ export function generateWorld(
     // feature as a tag, plus a clean description and read-aloud.
     const flavor = buildPoiFlavor(kind, name, cell.biome, rng)
     const dungeonSeedId = newId()
+
+    // Feature tile overrides the cell's terrain tile. The POI's marker/detail
+    // page re-derives the same tile from its type + subtype (featureTileForPoi),
+    // so nothing is stashed on the POI itself — keeps the user-facing tags clean.
+    const featureTile = featureTileForPoi(type, { subtype: flavor.subtypeLabel })
+    if (featureTile) {
+      const hostCell = hexCellByCoord.get(`${cell.q},${cell.r}`)
+      if (hostCell) hostCell.tile = featureTile
+    }
 
     const dungeonGenOptions =
       type === 'dungeon'

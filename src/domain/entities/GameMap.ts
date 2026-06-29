@@ -7,6 +7,12 @@ export interface HexCell {
   r: number
   biome: Biome
   corners: Point[]
+  /**
+   * Hand-drawn tile name (see tileMapping). Terrain tile by biome, or a feature
+   * tile when the cell hosts a POI. Optional: older generated maps lack it and
+   * fall back to the biome's terrain tile at render time.
+   */
+  tile?: string
 }
 
 export interface GameMap {
