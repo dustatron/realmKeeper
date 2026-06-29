@@ -105,6 +105,9 @@ function SortableRow({ faction, onClick, onEditClick }: {
             {faction.description && (
               <span className="text-xs font-normal text-muted-foreground">{faction.description}</span>
             )}
+            {faction.motivation && (
+              <span className="text-xs italic text-muted-foreground/80">{faction.motivation}</span>
+            )}
           </div>
         </div>
       </TableCell>
@@ -167,6 +170,9 @@ function StaticRow({ faction, onClick, onEditClick }: {
             <span>{faction.name}</span>
             {faction.description && (
               <span className="text-xs font-normal text-muted-foreground">{faction.description}</span>
+            )}
+            {faction.motivation && (
+              <span className="text-xs italic text-muted-foreground/80">{faction.motivation}</span>
             )}
           </div>
         </div>
