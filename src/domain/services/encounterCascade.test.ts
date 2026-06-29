@@ -41,13 +41,16 @@ describe('rollCascade', () => {
     expect(r.npc).toBeUndefined()
   })
 
-  it('enriches npc with reaction + generated npc + null savedId', async () => {
-    // master roll lands on section index 2 (npc), entry index 1 → clamp via entries len 1
+  it('represents an npc with just the generated npc (no archetype reaction)', async () => {
+    // master roll lands on section index 2 (npc)
     const r = await rollCascade(sections, fx({ rollDie: (s) => (s === sections.length ? 2 : 1) }))
     expect(r.category).toBe('npc')
     expect(r.npc).toBe(fakeNpc)
     expect(r.npcSavedId).toBeNull()
-    expect(r.reaction).toBe('curious')
+    // NPCs carry their own disposition; no separate 2d6 reaction, and the summary
+    // text is the NPC's name.
+    expect(r.reaction).toBeUndefined()
+    expect(r.entryText).toBe('Test NPC')
     expect(r.monsterMatch).toBeUndefined()
   })
 

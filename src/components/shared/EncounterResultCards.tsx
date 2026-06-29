@@ -132,7 +132,7 @@ function NpcResultCard({
         <Badge variant="outline" className="text-xs">
           NPC
         </Badge>
-        {result.reaction && <ReactionTag disposition={result.reaction} />}
+        {npc.disposition && <ReactionTag disposition={npc.disposition} />}
         {/* Stats */}
         {sb && (
           <span className="ml-auto flex items-center gap-1.5 shrink-0">

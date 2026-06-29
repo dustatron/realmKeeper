@@ -42,9 +42,11 @@ async function buildResult(
   }
 
   if (section.category === 'npc') {
-    const reaction = preservedReaction ?? fx.rollReaction()
+    // An NPC encounter is fully represented by the generated NPC card, which
+    // carries its own disposition — no archetype entry text or separate 2d6
+    // reaction. Use the NPC's name as the one-line result summary.
     const npc = await fx.generateNpc()
-    return { ...base, reaction: reaction.disposition, reactionRoll: reaction.roll, npc, npcSavedId: null }
+    return { ...base, entryText: npc.name, npc, npcSavedId: null }
   }
 
   if (section.category === 'creature') {
@@ -88,7 +90,8 @@ export async function rerollEntry(
 }
 
 export function rerollReaction(prev: EncounterRollResult, fx: CascadeEffects): EncounterRollResult {
-  if (prev.category !== 'npc' && prev.category !== 'creature') return prev
+  // Only creatures roll a separate reaction; NPCs use their own disposition.
+  if (prev.category !== 'creature') return prev
   const reaction = fx.rollReaction()
   return { ...prev, reaction: reaction.disposition, reactionRoll: reaction.roll }
 }
@@ -96,5 +99,5 @@ export function rerollReaction(prev: EncounterRollResult, fx: CascadeEffects): E
 export async function rerollNpc(prev: EncounterRollResult, fx: CascadeEffects): Promise<EncounterRollResult> {
   if (prev.category !== 'npc') return prev
   const npc = await fx.generateNpc()
-  return { ...prev, npc, npcSavedId: null }
+  return { ...prev, npc, entryText: npc.name, npcSavedId: null }
 }

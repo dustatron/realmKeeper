@@ -38,6 +38,11 @@ interface EncounterCascadeProps {
 
 /** Build a one-line summary of the persisted result for the banner. */
 export function summarizeResult(result: EncounterRollResult): string {
+  if (result.npc) {
+    return result.npc.disposition
+      ? `${result.npc.name} — ${result.npc.disposition}`
+      : result.npc.name;
+  }
   const base = result.entryText || result.categoryLabel;
   return result.reaction ? `${base} — ${result.reaction}` : base;
 }
@@ -231,8 +236,8 @@ export function EncounterCascade({
             </table>
           </div>
 
-          {/* 4. Category entries sub-table */}
-          {lastResult && hitSection && (
+          {/* 4. Category entries sub-table (hidden for NPCs — the card is the result) */}
+          {lastResult && hitSection && lastResult.category !== "npc" && (
             <div className="rounded-md border overflow-hidden">
               <div className="flex items-center justify-between px-2 py-1.5 border-b bg-muted/50">
                 <span className="text-xs font-semibold">
