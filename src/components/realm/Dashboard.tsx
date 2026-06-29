@@ -323,26 +323,6 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
 
             {/* Stats Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Link to="/realms/calendar" className="block">
-                <Card className={STAT_CARD_CLASS}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                      <Calendar className="size-4" />
-                      Current Date
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Badge className={SEASON_COLORS[realm.currentSeason]}>
-                      {realm.currentSeason.charAt(0).toUpperCase() + realm.currentSeason.slice(1)}
-                    </Badge>
-                    <div className="text-2xl font-bold mt-2">Year {realm.currentYear}</div>
-                    <div className="text-sm text-muted-foreground">
-                      Day {realm.currentDay} • Watch {realm.currentWatch}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-
               {partyLocation ? (
                 <Link
                   to="/realms/pois/$poiId"
@@ -381,6 +361,26 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                   </CardContent>
                 </Card>
               )}
+
+              <Link to="/realms/calendar" className="block">
+                <Card className={STAT_CARD_CLASS}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                      <Calendar className="size-4" />
+                      Current Date
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Badge className={SEASON_COLORS[realm.currentSeason]}>
+                      {realm.currentSeason.charAt(0).toUpperCase() + realm.currentSeason.slice(1)}
+                    </Badge>
+                    <div className="text-2xl font-bold mt-2">Year {realm.currentYear}</div>
+                    <div className="text-sm text-muted-foreground">
+                      Day {realm.currentDay} • Watch {realm.currentWatch}
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
 
               <Link to="/realms/locations/pois" className="block">
                 <Card className={STAT_CARD_CLASS}>
