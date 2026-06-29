@@ -12,7 +12,7 @@ import { makeSeededDice } from './seededDice'
 import { pickNpcWant } from '@domain/data/worldgen/npcWants'
 import { buildHumanoidFlavor } from './npcFactory'
 import type { ResolvedTables } from './TableProvider'
-import { NPC_FAVOR_TABLE_ID, NPC_PURSUIT_TABLE_ID } from '@domain/data/worldgen/npc.tables'
+import { NPC_FAVOR_TABLE_ID, NPC_PURSUIT_TABLE_ID, NPC_FLAW_TABLE_ID, NPC_FLAWS } from '@domain/data/worldgen/npc.tables'
 
 export type NpcRole = 'leader' | 'agent' | 'inhabitant'
 
@@ -89,6 +89,12 @@ export function buildNpc(
   const roleLabel = input.occupation ?? role
   const article = /^[aeiou]/i.test(race) ? 'An' : 'A'
 
+  // ~1 in 3 NPCs carries an ironic/tragic flaw — a memorable, playable hook.
+  const flawPool = input.tables?.texts(NPC_FLAW_TABLE_ID)
+  const flaw = rng.chance(0.34)
+    ? rng.pick(flawPool && flawPool.length > 0 ? flawPool : NPC_FLAWS)
+    : null
+
   return {
     id: newId(),
     worldId: input.worldId,
@@ -99,7 +105,7 @@ export function buildNpc(
     poiId: input.poiId ?? null,
     lifeStatus: 'alive',
     movementStatus: 'present',
-    description: `${article} ${race} ${roleLabel} — ${flavor.traits[0].toLowerCase()} but ${flavor.traits[1].toLowerCase()}. ${flavor.personality}.`,
+    description: `${article} ${race} ${roleLabel} — ${flavor.traits[0].toLowerCase()} but ${flavor.traits[1].toLowerCase()}. ${flavor.personality}.${flaw ? ` ${flaw}.` : ''}`,
     traits: flavor.traits,
     motivation: flavor.motivation,
     appearance: flavor.appearance,

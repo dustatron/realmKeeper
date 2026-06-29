@@ -1,6 +1,6 @@
 import type { TableDef, TableSet } from '@domain/entities/TableDef'
 import { listTable, weightedTable } from './tableViewUtils'
-import { REGION_PROBLEMS, REGION_PROBLEMS_TABLE_ID } from '@domain/services/worldgen/regionFlavor'
+import { REGION_PROBLEMS, REGION_PROBLEMS_TABLE_ID, REGION_RUMORS, REGION_RUMORS_TABLE_ID } from '@domain/services/worldgen/regionFlavor'
 import { BIOME_FEATURE_TABLES } from './biomes'
 import { PORTAL_NAMES } from './poiKinds'
 
@@ -16,6 +16,7 @@ export const PORTAL_NAMES_TABLE_ID = 'table-rk-poi-portal-names'
 
 const regionDefs: TableDef[] = [
   listTable(REGION_PROBLEMS_TABLE_ID, REGION_SET_ID, 'Region Problem', REGION_PROBLEMS, ['worldgen', 'region', 'problem']),
+  listTable(REGION_RUMORS_TABLE_ID, REGION_SET_ID, 'Region Rumor', REGION_RUMORS, ['worldgen', 'region', 'rumor']),
   ...Object.entries(BIOME_FEATURE_TABLES).map(([biome, table]) =>
     weightedTable(
       biomeFeatureId(biome),

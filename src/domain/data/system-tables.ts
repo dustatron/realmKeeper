@@ -9,6 +9,7 @@ import { worldgenExtraTableSets, worldgenExtraTableDefs } from './worldgen/world
 import { shopTableSets, shopTableDefs } from './worldgen/shops.tables'
 import { plotHookTableSets, plotHookTableDefs } from './worldgen/plotHooks'
 import { npcTableSets, npcTableDefs } from './worldgen/npc.tables'
+import { settlementTableSets, settlementTableDefs } from './worldgen/settlement.tables'
 
 // ---------------------------------------------------------------------------
 // Aggregate all system tables (add more systems here later)
@@ -22,8 +23,8 @@ import { npcTableSets, npcTableDefs } from './worldgen/npc.tables'
 // Tables UI auto-shows anything registered here via getAllSystemSets().
 // ---------------------------------------------------------------------------
 
-const allSystemSets: TableSet[] = [...cairnTableSets, ...shadowdarkTableSets, ...treasureTableSets, ...settlementProblemTableSets, ...ruinLandmarkTableSets, ...nameTableSets, ...worldgenExtraTableSets, ...shopTableSets, ...plotHookTableSets, ...npcTableSets]
-const allSystemDefs: TableDef[] = [...cairnTableDefs, ...shadowdarkTableDefs, ...treasureTableDefs, ...settlementProblemTableDefs, ...ruinLandmarkTableDefs, ...nameTableDefs, ...worldgenExtraTableDefs, ...shopTableDefs, ...plotHookTableDefs, ...npcTableDefs]
+const allSystemSets: TableSet[] = [...cairnTableSets, ...shadowdarkTableSets, ...treasureTableSets, ...settlementProblemTableSets, ...ruinLandmarkTableSets, ...nameTableSets, ...worldgenExtraTableSets, ...shopTableSets, ...plotHookTableSets, ...npcTableSets, ...settlementTableSets]
+const allSystemDefs: TableDef[] = [...cairnTableDefs, ...shadowdarkTableDefs, ...treasureTableDefs, ...settlementProblemTableDefs, ...ruinLandmarkTableDefs, ...nameTableDefs, ...worldgenExtraTableDefs, ...shopTableDefs, ...plotHookTableDefs, ...npcTableDefs, ...settlementTableDefs]
 
 // Pre-built lookup maps for O(1) access
 const defById = new Map<string, TableDef>(allSystemDefs.map((d) => [d.id, d]))

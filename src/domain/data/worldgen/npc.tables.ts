@@ -14,6 +14,37 @@ export const NPC_PERSONALITY_TABLE_ID = 'table-rk-npc-personality'
 export const NPC_PHYSICAL_TRAIT_TABLE_ID = 'table-rk-npc-physical-trait'
 export const NPC_FAVOR_TABLE_ID = 'table-rk-npc-favor'
 export const NPC_PURSUIT_TABLE_ID = 'table-rk-npc-pursuit'
+export const NPC_FLAW_TABLE_ID = 'table-rk-npc-flaw'
+
+// Ironic / tragic flaws (curated from user source; grounded + light whimsy,
+// modern/meme entries dropped). Profession-agnostic so they apply to any NPC;
+// appended to some NPCs' descriptions as a memorable hook.
+export const NPC_FLAWS = [
+  'Faints at the sight of blood',
+  'Terrified of the dark; sleeps with a lantern lit',
+  'Compulsively honest at the worst possible moments',
+  'Cannot actually read, and hides it well',
+  'Allergic to smoke and dust',
+  'Quietly losing their faith',
+  'Secretly cannot stand people',
+  'Stutters badly — except when singing',
+  'Nearly blind once the sun goes down',
+  'Has lost their sense of taste',
+  'Hopeless with directions',
+  'Cannot do sums in their head',
+  'Flinches at loud noises',
+  'Believes none of their own claims',
+  'Gets violently seasick',
+  'Has gone soft and avoids a fight',
+  'Plagued by a trembling hand',
+  'Sleepwalks, sometimes far',
+  'Colorblind, to their constant trouble',
+  'Forgets what they were saying halfway through',
+  'Cannot hold their drink at all',
+  'Slowly going deaf, and too proud to admit it',
+  'Seized at times by a sudden conscience',
+  'Superstitious to the point of paralysis',
+]
 
 const PROFESSIONS = [
   'Merchant', 'Artisan / Specialist', 'Beggar / Wretch', 'Servant / Worker', 'Guard / Soldier',
@@ -81,7 +112,7 @@ export const npcTableSets: TableSet[] = [
     tableIds: [
       'table-rk-npc-profession', 'table-rk-npc-artisan-trade', 'table-rk-npc-rare-trade',
       'table-rk-npc-motivation', 'table-rk-npc-personality', 'table-rk-npc-physical-trait',
-      'table-rk-npc-favor', 'table-rk-npc-pursuit',
+      'table-rk-npc-favor', 'table-rk-npc-pursuit', NPC_FLAW_TABLE_ID,
     ],
   },
 ]
@@ -95,4 +126,5 @@ export const npcTableDefs: TableDef[] = [
   listTable('table-rk-npc-physical-trait', SET_ID, 'NPC Physical Trait', PHYSICAL_TRAITS, ['npc', 'trait']),
   listTable('table-rk-npc-favor', SET_ID, 'NPC Favor', NPC_FAVORS, ['npc', 'want']),
   listTable('table-rk-npc-pursuit', SET_ID, 'NPC Pursuit', NPC_PURSUITS, ['npc', 'want']),
+  listTable(NPC_FLAW_TABLE_ID, SET_ID, 'NPC Tragic Flaw', NPC_FLAWS, ['npc', 'flaw']),
 ]

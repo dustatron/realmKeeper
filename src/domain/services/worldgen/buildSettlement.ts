@@ -7,6 +7,17 @@ import { buildNpc } from './buildNpc'
 import { settlementSize } from '@domain/data/worldgen/settlementSize'
 import type { ResolvedTables } from './TableProvider'
 import { SHOP_TYPES_TABLE_ID, SHOP_NAMES_TABLE_ID, SHOP_TYPES } from '@domain/data/worldgen/shops.tables'
+import {
+  DISTRICT_TABLE_ID, KNOWN_FOR_TABLE_ID, STRUCTURE_QUIRK_TABLE_ID, GUILD_TABLE_ID, SHOP_QUIRK_TABLE_ID,
+  DISTRICTS, KNOWN_FOR, STRUCTURE_QUIRKS, GUILDS, SHOP_QUIRKS,
+} from '@domain/data/worldgen/settlement.tables'
+
+// Pick from an editable table, falling back to the built-in array (same order
+// keeps seeded output stable).
+function pickFlavor(rng: SeededRandom, tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): string {
+  const texts = tables?.texts(id)
+  return rng.pick(texts && texts.length > 0 ? texts : fallback)
+}
 
 // The proprietor's trade, by building type (for the common civic types; other
 // shop types fall back to the lowercased type name as the occupation).
@@ -47,6 +58,16 @@ export function buildSettlementBuildings(
   const types_ = typePool && typePool.length > 0 ? typePool : SHOP_TYPES
   const namePool = tables?.texts(SHOP_NAMES_TABLE_ID) ?? []
 
+  // Settlement-level flavor: a district, a "known for", a structure quirk, and
+  // (sometimes) a guild. Enriches the settlement's own description in place.
+  const district = pickFlavor(rng, tables, DISTRICT_TABLE_ID, DISTRICTS)
+  const knownFor = pickFlavor(rng, tables, KNOWN_FOR_TABLE_ID, KNOWN_FOR)
+  const structureQuirk = pickFlavor(rng, tables, STRUCTURE_QUIRK_TABLE_ID, STRUCTURE_QUIRKS)
+  const guild = rng.chance(0.5) ? pickFlavor(rng, tables, GUILD_TABLE_ID, GUILDS) : null
+  settlement.description =
+    `${settlement.description ?? ''} Known for ${knownFor}; ${structureQuirk}. Its heart is ${district}.` +
+    (guild ? ` Home to ${guild}.` : '')
+
   const count = Math.min(types_.length, buildingCount(settlement.subtypeLabel, rng))
   const types = rng.sample(types_, count)
   // Distinct flavorful names when the pool is large enough; else fall back per
@@ -57,11 +78,13 @@ export function buildSettlementBuildings(
   const proprietors: NPC[] = []
   types.forEach((type, i) => {
     const name = names ? names[i] : `The ${type.toLowerCase()}`
+    const quirk = pickFlavor(rng, tables, SHOP_QUIRK_TABLE_ID, SHOP_QUIRKS)
+    const quirkNote = quirk.charAt(0).toUpperCase() + quirk.slice(1)
     const building = buildPOI({
       regionId: settlement.regionId,
       parentPoiId: settlement.id,
       name,
-      description: `${name} — a ${type.toLowerCase()} in ${settlement.name}.`,
+      description: `${name} — a ${type.toLowerCase()} in ${settlement.name}. Locals note: ${quirkNote}.`,
       type: 'building',
       subtypeLabel: type,
     })
