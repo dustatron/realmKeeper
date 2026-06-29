@@ -11,14 +11,12 @@ import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
 import { useSystemConfig } from '~/ui/hooks/useSystemConfigs'
 import { useContainer } from '~/ui/hooks/useContainer'
 import { executeUpdateFaction } from '@application/use-cases/UpdateFaction'
-import { executeDeleteFaction } from '@application/use-cases/DeleteFaction'
 import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import { executeCreateFactionPresence } from '@application/use-cases/CreateFactionPresence'
 import { executeDeleteFactionPresence } from '@application/use-cases/DeleteFactionPresence'
 import { executeUpdateRelationship } from '@application/use-cases/UpdateRelationship'
 import { executeLinkNPCToFaction } from '@application/use-cases/LinkNPCToFaction'
 import { PageHeader } from '~/components/shared/PageHeader'
-import { ConfirmDialog } from '~/components/shared/ConfirmDialog'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
@@ -44,6 +42,15 @@ const STATUS_COLORS: Record<string, string> = {
   destroyed: 'bg-red-600',
 }
 
+// Territory presence type → badge tint, so controlled vs contested reads at a glance.
+const PRESENCE_TYPE_COLORS: Record<string, string> = {
+  controls: 'border-emerald-500/60 text-emerald-400',
+  operates: 'border-blue-500/60 text-blue-400',
+  contests: 'border-red-500/60 text-red-400',
+  patrols: 'border-amber-500/60 text-amber-400',
+  hidden: 'border-purple-500/60 text-purple-400',
+}
+
 function FactionDetailPage() {
   const { factionId } = Route.useParams()
   const activeRealmId = useUIStore((s) => s.activeRealmId)
@@ -59,7 +66,6 @@ function FactionDetailPage() {
 
   const allNPCs = useNPCs(activeRealmId)
 
-  const [showDelete, setShowDelete] = useState(false)
   const [isAddingAgent, setIsAddingAgent] = useState(false)
   const [showLinkNPC, setShowLinkNPC] = useState(false)
   const [linkSearch, setLinkSearch] = useState('')
@@ -78,10 +84,6 @@ function FactionDetailPage() {
     [factionId]
   ) ?? []
 
-  const handleDelete = async () => {
-    await executeDeleteFaction(factionId, { factionRepo: container.factionRepo })
-    window.history.back()
-  }
 
   const handleToggleGoal = async (goalId: string) => {
     if (!faction) return
@@ -185,18 +187,15 @@ function FactionDetailPage() {
     <div className="space-y-6">
       <PageHeader
         title={
-          <span className="flex items-center gap-2">
-            {f.isParty && <Crown className="size-6 text-amber-500" />}
-            {f.name}
+          <span className="flex flex-col">
+            <span className="flex items-center gap-2">
+              {f.isParty && <Crown className="size-6 text-amber-500" />}
+              {f.name}
+            </span>
+            {f.description && (
+              <span className="text-sm font-normal text-muted-foreground">{f.description}</span>
+            )}
           </span>
-        }
-        actionsLeft={
-          !f.isParty ? (
-            <Button size="sm" variant="destructive" onClick={() => setShowDelete(true)}>
-              <Trash2 className="mr-2 size-4" />
-              Delete
-            </Button>
-          ) : undefined
         }
         actions={
           <div className="flex items-center gap-2">
@@ -250,70 +249,63 @@ function FactionDetailPage() {
               ))}
             </div>
 
-            {/* Location row */}
-            {(f.regionId || f.headquartersPoiId) && (
+            {/* Leadership + location row — the "who runs it / where" answers, up top and linked */}
+            {(f.regionId || f.headquartersPoiId || f.leaderNpcId) && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                {(() => {
+                  const leader = allNPCs.find((n) => n.id === f.leaderNpcId)
+                  return leader ? (
+                    <span className="text-muted-foreground inline-flex items-center gap-1">
+                      Leader:{' '}
+                      <Link
+                        to="/realms/npcs/$npcId"
+                        params={{ npcId: leader.id }}
+                        className="text-foreground font-medium hover:underline inline-flex items-center gap-1"
+                      >
+                        <Crown className="size-3.5 text-amber-500" />
+                        {leader.name}
+                      </Link>
+                    </span>
+                  ) : null
+                })()}
                 {(() => {
                   const region = regions.find((r) => r.id === f.regionId)
                   return region ? (
-                    <span className="text-muted-foreground">Region: <span className="text-foreground font-medium">{region.name}</span></span>
+                    <span className="text-muted-foreground">
+                      Region:{' '}
+                      <Link
+                        to="/realms/regions/$regionId"
+                        params={{ regionId: region.id }}
+                        className="text-foreground font-medium hover:underline"
+                      >
+                        {region.name}
+                      </Link>
+                    </span>
                   ) : null
                 })()}
                 {(() => {
                   const hqPoi = realmPOIs.find((p) => p.id === f.headquartersPoiId)
                   return hqPoi ? (
-                    <span className="text-muted-foreground">HQ: <span className="text-foreground font-medium">{hqPoi.name}</span></span>
+                    <span className="text-muted-foreground">
+                      HQ:{' '}
+                      <Link
+                        to="/realms/pois/$poiId"
+                        params={{ poiId: hqPoi.id }}
+                        className="text-foreground font-medium hover:underline"
+                      >
+                        {hqPoi.name}
+                      </Link>
+                    </span>
                   ) : null
                 })()}
               </div>
             )}
-
-            {/* Description */}
-            {f.description && (
-              <p className="text-sm whitespace-pre-wrap text-muted-foreground">{f.description}</p>
-            )}
-
-            {/* Advantages + Obstacles side by side */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-              <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-500 mb-2">Advantages ({(f.advantages ?? []).length})</h4>
-                {(f.advantages ?? []).length === 0 ? (
-                  <p className="text-sm text-muted-foreground">None</p>
-                ) : (
-                  <ul className="space-y-1">
-                    {f.advantages.map((a) => (
-                      <li key={a.id} className="text-sm flex items-center gap-2">
-                        <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
-                        {a.description}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-red-500 mb-2">Obstacles ({(f.obstacles ?? []).length})</h4>
-                {(f.obstacles ?? []).length === 0 ? (
-                  <p className="text-sm text-muted-foreground">None</p>
-                ) : (
-                  <ul className="space-y-1">
-                    {f.obstacles.map((o) => (
-                      <li key={o.id} className="text-sm flex items-center gap-2">
-                        <span className="size-1.5 rounded-full bg-red-500 shrink-0" />
-                        {o.description}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
           </CardContent>
         </Card>
 
-        {/* Agenda */}
-        {f.agendaGoals.length > 0 && (
-          <>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Agenda</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Agenda — always shown so an empty faction still prompts you to add goals (via Edit) */}
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Agenda</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Immediate */}
               <Card>
                 <CardHeader className="pb-2">
@@ -397,9 +389,45 @@ function FactionDetailPage() {
                   )}
                 </CardContent>
               </Card>
+        </div>
+
+        {/* Resources: Advantages + Obstacles — reference color, kept below the agenda */}
+        <Card>
+          <CardContent className="pt-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-500 mb-2">Advantages ({(f.advantages ?? []).length})</h4>
+                {(f.advantages ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">None</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {f.advantages.map((a) => (
+                      <li key={a.id} className="text-sm flex items-center gap-2">
+                        <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        {a.description}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-red-500 mb-2">Obstacles ({(f.obstacles ?? []).length})</h4>
+                {(f.obstacles ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">None</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {f.obstacles.map((o) => (
+                      <li key={o.id} className="text-sm flex items-center gap-2">
+                        <span className="size-1.5 rounded-full bg-red-500 shrink-0" />
+                        {o.description}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
-          </>
-        )}
+          </CardContent>
+        </Card>
 
         {/* Relationships + Agents side by side on larger screens */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -416,7 +444,9 @@ function FactionDetailPage() {
                 <p className="text-sm text-muted-foreground">No relationships.</p>
               ) : (
                 <div className="space-y-1">
-                  {factionRelationships.map((rel) => {
+                  {[...factionRelationships]
+                    .sort((a, b) => b.score - a.score)
+                    .map((rel) => {
                     const targetFaction = allFactions.find((f) => f.id === rel.targetId)
                     const statusLabel = deriveStatus(rel.score)
                     return (
@@ -424,8 +454,9 @@ function FactionDetailPage() {
                         <Link
                           to="/realms/factions/$factionId"
                           params={{ factionId: rel.targetId }}
-                          className="text-sm text-primary hover:underline font-medium"
+                          className={`text-sm hover:underline font-medium inline-flex items-center gap-1 ${targetFaction?.isParty ? 'text-amber-500' : 'text-primary'}`}
                         >
+                          {targetFaction?.isParty && <Crown className="size-3.5 text-amber-500" />}
                           {targetFaction?.name ?? 'Unknown'}
                         </Link>
                         <div className="flex items-center gap-1.5">
@@ -548,13 +579,18 @@ function FactionDetailPage() {
                     <div key={presence.id} className="flex items-start gap-2 py-2 border-b last:border-0">
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
-                          <Link
-                            to="/realms/locations/pois"
-                            className="text-sm text-primary hover:underline font-medium"
-                          >
-                            {poi?.name ?? 'Unknown'}
-                          </Link>
-                          <Badge variant="outline" className="text-xs">
+                          {poi ? (
+                            <Link
+                              to="/realms/pois/$poiId"
+                              params={{ poiId: poi.id }}
+                              className="text-sm text-primary hover:underline font-medium"
+                            >
+                              {poi.name}
+                            </Link>
+                          ) : (
+                            <span className="text-sm text-muted-foreground font-medium">Unknown</span>
+                          )}
+                          <Badge variant="outline" className={`text-xs ${PRESENCE_TYPE_COLORS[presence.type] ?? ''}`}>
                             {presence.type}
                           </Badge>
                         </div>
@@ -689,16 +725,6 @@ function FactionDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <ConfirmDialog
-        open={showDelete}
-        onOpenChange={setShowDelete}
-        title="Delete Faction"
-        description="Are you sure you want to delete this faction? This action cannot be undone."
-        confirmLabel="Delete"
-        variant="destructive"
-        onConfirm={handleDelete}
-      />
     </div>
   )
 }

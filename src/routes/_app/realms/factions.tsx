@@ -100,7 +100,12 @@ function SortableRow({ faction, onClick, onEditClick }: {
       <TableCell className="font-medium">
         <div className="flex items-center gap-2">
           {faction.isParty && <Crown className="size-4 text-primary" />}
-          {faction.name}
+          <div className="flex flex-col">
+            <span>{faction.name}</span>
+            {faction.description && (
+              <span className="text-xs font-normal text-muted-foreground">{faction.description}</span>
+            )}
+          </div>
         </div>
       </TableCell>
       <TableCell>{faction.type || '—'}</TableCell>
@@ -158,7 +163,12 @@ function StaticRow({ faction, onClick, onEditClick }: {
       <TableCell className="font-medium">
         <div className="flex items-center gap-2">
           <Crown className="size-4 text-primary" />
-          {faction.name}
+          <div className="flex flex-col">
+            <span>{faction.name}</span>
+            {faction.description && (
+              <span className="text-xs font-normal text-muted-foreground">{faction.description}</span>
+            )}
+          </div>
         </div>
       </TableCell>
       <TableCell>{faction.type || '—'}</TableCell>

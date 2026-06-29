@@ -90,6 +90,81 @@ function pickRegionName(rng: SeededRandom, biome?: string): string {
   }
 }
 
+// ── Faction naming ──────────────────────────────────────────────────────────
+// Factions get an evocative proper name (e.g. "The Crimson Hand", "House Vane"),
+// keeping the old "<Trait> <Type>" phrase as a description. Each faction type
+// biases toward a fitting collective noun, combined with adjective / emblem /
+// proper-root pools (the same REGION_ROOT roots double as surnames) across a few
+// templates, with signature patterns for Noble Houses, Tribes, and Nomads.
+const FACTION_ADJ = [
+  'Crimson', 'Gilded', 'Iron', 'Ashen', 'Hollow', 'Pale', 'Golden', 'Black',
+  'Emerald', 'Thorned', 'Veiled', 'Broken', 'Eternal', 'Grey', 'Silent',
+  'Bronze', 'Sable', 'Verdant', 'Scarlet', 'Obsidian',
+]
+const FACTION_EMBLEM = [
+  'Hand', 'Crow', 'Serpent', 'Coin', 'Key', 'Thorn', 'Lantern', 'Star', 'Veil',
+  'Oath', 'Wheel', 'Flame', 'Spire', 'Eye', 'Chain', 'Crown', 'Fang', 'Raven',
+  'Ember', 'Sun', 'Moon', 'Tide', 'Gate', 'Antler', 'Talon',
+]
+const FACTION_COLLECTIVE_DEFAULT = ['Order', 'Circle', 'League', 'Pact', 'Company', 'Covenant']
+const FACTION_COLLECTIVE_BY_TYPE: Record<string, string[]> = {
+  Artisans: ['Guild', 'Workshop', 'Makers', 'Hands'],
+  Cabal: ['Cabal', 'Circle', 'Conclave', 'Coven'],
+  Commoners: ['Folk', 'Union', 'Commons', 'League'],
+  Criminal: ['Syndicate', 'Ring', 'Hand', 'Chain'],
+  Cult: ['Cult', 'Faithful', 'Communion', 'Flock'],
+  Explorers: ['Company', 'Expedition', 'Society', 'Pathfinders'],
+  Farmers: ['Grange', 'Commons', 'Cooperative', 'Folk'],
+  Guild: ['Guild', 'League', 'Consortium', 'Company'],
+  'Holy Order': ['Order', 'Covenant', 'Templars', 'Faithful'],
+  Hunters: ['Lodge', 'Pack', 'Company', 'Stalkers'],
+  Mercenary: ['Company', 'Banner', 'Blades', 'Free Company'],
+  Merchant: ['Coster', 'Company', 'Consortium', 'Concern', 'Cartel'],
+  Military: ['Legion', 'Banner', 'Host', 'Guard'],
+  'Noble House': ['House', 'Court', 'Line'],
+  Nomads: ['Caravan', 'Host', 'Wanderers', 'Clans'],
+  Outlaws: ['Band', 'Gang', 'Brotherhood', 'Crew'],
+  Scholars: ['Academy', 'Circle', 'College', 'Society'],
+  Sect: ['Sect', 'Communion', 'Order', 'Faithful'],
+  Tribe: ['Tribe', 'Clan', 'Kin', 'People'],
+  Wizards: ['Circle', 'Conclave', 'Coven', 'Order'],
+}
+
+export function pickFactionName(type: string, rng: SeededRandom): string {
+  const collective = rng.pick(FACTION_COLLECTIVE_BY_TYPE[type] ?? FACTION_COLLECTIVE_DEFAULT)
+  const adj = rng.pick(FACTION_ADJ)
+  const emblem = rng.pick(FACTION_EMBLEM)
+  const root = rng.pick(REGION_ROOT)
+
+  // Signature patterns for types with a strong naming convention.
+  if (type === 'Noble House') {
+    return rng.between(0, 1) === 0 ? `House ${root}` : `The ${root} Line`
+  }
+  if (type === 'Tribe' || type === 'Nomads') {
+    switch (rng.between(0, 2)) {
+      case 0:
+        return `The ${root} ${collective}`
+      case 1:
+        return `The ${emblem} ${collective}`
+      default:
+        return `${collective} of ${root}`
+    }
+  }
+
+  switch (rng.between(0, 4)) {
+    case 0:
+      return `The ${adj} ${collective}`
+    case 1:
+      return `${collective} of the ${emblem}`
+    case 2:
+      return `The ${emblem} ${collective}`
+    case 3:
+      return `${root}'s ${collective}`
+    default:
+      return `The ${root} ${collective}`
+  }
+}
+
 export interface PickNameOptions {
   biome?: string
 }

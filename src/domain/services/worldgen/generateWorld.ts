@@ -541,9 +541,15 @@ export function generateWorld(
     opts.factionCount ?? defaultFactionCount,
   )
   const hqNodes = rng.sample(settlementNodes, factionCount)
+  const usedFactionNames = new Set<string>()
   const factions: Faction[] = hqNodes.map((node) =>
     buildFaction(
-      { worldId: realmId, hqPoiId: node.poi.id, regionId: node.poi.regionId },
+      {
+        worldId: realmId,
+        hqPoiId: node.poi.id,
+        regionId: node.poi.regionId,
+        usedNames: usedFactionNames,
+      },
       rng,
     ),
   )

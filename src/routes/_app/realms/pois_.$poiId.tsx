@@ -40,7 +40,7 @@ function loadImageSize(url: string): Promise<{ width: number; height: number }> 
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight })
-    img.onerror = reject
+    img.onerror = () => reject(new Error(`Town map image failed to load: ${url}`))
     img.src = url
   })
 }
@@ -302,10 +302,24 @@ function POIDetailPage() {
         ? TOWN_MAPS.find((map) => map.id === options.townMapId) ?? null
         : null
       const existingMap = townMapForImageUrl(townMap?.imageUrl)
-      const picked = selectedMap ?? existingMap ?? pickTownMapForSize(poi.id, children.length)
+      let picked = selectedMap ?? existingMap ?? pickTownMapForSize(poi.id, children.length)
       if (!picked) throw new Error('No bundled town maps are available.')
 
-      const { width, height } = await loadImageSize(picked.imageUrl)
+      // Load the map image; if the chosen/existing one is broken, self-heal by
+      // falling back to a fresh size-appropriate pick before giving up.
+      let dims: { width: number; height: number }
+      try {
+        dims = await loadImageSize(picked.imageUrl)
+      } catch (imgErr) {
+        const fallback = pickTownMapForSize(poi.id, children.length)
+        if (fallback && fallback.imageUrl !== picked.imageUrl) {
+          picked = fallback
+          dims = await loadImageSize(picked.imageUrl)
+        } else {
+          throw imgErr
+        }
+      }
+      const { width, height } = dims
       let activeTownMap = await executeGetOrCreateTownMap(
         { poiId: poi.id, name: poi.name, imageUrl: picked.imageUrl, width, height },
         { gameMapRepo: container.gameMapRepo },
@@ -651,6 +665,9 @@ function POIDetailPage() {
             notices={notices}
             encounterTable={encounterTable}
             poiEvents={poiEvents}
+            factions={factions}
+            factionPresences={factionPresences}
+            mapError={townMapError}
             poiMaps={poiMaps}
             onToggleRumorUsed={actions.handleToggleRumorUsed}
             onCreateRumor={actions.handleCreateRumor}
@@ -782,9 +799,13 @@ function POIDetailPage() {
     }
   }
 
+  // Settlements own their full layout (tabs + map). Nothing renders above their
+  // tabs — the town-map error is surfaced inside the SettlementTemplate instead.
+  const isSettlement = poi.type === 'settlement'
+
   return (
     <div className="space-y-4">
-      {poi.imageUrl && (
+      {poi.imageUrl && !isSettlement && (
         <CloudinaryImage
           src={poi.imageUrl}
           alt={poi.name}
@@ -802,11 +823,11 @@ function POIDetailPage() {
         </div>
       )}
 
-      {townMapError && (
+      {townMapError && !isSettlement && (
         <p className="text-sm text-destructive">{townMapError}</p>
       )}
 
-      {compassConnections.length > 0 && (
+      {compassConnections.length > 0 && !isSettlement && (
         <CompassRose currentRoom={poi} connections={compassConnections} />
       )}
 

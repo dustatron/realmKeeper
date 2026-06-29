@@ -55,6 +55,17 @@ import type { Notice } from "@domain/entities/Notice";
 import type { EncounterTable } from "@domain/entities/EncounterTable";
 import type { POIEvent } from "@domain/entities/POIEvent";
 import type { GameMap } from "@domain/entities/GameMap";
+import type { Faction } from "@domain/entities/Faction";
+import type { FactionPresence } from "@domain/entities/FactionPresence";
+
+// Territory presence type → badge tint (controlled vs contested at a glance).
+const PRESENCE_TYPE_COLORS: Record<string, string> = {
+  controls: "border-emerald-500/60 text-emerald-400",
+  operates: "border-blue-500/60 text-blue-400",
+  contests: "border-red-500/60 text-red-400",
+  patrols: "border-amber-500/60 text-amber-400",
+  hidden: "border-purple-500/60 text-purple-400",
+};
 import type { TreasureItem } from "@domain/value-objects/TreasureItem";
 import {
   OPPOSITE_DIRECTION,
@@ -332,6 +343,8 @@ interface SettlementTemplateProps {
   encounterTable: EncounterTable | null | undefined;
   poiEvents: POIEvent[];
   poiMaps: GameMap[];
+  factions: Faction[];
+  factionPresences: FactionPresence[];
   onToggleRumorUsed: (rumor: Rumor) => void;
   onCreateRumor: (input: {
     text: string;
@@ -377,6 +390,7 @@ interface SettlementTemplateProps {
   activeTab?: string | null;
   onTabChange?: (tab: SettlementTab) => void;
   mapSection: React.ReactNode;
+  mapError?: string | null;
   notesSection?: React.ReactNode;
   actionBar?: React.ReactNode;
   worldId?: string | null;
@@ -659,6 +673,8 @@ export function SettlementTemplate({
   notices,
   encounterTable,
   poiEvents,
+  factions,
+  factionPresences,
   onToggleRumorUsed,
   onCreateRumor,
   onDeleteRumor,
@@ -680,6 +696,7 @@ export function SettlementTemplate({
   activeTab,
   onTabChange,
   mapSection,
+  mapError,
   notesSection,
   actionBar,
   worldId,
@@ -721,6 +738,25 @@ export function SettlementTemplate({
       })),
     ],
     [npcs, childNPCs, childPoiNames],
+  );
+
+  // Factions tied to this settlement: those headquartered here, plus any with a
+  // presence. HQ factions are excluded from the presence list to avoid double-
+  // listing (an HQ already seeds a 'controls' presence at generation).
+  const hqFactions = useMemo(
+    () => factions.filter((f) => f.headquartersPoiId === poi.id),
+    [factions, poi.id],
+  );
+  const presenceRows = useMemo(() => {
+    const hqIds = new Set(hqFactions.map((f) => f.id));
+    return factionPresences
+      .filter((fp) => !hqIds.has(fp.factionId))
+      .map((fp) => ({ presence: fp, faction: factions.find((f) => f.id === fp.factionId) }))
+      .filter((r): r is { presence: FactionPresence; faction: Faction } => !!r.faction);
+  }, [factionPresences, factions, hqFactions]);
+  const npcById = useMemo(
+    () => new Map([...npcs, ...childNPCs].map((n) => [n.id, n])),
+    [npcs, childNPCs],
   );
 
   const selectedLocation = selectedChildId
@@ -952,6 +988,70 @@ export function SettlementTemplate({
                   </div>
                 </div>
               )}
+
+              {(hqFactions.length > 0 || presenceRows.length > 0) && (
+                <div className="space-y-2 rounded-md bg-muted/20 px-3 py-2">
+                  <p className="text-xs font-extrabold uppercase tracking-wide text-muted-foreground">
+                    Factions
+                  </p>
+                  <div className="space-y-2">
+                    {hqFactions.map((fac) => {
+                      const leader = fac.leaderNpcId ? npcById.get(fac.leaderNpcId) : undefined;
+                      const goal = fac.agendaGoals.find((g) => g.timeframe === "immediate");
+                      return (
+                        <div key={fac.id} className="text-sm">
+                          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                            <span className="shrink-0">🏛</span>
+                            <Link
+                              to="/realms/factions/$factionId"
+                              params={{ factionId: fac.id }}
+                              className="font-medium hover:underline"
+                            >
+                              {fac.name}
+                            </Link>
+                            <Badge variant="outline" className="text-[10px] border-amber-500/60 text-amber-400">HQ</Badge>
+                            {fac.type && <span className="text-xs text-muted-foreground">{fac.type}</span>}
+                            {leader && (
+                              <span className="text-xs text-muted-foreground">
+                                · led by{" "}
+                                <Link
+                                  to="/realms/npcs/$npcId"
+                                  params={{ npcId: leader.id }}
+                                  className="hover:underline"
+                                >
+                                  {leader.name}
+                                </Link>
+                              </span>
+                            )}
+                          </div>
+                          {goal && (
+                            <p className="pl-5 text-xs text-muted-foreground">
+                              Now: {goal.description}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {presenceRows.map(({ presence, faction }) => (
+                      <div key={presence.id} className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm">
+                        <Link
+                          to="/realms/factions/$factionId"
+                          params={{ factionId: faction.id }}
+                          className="font-medium hover:underline"
+                        >
+                          {faction.name}
+                        </Link>
+                        <Badge variant="outline" className={`text-[10px] ${PRESENCE_TYPE_COLORS[presence.type] ?? ""}`}>
+                          {presence.type}
+                        </Badge>
+                        {presence.notes && (
+                          <span className="text-xs text-muted-foreground">{presence.notes}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <OverviewRoutes
@@ -1014,6 +1114,9 @@ export function SettlementTemplate({
         <TabsContent value="locations" className="space-y-4 pt-3">
           {overviewSection}
           {/* Map spans full width above master-detail, only when one exists */}
+          {mapError && (
+            <p className="text-sm text-destructive">{mapError}</p>
+          )}
           {mapSection && <div>{mapSection}</div>}
 
           <div
