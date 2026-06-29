@@ -2,11 +2,14 @@ import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import type { Faction, AgendaGoal } from '@domain/entities/Faction'
 import { newId } from '@shared/ulid'
 import { pickCairn, sampleCairn, cairnTexts } from './cairnPick'
+import { pickFactionName } from '~/domain/data/worldgen/names'
 
 export interface BuildFactionInput {
   worldId: string
   hqPoiId: string
   regionId: string
+  /** When provided, the generated name is kept unique within the set (and added). */
+  usedNames?: Set<string>
 }
 
 // Cairn's advantage-quantity roll: 1d20 → 1-7=1, 8-12=2, 13-17=3, 18-20=4.
@@ -57,15 +60,30 @@ export function buildFaction(input: BuildFactionInput, rng: SeededRandom): Facti
     segments: 4,
   }))
 
-  // Default to a non-empty name even if the type table is somehow missing.
-  const name = (traits[0] ? `${traits[0]} ${type}` : type).trim() || 'Unnamed Faction'
+  // Evocative proper name (e.g. "The Crimson Hand", "House Vane"), kept unique
+  // within the world when a usedNames set is supplied. The old "<Trait> <Type>"
+  // phrase becomes the description/subtitle.
+  const resolvedType = type || (cairnTexts('table-cairn-faction-type')[0] ?? '')
+  const makeName = (): string => pickFactionName(resolvedType, rng)
+  let name = makeName()
+  if (input.usedNames) {
+    for (let i = 0; i < 20 && input.usedNames.has(name); i++) name = makeName()
+    if (input.usedNames.has(name)) {
+      const base = name
+      let k = 2
+      while (input.usedNames.has(name)) name = `${base} ${k++}`
+    }
+    input.usedNames.add(name)
+  }
+
+  const description = (traits[0] ? `${traits[0]} ${resolvedType}` : resolvedType).trim()
 
   return {
     id: newId(),
     worldId: input.worldId,
     name,
-    description: '',
-    type: type || (cairnTexts('table-cairn-faction-type')[0] ?? ''),
+    description,
+    type: resolvedType,
     status: 'active',
     isParty: false,
     regionId: input.regionId,
