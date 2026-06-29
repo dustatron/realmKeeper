@@ -12,7 +12,30 @@ import { makeSeededDice } from './seededDice'
 import { pickNpcWant } from '@domain/data/worldgen/npcWants'
 import { buildHumanoidFlavor } from './npcFactory'
 import type { ResolvedTables } from './TableProvider'
-import { NPC_FAVOR_TABLE_ID, NPC_PURSUIT_TABLE_ID, NPC_FLAW_TABLE_ID, NPC_FLAWS } from '@domain/data/worldgen/npc.tables'
+import {
+  NPC_FAVOR_TABLE_ID, NPC_PURSUIT_TABLE_ID, NPC_FLAW_TABLE_ID, NPC_FLAWS,
+  NPC_PROFESSION_TABLE_ID, NPC_ARTISAN_TABLE_ID, PROFESSIONS, ARTISAN_TRADES,
+} from '@domain/data/worldgen/npc.tables'
+
+function pool(tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): readonly string[] {
+  const t = tables?.texts(id)
+  return t && t.length > 0 ? t : fallback
+}
+
+// A first name / surname from the (editable) Cairn name tables, falling back to
+// the static Cairn data.
+function liveCairn(rng: SeededRandom, tables: ResolvedTables | undefined, id: string): string {
+  const t = tables?.texts(id)
+  return t && t.length > 0 ? rng.pick(t) : pickCairn(rng, id)
+}
+
+// A general profession for townsfolk who aren't tied to a specific shop. Mirrors
+// the source's profession → artisan-specialty cascade.
+function pickProfession(rng: SeededRandom, tables: ResolvedTables | undefined): string {
+  const prof = rng.pick(pool(tables, NPC_PROFESSION_TABLE_ID, PROFESSIONS))
+  if (/artisan/i.test(prof)) return rng.pick(pool(tables, NPC_ARTISAN_TABLE_ID, ARTISAN_TRADES))
+  return prof
+}
 
 export type NpcRole = 'leader' | 'agent' | 'inhabitant'
 
@@ -65,8 +88,8 @@ export function buildNpc(
   // --- Identity ---
   const gender: 'male' | 'female' = rng.chance(0.5) ? 'male' : 'female'
   const race = rng.pick(RACE_POOL)
-  const firstName = pickCairn(rng, nameTableId(race, gender))
-  const surname = race === 'human' ? pickCairn(rng, 'table-cairn-surnames') : ''
+  const firstName = liveCairn(rng, input.tables, nameTableId(race, gender))
+  const surname = race === 'human' ? liveCairn(rng, input.tables, 'table-cairn-surnames') : ''
   const name = [firstName, surname].filter(Boolean).join(' ') || 'Unnamed'
 
   // --- Flavor (Cairn character traits) ---
@@ -86,7 +109,10 @@ export function buildNpc(
   block.maxHp = block.hp
 
   const role: NpcRole = input.role ?? 'inhabitant'
-  const roleLabel = input.occupation ?? role
+  // Shop proprietors arrive with an occupation; faction leaders/agents keep their
+  // role. Other townsfolk draw a general profession so they aren't just "an
+  // inhabitant."
+  const roleLabel = input.occupation ?? (role === 'inhabitant' ? pickProfession(rng, input.tables).toLowerCase() : role)
   const article = /^[aeiou]/i.test(race) ? 'An' : 'A'
 
   // ~1 in 3 NPCs carries an ironic/tragic flaw — a memorable, playable hook.

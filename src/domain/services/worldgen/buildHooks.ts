@@ -12,6 +12,12 @@ import {
   PLOT_HOOKS_JOB_TABLE_ID, PLOT_HOOKS_ILLICIT_TABLE_ID,
   PLOT_HOOKS_JOB, PLOT_HOOKS_ILLICIT,
 } from '@domain/data/worldgen/plotHooks'
+import { SETTLEMENT_PROBLEM_TABLE_ID, settlementProblemTexts } from '@domain/data/worldgen/settlementProblems'
+
+function pool(tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): readonly string[] {
+  const t = tables?.texts(id)
+  return t && t.length > 0 ? t : fallback
+}
 
 export interface HookBundle {
   hooks: Hook[]
@@ -177,10 +183,13 @@ export function buildHooks(
     )
   }
 
-  // --- Plot-hook job board: public, mundane postings from the job-hook table,
-  // anchored to each settlement so they surface on its Notices board. ---
-  const jobPool = tables?.texts(PLOT_HOOKS_JOB_TABLE_ID)
-  const jobHooks = jobPool && jobPool.length > 0 ? jobPool : PLOT_HOOKS_JOB
+  // --- Plot-hook job board: public postings on each settlement's Notices board.
+  // One is seeded from the settlement's OWN trouble (so the board reflects the
+  // town), the rest from a combined pool of job hooks + settlement troubles for
+  // variety. Every settlement gets at least one. ---
+  const jobHooks = pool(tables, PLOT_HOOKS_JOB_TABLE_ID, PLOT_HOOKS_JOB)
+  const troubles = pool(tables, SETTLEMENT_PROBLEM_TABLE_ID, settlementProblemTexts)
+  const jobPoolCombined = [...jobHooks, ...troubles]
   // A proprietor to name as the poster, if the settlement has one.
   const buildingParent = new Map(pois.filter((p) => p.type === 'building').map((p) => [p.id, p.parentPoiId]))
   const proprietorBySettlement = new Map<string, string>()
@@ -188,20 +197,22 @@ export function buildHooks(
     const settId = n.poiId ? buildingParent.get(n.poiId) : null
     if (settId && !proprietorBySettlement.has(settId)) proprietorBySettlement.set(settId, n.id)
   }
+  const reward = 'Negotiable — speak to the poster.'
   for (const settlement of pois.filter((p) => p.type === 'settlement')) {
-    const count = rng.between(0, 2)
-    if (count === 0 || jobHooks.length === 0) continue
-    for (const text of rng.sample(jobHooks, Math.min(count, jobHooks.length))) {
-      addNotice(
-        null,
-        settlement.id,
-        settlement.regionId,
-        'job',
-        'Posted on the board',
-        text,
-        proprietorBySettlement.get(settlement.id) ?? null,
-        'Negotiable — speak to the poster.',
-      )
+    const posterId = proprietorBySettlement.get(settlement.id) ?? null
+    const posterName = posterId ? nameOf.get(posterId) : null
+    const title = posterName ? `Posted by ${posterName}` : 'Posted on the board'
+    let posted = 0
+    const trouble = settlement.trouble?.trim()
+    if (trouble) {
+      addNotice(null, settlement.id, settlement.regionId, 'job', title, trouble, posterId, reward)
+      posted++
+    }
+    const extra = rng.between(posted > 0 ? 0 : 1, 2)
+    if (extra > 0 && jobPoolCombined.length > 0) {
+      for (const text of rng.sample(jobPoolCombined, Math.min(extra, jobPoolCombined.length))) {
+        addNotice(null, settlement.id, settlement.regionId, 'job', title, text, posterId, reward)
+      }
     }
   }
 

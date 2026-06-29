@@ -282,7 +282,7 @@ export function generateWorld(
     const name = pickName(nameKind, rng, { tables: opts.tables })
     // Every POI gets structured flavor: the Cairn type as a subtype label, its
     // feature as a tag, plus a clean description and read-aloud.
-    const flavor = buildPoiFlavor(kind, name, cell.biome, rng)
+    const flavor = buildPoiFlavor(kind, name, cell.biome, rng, opts.tables)
     const dungeonSeedId = newId()
 
     // Art-driven landmarks: assign a tile-backed subtype (volcano, floating

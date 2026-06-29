@@ -15,6 +15,9 @@ export const NPC_PHYSICAL_TRAIT_TABLE_ID = 'table-rk-npc-physical-trait'
 export const NPC_FAVOR_TABLE_ID = 'table-rk-npc-favor'
 export const NPC_PURSUIT_TABLE_ID = 'table-rk-npc-pursuit'
 export const NPC_FLAW_TABLE_ID = 'table-rk-npc-flaw'
+export const NPC_PROFESSION_TABLE_ID = 'table-rk-npc-profession'
+export const NPC_ARTISAN_TABLE_ID = 'table-rk-npc-artisan-trade'
+export const NPC_RARE_TRADE_TABLE_ID = 'table-rk-npc-rare-trade'
 
 // Ironic / tragic flaws (curated from user source; grounded + light whimsy,
 // modern/meme entries dropped). Profession-agnostic so they apply to any NPC;
@@ -46,19 +49,19 @@ export const NPC_FLAWS = [
   'Superstitious to the point of paralysis',
 ]
 
-const PROFESSIONS = [
+export const PROFESSIONS = [
   'Merchant', 'Artisan / Specialist', 'Beggar / Wretch', 'Servant / Worker', 'Guard / Soldier',
   'Miller / Baker', 'Hunter / Trapper', 'Fisher', 'Villager', 'Labourer', 'Farmer', 'Shepherd',
   'Leader / Wisewoman', 'Field Worker', 'Servant', 'Noble',
 ]
 
-const ARTISAN_TRADES = [
+export const ARTISAN_TRADES = [
   'Bookseller / Illuminator', 'Bookbinder / Copyist', 'Pursemaker', 'Fishmonger', 'Blacksmith',
   'Weaver', 'Baker', 'Furrier', 'Barber / Chandler', 'General Crafts', 'Shoemaker', 'Pastrycook',
   'Tailor', 'Painter', 'Butcher', 'Saddler', 'Stonemason / Carpenter', 'Hatmaker / Cooper',
 ]
 
-const RARE_TRADES = [
+export const RARE_TRADES = [
   'Alchemist / Apothecary', 'Master Glassmaker', 'Cartographer / Surveyor', 'Astrologer / Scholar',
   'Master Jeweler / Gemcutter', 'Exotic Importer', 'Guild Master / Overseer',
   'Weapon / Armour Specialist', 'Magical Artisan', 'Secret / Unique Profession',

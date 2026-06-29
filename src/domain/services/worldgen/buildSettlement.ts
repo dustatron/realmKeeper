@@ -8,8 +8,8 @@ import { settlementSize } from '@domain/data/worldgen/settlementSize'
 import type { ResolvedTables } from './TableProvider'
 import { SHOP_TYPES_TABLE_ID, SHOP_NAMES_TABLE_ID, SHOP_TYPES } from '@domain/data/worldgen/shops.tables'
 import {
-  DISTRICT_TABLE_ID, KNOWN_FOR_TABLE_ID, STRUCTURE_QUIRK_TABLE_ID, GUILD_TABLE_ID, SHOP_QUIRK_TABLE_ID,
-  DISTRICTS, KNOWN_FOR, STRUCTURE_QUIRKS, GUILDS, SHOP_QUIRKS,
+  DISTRICT_TABLE_ID, KNOWN_FOR_TABLE_ID, STRUCTURE_QUIRK_TABLE_ID, GUILD_TABLE_ID, SHOP_QUIRK_TABLE_ID, NOTABLE_FEATURE_TABLE_ID,
+  DISTRICTS, KNOWN_FOR, STRUCTURE_QUIRKS, GUILDS, SHOP_QUIRKS, NOTABLE_FEATURES,
 } from '@domain/data/worldgen/settlement.tables'
 
 // Pick from an editable table, falling back to the built-in array (same order
@@ -64,9 +64,11 @@ export function buildSettlementBuildings(
   const knownFor = pickFlavor(rng, tables, KNOWN_FOR_TABLE_ID, KNOWN_FOR)
   const structureQuirk = pickFlavor(rng, tables, STRUCTURE_QUIRK_TABLE_ID, STRUCTURE_QUIRKS)
   const guild = rng.chance(0.5) ? pickFlavor(rng, tables, GUILD_TABLE_ID, GUILDS) : null
+  const feature = pickFlavor(rng, tables, NOTABLE_FEATURE_TABLE_ID, NOTABLE_FEATURES)
   settlement.description =
     `${settlement.description ?? ''} Known for ${knownFor}; ${structureQuirk}. Its heart is ${district}.` +
-    (guild ? ` Home to ${guild}.` : '')
+    (guild ? ` Home to ${guild}.` : '') +
+    ` Notably, ${feature}.`
 
   const count = Math.min(types_.length, buildingCount(settlement.subtypeLabel, rng))
   const types = rng.sample(types_, count)

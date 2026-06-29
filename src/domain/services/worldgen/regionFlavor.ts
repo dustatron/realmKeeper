@@ -135,7 +135,7 @@ export function buildRegionFlavor(biome: Biome, rng: SeededRandom, tables?: Reso
   const tier = BIOME_TIER[biome]
 
   // Features: the biome's own evocative feature plus a Cairn landmark.
-  const biomeFeature = pickBiomeFeature(biome, rng)
+  const biomeFeature = pickBiomeFeature(biome, rng, tables)
   const landmark = pickCairn(rng, `table-cairn-landmark-${tier}`)
   const features = [biomeFeature, landmark]
 

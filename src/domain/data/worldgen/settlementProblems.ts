@@ -1,5 +1,8 @@
 import type { TableDef, TableSet } from '@domain/entities/TableDef'
 import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
+import type { ResolvedTables } from '@domain/services/worldgen/TableProvider'
+
+export const SETTLEMENT_PROBLEM_TABLE_ID = 'table-worldgen-settlement-problem'
 
 export const settlementProblemTexts = [
   'Werewolves are taking livestock first, and everyone knows people are next.',
@@ -86,7 +89,7 @@ export const settlementProblemTableSets: TableSet[] = [
 
 export const settlementProblemTableDefs: TableDef[] = [
   {
-    id: 'table-worldgen-settlement-problem',
+    id: SETTLEMENT_PROBLEM_TABLE_ID,
     setId: 'tableset-worldgen-settlement-problems',
     name: 'Settlement Problem',
     diceFormula: `1d${settlementProblemTexts.length}`,
@@ -96,10 +99,10 @@ export const settlementProblemTableDefs: TableDef[] = [
   },
 ]
 
-export function pickSettlementProblem(rng: SeededRandom, current?: string | null): string {
+export function pickSettlementProblem(rng: SeededRandom, current?: string | null, tables?: ResolvedTables): string {
+  const provided = tables?.texts(SETTLEMENT_PROBLEM_TABLE_ID)
+  const pool = provided && provided.length > 0 ? provided : settlementProblemTexts
   const currentText = current?.trim()
-  const candidates = currentText
-    ? settlementProblemTexts.filter((problem) => problem !== currentText)
-    : settlementProblemTexts
-  return rng.pick(candidates.length > 0 ? candidates : settlementProblemTexts)
+  const candidates = currentText ? pool.filter((problem) => problem !== currentText) : pool
+  return rng.pick(candidates.length > 0 ? candidates : pool)
 }

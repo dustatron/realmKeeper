@@ -3,6 +3,7 @@ import {
   createWeightedTable,
   type WeightedTable,
 } from '~/lib/dungeon/SeededRandom'
+import type { ResolvedTables } from '@domain/services/worldgen/TableProvider'
 
 export type Biome =
   | 'forest' | 'mountains' | 'grasslands' | 'desert' | 'marsh'
@@ -87,6 +88,8 @@ export const BIOME_FEATURE_TABLES: Record<Biome, WeightedTable<string>> = {
   }),
 }
 
-export function pickBiomeFeature(biome: Biome, rng: SeededRandom): string {
+export function pickBiomeFeature(biome: Biome, rng: SeededRandom, tables?: ResolvedTables): string {
+  const id = `table-rk-region-feature-${biome}`
+  if (tables?.has(id)) return tables.pickWeighted(rng, id)
   return rng.pickWeighted(BIOME_FEATURE_TABLES[biome])
 }
