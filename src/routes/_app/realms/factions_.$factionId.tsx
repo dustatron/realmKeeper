@@ -25,7 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
 import { Input } from '~/components/ui/input'
-import { ArrowLeft, Trash2, Pencil, Crown, CheckCircle2, Circle, Dices, Users, Handshake, ChevronUp, ChevronDown, MapPin, Link2, Footprints } from 'lucide-react'
+import { ArrowLeft, Trash2, Pencil, Crown, CheckCircle2, Circle, Dices, Users, Handshake, ChevronUp, ChevronDown, MapPin, Map, Link2, Footprints } from 'lucide-react'
 import { ProgressClock } from '~/components/shared/ProgressClock'
 import { FACTION_STATUSES, FACTION_PRESENCE_TYPES, type FactionPresenceType } from '@shared/constants'
 import { deriveStatus } from '@domain/value-objects/RelationshipScore'
@@ -255,86 +255,83 @@ function FactionDetailPage() {
               ))}
             </div>
 
-            {/* Leadership + location row — the "who runs it / where" answers, up top and linked */}
+            {/* Leadership + location — "who runs it / where", as scannable chips */}
             {(f.regionId || f.headquartersPoiId || f.leaderNpcId || (f.isParty && f.currentPoiId)) && (
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+              <div className="flex flex-wrap gap-2 text-xs">
                 {f.isParty && (() => {
                   const here = realmPOIs.find((p) => p.id === f.currentPoiId)
                   return here ? (
-                    <span className="text-muted-foreground inline-flex items-center gap-1">
-                      <Footprints className="size-3.5" />
-                      Location:{' '}
-                      <Link
-                        to="/realms/pois/$poiId"
-                        params={{ poiId: here.id }}
-                        className="text-foreground font-medium hover:underline"
-                      >
-                        {here.name}
-                      </Link>
-                    </span>
+                    <Link
+                      to="/realms/pois/$poiId"
+                      params={{ poiId: here.id }}
+                      className="inline-flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1 hover:bg-accent transition-colors"
+                    >
+                      <Footprints className="size-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Location</span>
+                      <span className="font-medium text-foreground">{here.name}</span>
+                    </Link>
                   ) : null
                 })()}
                 {(() => {
                   const leader = allNPCs.find((n) => n.id === f.leaderNpcId)
                   return leader ? (
-                    <span className="text-muted-foreground inline-flex items-center gap-1">
-                      Leader:{' '}
-                      <Link
-                        to="/realms/npcs/$npcId"
-                        params={{ npcId: leader.id }}
-                        className="text-foreground font-medium hover:underline inline-flex items-center gap-1"
-                      >
-                        <Crown className="size-3.5 text-amber-500" />
-                        {leader.name}
-                      </Link>
-                    </span>
+                    <Link
+                      to="/realms/npcs/$npcId"
+                      params={{ npcId: leader.id }}
+                      className="inline-flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1 hover:bg-accent transition-colors"
+                    >
+                      <Crown className="size-3.5 text-amber-500" />
+                      <span className="text-muted-foreground">Leader</span>
+                      <span className="font-medium text-foreground">{leader.name}</span>
+                    </Link>
                   ) : null
                 })()}
                 {(() => {
                   const region = regions.find((r) => r.id === f.regionId)
                   return region ? (
-                    <span className="text-muted-foreground">
-                      Region:{' '}
-                      <Link
-                        to="/realms/regions/$regionId"
-                        params={{ regionId: region.id }}
-                        className="text-foreground font-medium hover:underline"
-                      >
-                        {region.name}
-                      </Link>
-                    </span>
+                    <Link
+                      to="/realms/regions/$regionId"
+                      params={{ regionId: region.id }}
+                      className="inline-flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1 hover:bg-accent transition-colors"
+                    >
+                      <Map className="size-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Region</span>
+                      <span className="font-medium text-foreground">{region.name}</span>
+                    </Link>
                   ) : null
                 })()}
                 {(() => {
                   const hqPoi = realmPOIs.find((p) => p.id === f.headquartersPoiId)
                   return hqPoi ? (
-                    <span className="text-muted-foreground">
-                      HQ:{' '}
-                      <Link
-                        to="/realms/pois/$poiId"
-                        params={{ poiId: hqPoi.id }}
-                        className="text-foreground font-medium hover:underline"
-                      >
-                        {hqPoi.name}
-                      </Link>
-                    </span>
+                    <Link
+                      to="/realms/pois/$poiId"
+                      params={{ poiId: hqPoi.id }}
+                      className="inline-flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1 hover:bg-accent transition-colors"
+                    >
+                      <MapPin className="size-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">HQ</span>
+                      <span className="font-medium text-foreground">{hqPoi.name}</span>
+                    </Link>
                   ) : null
                 })()}
               </div>
             )}
+
+            {/* GM secret — collapsed by default so it doesn't spoil at a glance */}
+            {f.secret && (
+              <details className="rounded-md border border-rose-500/30 bg-rose-500/10 text-sm">
+                <summary className="cursor-pointer select-none px-3 py-2 font-semibold text-rose-600 dark:text-rose-400">
+                  Secret (GM) <span className="font-normal text-muted-foreground">— reveal</span>
+                </summary>
+                <p className="px-3 pb-2 text-foreground/90">{f.secret}</p>
+              </details>
+            )}
           </CardContent>
         </Card>
 
-        {f.secret && (
-          <p className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm">
-            <span className="font-semibold text-rose-600 dark:text-rose-400">Secret (GM) </span>
-            {f.secret}
-          </p>
-        )}
-
         {/* Agenda — always shown so an empty faction still prompts you to add goals (via Edit) */}
         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Agenda</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
               {/* Immediate */}
               <Card>
                 <CardHeader className="pb-2">
