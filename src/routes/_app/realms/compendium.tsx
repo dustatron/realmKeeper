@@ -651,7 +651,7 @@ function CompendiumPage() {
                 description="Try a different search or filter."
               />
             ) : (
-              <ScrollArea className="h-[calc(100vh-16rem)]">
+              <ScrollArea className="h-[calc(100dvh-16rem)]">
                 <MonsterTable
                   monsters={filteredMonsters}
                   starredIds={starredMonsterIds}
@@ -706,7 +706,7 @@ function CompendiumPage() {
                 description="Try a different search or filter."
               />
             ) : (
-              <ScrollArea className="h-[calc(100vh-16rem)]">
+              <ScrollArea className="h-[calc(100dvh-16rem)]">
                 <SpellTable
                   spells={filteredSpells}
                   starredIds={starredSpellIds}
@@ -753,7 +753,7 @@ function CompendiumPage() {
                 description="Try a different search or filter."
               />
             ) : (
-              <ScrollArea className="h-[calc(100vh-16rem)]">
+              <ScrollArea className="h-[calc(100dvh-16rem)]">
                 <MagicItemTable
                   items={filteredMagicItems}
                   starredIds={starredMagicItemIds}
@@ -798,7 +798,7 @@ function CompendiumPage() {
                   description="Try a different search."
                 />
               ) : (
-                <ScrollArea className="h-[calc(100vh-16rem)]">
+                <ScrollArea className="h-[calc(100dvh-16rem)]">
                   <EquipmentTable items={filteredEquipment} hiddenIds={hiddenSet} onToggleHide={handleToggleHide} />
                 </ScrollArea>
               )}

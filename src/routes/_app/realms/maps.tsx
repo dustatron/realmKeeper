@@ -35,7 +35,7 @@ function MapsPage() {
   }
 
   return (
-    <div className="-mx-4 -my-6 h-[calc(100vh-4rem)] min-h-0 overflow-hidden">
+    <div className="-mx-4 -my-6 h-[calc(100dvh-4rem)] min-h-0 overflow-hidden">
       <MultiMapViewer
         maps={realmMaps}
         onUpload={handleUpload}
