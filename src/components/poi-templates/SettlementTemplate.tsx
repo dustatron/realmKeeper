@@ -1,5 +1,7 @@
 import { useMemo, useState, useRef, useEffect, type ReactNode } from "react";
-import { useHooksByWorld } from "~/ui/hooks/useHooks";
+import { useHookResolver } from "~/ui/hooks/useHookResolver";
+import { useLinkableEntities } from "~/ui/hooks/useLinkableEntities";
+import type { EntityLink } from "@domain/value-objects/EntityLink";
 import { Link } from "@tanstack/react-router";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import {
@@ -350,14 +352,17 @@ interface SettlementTemplateProps {
     text: string;
     source: string;
     isQuestHook: boolean;
+    links: EntityLink[];
   }) => void;
   onDeleteRumor: (id: string) => void;
+  onUpdateRumor: (rumor: Rumor) => void;
   onToggleNoticeUsed: (notice: Notice) => void;
   onCreateNotice: (input: {
     title: string;
     description: string;
     type: NoticeType;
     reward: string;
+    links: EntityLink[];
   }) => void;
   onDeleteNotice: (id: string) => void;
   onRollEncounter: () => Promise<RollEncounterResult>;
@@ -678,6 +683,7 @@ export function SettlementTemplate({
   onToggleRumorUsed,
   onCreateRumor,
   onDeleteRumor,
+  onUpdateRumor,
   onToggleNoticeUsed,
   onCreateNotice,
   onDeleteNotice,
@@ -701,12 +707,8 @@ export function SettlementTemplate({
   actionBar,
   worldId,
 }: SettlementTemplateProps) {
-  const worldHooks = useHooksByWorld(worldId ?? null);
-  const hooksById = useMemo(
-    () => new Map(worldHooks.map((h) => [h.id, h])),
-    [worldHooks],
-  );
-  const resolveTarget = (id: string) => hooksById.get(id)?.secret.detail ?? null;
+  const resolveTarget = useHookResolver(worldId ?? null);
+  const linkOptions = useLinkableEntities(worldId ?? null);
 
   // Group child NPCs by their poiId
   const npcsByPoiId = useMemo(() => {
@@ -1332,14 +1334,14 @@ export function SettlementTemplate({
               </Button>
             </div>
             {allNPCs.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {allNPCs.map(({ npc, poiName }) => {
                   const isHighlighted =
                     selectedChildId != null && npc.poiId === selectedChildId;
                   return (
                     <div
                       key={npc.id}
-                      className={`w-96 rounded-md transition-all ${isHighlighted ? "ring-2 ring-primary" : ""}`}
+                      className={`rounded-lg transition-all ${isHighlighted ? "ring-2 ring-primary" : ""}`}
                     >
                       <NPCMiniCard
                         npc={npc}
@@ -1363,7 +1365,9 @@ export function SettlementTemplate({
             onToggleUsed={onToggleRumorUsed}
             onCreate={onCreateRumor}
             onDelete={onDeleteRumor}
+            onUpdate={onUpdateRumor}
             resolveTarget={resolveTarget}
+            linkOptions={linkOptions}
           />
           <NoticeBoard
             notices={notices}
@@ -1371,6 +1375,7 @@ export function SettlementTemplate({
             onCreate={onCreateNotice}
             onDelete={onDeleteNotice}
             resolveTarget={resolveTarget}
+            linkOptions={linkOptions}
           />
         </TabsContent>
 

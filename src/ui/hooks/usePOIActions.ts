@@ -28,6 +28,7 @@ import type { SystemConfig } from '@domain/entities/SystemConfig'
 import type { EncounterRollResult } from '@domain/value-objects/EncounterRollResult'
 import type { CompendiumRef } from '@domain/entities/Compendium'
 import type { Rumor } from '@domain/entities/Rumor'
+import type { EntityLink } from '@domain/value-objects/EntityLink'
 import type { Notice } from '@domain/entities/Notice'
 import type { WatabouCityData } from '@domain/value-objects/WatabouCityData'
 import type { WatabouDungeonData } from '@domain/value-objects/WatabouDungeonData'
@@ -65,7 +66,7 @@ export function usePOIActions(poi: POI | null | undefined, region: Region | null
     await executeCreateGameMap({ ...data, ownerPoiId: poi.id }, { gameMapRepo: container.gameMapRepo })
   }
 
-  const handleCreateRumor = async (input: { text: string; source: string; isQuestHook: boolean }) => {
+  const handleCreateRumor = async (input: { text: string; source: string; isQuestHook: boolean; links?: EntityLink[] }) => {
     if (!poi || !region) return
     await executeCreateRumor(
       { poiId: poi.id, regionId: poi.regionId, worldId: region.worldId, ...input },
@@ -77,11 +78,15 @@ export function usePOIActions(poi: POI | null | undefined, region: Region | null
     await executeUpdateRumor({ ...rumor, isUsed: !rumor.isUsed }, { rumorRepo: container.rumorRepo })
   }
 
+  const handleUpdateRumor = async (rumor: Rumor) => {
+    await executeUpdateRumor(rumor, { rumorRepo: container.rumorRepo })
+  }
+
   const handleDeleteRumor = async (id: string) => {
     await executeDeleteRumor(id, { rumorRepo: container.rumorRepo })
   }
 
-  const handleCreateNotice = async (input: { title: string; description: string; type: NoticeType; reward: string }) => {
+  const handleCreateNotice = async (input: { title: string; description: string; type: NoticeType; reward: string; links?: EntityLink[] }) => {
     if (!poi || !region) return
     await executeCreateNotice(
       { poiId: poi.id, regionId: poi.regionId, worldId: region.worldId, ...input },
@@ -213,6 +218,7 @@ export function usePOIActions(poi: POI | null | undefined, region: Region | null
     handleUploadMap,
     handleCreateRumor,
     handleToggleRumorUsed,
+    handleUpdateRumor,
     handleDeleteRumor,
     handleCreateNotice,
     handleToggleNoticeUsed,
