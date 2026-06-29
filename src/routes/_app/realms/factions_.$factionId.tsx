@@ -25,7 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
 import { Input } from '~/components/ui/input'
-import { ArrowLeft, Trash2, Pencil, Crown, CheckCircle2, Circle, Dices, Users, Handshake, ChevronUp, ChevronDown, MapPin, Link2 } from 'lucide-react'
+import { ArrowLeft, Trash2, Pencil, Crown, CheckCircle2, Circle, Dices, Users, Handshake, ChevronUp, ChevronDown, MapPin, Link2, Footprints } from 'lucide-react'
 import { ProgressClock } from '~/components/shared/ProgressClock'
 import { FACTION_STATUSES, FACTION_PRESENCE_TYPES, type FactionPresenceType } from '@shared/constants'
 import { deriveStatus } from '@domain/value-objects/RelationshipScore'
@@ -250,8 +250,24 @@ function FactionDetailPage() {
             </div>
 
             {/* Leadership + location row — the "who runs it / where" answers, up top and linked */}
-            {(f.regionId || f.headquartersPoiId || f.leaderNpcId) && (
+            {(f.regionId || f.headquartersPoiId || f.leaderNpcId || (f.isParty && f.currentPoiId)) && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                {f.isParty && (() => {
+                  const here = realmPOIs.find((p) => p.id === f.currentPoiId)
+                  return here ? (
+                    <span className="text-muted-foreground inline-flex items-center gap-1">
+                      <Footprints className="size-3.5" />
+                      Location:{' '}
+                      <Link
+                        to="/realms/pois/$poiId"
+                        params={{ poiId: here.id }}
+                        className="text-foreground font-medium hover:underline"
+                      >
+                        {here.name}
+                      </Link>
+                    </span>
+                  ) : null
+                })()}
                 {(() => {
                   const leader = allNPCs.find((n) => n.id === f.leaderNpcId)
                   return leader ? (

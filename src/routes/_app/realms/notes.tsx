@@ -119,7 +119,7 @@ function NotesPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-[calc(100vh-12rem)]">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-[calc(100dvh-12rem)]">
         {/* Note List Sidebar */}
         <div className="lg:col-span-1 space-y-3">
           <div className="flex items-center gap-2">
@@ -129,7 +129,7 @@ function NotesPage() {
             </Button>
           </div>
 
-          <ScrollArea className="h-[calc(100vh-16rem)]">
+          <ScrollArea className="h-[calc(100dvh-16rem)]">
             <div className="space-y-1">
               {filteredNotes.map((note) => (
                 <NoteListItem

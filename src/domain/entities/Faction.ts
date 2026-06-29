@@ -31,6 +31,8 @@ export interface Faction {
   isParty: boolean
   regionId: string | null
   headquartersPoiId: string | null
+  /** For the party faction: the party's current location — any POI node (site, building, or room). */
+  currentPoiId?: string | null
   leaderNpcId: string | null
   agentNpcIds: string[]
   agendaGoals: AgendaGoal[]

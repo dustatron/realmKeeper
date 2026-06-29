@@ -68,7 +68,7 @@ function TablesPage() {
             <CardTitle className="text-base">Table Sets</CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[calc(100vh-16rem)]">
+            <ScrollArea className="h-[calc(100dvh-16rem)]">
               <div className="space-y-2">
                 {tableSets.map((set) => (
                   <TableSetItem
@@ -233,7 +233,7 @@ function SelectedTableView({
       )}
 
       {/* Table Entries */}
-      <ScrollArea className="h-[calc(100vh-28rem)]">
+      <ScrollArea className="h-[calc(100dvh-28rem)]">
         <div className="space-y-1">
           {table.entries.map((entry, idx) => {
             const isLastRoll = lastRollResult?.entry === entry

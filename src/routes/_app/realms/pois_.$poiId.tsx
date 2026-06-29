@@ -15,7 +15,7 @@ import { useResolvedPaths } from '~/ui/hooks/useResolvedPaths'
 import { usePOIMaps } from '~/ui/hooks/useGameMaps'
 import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
 import { useSystemConfig } from '~/ui/hooks/useSystemConfigs'
-import { useFactions } from '~/ui/hooks/useFactions'
+import { useFactions, usePartyFaction } from '~/ui/hooks/useFactions'
 import { useRumorsByPoi } from '~/ui/hooks/useRumors'
 import { useNoticesByPoi } from '~/ui/hooks/useNotices'
 import { useEncounterTable } from '~/ui/hooks/useEncounterTable'
@@ -25,6 +25,7 @@ import { useContainer } from '~/ui/hooks/useContainer'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { usePOIActions } from '~/ui/hooks/usePOIActions'
 import { executeDeletePOI } from '@application/use-cases/DeletePOI'
+import { executeSetPartyLocation } from '@application/use-cases/SetPartyLocation'
 import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
 import { visitedPatch } from '@domain/services/poiStatus'
 import { executeGetOrCreateTownMap } from '@application/use-cases/GetOrCreateTownMap'
@@ -100,6 +101,7 @@ import {
   CircleDashed,
   Wand2,
   RefreshCw,
+  Footprints,
 } from 'lucide-react'
 import { POI_TYPE_ICONS } from '@shared/poi-icons'
 import { featureTileForPoi } from '~/lib/hexmap/tileMapping'
@@ -143,6 +145,7 @@ function POIDetailPage() {
   const regionNPCs = useNPCsByRegion(poi?.regionId ?? null)
   const systemConfig = useSystemConfig(realm?.systemId ?? null)
   const factions = useFactions(realm?.id ?? null)
+  const partyFaction = usePartyFaction(realm?.id ?? null)
   const regions = useRegions(realm?.id ?? null)
   const allPois = useRealmPOIs(realm?.id ?? null)
   const container = useContainer()
@@ -496,8 +499,40 @@ function POIDetailPage() {
     </span>
   )
 
+  const partyIsHere = partyFaction?.currentPoiId === poi.id
+  const handleSetPartyHere = () => {
+    if (!partyFaction || !realm) return
+    void executeSetPartyLocation(
+      {
+        partyFaction,
+        poiId: poi.id,
+        poiName: poi.name,
+        now: {
+          year: realm.currentYear,
+          season: realm.currentSeason,
+          day: realm.currentDay,
+          watch: realm.currentWatch,
+        },
+      },
+      { factionRepo: container.factionRepo, worldEventRepo: container.worldEventRepo },
+    )
+  }
+
   const poiActionBar = (
     <>
+      {partyFaction && (
+        <Button
+          size="sm"
+          variant={partyIsHere ? 'default' : 'outline'}
+          onClick={handleSetPartyHere}
+          disabled={partyIsHere}
+          title={partyIsHere ? 'The party is currently here' : 'Move the party to this location'}
+          aria-pressed={partyIsHere}
+        >
+          <Footprints className="mr-2 size-4" />
+          {partyIsHere ? 'Party is here' : 'Move party here'}
+        </Button>
+      )}
       <Button
         size="sm"
         variant="outline"

@@ -113,7 +113,7 @@ export function WysiwygEditor({ content, onChange, placeholder, className }: Wys
   }
 
   return (
-    <div className={cn('rounded-md border flex flex-col h-[calc(100vh-12rem)]', className)}>
+    <div className={cn('rounded-md border flex flex-col h-[calc(100dvh-12rem)]', className)}>
       {/* Toolbar */}
       <div className="flex items-center gap-0.5 flex-wrap border-b px-1 py-1 bg-muted/30">
         <ToolbarButton
