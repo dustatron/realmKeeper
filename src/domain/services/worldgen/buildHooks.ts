@@ -13,6 +13,7 @@ import {
   PLOT_HOOKS_JOB, PLOT_HOOKS_ILLICIT,
 } from '@domain/data/worldgen/plotHooks'
 import { SETTLEMENT_PROBLEM_TABLE_ID, settlementProblemTexts } from '@domain/data/worldgen/settlementProblems'
+import { THIEVES_GUILD_QUEST_TABLE_ID, THIEVES_GUILD_QUESTS } from '@domain/data/worldgen/guildQuests.tables'
 
 function pool(tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): readonly string[] {
   const t = tables?.texts(id)
@@ -219,8 +220,11 @@ export function buildHooks(
   // --- Illicit patron hooks: extreme schemes a public board would never carry.
   // Delivered privately by a faction leader (contactNpcId set, poiId null so it
   // never lands on a settlement's board). ---
-  const illicitPool = tables?.texts(PLOT_HOOKS_ILLICIT_TABLE_ID)
-  const illicitHooks = illicitPool && illicitPool.length > 0 ? illicitPool : PLOT_HOOKS_ILLICIT
+  // Patron commissions draw from illicit hooks plus thieves'-guild jobs.
+  const illicitHooks = [
+    ...pool(tables, PLOT_HOOKS_ILLICIT_TABLE_ID, PLOT_HOOKS_ILLICIT),
+    ...pool(tables, THIEVES_GUILD_QUEST_TABLE_ID, THIEVES_GUILD_QUESTS),
+  ]
   for (const faction of factions) {
     if (!faction.leaderNpcId || illicitHooks.length === 0) continue
     if (!rng.chance(0.5)) continue

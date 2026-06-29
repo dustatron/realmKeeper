@@ -13,6 +13,10 @@ import { settlementTableSets, settlementTableDefs } from './worldgen/settlement.
 import { travelTableSets, travelTableDefs } from './worldgen/travel.tables'
 import { factionTableSets, factionTableDefs } from './worldgen/faction.tables'
 import { encounterTableSets, encounterTableDefs } from './worldgen/encounters.tables'
+import { lootTableSets, lootTableDefs } from './worldgen/loot.tables'
+import { dungeonDressingTableSets, dungeonDressingTableDefs } from './worldgen/dungeonDressing.tables'
+import { curseTableSets, curseTableDefs } from './worldgen/curses.tables'
+import { guildQuestTableSets, guildQuestTableDefs } from './worldgen/guildQuests.tables'
 
 // ---------------------------------------------------------------------------
 // Aggregate all system tables (add more systems here later)
@@ -26,8 +30,8 @@ import { encounterTableSets, encounterTableDefs } from './worldgen/encounters.ta
 // Tables UI auto-shows anything registered here via getAllSystemSets().
 // ---------------------------------------------------------------------------
 
-const allSystemSets: TableSet[] = [...cairnTableSets, ...shadowdarkTableSets, ...treasureTableSets, ...settlementProblemTableSets, ...ruinLandmarkTableSets, ...nameTableSets, ...worldgenExtraTableSets, ...shopTableSets, ...plotHookTableSets, ...npcTableSets, ...settlementTableSets, ...travelTableSets, ...factionTableSets, ...encounterTableSets]
-const allSystemDefs: TableDef[] = [...cairnTableDefs, ...shadowdarkTableDefs, ...treasureTableDefs, ...settlementProblemTableDefs, ...ruinLandmarkTableDefs, ...nameTableDefs, ...worldgenExtraTableDefs, ...shopTableDefs, ...plotHookTableDefs, ...npcTableDefs, ...settlementTableDefs, ...travelTableDefs, ...factionTableDefs, ...encounterTableDefs]
+const allSystemSets: TableSet[] = [...cairnTableSets, ...shadowdarkTableSets, ...treasureTableSets, ...settlementProblemTableSets, ...ruinLandmarkTableSets, ...nameTableSets, ...worldgenExtraTableSets, ...shopTableSets, ...plotHookTableSets, ...npcTableSets, ...settlementTableSets, ...travelTableSets, ...factionTableSets, ...encounterTableSets, ...lootTableSets, ...dungeonDressingTableSets, ...curseTableSets, ...guildQuestTableSets]
+const allSystemDefs: TableDef[] = [...cairnTableDefs, ...shadowdarkTableDefs, ...treasureTableDefs, ...settlementProblemTableDefs, ...ruinLandmarkTableDefs, ...nameTableDefs, ...worldgenExtraTableDefs, ...shopTableDefs, ...plotHookTableDefs, ...npcTableDefs, ...settlementTableDefs, ...travelTableDefs, ...factionTableDefs, ...encounterTableDefs, ...lootTableDefs, ...dungeonDressingTableDefs, ...curseTableDefs, ...guildQuestTableDefs]
 
 // Pre-built lookup maps for O(1) access
 const defById = new Map<string, TableDef>(allSystemDefs.map((d) => [d.id, d]))
