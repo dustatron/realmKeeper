@@ -1,5 +1,6 @@
 import type { IRumorRepository } from '@application/ports/IRumorRepository'
 import type { Rumor } from '@domain/entities/Rumor'
+import type { EntityLink } from '@domain/value-objects/EntityLink'
 import { newId } from '@shared/ulid'
 
 export interface CreateRumorInput {
@@ -9,6 +10,7 @@ export interface CreateRumorInput {
   text: string
   source?: string
   isQuestHook?: boolean
+  links?: EntityLink[]
   tags?: string[]
 }
 
@@ -27,6 +29,7 @@ export async function executeCreateRumor(
     isUsed: false,
     isQuestHook: input.isQuestHook ?? false,
     hookId: null,
+    links: input.links ?? [],
     tags: input.tags ?? [],
     createdAt: now,
     updatedAt: now,

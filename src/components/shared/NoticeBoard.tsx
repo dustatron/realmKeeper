@@ -18,9 +18,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from '~/components/ui/dialog'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Check, Lock } from 'lucide-react'
+import { HookLinkChip, type HookReveal, type HookLink } from '~/components/shared/HookLinkChip'
+import { EntityLinkPicker } from '~/components/shared/EntityLinkPicker'
 import { NOTICE_TYPES, type NoticeType } from '@shared/constants'
 import type { Notice } from '@domain/entities/Notice'
+import type { EntityLink } from '@domain/value-objects/EntityLink'
 
 const NOTICE_TYPE_COLORS: Record<NoticeType, string> = {
   bounty: 'bg-red-600 hover:bg-red-600',
@@ -33,24 +36,31 @@ const NOTICE_TYPE_COLORS: Record<NoticeType, string> = {
 interface NoticeBoardProps {
   notices: Notice[]
   onToggleUsed: (notice: Notice) => void
-  onCreate: (input: { title: string; description: string; type: NoticeType; reward: string }) => void
+  onCreate: (input: { title: string; description: string; type: NoticeType; reward: string; links: EntityLink[] }) => void
   onDelete: (id: string) => void
-  resolveTarget?: (hookId: string) => string | null
+  resolveTarget?: (hookId: string) => HookReveal | null
+  /** All POIs/NPCs available to link, for the picker and for resolving stored links. */
+  linkOptions?: HookLink[]
 }
 
-export function NoticeBoard({ notices, onToggleUsed, onCreate, onDelete, resolveTarget }: NoticeBoardProps) {
+const EMPTY_FORM = {
+  title: '',
+  description: '',
+  type: 'job' as NoticeType,
+  reward: '',
+  links: [] as EntityLink[],
+}
+
+export function NoticeBoard({ notices, onToggleUsed, onCreate, onDelete, resolveTarget, linkOptions = [] }: NoticeBoardProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [form, setForm] = useState({
-    title: '',
-    description: '',
-    type: 'job' as NoticeType,
-    reward: '',
-  })
+  const [form, setForm] = useState(EMPTY_FORM)
+
+  const linkNameById = new Map(linkOptions.map((o) => [o.id, o]))
 
   const handleCreate = () => {
     if (!form.title.trim()) return
     onCreate(form)
-    setForm({ title: '', description: '', type: 'job', reward: '' })
+    setForm(EMPTY_FORM)
     setDialogOpen(false)
   }
 
@@ -69,14 +79,20 @@ export function NoticeBoard({ notices, onToggleUsed, onCreate, onDelete, resolve
           {notices.map((notice) => (
             <div
               key={notice.id}
-              className="flex items-start gap-2 rounded-md border p-2 group"
+              className="flex items-start gap-2 rounded-md border p-2"
             >
-              <input
-                type="checkbox"
-                checked={notice.isUsed}
-                onChange={() => onToggleUsed(notice)}
-                className="mt-1 rounded"
-              />
+              <button
+                type="button"
+                onClick={() => onToggleUsed(notice)}
+                title={notice.isUsed ? 'Mark as not yet shared' : 'Mark as shared with players'}
+                className={`mt-0.5 size-7 shrink-0 rounded-md border flex items-center justify-center transition-colors ${
+                  notice.isUsed
+                    ? 'bg-primary border-primary text-primary-foreground'
+                    : 'border-input hover:bg-muted'
+                }`}
+              >
+                {notice.isUsed && <Check className="size-4" />}
+              </button>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <Badge className={`text-xs text-white ${NOTICE_TYPE_COLORS[notice.type]}`}>
@@ -94,17 +110,47 @@ export function NoticeBoard({ notices, onToggleUsed, onCreate, onDelete, resolve
                 {notice.reward && (
                   <p className="text-xs text-amber-600 mt-0.5">Reward: {notice.reward}</p>
                 )}
-                {notice.hookId && resolveTarget?.(notice.hookId) && (
-                  <p className="text-xs text-muted-foreground">🔑 Points to: {resolveTarget(notice.hookId)}</p>
+                {(() => {
+                  const reveal = notice.hookId ? resolveTarget?.(notice.hookId) : null
+                  if (!reveal) return null
+                  return (
+                    <div className="mt-1.5 rounded border border-dashed border-border bg-muted/40 px-2 py-1 text-xs text-muted-foreground">
+                      <div className="flex items-start gap-1.5">
+                        <Lock className="size-3 mt-0.5 shrink-0" />
+                        <span>
+                          <span className="font-semibold uppercase tracking-wide text-[10px] mr-1">GM only</span>
+                          Points to {reveal.detail}
+                        </span>
+                      </div>
+                      {reveal.links.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5 pl-[1.125rem]">
+                          {reveal.links.map((link) => (
+                            <HookLinkChip key={link.id} link={link} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+                {notice.links && notice.links.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground mr-0.5">Linked</span>
+                    {notice.links.map((link) => {
+                      const opt = linkNameById.get(link.id)
+                      if (!opt) return null
+                      return <HookLinkChip key={link.id} link={opt} />
+                    })}
+                  </div>
                 )}
               </div>
               <Button
                 variant="ghost"
                 size="sm"
-                className="size-7 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                className="size-8 p-0 shrink-0 text-muted-foreground hover:text-destructive"
                 onClick={() => onDelete(notice.id)}
+                title="Delete notice"
               >
-                <Trash2 className="size-3.5" />
+                <Trash2 className="size-4" />
               </Button>
             </div>
           ))}
@@ -161,6 +207,15 @@ export function NoticeBoard({ notices, onToggleUsed, onCreate, onDelete, resolve
                 value={form.reward}
                 onChange={(e) => setForm((f) => ({ ...f, reward: e.target.value }))}
                 placeholder="99 gp, A magic item..."
+              />
+            </div>
+            <div>
+              <Label>Links</Label>
+              <p className="text-xs text-muted-foreground mb-1.5">Connect this notice to locations or NPCs.</p>
+              <EntityLinkPicker
+                options={linkOptions}
+                value={form.links}
+                onChange={(links) => setForm((f) => ({ ...f, links }))}
               />
             </div>
           </div>

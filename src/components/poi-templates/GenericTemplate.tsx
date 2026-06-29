@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
-import { useHooksByWorld } from "~/ui/hooks/useHooks";
+import { useHookResolver } from "~/ui/hooks/useHookResolver";
+import { useLinkableEntities } from "~/ui/hooks/useLinkableEntities";
+import type { EntityLink } from "@domain/value-objects/EntityLink";
 import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import { markdownOptions } from "~/shared/markdown";
@@ -71,6 +73,7 @@ interface GenericTemplateProps {
     text: string;
     source: string;
     isQuestHook: boolean;
+    links: EntityLink[];
   }) => void;
   onToggleRumorUsed: (rumor: Rumor) => void;
   onDeleteRumor: (id: string) => void;
@@ -120,12 +123,8 @@ export function GenericTemplate({
 }: GenericTemplateProps) {
   const activeEvents = poiEvents.filter((e) => e.isActive).length;
 
-  const worldHooks = useHooksByWorld(worldId ?? null);
-  const hooksById = useMemo(
-    () => new Map(worldHooks.map((h) => [h.id, h])),
-    [worldHooks],
-  );
-  const resolveTarget = (id: string) => hooksById.get(id)?.secret.detail ?? null;
+  const resolveTarget = useHookResolver(worldId ?? null);
+  const linkOptions = useLinkableEntities(worldId ?? null);
   const [linkNPCOpen, setLinkNPCOpen] = useState(false);
 
   // Roll up NPCs from child locations (e.g. NPCs in a fort's buildings), labeled by location.
@@ -411,6 +410,7 @@ export function GenericTemplate({
               onCreate={onCreateRumor}
               onDelete={onDeleteRumor}
               resolveTarget={resolveTarget}
+              linkOptions={linkOptions}
             />
           )}
         </TabsContent>

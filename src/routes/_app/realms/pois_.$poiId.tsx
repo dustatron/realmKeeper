@@ -672,6 +672,7 @@ function POIDetailPage() {
             onToggleRumorUsed={actions.handleToggleRumorUsed}
             onCreateRumor={actions.handleCreateRumor}
             onDeleteRumor={actions.handleDeleteRumor}
+            onUpdateRumor={actions.handleUpdateRumor}
             onToggleNoticeUsed={actions.handleToggleNoticeUsed}
             onCreateNotice={actions.handleCreateNotice}
             onDeleteNotice={actions.handleDeleteNotice}
@@ -833,7 +834,7 @@ function POIDetailPage() {
 
       {renderTemplate()}
       {poi.type !== 'dungeon' && parentPoi?.type !== 'dungeon' && compendiumSection}
-      {poi.type !== 'dungeon' && parentPoi?.type !== 'dungeon' && (
+      {poi.type !== 'dungeon' && parentPoi?.type !== 'dungeon' && !isSettlement && (
         <TrapSection traps={poi.traps ?? []} onUpdate={actions.handleUpdateTraps} />
       )}
       {poi.type !== 'dungeon' && parentPoi?.type !== 'dungeon' && (

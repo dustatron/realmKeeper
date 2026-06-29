@@ -11,26 +11,53 @@ import {
   DialogTitle,
   DialogFooter,
 } from '~/components/ui/dialog'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Check, Lock } from 'lucide-react'
+import { HookLinkChip, type HookReveal, type HookLink } from '~/components/shared/HookLinkChip'
+import { EntityLinkPicker } from '~/components/shared/EntityLinkPicker'
 import type { Rumor } from '@domain/entities/Rumor'
+import type { EntityLink } from '@domain/value-objects/EntityLink'
+
+type Reliability = NonNullable<Rumor['reliability']>
+
+const RELIABILITY_CYCLE: (Reliability | undefined)[] = [undefined, 'true', 'uncertain', 'false']
+
+const RELIABILITY_META: Record<Reliability, { label: string; cls: string }> = {
+  true: { label: 'likely true', cls: 'bg-green-600/15 text-green-600 border-green-600/40' },
+  uncertain: { label: 'uncertain', cls: 'bg-amber-600/15 text-amber-600 border-amber-600/40' },
+  false: { label: 'false lead', cls: 'bg-red-600/15 text-red-600 border-red-600/40' },
+}
 
 interface RumorListProps {
   rumors: Rumor[]
   onToggleUsed: (rumor: Rumor) => void
-  onCreate: (input: { text: string; source: string; isQuestHook: boolean }) => void
+  onCreate: (input: { text: string; source: string; isQuestHook: boolean; links: EntityLink[] }) => void
   onDelete: (id: string) => void
-  resolveTarget?: (hookId: string) => string | null
+  onUpdate?: (rumor: Rumor) => void
+  resolveTarget?: (hookId: string) => HookReveal | null
+  /** All POIs/NPCs available to link, for the picker and for resolving stored links. */
+  linkOptions?: HookLink[]
 }
 
-export function RumorList({ rumors, onToggleUsed, onCreate, onDelete, resolveTarget }: RumorListProps) {
+const EMPTY_FORM = { text: '', source: '', isQuestHook: false, links: [] as EntityLink[] }
+
+export function RumorList({ rumors, onToggleUsed, onCreate, onDelete, onUpdate, resolveTarget, linkOptions = [] }: RumorListProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [form, setForm] = useState({ text: '', source: '', isQuestHook: false })
+  const [form, setForm] = useState(EMPTY_FORM)
+
+  const linkNameById = new Map(linkOptions.map((o) => [o.id, o]))
 
   const handleCreate = () => {
     if (!form.text.trim()) return
     onCreate(form)
-    setForm({ text: '', source: '', isQuestHook: false })
+    setForm(EMPTY_FORM)
     setDialogOpen(false)
+  }
+
+  const cycleReliability = (rumor: Rumor) => {
+    if (!onUpdate) return
+    const idx = RELIABILITY_CYCLE.indexOf(rumor.reliability)
+    const next = RELIABILITY_CYCLE[(idx + 1) % RELIABILITY_CYCLE.length]
+    onUpdate({ ...rumor, reliability: next })
   }
 
   return (
@@ -45,44 +72,91 @@ export function RumorList({ rumors, onToggleUsed, onCreate, onDelete, resolveTar
 
       {rumors.length > 0 ? (
         <div className="space-y-1">
-          {rumors.map((rumor, i) => (
-            <div
-              key={rumor.id}
-              className="flex items-start gap-2 rounded-md border p-2 group"
-            >
-              <input
-                type="checkbox"
-                checked={rumor.isUsed}
-                onChange={() => onToggleUsed(rumor)}
-                className="mt-1 rounded"
-              />
-              <div className="flex-1 min-w-0">
-                <span className={`text-sm ${rumor.isUsed ? 'line-through text-muted-foreground' : ''}`}>
-                  <span className="text-muted-foreground mr-1">{i + 1}.</span>
-                  {rumor.text}
-                </span>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  {rumor.source && (
-                    <span className="text-xs text-muted-foreground">&mdash; {rumor.source}</span>
+          {rumors.map((rumor) => {
+            const rel = rumor.reliability ? RELIABILITY_META[rumor.reliability] : null
+            const reveal = rumor.hookId ? resolveTarget?.(rumor.hookId) : null
+            return (
+              <div
+                key={rumor.id}
+                className="flex items-start gap-2 rounded-md border p-2"
+              >
+                <button
+                  type="button"
+                  onClick={() => onToggleUsed(rumor)}
+                  title={rumor.isUsed ? 'Mark as not yet shared' : 'Mark as shared with players'}
+                  className={`mt-0.5 size-7 shrink-0 rounded-md border flex items-center justify-center transition-colors ${
+                    rumor.isUsed
+                      ? 'bg-primary border-primary text-primary-foreground'
+                      : 'border-input hover:bg-muted'
+                  }`}
+                >
+                  {rumor.isUsed && <Check className="size-4" />}
+                </button>
+                <div className="flex-1 min-w-0">
+                  <span className={`text-sm ${rumor.isUsed ? 'line-through text-muted-foreground' : ''}`}>
+                    {rumor.text}
+                  </span>
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    {rumor.source && (
+                      <span className="text-xs text-muted-foreground">&mdash; {rumor.source}</span>
+                    )}
+                    {rumor.isQuestHook && (
+                      <Badge className="text-xs bg-indigo-600 hover:bg-indigo-600">Quest</Badge>
+                    )}
+                    {onUpdate ? (
+                      <button type="button" onClick={() => cycleReliability(rumor)} title="GM: cycle reliability">
+                        <Badge
+                          variant="outline"
+                          className={`text-xs cursor-pointer ${rel ? rel.cls : 'text-muted-foreground border-dashed'}`}
+                        >
+                          {rel ? rel.label : 'unverified'}
+                        </Badge>
+                      </button>
+                    ) : (
+                      rel && <Badge variant="outline" className={`text-xs ${rel.cls}`}>{rel.label}</Badge>
+                    )}
+                  </div>
+                  {reveal && (
+                    <div className="mt-1.5 rounded border border-dashed border-border bg-muted/40 px-2 py-1 text-xs text-muted-foreground">
+                      <div className="flex items-start gap-1.5">
+                        <Lock className="size-3 mt-0.5 shrink-0" />
+                        <span>
+                          <span className="font-semibold uppercase tracking-wide text-[10px] mr-1">GM only</span>
+                          Points to {reveal.detail}
+                        </span>
+                      </div>
+                      {reveal.links.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5 pl-[1.125rem]">
+                          {reveal.links.map((link) => (
+                            <HookLinkChip key={link.id} link={link} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
-                  {rumor.isQuestHook && (
-                    <Badge className="text-xs bg-amber-600 hover:bg-amber-600">Quest</Badge>
+                  {rumor.links && rumor.links.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground mr-0.5">Linked</span>
+                      {rumor.links.map((link) => {
+                        const opt = linkNameById.get(link.id)
+                        if (!opt) return null
+                        return <HookLinkChip key={link.id} link={opt} />
+                      })}
+                    </div>
                   )}
                 </div>
-                {rumor.hookId && resolveTarget?.(rumor.hookId) && (
-                  <p className="text-xs text-muted-foreground">🔑 Points to: {resolveTarget(rumor.hookId)}</p>
-                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="size-8 p-0 shrink-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => onDelete(rumor.id)}
+                  title="Delete rumor"
+                >
+                  <Trash2 className="size-4" />
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="size-7 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                onClick={() => onDelete(rumor.id)}
-              >
-                <Trash2 className="size-3.5" />
-              </Button>
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">No rumors yet.</p>
@@ -122,6 +196,15 @@ export function RumorList({ rumors, onToggleUsed, onCreate, onDelete, resolveTar
               />
               Quest Hook
             </label>
+            <div>
+              <Label>Links</Label>
+              <p className="text-xs text-muted-foreground mb-1.5">Connect this rumor to locations or NPCs.</p>
+              <EntityLinkPicker
+                options={linkOptions}
+                value={form.links}
+                onChange={(links) => setForm((f) => ({ ...f, links }))}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>

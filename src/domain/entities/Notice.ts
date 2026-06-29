@@ -1,4 +1,5 @@
 import type { NoticeType } from '@shared/constants'
+import type { EntityLink } from '@domain/value-objects/EntityLink'
 
 export interface Notice {
   id: string
@@ -11,6 +12,8 @@ export interface Notice {
   reward: string
   contactNpcId: string | null
   hookId: string | null
+  /** GM-added links to related POIs/NPCs. */
+  links?: EntityLink[]
   isUsed: boolean
   tags: string[]
   createdAt: number

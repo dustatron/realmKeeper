@@ -1,6 +1,7 @@
 import type { INoticeRepository } from '@application/ports/INoticeRepository'
 import type { Notice } from '@domain/entities/Notice'
 import type { NoticeType } from '@shared/constants'
+import type { EntityLink } from '@domain/value-objects/EntityLink'
 import { newId } from '@shared/ulid'
 
 export interface CreateNoticeInput {
@@ -12,6 +13,7 @@ export interface CreateNoticeInput {
   type: NoticeType
   reward?: string
   contactNpcId?: string | null
+  links?: EntityLink[]
   tags?: string[]
 }
 
@@ -31,6 +33,7 @@ export async function executeCreateNotice(
     reward: input.reward ?? '',
     contactNpcId: input.contactNpcId ?? null,
     hookId: null,
+    links: input.links ?? [],
     isUsed: false,
     tags: input.tags ?? [],
     createdAt: now,
