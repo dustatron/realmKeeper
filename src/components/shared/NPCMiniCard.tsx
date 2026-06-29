@@ -202,6 +202,17 @@ export function NPCMiniCard({ npc, poiName, onUpdateNPC }: NPCMiniCardProps) {
               </span>
             </div>
           )}
+
+          {/* Faction action — what they're doing for their faction */}
+          {npc.factionAction && (
+            <div className="flex items-start gap-1.5 rounded-md bg-sky-500/10 px-2 py-1.5 text-sm">
+              <Shield className="size-3.5 mt-0.5 shrink-0 text-sky-500" />
+              <span className="leading-snug">
+                <span className="font-semibold text-sky-600 dark:text-sky-400">Faction </span>
+                <span className="text-foreground/90">{npc.factionAction}</span>
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Roleplay zone — secondary, dimmed */}

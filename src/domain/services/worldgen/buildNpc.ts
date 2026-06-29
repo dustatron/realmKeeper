@@ -47,6 +47,8 @@ export interface BuildNpcInput {
   role?: NpcRole
   /** A concrete objective (the "side-quest hook" surfaced on the NPC page). */
   want?: string
+  /** For faction members: what they're doing for the faction (shown alongside want). */
+  factionAction?: string
   /** A profession label (e.g. "blacksmith") used in place of the bare role. */
   occupation?: string
   /** Central table registry, so flavor/want pools can be customized. */
@@ -140,6 +142,7 @@ export function buildNpc(
     // NPC wants table (a favor to ask the party, or a personal pursuit), so
     // every NPC is a potential quest-giver.
     want: input.want ?? pickWant(rng, input.tables),
+    factionAction: input.factionAction,
     tags: [role],
     imageUrl: null,
     systemBlock: block,

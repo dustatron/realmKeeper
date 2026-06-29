@@ -588,16 +588,18 @@ export function generateWorld(
         regionId: faction.regionId ?? undefined,
         poiId: faction.headquartersPoiId ?? undefined,
       }
-      // Each faction NPC's "want" points at a real faction objective, so the
-      // hook on their page is grounded in a faction agenda (leaders pursue a
-      // long-term aim; agents work an immediate tactical goal).
+      // Every faction NPC gets their OWN personal want (varied — buildNpc draws
+      // from the NPC wants pool), PLUS a faction action: what they're currently
+      // doing for the faction. Leaders drive a long-term aim; agents work an
+      // immediate goal. (Previously the agenda goal WAS the want, so a faction's
+      // agents all parroted the same 1-2 immediate goals.)
       const longTermGoals = faction.agendaGoals.filter((g) => g.timeframe === 'long-term')
       const immediateGoals = faction.agendaGoals.filter((g) => g.timeframe === 'immediate')
-      const wantFrom = (pool: typeof faction.agendaGoals): string =>
+      const actionFrom = (pool: typeof faction.agendaGoals): string =>
         (pool.length > 0 ? rng.pick(pool) : faction.agendaGoals[0])?.description ?? ''
 
       const leader = buildNpc(
-        { ...link, role: 'leader', want: wantFrom(longTermGoals), tables: opts.tables },
+        { ...link, role: 'leader', factionAction: actionFrom(longTermGoals), tables: opts.tables },
         opts.systemConfig,
         rng,
       )
@@ -608,7 +610,7 @@ export function generateWorld(
       const agentCount = rng.between(1, 3)
       for (let i = 0; i < agentCount; i++) {
         const agent = buildNpc(
-          { ...link, role: 'agent', want: wantFrom(immediateGoals), tables: opts.tables },
+          { ...link, role: 'agent', factionAction: actionFrom(immediateGoals), tables: opts.tables },
           opts.systemConfig,
           rng,
         )

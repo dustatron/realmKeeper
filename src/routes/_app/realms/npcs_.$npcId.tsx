@@ -748,6 +748,12 @@ function NPCDetailPage() {
                 <span className="text-sm">{npc.want}</span>
               </div>
             )}
+            {npc.factionAction && (
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-muted-foreground w-24 shrink-0">Faction action</span>
+                <span className="text-sm">{npc.factionAction}</span>
+              </div>
+            )}
             {npc.traits.length > 0 && (
               <div className="flex items-start gap-2">
                 <span className="text-sm font-medium text-muted-foreground w-24 shrink-0 pt-0.5">Traits</span>
