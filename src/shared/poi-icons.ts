@@ -12,6 +12,7 @@ import {
   Map,
   Tent,
   Sparkles,
+  Aperture,
 } from 'lucide-react'
 import type { PoiType } from '@shared/constants'
 
@@ -28,5 +29,6 @@ export const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: s
   ruin: Landmark,
   camp: Tent,
   shrine: Sparkles,
+  portal: Aperture,
   other: MapPin,
 }

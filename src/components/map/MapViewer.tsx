@@ -24,6 +24,7 @@ import {
   Landmark,
   Tent,
   Sparkles,
+  Aperture,
   MapPin,
   Maximize,
   Minimize,
@@ -73,6 +74,7 @@ const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }
   ruin: Landmark,
   camp: Tent,
   shrine: Sparkles,
+  portal: Aperture,
   other: MapPin,
 }
 
@@ -527,7 +529,8 @@ export function MapViewer({
         type: 'line',
         source: lineSourceId,
         paint: {
-          'line-color': '#1e293b',
+          // Portals read as a distinct planar link (violet), roads as dark.
+          'line-color': ['case', ['==', ['get', 'type'], 'portal'], '#a855f7', '#1e293b'],
           'line-width': 6,
           'line-dasharray': [2, 1],
           'line-opacity': 0.9,

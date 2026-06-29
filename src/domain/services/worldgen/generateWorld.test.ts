@@ -147,10 +147,13 @@ describe('generateWorld', () => {
     const { pois, paths } = generateWorld(REALM, 'seed-a', { cols: 16, rows: 16 })
     const settlementIds = new Set(pois.filter((p) => p.type === 'settlement').map((p) => p.id))
     expect(settlementIds.size).toBeGreaterThan(1)
-    expect(paths.length).toBeGreaterThan(0)
+    // Portal links (type 'portal') connect gates, not settlements — exclude them
+    // from the settlement road-network invariants below.
+    const roadPaths = paths.filter((p) => p.type !== 'portal')
+    expect(roadPaths.length).toBeGreaterThan(0)
 
     const seenEdges = new Set<string>()
-    for (const path of paths) {
+    for (const path of roadPaths) {
       // both endpoints are generated settlements
       expect(settlementIds.has(path.fromPoiId)).toBe(true)
       expect(settlementIds.has(path.toPoiId)).toBe(true)
@@ -173,7 +176,8 @@ describe('generateWorld', () => {
       const lake = new Set(
         gameMap.hexCells!.filter((c) => c.biome === 'lake').map((c) => `${c.q},${c.r}`),
       )
-      for (const path of paths) {
+      // Portal links are planar and intentionally bypass terrain (incl. water).
+      for (const path of paths.filter((p) => p.type !== 'portal')) {
         const a = axialOf(poiById.get(path.fromPoiId)!)
         const b = axialOf(poiById.get(path.toPoiId)!)
         for (const h of hexLine(a, b)) {

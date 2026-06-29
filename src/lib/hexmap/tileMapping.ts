@@ -12,6 +12,10 @@ export const HEX_TILES = [
   'city', 'river', 'lake', 'cave', 'swamp', 'portal', 'village', 'community',
   'tower', 'hole', 'dead-trees', 'standing-stones', 'graveyard', 'ruins',
   'floating-island', 'wonder', 'keep', 'crystals', 'fog', 'farms',
+  // Border-only tile (transparent interior): keeps the hand-drawn hex outline on
+  // biomes that have no doodle of their own (desert, frozen) — the color fill
+  // shows through the middle.
+  'empty-hex',
 ] as const
 export type HexTile = (typeof HEX_TILES)[number]
 
@@ -29,12 +33,28 @@ export const TERRAIN_TILE_BY_BIOME: Record<Biome, HexTile | null> = {
   marsh: 'swamp',
   blighted: 'dead-trees',
   lake: 'water',
-  desert: null,
-  frozen: null,
+  // No desert/snow doodle in the pack — use the border-only tile so these read
+  // as deliberate (outlined hex + biome color) rather than a missing tile.
+  desert: 'empty-hex',
+  frozen: 'empty-hex',
 }
 
 export function terrainTileForBiome(biome: Biome): HexTile | null {
   return TERRAIN_TILE_BY_BIOME[biome] ?? null
+}
+
+/**
+ * Human-readable landmark subtype label → its hex tile. Worldgen sets these
+ * labels on art-driven landmark POIs; the map cell and the POI marker/detail
+ * both resolve the tile through here, so a "Crystal Spire" reads as crystals
+ * everywhere. Unknown landmark subtypes fall back to `wonder`.
+ */
+export const LANDMARK_LABEL_TO_TILE: Record<string, HexTile> = {
+  'floating island': 'floating-island',
+  volcano: 'volcano',
+  'ancient wonder': 'wonder',
+  'crystal spire': 'crystals',
+  'standing stones': 'standing-stones',
 }
 
 /**
@@ -63,8 +83,10 @@ export function featureTileForPoi(
       return 'cave'
     case 'ruin':
       return 'ruins'
+    case 'portal':
+      return 'portal'
     case 'landmark':
-      return 'wonder'
+      return LANDMARK_LABEL_TO_TILE[subtype] ?? 'wonder'
     case 'shrine':
       return 'standing-stones'
     case 'camp':

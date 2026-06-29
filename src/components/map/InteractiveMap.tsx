@@ -55,6 +55,7 @@ import {
   Landmark,
   Tent,
   Sparkles,
+  Aperture,
   MapPin,
   Trash2,
   X,
@@ -85,6 +86,7 @@ const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }
   ruin: Landmark,
   camp: Tent,
   shrine: Sparkles,
+  portal: Aperture,
   other: MapPin,
 }
 

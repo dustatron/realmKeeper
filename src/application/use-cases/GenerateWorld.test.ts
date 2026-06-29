@@ -202,7 +202,8 @@ describe('executeGenerateWorld', () => {
     )
     const pois = await db.pois.where('mapRef').equals(mapId).toArray()
     const settlementIds = new Set(pois.filter((p) => p.type === 'settlement').map((p) => p.id))
-    const paths = await db.paths.toArray()
+    // Portal links (type 'portal') connect gates, not settlements.
+    const paths = (await db.paths.toArray()).filter((p) => p.type !== 'portal')
     expect(paths.length).toBeGreaterThan(0)
     for (const path of paths) {
       expect(settlementIds.has(path.fromPoiId)).toBe(true)

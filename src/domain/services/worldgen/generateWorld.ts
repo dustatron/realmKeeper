@@ -8,7 +8,13 @@ import {
 import { BIOMES, type Biome } from '~/domain/data/worldgen/biomes'
 import { terrainTileForBiome, featureTileForPoi } from '~/lib/hexmap/tileMapping'
 import { pickName } from '~/domain/data/worldgen/names'
-import { POI_KIND_TABLE, poiKindToType, DUNGEON_THEMES } from '~/domain/data/worldgen/poiKinds'
+import {
+  POI_KIND_TABLE,
+  poiKindToType,
+  DUNGEON_THEMES,
+  LANDMARK_ART_TABLE,
+  PORTAL_NAMES,
+} from '~/domain/data/worldgen/poiKinds'
 import { buildPOI } from './buildPoi'
 import { buildPath } from './buildPath'
 import { buildFaction } from './buildFaction'
@@ -275,6 +281,15 @@ export function generateWorld(
     const flavor = buildPoiFlavor(kind, name, cell.biome, rng)
     const dungeonSeedId = newId()
 
+    // Art-driven landmarks: assign a tile-backed subtype (volcano, floating
+    // island, crystals, wonder, standing stones) + a mechanical GM hook, so the
+    // map shows distinct doodles instead of a single generic landmark.
+    if (kind === 'landmark') {
+      const art = rng.pickWeighted(LANDMARK_ART_TABLE)
+      flavor.subtypeLabel = art.label
+      flavor.trouble = art.hook
+    }
+
     // Feature tile overrides the cell's terrain tile. The POI's marker/detail
     // page re-derives the same tile from its type + subtype (featureTileForPoi),
     // so nothing is stashed on the POI itself — keeps the user-facing tags clean.
@@ -333,6 +348,9 @@ export function generateWorld(
   // Settlement POIs paired with their hex coords, so step 7 can wire travel
   // routes by hex distance.
   const settlementNodes: { poi: POI; q: number; r: number }[] = []
+  // Cells already hosting a POI — portals (step 7c) avoid these so a gate gets
+  // its own clean hex.
+  const usedCells = new Set<string>()
   for (const region of regions) {
     const regionLand = landByRegion.get(region.id) ?? []
     if (regionLand.length === 0) continue
@@ -344,6 +362,7 @@ export function generateWorld(
     for (const cell of rng.sample(regionLand, target)) {
       const poi = makePoi(cell)
       pois.push(poi)
+      usedCells.add(`${cell.q},${cell.r}`)
       if (poi.type === 'settlement') {
         settlementNodes.push({ poi, q: cell.q, r: cell.r })
       }
@@ -450,6 +469,65 @@ export function generateWorld(
   }
   const extraCount = Math.min(extraEdges.length, Math.max(1, Math.round(regionKeys.length / 3)))
   for (const edge of extraEdges.slice(0, extraCount)) addPath(edge.a, edge.b, edge.dist)
+
+  // Step 7c: planar portals. Deliberately rare — AT MOST ONE PER REGION, and only
+  // a handful of regions get one: a single pair (A↔B) on small maps, a closed
+  // ring (A→B→C→…→A) on larger ones. Links are Path rows of type 'portal' (1
+  // watch), so stepping through a gate surfaces as a connection on the POI page
+  // and on the map.
+  const portalTarget =
+    cellMetas.length <= 100 ? 2 : Math.min(4, 2 + Math.round(cellMetas.length / 160))
+  // One candidate clean land cell per region (so a region hosts at most one gate).
+  const portalRegionCells = regions
+    .map((r) => (landByRegion.get(r.id) ?? []).filter((c) => !usedCells.has(`${c.q},${c.r}`)))
+    .filter((cells) => cells.length > 0)
+    .map((cells) => rng.pick(cells))
+  const portalNodes: { poi: POI; q: number; r: number }[] = []
+  if (portalRegionCells.length >= 2) {
+    const chosenCells = rng.sample(portalRegionCells, Math.min(portalTarget, portalRegionCells.length))
+    const portalNames = rng.sample(PORTAL_NAMES, Math.min(chosenCells.length, PORTAL_NAMES.length))
+    chosenCells.forEach((cell, i) => {
+      const name = portalNames[i] ?? `Gate ${i + 1}`
+      const portal = buildPOI({
+        regionId: cell.regionId,
+        name,
+        type: 'portal',
+        subtypeLabel: 'Planar Gate',
+        tags: ['portal'],
+        description: `${name} is a standing gate humming with planar energy.`,
+        readAloud: `The air within ${name} ripples like a heat-haze, though the stone is cold; step through, and you are somewhere else.`,
+        trouble: 'Where it leads is fixed but not obvious; what else uses the gate is the real question.',
+        position: { x: cell.cx, y: cell.cy },
+        mapRef: gameMap.id,
+      })
+      pois.push(portal)
+      usedCells.add(`${cell.q},${cell.r}`)
+      const hostCell = hexCellByCoord.get(`${cell.q},${cell.r}`)
+      if (hostCell) hostCell.tile = 'portal'
+      portalNodes.push({ poi: portal, q: cell.q, r: cell.r })
+    })
+
+    // Link the gates. 2 → one pair; 3+ → a closed ring (wrap last→first).
+    const linkPortals = (a: POI, b: POI): void => {
+      paths.push(
+        buildPath({
+          fromPoiId: a.id,
+          toPoiId: b.id,
+          type: 'portal',
+          name: `${a.name} ⇆ ${b.name}`,
+          description: 'A planar link — step through one gate, emerge from the other.',
+          baseTravelWatches: 1,
+        }),
+      )
+    }
+    if (portalNodes.length === 2) {
+      linkPortals(portalNodes[0].poi, portalNodes[1].poi)
+    } else if (portalNodes.length >= 3) {
+      for (let i = 0; i < portalNodes.length; i++) {
+        linkPortals(portalNodes[i].poi, portalNodes[(i + 1) % portalNodes.length].poi)
+      }
+    }
+  }
 
   // Step 8: factions. Each gets a distinct settlement as its headquarters (and
   // inherits that settlement's region). Count scales with map size via the
