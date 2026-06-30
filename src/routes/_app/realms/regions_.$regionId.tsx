@@ -1298,21 +1298,17 @@ function RegionDetailPage() {
             (region.settlements ?? []).length > 0 ||
             (region.people ?? []).length > 0) && (
             <Card className="mb-4">
-              <CardContent className="pt-4">
-                <Collapsible open={loreOpen} onOpenChange={setLoreOpen}>
+              <Collapsible open={loreOpen} onOpenChange={setLoreOpen}>
               <CollapsibleTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-muted-foreground hover:text-foreground w-full justify-start gap-1"
-                >
+                <CardHeader className="cursor-pointer flex-row items-center gap-1 space-y-0">
                   <ChevronDown
-                    className={`size-3.5 transition-transform ${loreOpen ? "" : "-rotate-90"}`}
+                    className={`size-4 text-muted-foreground transition-transform ${loreOpen ? "" : "-rotate-90"}`}
                   />
-                  Lore &amp; details
-                </Button>
+                  <CardTitle className="text-sm">Lore &amp; details</CardTitle>
+                </CardHeader>
               </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-3 pt-2">
+              <CollapsibleContent>
+              <CardContent className="space-y-3">
                 {(region.dangers ?? []).length > 0 && (
                   <div>
                     <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1383,9 +1379,9 @@ function RegionDetailPage() {
                     </div>
                   </div>
                 )}
-              </CollapsibleContent>
-                </Collapsible>
               </CardContent>
+              </CollapsibleContent>
+              </Collapsible>
             </Card>
           )}
 
