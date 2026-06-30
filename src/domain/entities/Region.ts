@@ -12,6 +12,8 @@ export interface Region {
   definingResource: string | null
   people: string[]
   problem: string
+  /** Regional front: a mini progress-clock threat that advances when the region is ignored (worldgen). null = none. */
+  front: { title: string; description: string; progress: number; segments: number } | null
   boundary: { x: number; y: number }[] | null
   color: string | null
   imageUrl: string | null

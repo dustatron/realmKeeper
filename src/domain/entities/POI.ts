@@ -51,6 +51,8 @@ export interface POI {
   dangerLevel: number | null
   /** Economic role: the good this settlement produces and the goods it needs. null = no trade role. */
   trade: { produces: string; needs: string[] } | null
+  /** Settlement wealth band, snapshotted at generation from the trade graph. null = not a settlement / ungenerated. */
+  wealthBand: 'destitute' | 'poor' | 'modest' | 'prosperous' | 'rich' | null
   /** Who/what currently holds this place right now (living-world state). */
   currentOccupant: string | null
   lightLevel: 'bright' | 'dim' | 'dark' | null

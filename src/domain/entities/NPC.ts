@@ -26,6 +26,8 @@ export interface NPC {
   imageUrl: string | null
   systemBlock: SystemBlock
   disposition?: Disposition
+  /** Personal wealth tier, derived from the settlement's wealth band at generation. null = ungenerated. */
+  wealthTier: 'destitute' | 'poor' | 'middling' | 'wealthy' | null
   starred: boolean
   createdAt: number
   updatedAt: number

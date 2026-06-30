@@ -58,6 +58,8 @@ export interface BuildNpcInput {
   customRaces?: string[]
   /** Central table registry, so flavor/want pools can be customized. */
   tables?: ResolvedTables
+  /** Personal wealth tier (assigned from the settlement's wealth band). Defaults to null. */
+  wealthTier?: 'destitute' | 'poor' | 'middling' | 'wealthy' | null
 }
 
 // A want (the NPC's quest hook / general drive): a favor to ask or a personal
@@ -196,6 +198,7 @@ export function buildNpc(
     // every NPC is a potential quest-giver.
     want: input.want ?? pickWant(rng, input.tables),
     factionAction: input.factionAction,
+    wealthTier: input.wealthTier ?? null,
     tags: [role],
     imageUrl: null,
     systemBlock: block,

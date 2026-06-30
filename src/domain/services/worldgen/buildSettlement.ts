@@ -35,11 +35,18 @@ const BUILDING_OCCUPATIONS: Record<string, string> = {
   Brewery: 'brewer', Watchtower: 'watch officer',
 }
 
-function buildingCount(subtype: string | null, rng: SeededRandom): number {
+// Building count scales with settlement size AND wealth band — a rich town is
+// busier and better-appointed than a poor one of the same size.
+function buildingCount(subtype: string | null, wealthBand: string | null, rng: SeededRandom): number {
   const size = settlementSize(subtype)
-  if (size === 'large') return rng.between(7, 10)
-  if (size === 'small') return rng.between(2, 3)
-  return rng.between(4, 6)
+  const base = size === 'large' ? rng.between(7, 10) : size === 'small' ? rng.between(2, 3) : rng.between(4, 6)
+  const mult =
+    wealthBand === 'rich' ? 1.4
+      : wealthBand === 'prosperous' ? 1.2
+      : wealthBand === 'poor' ? 0.7
+      : wealthBand === 'destitute' ? 0.5
+      : 1
+  return Math.max(1, Math.round(base * mult))
 }
 
 export interface SettlementBuild {
@@ -80,7 +87,7 @@ export function buildSettlementBuildings(
     ` A local tradition: ${festival}` +
     `\n\nGM secret: ${secret}`
 
-  const count = Math.min(types_.length, buildingCount(settlement.subtypeLabel, rng))
+  const count = Math.min(types_.length, buildingCount(settlement.subtypeLabel, settlement.wealthBand, rng))
   const types = rng.sample(types_, count)
   // Distinct flavorful names when the pool is large enough; else fall back per
   // building to a generic "The <type>".

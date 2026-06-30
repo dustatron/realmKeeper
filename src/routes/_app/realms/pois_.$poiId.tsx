@@ -245,7 +245,7 @@ function POIDetailPage() {
       regionId: poi?.regionId ?? null, poiId: poiId, lifeStatus: 'alive',
       movementStatus: 'present', description: '', traits: [], motivation: '',
       appearance: '', voice: '', want: '', tags: [], imageUrl: null,
-      systemBlock: defaultSystemBlock, starred: false,
+      systemBlock: defaultSystemBlock, wealthTier: null, starred: false,
       createdAt: Date.now(), updatedAt: Date.now(),
     }
     setEditingNPC(npc)

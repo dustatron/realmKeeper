@@ -33,6 +33,7 @@ export interface BuildPOIInput {
   dangerLevel?: number | null
   currentOccupant?: string | null
   trade?: { produces: string; needs: string[] } | null
+  wealthBand?: 'destitute' | 'poor' | 'modest' | 'prosperous' | 'rich' | null
 }
 
 export function buildPOI(input: BuildPOIInput): POI {
@@ -68,6 +69,7 @@ export function buildPOI(input: BuildPOIInput): POI {
     dangerLevel: input.dangerLevel ?? null,
     currentOccupant: input.currentOccupant ?? null,
     trade: input.trade ?? null,
+    wealthBand: input.wealthBand ?? null,
     lightLevel: null,
     wanderingMonsters: [],
     encounterChance: null,

@@ -7,7 +7,7 @@ const mkNpc = (id: string): NPC => ({
   id, worldId: 'w', name: id, factionIds: [], regionId: null, poiId: 'poi1',
   lifeStatus: 'alive', movementStatus: 'present', description: '', traits: [],
   motivation: '', appearance: '', voice: '', want: '', tags: [], imageUrl: null,
-  systemBlock: {} as NPC['systemBlock'], starred: false, createdAt: 1, updatedAt: 1,
+  systemBlock: {} as NPC['systemBlock'], wealthTier: null, starred: false, createdAt: 1, updatedAt: 1,
 })
 
 describe('NPCRepository.bulkCreate', () => {
