@@ -11,6 +11,7 @@ import {
   wealthBandColor,
   type PxToLngLat,
 } from './mapLayers'
+import { hexNeighbors } from '~/lib/hexmap/hex'
 
 // Identity stub: keep px coordinates so assertions are readable.
 const toLngLat: PxToLngLat = (x, y) => [x, y]
@@ -54,16 +55,29 @@ function conn(partial: Partial<Connection>): Connection {
 }
 
 describe('buildRiverGeoJSON', () => {
-  it('emits one closed polygon per river cell, none for others', () => {
-    const cells = [hex({ river: true }), hex({ river: false }), hex({})]
+  it('emits wavy line(s) for adjacent river cells, none for isolated/non-river cells', () => {
+    const nbr = hexNeighbors({ q: 0, r: 0 })[0]
+    const cells = [
+      hex({ q: 0, r: 0, river: true }),
+      hex({ q: nbr.q, r: nbr.r, river: true }),
+      hex({ q: 9, r: 9, river: true }), // isolated river cell → no segment
+      hex({ q: 5, r: 5, river: false }),
+    ]
     const fc = buildRiverGeoJSON(cells, toLngLat)
     expect(fc.type).toBe('FeatureCollection')
-    expect(fc.features).toHaveLength(1)
-    const geom = fc.features[0].geometry as GeoJSON.Polygon
-    expect(geom.type).toBe('Polygon')
-    // 4 corners + closing point.
-    expect(geom.coordinates[0]).toHaveLength(5)
-    expect(geom.coordinates[0][0]).toEqual(geom.coordinates[0][4])
+    // The adjacent pair produces river line(s); isolated/non-river cells produce none.
+    expect(fc.features.length).toBeGreaterThanOrEqual(1)
+    for (const f of fc.features) {
+      const geom = f.geometry as GeoJSON.LineString
+      expect(geom.type).toBe('LineString')
+      // Wavy: each segment is subdivided into several points.
+      expect(geom.coordinates.length).toBeGreaterThanOrEqual(2)
+    }
+  })
+
+  it('returns nothing when there are no river cells', () => {
+    const fc = buildRiverGeoJSON([hex({ river: false })], toLngLat)
+    expect(fc.features).toHaveLength(0)
   })
 })
 
@@ -100,10 +114,10 @@ describe('buildTradeRouteGeoJSON', () => {
     expect(fc.features).toHaveLength(1)
     const line = fc.features[0].geometry as GeoJSON.LineString
     expect(line.type).toBe('LineString')
-    expect(line.coordinates).toEqual([
-      [0, 0],
-      [5, 5],
-    ])
+    // Lightly wavy: subdivided, but pinned to the two POI positions at the ends.
+    expect(line.coordinates.length).toBeGreaterThanOrEqual(2)
+    expect(line.coordinates[0]).toEqual([0, 0])
+    expect(line.coordinates[line.coordinates.length - 1]).toEqual([5, 5])
   })
 
   it('skips connections with a missing or positionless endpoint', () => {

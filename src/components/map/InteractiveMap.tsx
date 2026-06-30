@@ -416,9 +416,11 @@ export function InteractiveMap({
         mode={mode}
         showLabels={showLabels}
         showRegions={showRegions}
+        showResources={layers.resources}
         hideRegionControls={!isRealmMap}
         onModeChange={handleModeChange}
         onToggleLabels={() => setShowLabels(!showLabels)}
+        onToggleResources={() => setLayers((l) => ({ ...l, resources: !l.resources }))}
         onToggleRegions={() => setShowRegions(!showRegions)}
         onUpload={() => {}}
         onZoomToFit={() => mapHandleRef.current?.zoomToFit()}
@@ -433,7 +435,7 @@ export function InteractiveMap({
         {/* P4 overlay-layer toggles. Only meaningful for hex realm maps (the
             data lives on hex cells / generated POIs); hidden on town/dungeon. */}
         {gameMap.kind === 'hex' && (
-          <div className="absolute left-2 top-2 z-10">
+          <div className="absolute right-2 top-32 z-10">
             <MapLayerControl layers={layers} onChange={setLayers} />
           </div>
         )}

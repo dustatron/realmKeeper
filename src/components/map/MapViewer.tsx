@@ -64,7 +64,7 @@ interface MapViewerProps {
   pois: POI[]
   paths: Path[]
   regions?: Region[]
-  /** Trade-graph connections (used for the dashed trade-route layer). */
+  /** Trade-graph connections (used for the trade-route layer). */
   connections?: Connection[]
   /** Visibility of the Phase-4 overlay layers. Omitted layers default to ON. */
   layers?: Partial<Record<MapLayerId, boolean>>
@@ -614,7 +614,7 @@ export function MapViewer({
         source: lineSourceId,
         paint: {
           // Portals read as a distinct planar link (violet), roads as dark.
-          'line-color': ['case', ['==', ['get', 'type'], 'portal'], '#a855f7', '#1e293b'],
+          'line-color': ['case', ['==', ['get', 'type'], 'portal'], '#a855f7', '#6b5334'],
           'line-width': 6,
           'line-dasharray': [2, 1],
           'line-opacity': 0.9,
@@ -989,9 +989,11 @@ export function MapViewer({
     ]
     const riverBeforeId = aboveTiles.find((id) => instance.getLayer(id))
 
-    // --- Rivers (fill) ---
+    // --- Rivers (line, road-style) ---
+    // Drawn as thin blue lines between adjacent river cells so they read as
+    // flowing water WITHOUT painting over settlement/landmark tile doodles.
     const riverSourceId = 'rivers-source'
-    const riverLayerId = 'rivers-fill'
+    const riverLayerId = 'rivers-line'
     const riverGeojson = buildRiverGeoJSON(map.hexCells ?? [], pxToLngLat)
     if (instance.getSource(riverSourceId)) {
       ;(instance.getSource(riverSourceId) as maplibregl.GeoJSONSource).setData(riverGeojson)
@@ -1001,9 +1003,11 @@ export function MapViewer({
       instance.addLayer(
         {
           id: riverLayerId,
-          type: 'fill',
+          type: 'line',
           source: riverSourceId,
-          paint: { 'fill-color': '#3b82f6', 'fill-opacity': 0.5 },
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          // Thicker + soft blur reads as a flowing waterway rather than a hairline.
+          paint: { 'line-color': '#3b82f6', 'line-width': 8, 'line-opacity': 0.9, 'line-blur': 0.6 },
         },
         riverBeforeId,
       )
@@ -1040,7 +1044,7 @@ export function MapViewer({
     }
     if (instance.getLayer(chokeLayerId)) instance.setLayoutProperty(chokeLayerId, 'visibility', vis(showRivers))
 
-    // --- Trade routes (dashed line, above roads) ---
+    // --- Trade routes (road-style muddy brown, lightly wavy) ---
     const tradeSourceId = 'trade-routes-source'
     const tradeLayerId = 'trade-routes-line'
     const tradeGeojson = buildTradeRouteGeoJSON(connections ?? [], poiById, pxToLngLat)
@@ -1052,13 +1056,9 @@ export function MapViewer({
         id: tradeLayerId,
         type: 'line',
         source: tradeSourceId,
-        paint: {
-          // Distinct from roads (dark) / portals (violet): a thin gold supply line.
-          'line-color': '#ca8a04',
-          'line-width': 2,
-          'line-dasharray': [3, 2],
-          'line-opacity': 0.85,
-        },
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        // Same muddy-brown road styling, lightly wavy via the builder.
+        paint: { 'line-color': '#6b5334', 'line-width': 6, 'line-dasharray': [2, 1], 'line-opacity': 0.9 },
       })
     }
     if (instance.getLayer(tradeLayerId)) instance.setLayoutProperty(tradeLayerId, 'visibility', vis(showTrade))
@@ -1094,9 +1094,9 @@ export function MapViewer({
     }
     if (instance.getLayer(resourceLayerId)) instance.setLayoutProperty(resourceLayerId, 'visibility', vis(showResources))
 
-    // --- Treasure markers (circle on loot-bearing POIs) ---
+    // --- Treasure markers (gold coin icon on loot-bearing POIs) ---
     const treasureSourceId = 'treasure-source'
-    const treasureLayerId = 'treasure-circle'
+    const treasureLayerId = 'treasure-symbol'
     const treasureGeojson = buildTreasureGeoJSON(pois, pxToLngLat)
     if (instance.getSource(treasureSourceId)) {
       ;(instance.getSource(treasureSourceId) as maplibregl.GeoJSONSource).setData(treasureGeojson)
@@ -1104,13 +1104,13 @@ export function MapViewer({
       instance.addSource(treasureSourceId, { type: 'geojson', data: treasureGeojson })
       instance.addLayer({
         id: treasureLayerId,
-        type: 'circle',
+        type: 'symbol',
         source: treasureSourceId,
-        paint: {
-          'circle-color': '#eab308',
-          'circle-radius': 6,
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#713f12',
+        layout: {
+          'text-field': '💰',
+          'text-size': 18,
+          'text-allow-overlap': true,
+          'text-ignore-placement': true,
         },
       })
     }

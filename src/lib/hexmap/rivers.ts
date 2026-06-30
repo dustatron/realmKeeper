@@ -45,6 +45,12 @@ export interface TraceRiversOptions {
   riverCount?: number
   /** Min source elevation. Sources below this are never chosen. Default 0.6. */
   minSourceElevation?: number
+  /**
+   * Explicit source cells (e.g. mountain-terrain hexes). When provided and
+   * non-empty, rivers are traced downhill FROM these instead of the elevation-
+   * derived highland set — so mountains reliably have rivers coming off them.
+   */
+  sources?: readonly Axial[]
 }
 
 export type ChokepointKind = 'ford' | 'pass' | 'bridge'
@@ -91,25 +97,36 @@ export function traceRivers(
   const isEdge = (c: Axial): boolean =>
     hexNeighbors(c).some((n) => !cellSet.has(key(n)))
 
-  // Candidate sources: highest-elevation land cells (not water), above the floor.
+  // Explicit sources (e.g. mountain cells) take priority — rivers come off them.
+  // Validate they're on the map and not water.
+  const explicit = (opts.sources ?? []).filter(
+    (c) => cellSet.has(key(c)) && !water.has(key(c)) && elev(c) !== undefined,
+  )
+
+  // Otherwise: candidate sources = highest-elevation land cells above the floor.
   const sorted = cells
     .filter((c) => !water.has(key(c)) && elev(c) !== undefined)
     .map((c) => ({ c, e: elev(c) as number }))
     .sort((a, b) => b.e - a.e)
   const topCount = Math.max(1, Math.round(sorted.length * sourceFraction))
-  const eligible = sorted
+  const elevationEligible = sorted
     .slice(0, topCount)
     .filter((s) => s.e >= minSourceElevation)
     .map((s) => s.c)
+
+  const usingExplicit = explicit.length > 0
+  const eligible = usingExplicit ? explicit : elevationEligible
 
   if (eligible.length === 0) {
     return { riverCells, paths, chokepoints }
   }
 
-  const riverCount = Math.max(
-    1,
-    Math.min(eligible.length, opts.riverCount ?? Math.max(1, Math.round(cells.length / 40))),
-  )
+  // With explicit (mountain) sources, let about half of them spawn a river so
+  // mountainous terrain reads as river country; otherwise ~1 per 40 cells.
+  const defaultCount = usingExplicit
+    ? Math.max(1, Math.round(eligible.length / 2))
+    : Math.max(1, Math.round(cells.length / 40))
+  const riverCount = Math.max(1, Math.min(eligible.length, opts.riverCount ?? defaultCount))
   const sources = rng.sample(eligible, riverCount)
 
   for (const source of sources) {
