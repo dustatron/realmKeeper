@@ -226,6 +226,7 @@ function NPCNewPage() {
         tags,
         imageUrl,
         systemBlock,
+        wealthTier: null,
         starred: false,
         createdAt: now,
         updatedAt: now,

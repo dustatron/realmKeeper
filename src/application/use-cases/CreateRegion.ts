@@ -28,6 +28,7 @@ export async function executeCreateRegion(
     definingResource: null,
     people: [],
     problem: '',
+    front: null,
     boundary: null,
     color: input.color ?? null,
     imageUrl: null,

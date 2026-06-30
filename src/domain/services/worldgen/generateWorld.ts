@@ -15,6 +15,9 @@ import { deriveNeeds, WATER } from './economy'
 import { resourceByName } from '@domain/data/worldgen/resources.catalog'
 import { buildTradeConnections, type SettlementNode } from './buildTradeConnections'
 import { buildNaturalSite } from './buildNaturalSite'
+import { computeWealthScore, wealthBand, npcWealthTier } from './wealth'
+import { buildRegionFront } from './regionFronts'
+import { seedStories } from './seedStories'
 import { terrainTileForBiome, featureTileForPoi } from '~/lib/hexmap/tileMapping'
 import { pickName } from '~/domain/data/worldgen/names'
 import {
@@ -159,6 +162,7 @@ export function generateWorld(
       resources: [center.definingResource],
       people: flavor.people,
       problem: flavor.problem,
+      front: null, // regional front assigned during integration (P3)
       boundary: null, // set in step 4c from the region's hex cluster
       // Distinct per-region color (not the biome color) so adjacent regions of
       // the same biome still read as separate areas on the map.
@@ -611,6 +615,38 @@ export function generateWorld(
     )
   }
 
+  // Step 7f: settlement wealth. Snapshot a band from the trade graph — road
+  // degree + economic role + good value + water access + monopoly. This is the
+  // content anchor that shapes buildings, NPC tiers, and hooks; the live score
+  // recomputes lazily later. Pure derivation, no rng consumed.
+  const settlementIdSet = new Set(settlementNodes.map((n) => n.poi.id))
+  const roadDegree = new Map<string, number>()
+  for (const p of paths) {
+    if (p.type === 'portal') continue
+    if (settlementIdSet.has(p.fromPoiId) && settlementIdSet.has(p.toPoiId)) {
+      roadDegree.set(p.fromPoiId, (roadDegree.get(p.fromPoiId) ?? 0) + 1)
+      roadDegree.set(p.toPoiId, (roadDegree.get(p.toPoiId) ?? 0) + 1)
+    }
+  }
+  const producerCount = new Map<string, number>()
+  for (const node of settlementNodes) {
+    const g = node.poi.trade?.produces
+    if (g) producerCount.set(g, (producerCount.get(g) ?? 0) + 1)
+  }
+  for (const node of settlementNodes) {
+    const produces = node.poi.trade?.produces ?? null
+    const def = produces ? resourceByName(produces) : undefined
+    const score = computeWealthScore({
+      id: node.poi.id,
+      produces: produces ? { weightClass: def?.weightClass ?? 'bulk' } : null,
+      role: settlementSize(node.poi.subtypeLabel) === 'large' ? 'refiner' : 'extractor',
+      tradeDegree: roadDegree.get(node.poi.id) ?? 0,
+      hasWater: settlementWater.get(node.poi.id) ?? false,
+      monopoly: produces ? producerCount.get(produces) === 1 : false,
+    })
+    node.poi.wealthBand = wealthBand(score)
+  }
+
   // Step 7e: natural sites — a few named, dangerous wild places on unsettled land,
   // away from existing POIs. With unclaimed deposits enabled, some hold an
   // extractable resource (an adventure-worthy vein). Child rng keeps the main
@@ -740,14 +776,20 @@ export function generateWorld(
         opts.tables,
       )
       pois.push(...buildings)
+      // Wealth distribution: a settlement's band sets the spread of its NPCs'
+      // tiers (a rich town still has an underclass). Child rng keeps the main
+      // stream byte-stable.
+      const band = node.poi.wealthBand ?? 'modest'
+      const wrng = rng.child(`npc-wealth-${node.poi.id}`)
+      for (const p of proprietors) p.wealthTier = npcWealthTier(band, wrng)
       npcs.push(...proprietors)
-      npcs.push(
-        buildNpc(
-          { worldId: realmId, regionId: node.poi.regionId, poiId: node.poi.id, role: 'inhabitant', tables: opts.tables },
-          opts.systemConfig,
-          rng,
-        ),
+      const resident = buildNpc(
+        { worldId: realmId, regionId: node.poi.regionId, poiId: node.poi.id, role: 'inhabitant', tables: opts.tables },
+        opts.systemConfig,
+        rng,
       )
+      resident.wealthTier = npcWealthTier(band, wrng)
+      npcs.push(resident)
     }
   }
 
@@ -816,6 +858,36 @@ export function generateWorld(
   const { hooks, notices, rumors } = opts.systemConfig
     ? buildHooks(factions, npcs, pois, connections, realmId, rng, opts.tables)
     : { hooks: [], notices: [], rumors: [] }
+
+  // Step 11b: regional fronts + the StorySeeder pass. Each region gets a mini
+  // progress-clock threat; the seeder reads the finished economic graph to emit
+  // wealth-band hooks, contested-resource plots (>=1 per region), and cross-map
+  // rumors. Child rngs keep the core seed stream stable.
+  for (const region of regions) {
+    region.front = buildRegionFront({
+      regionId: region.id,
+      definingResource: region.definingResource,
+      rng: rng.child(`front-${region.id}`),
+      tables: opts.tables,
+    })
+  }
+  const story = seedStories({
+    settlements: settlementNodes.map((n) => ({
+      id: n.poi.id,
+      regionId: n.poi.regionId,
+      wealthBand: n.poi.wealthBand,
+      produces: n.poi.trade?.produces ?? null,
+      needs: n.poi.trade?.needs ?? [],
+      trouble: n.poi.trouble,
+    })),
+    regions: regions.map((r) => ({ id: r.id, definingResource: r.definingResource })),
+    worldId: realmId,
+    rng: rng.child('story-seeder'),
+    tables: opts.tables,
+  })
+  hooks.push(...story.hooks)
+  notices.push(...story.notices)
+  rumors.push(...story.rumors)
 
   // Step 12: the looming doom — a faction's agenda escalates into a dated
   // WorldEvent, foreshadowed by rumors and opposed by a quest to avert it. Its

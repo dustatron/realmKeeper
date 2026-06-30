@@ -27,6 +27,7 @@ import { withHookIdDefault, withGameMapKindDefault } from './migrations/v36-defa
 import { withTownDefaults } from './migrations/v37-town-defaults'
 import { withDefiningResourceDefault } from './migrations/v42-resource-defaults'
 import { withTradeDefault } from './migrations/v43-trade-defaults'
+import { withWealthBandDefault, withWealthTierDefault, withFrontDefault } from './migrations/v44-wealth-defaults'
 import { seedDatabase } from './seed'
 import { newId } from '@shared/ulid'
 
@@ -724,6 +725,29 @@ db.version(43).stores(storesV39).upgrade(async (tx) => {
   }
 })
 
+// v44: Wealth + story fields. Backfill POI.wealthBand, NPC.wealthTier, Region.front
+// to null. No index change needed.
+db.version(44).stores(storesV39).upgrade(async (tx) => {
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.wealthBand === undefined) {
+      await tx.table('pois').put(withWealthBandDefault(poi))
+    }
+  }
+  const npcs = await tx.table('npcs').toArray()
+  for (const npc of npcs) {
+    if (npc.wealthTier === undefined) {
+      await tx.table('npcs').put(withWealthTierDefault(npc))
+    }
+  }
+  const regions = await tx.table('regions').toArray()
+  for (const r of regions) {
+    if (r.front === undefined) {
+      await tx.table('regions').put(withFrontDefault(r))
+    }
+  }
+})
+
 // Normalize Realms on read — ensures starred arrays have defaults
 db.worlds.hook('reading', (realm) => {
   if (!realm) return realm
@@ -774,6 +798,7 @@ db.pois.hook('reading', (poi) => {
     dangerLevel: null,
     currentOccupant: null,
     trade: null,
+    wealthBand: null,
   }
   for (const [key, val] of Object.entries(defaults)) {
     if (rec[key] === undefined) {
@@ -816,6 +841,7 @@ db.npcs.hook('reading', (npc) => {
     factionIds: [],
     traits: [],
     tags: [],
+    wealthTier: null,
   }
   for (const [key, val] of Object.entries(defaults)) {
     if (rec[key] === undefined) {

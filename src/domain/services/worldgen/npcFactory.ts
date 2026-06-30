@@ -93,6 +93,7 @@ export function buildCreatureNpc(input: BuildCreatureNpcInput, rng: SeededRandom
     motivation: '',
     voice: '',
     want: input.want ?? rng.pick(CREATURE_WANTS),
+    wealthTier: null,
     tags: input.tags ?? ['creature'],
     imageUrl: null,
     systemBlock: input.compendiumId
