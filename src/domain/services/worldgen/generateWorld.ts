@@ -205,16 +205,17 @@ export function generateWorld(
     }
   })
 
-  // Step 4b: carve lakes. Most maps get at least one small lake (a seed cell
-  // grown outward to a few adjacent cells). Lakes overwrite the cell's biome to
-  // 'lake' (rendered blue); POIs avoid them in step 6.
+  // Step 4b: carve lakes. Water should be a common feature — every map gets a
+  // few lakes (a seed cell grown outward), so settlements (especially large ones,
+  // which need a water source) can sit beside one. Lakes overwrite the cell's
+  // biome to 'lake' (rendered blue); POIs avoid them in step 6.
   const cellByCoord = new Map<string, CellMeta>()
   for (const cm of cellMetas) cellByCoord.set(`${cm.q},${cm.r}`, cm)
 
-  const lakeCount = Math.max(1, Math.round(cellMetas.length / 110))
+  const lakeCount = Math.max(2, Math.round(cellMetas.length / 55))
   for (let l = 0; l < lakeCount; l++) {
     const start = cellMetas[rng.between(0, cellMetas.length - 1)]
-    const targetSize = rng.between(2, 5)
+    const targetSize = rng.between(3, 7)
     const inLake = new Set<string>([`${start.q},${start.r}`])
     start.biome = 'lake'
     const frontier: CellMeta[] = [start]
