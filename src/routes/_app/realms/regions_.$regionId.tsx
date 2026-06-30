@@ -189,7 +189,7 @@ function RegionDetailPage() {
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [isGeneratingNPC, setIsGeneratingNPC] = useState(false);
   const [rerollProblemConfirmOpen, setRerollProblemConfirmOpen] = useState(false);
-  const [loreOpen, setLoreOpen] = useState(false);
+  const [loreOpen, setLoreOpen] = useState(true);
 
   const [editForm, setEditForm] = useState({
     name: "",
@@ -1297,7 +1297,9 @@ function RegionDetailPage() {
             (region.resources ?? []).length > 0 ||
             (region.settlements ?? []).length > 0 ||
             (region.people ?? []).length > 0) && (
-            <Collapsible open={loreOpen} onOpenChange={setLoreOpen} className="mb-4">
+            <Card className="mb-4">
+              <CardContent className="pt-4">
+                <Collapsible open={loreOpen} onOpenChange={setLoreOpen}>
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
@@ -1305,7 +1307,7 @@ function RegionDetailPage() {
                   className="h-7 px-2 text-muted-foreground hover:text-foreground w-full justify-start gap-1"
                 >
                   <ChevronDown
-                    className={`size-3.5 transition-transform ${loreOpen ? "rotate-180" : ""}`}
+                    className={`size-3.5 transition-transform ${loreOpen ? "" : "-rotate-90"}`}
                   />
                   Lore &amp; details
                 </Button>
@@ -1382,7 +1384,9 @@ function RegionDetailPage() {
                   </div>
                 )}
               </CollapsibleContent>
-            </Collapsible>
+                </Collapsible>
+              </CardContent>
+            </Card>
           )}
 
           {/* Key Locations */}
