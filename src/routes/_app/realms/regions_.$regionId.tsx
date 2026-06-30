@@ -1300,85 +1300,40 @@ function RegionDetailPage() {
             <Card className="mb-4">
               <Collapsible open={loreOpen} onOpenChange={setLoreOpen}>
               <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer flex-row items-center gap-1 space-y-0">
-                  <ChevronDown
-                    className={`size-4 text-muted-foreground transition-transform ${loreOpen ? "" : "-rotate-90"}`}
-                  />
-                  <CardTitle className="text-sm">Lore &amp; details</CardTitle>
+                <CardHeader className="cursor-pointer space-y-0">
+                  <div className="flex items-center gap-2">
+                    <ChevronDown
+                      className={`size-4 text-muted-foreground transition-transform ${loreOpen ? "" : "-rotate-90"}`}
+                    />
+                    <CardTitle className="text-sm">Lore &amp; details</CardTitle>
+                  </div>
                 </CardHeader>
               </CollapsibleTrigger>
               <CollapsibleContent>
-              <CardContent className="space-y-3">
-                {(region.dangers ?? []).length > 0 && (
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Dangers
-                    </span>
-                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {region.dangers.map((d, i) => (
-                        <Badge key={i} variant="secondary">
-                          {d}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {(region.features ?? []).length > 0 && (
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Features
-                    </span>
-                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {region.features.map((f, i) => (
-                        <Badge key={i} variant="secondary">
-                          {f}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {(region.resources ?? []).length > 0 && (
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Resources
-                    </span>
-                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {region.resources.map((r, i) => (
-                        <Badge key={i} variant="secondary">
-                          {r}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {(region.settlements ?? []).length > 0 && (
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Settlements
-                    </span>
-                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {region.settlements.map((s, i) => (
-                        <Badge key={i} variant="secondary">
-                          {s}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {(region.people ?? []).length > 0 && (
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      People
-                    </span>
-                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {region.people.map((p, i) => (
-                        <Badge key={i} variant="secondary">
-                          {p}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <CardContent>
+                <dl className="divide-y divide-border/60">
+                  {[
+                    { label: "Dangers", items: region.dangers ?? [] },
+                    { label: "Features", items: region.features ?? [] },
+                    { label: "Resources", items: region.resources ?? [] },
+                    { label: "Settlements", items: region.settlements ?? [] },
+                    { label: "People", items: region.people ?? [] },
+                  ]
+                    .filter((g) => g.items.length > 0)
+                    .map((g) => (
+                      <div
+                        key={g.label}
+                        className="flex flex-col gap-1 py-2.5 first:pt-0 last:pb-0 sm:flex-row sm:items-baseline sm:gap-4"
+                      >
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:w-28 sm:shrink-0">
+                          {g.label}
+                        </dt>
+                        <dd className="text-sm text-foreground">
+                          {g.items.join(", ")}
+                        </dd>
+                      </div>
+                    ))}
+                </dl>
               </CardContent>
               </CollapsibleContent>
               </Collapsible>
