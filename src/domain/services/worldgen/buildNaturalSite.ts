@@ -38,6 +38,7 @@ export function buildNaturalSite(input: BuildNaturalSiteInput): POI {
     name,
     description,
     type: 'natural',
+    readAloud: `${name} — ${hazard.mood}.`,
     mood: hazard.mood,
     trouble: hazard.trouble,
     tags: ['natural-site'],

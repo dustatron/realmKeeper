@@ -124,6 +124,7 @@ export async function executeGenerateWorld(
       systemConfig,
       tables,
       resources: input.resources,
+      unclaimedDeposits: input.unclaimedDeposits,
       loomingThreat: input.loomingThreat ?? true,
       portals: input.portals ?? true,
       realmContent: {

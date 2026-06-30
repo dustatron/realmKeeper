@@ -344,8 +344,10 @@ describe('generateWorld', () => {
     })
     const npcIds = new Set(npcs.map((n) => n.id))
     expect(connections.length).toBeGreaterThan(0)
-    for (const c of connections) {
-      expect(c.fromType).toBe('npc')
+    // Narrative NPC edges (trade 'supplies' edges are POI↔POI and tested elsewhere).
+    const npcConnections = connections.filter((c) => c.fromType === 'npc')
+    expect(npcConnections.length).toBeGreaterThan(0)
+    for (const c of npcConnections) {
       expect(c.toType).toBe('npc')
       expect(npcIds.has(c.fromId)).toBe(true)
       expect(npcIds.has(c.toId)).toBe(true)

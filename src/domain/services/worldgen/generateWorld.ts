@@ -10,6 +10,11 @@ import { type Biome } from '~/domain/data/worldgen/biomes'
 import { buildElevationField } from '~/lib/hexmap/elevation'
 import { traceRivers } from '~/lib/hexmap/rivers'
 import { assignRegionResources } from './resourceBiome'
+import { settlementSize } from '@domain/data/worldgen/settlementSize'
+import { deriveNeeds, WATER } from './economy'
+import { resourceByName } from '@domain/data/worldgen/resources.catalog'
+import { buildTradeConnections, type SettlementNode } from './buildTradeConnections'
+import { buildNaturalSite } from './buildNaturalSite'
 import { terrainTileForBiome, featureTileForPoi } from '~/lib/hexmap/tileMapping'
 import { pickName } from '~/domain/data/worldgen/names'
 import {
@@ -76,6 +81,8 @@ export function generateWorld(
     realmContent?: RealmContentSprinkleOptions
     /** Chosen raw-resource names (the spine of terrain). Empty → low-fantasy baseline. */
     resources?: string[]
+    /** When true, some natural sites host an unclaimed, extractable resource. */
+    unclaimedDeposits?: boolean
   }
 ): {
   gameMap: GameMap
@@ -559,6 +566,57 @@ export function generateWorld(
     }
   }
 
+  // Step 7d: settlement economy. Small/medium settlements EXTRACT their region's
+  // defining resource; large settlements REFINE it into a finished good. Needs
+  // follow from what they produce (deriveNeeds). Water is special — satisfied by
+  // a river or lake-adjacent cell, not by trade — so it's tracked separately and
+  // dropped from the tradeable needs.
+  const definingByRegion = new Map(regions.map((r) => [r.id, r.definingResource]))
+  const lakeAdjacent = (q: number, r: number): boolean =>
+    hexNeighbors({ q, r }).some((n) => waterCells.has(`${n.q},${n.r}`))
+  const settlementWater = new Map<string, boolean>()
+  const REFINER_GOODS = ['weapons', 'tools', 'textiles']
+  for (const node of settlementNodes) {
+    const size = settlementSize(node.poi.subtypeLabel)
+    const srng = rng.child(`trade-${node.poi.id}`)
+    const produces =
+      size === 'large'
+        ? srng.pick(REFINER_GOODS)
+        : (definingByRegion.get(node.poi.regionId) ?? 'grain')
+    const needs = deriveNeeds(produces, size).filter((n) => n !== WATER)
+    node.poi.trade = { produces, needs }
+    settlementWater.set(
+      node.poi.id,
+      riverCells.has(`${node.q},${node.r}`) || lakeAdjacent(node.q, node.r),
+    )
+  }
+
+  // Step 7e: natural sites — a few named, dangerous wild places on unsettled land,
+  // away from existing POIs. With unclaimed deposits enabled, some hold an
+  // extractable resource (an adventure-worthy vein). Child rng keeps the main
+  // seeded stream (factions/interiors) byte-stable.
+  const nsRng = rng.child('natural-sites')
+  const naturalCount = Math.min(5, Math.max(1, Math.round(cellMetas.length / 120)))
+  const wildCells = cellMetas.filter(
+    (cm) => cm.biome !== 'lake' && !usedCells.has(`${cm.q},${cm.r}`),
+  )
+  for (const cm of nsRng.sample(wildCells, Math.min(naturalCount, wildCells.length))) {
+    const hostedResource = opts.unclaimedDeposits
+      ? (definingByRegion.get(cm.regionId) ?? undefined)
+      : undefined
+    pois.push(
+      buildNaturalSite({
+        regionId: cm.regionId,
+        rng: nsRng.child(`${cm.q}-${cm.r}`),
+        hostedResource,
+        position: { x: cm.cx, y: cm.cy },
+        mapRef: gameMap.id,
+        tables: opts.tables,
+      }),
+    )
+    usedCells.add(`${cm.q},${cm.r}`)
+  }
+
   // Step 8: factions. Each gets a distinct settlement as its headquarters (and
   // inherits that settlement's region). Count scales with map size via the
   // region count (which grows reliably small→medium→large, unlike settlement
@@ -678,9 +736,56 @@ export function generateWorld(
   // Step 10: narrative connections among the NPCs (agents → leader, and
   // leader↔leader ties from faction sentiment). Needs leaders, so only when
   // NPCs were generated.
-  const connections = opts.systemConfig
+  const connections: Connection[] = opts.systemConfig
     ? buildConnections(factions, factionRelationships, realmId)
     : []
+
+  // Step 10b: trade. Supplier→consumer edges between road-connected settlements,
+  // gated by good value (bulk satisfies only nearby needs, luxury reaches far).
+  // Unmet needs — and large towns without a water source — become a chance-gated
+  // supply-shortage trouble on the settlement.
+  const settlementIds = new Set(settlementNodes.map((n) => n.poi.id))
+  const neighbors = new Map<string, Set<string>>(
+    settlementNodes.map((n) => [n.poi.id, new Set<string>()]),
+  )
+  for (const p of paths) {
+    if (p.type === 'portal') continue
+    if (settlementIds.has(p.fromPoiId) && settlementIds.has(p.toPoiId)) {
+      neighbors.get(p.fromPoiId)!.add(p.toPoiId)
+      neighbors.get(p.toPoiId)!.add(p.fromPoiId)
+    }
+  }
+  const tradeNodes: SettlementNode[] = settlementNodes.map((n) => {
+    const produces = n.poi.trade?.produces ?? null
+    const def = produces ? resourceByName(produces) : undefined
+    return {
+      id: n.poi.id,
+      regionId: n.poi.regionId,
+      produces: produces ? { name: produces, weightClass: def?.weightClass ?? 'bulk' } : null,
+      needs: n.poi.trade?.needs ?? [],
+      neighbors: [...(neighbors.get(n.poi.id) ?? [])],
+    }
+  })
+  const trade = buildTradeConnections(tradeNodes, realmId)
+  connections.push(...trade.connections)
+
+  const settlementPoiById = new Map(settlementNodes.map((n) => [n.poi.id, n.poi]))
+  for (const { settlementId, good } of trade.unmetNeeds) {
+    const poi = settlementPoiById.get(settlementId)
+    if (poi && !poi.trouble && rng.child(`unmet-${settlementId}-${good}`).chance(0.5)) {
+      poi.trouble = `Supplies of ${good} have dried up, and tempers are fraying.`
+    }
+  }
+  for (const node of settlementNodes) {
+    if (
+      settlementSize(node.poi.subtypeLabel) === 'large' &&
+      !settlementWater.get(node.poi.id) &&
+      !node.poi.trouble &&
+      rng.child(`water-${node.poi.id}`).chance(0.5)
+    ) {
+      node.poi.trouble = 'The town has outgrown its wells, and water is running short.'
+    }
+  }
 
   // Step 11: quest Hooks (structured secrets) + their public Notice/Rumor
   // projections at real POIs. Needs NPCs, so only when a system config is given.
