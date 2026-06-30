@@ -24,6 +24,20 @@ export interface ResolvedTables {
   pickWeighted(rng: SeededRandom, id: string, fallback?: readonly string[]): string
 }
 
+/**
+ * Resolve a pool from the provider, falling back to the generator's built-in
+ * array when the table is missing or empty. Shared by the worldgen builders so
+ * the provider-or-fallback rule lives in exactly one place.
+ */
+export function resolvePool(
+  tables: ResolvedTables | undefined,
+  id: string,
+  fallback: readonly string[],
+): readonly string[] {
+  const texts = tables?.texts(id)
+  return texts && texts.length > 0 ? texts : fallback
+}
+
 export function createTableProvider(tables: readonly TableDef[]): ResolvedTables {
   // Insertion order matters: callers pass static defs first, then Dexie custom
   // defs, so a custom table with the same id overrides the built-in.

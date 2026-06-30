@@ -12,6 +12,8 @@ export interface NPC {
   lifeStatus: LifeStatus
   movementStatus: MovementStatus
   description: string
+  /** Quick GM-facing details: mannerism, a carried item, a secret, etc. */
+  notable?: string
   traits: string[]
   motivation: string
   appearance: string

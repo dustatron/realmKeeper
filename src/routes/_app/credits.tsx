@@ -24,8 +24,8 @@ const INSPIRATIONS: Resource[] = [
   },
   {
     name: "Dndspeak",
-    url: "https://www.dndspeak.com/items-and-treasures/",
-    note: "A deep well of d100 item & treasure lists that inspire our loot and trinket tables. Dndspeak's content is all rights reserved; our entries are original wording, not copied.",
+    url: "https://www.dndspeak.com/",
+    note: "A deep well of d100 community lists across items, encounters, conditions, NPCs, worldbuilding, and roleplaying. Their category topics inspired many Realm Keeper tables — biome encounters (swamp/desert/coast/mountain/plains/tundra), NPC secrets / appearances / pocket items / mannerisms, deities, festivals, cultural quirks, settlement secrets, tavern names & patrons, epitaphs, statues, paintings, dungeon graffiti, magical fountains & landscapes, book titles, riddles, mystery / side-quest / city hooks, diseases, fortunes, strange weather, potion effects, and afflictions. Dndspeak's content is all rights reserved; every entry we ship is original wording, not copied.",
   },
   {
     name: "Hexroll",

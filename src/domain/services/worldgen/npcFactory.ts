@@ -3,7 +3,7 @@ import type { NPC } from '@domain/entities/NPC'
 import type { Disposition } from '@shared/constants'
 import { newId } from '@shared/ulid'
 import { pickCairn } from './cairnPick'
-import type { ResolvedTables } from './TableProvider'
+import { resolvePool, type ResolvedTables } from './TableProvider'
 import {
   MOTIVATIONS, PERSONALITIES, PHYSICAL_TRAITS,
   NPC_MOTIVATION_TABLE_ID, NPC_PERSONALITY_TABLE_ID, NPC_PHYSICAL_TRAIT_TABLE_ID,
@@ -29,13 +29,6 @@ export interface HumanoidFlavor {
   personality: string // a behavior tell
 }
 
-// Resolve a pool from the provider (editable custom tables drive generation),
-// falling back to the built-in array. Same order keeps seeded output stable.
-function flavorPool(tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): readonly string[] {
-  const texts = tables?.texts(id)
-  return texts && texts.length > 0 ? texts : fallback
-}
-
 /**
  * Universal humanoid flavor from the Cairn trait tables plus a personality tell,
  * a drive, and a notable physical quirk from the Realm Keeper NPC tables. The
@@ -52,9 +45,9 @@ export function buildHumanoidFlavor(rng: SeededRandom, tables?: ResolvedTables):
   const virtue = pickCairn(rng, 'table-cairn-trait-virtue')
   const vice = pickCairn(rng, 'table-cairn-trait-vice')
 
-  const personality = rng.pick(flavorPool(tables, NPC_PERSONALITY_TABLE_ID, PERSONALITIES))
-  const motivation = rng.pick(flavorPool(tables, NPC_MOTIVATION_TABLE_ID, MOTIVATIONS))
-  const quirk = rng.pick(flavorPool(tables, NPC_PHYSICAL_TRAIT_TABLE_ID, PHYSICAL_TRAITS))
+  const personality = rng.pick(resolvePool(tables, NPC_PERSONALITY_TABLE_ID, PERSONALITIES))
+  const motivation = rng.pick(resolvePool(tables, NPC_MOTIVATION_TABLE_ID, MOTIVATIONS))
+  const quirk = rng.pick(resolvePool(tables, NPC_PHYSICAL_TRAIT_TABLE_ID, PHYSICAL_TRAITS))
 
   const hairDesc = hair === 'Bald' ? 'a bald head' : `${hair.toLowerCase()} hair`
   const appearance =

@@ -52,6 +52,22 @@ export const POI_TYPES = [
 ] as const;
 export type PoiType = (typeof POI_TYPES)[number];
 
+/** Region terrain options (single source of truth for the region forms and the
+ * terrain-aware encounter map). */
+export const TERRAIN_OPTIONS = [
+  "plains",
+  "forest",
+  "hills",
+  "mountain",
+  "swamp",
+  "desert",
+  "coast",
+  "road",
+  "tundra",
+  "other",
+] as const;
+export type Terrain = (typeof TERRAIN_OPTIONS)[number];
+
 /** Exploration lifecycle for a POI. Clearable sites (dungeons/ruins) cycle
  * through all three; other types use unexplored/explored as a visited flag. */
 export const POI_STATUSES = ["unexplored", "explored", "cleared"] as const;

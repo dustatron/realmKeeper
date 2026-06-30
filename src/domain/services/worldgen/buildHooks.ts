@@ -7,18 +7,18 @@ import type { Hook } from '@domain/entities/Hook'
 import type { Notice } from '@domain/entities/Notice'
 import type { Rumor } from '@domain/entities/Rumor'
 import { newId } from '@shared/ulid'
-import type { ResolvedTables } from './TableProvider'
+import { resolvePool, type ResolvedTables } from './TableProvider'
 import {
   PLOT_HOOKS_JOB_TABLE_ID, PLOT_HOOKS_ILLICIT_TABLE_ID,
   PLOT_HOOKS_JOB, PLOT_HOOKS_ILLICIT,
 } from '@domain/data/worldgen/plotHooks'
 import { SETTLEMENT_PROBLEM_TABLE_ID, settlementProblemTexts } from '@domain/data/worldgen/settlementProblems'
 import { THIEVES_GUILD_QUEST_TABLE_ID, THIEVES_GUILD_QUESTS } from '@domain/data/worldgen/guildQuests.tables'
-
-function pool(tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): readonly string[] {
-  const t = tables?.texts(id)
-  return t && t.length > 0 ? t : fallback
-}
+import {
+  HOOKS_MYSTERY_TABLE_ID, HOOKS_MYSTERY,
+  HOOKS_SIDE_QUEST_TABLE_ID, HOOKS_SIDE_QUEST,
+  HOOKS_CITY_TABLE_ID, HOOKS_CITY,
+} from '@domain/data/worldgen/hooks-extra.tables'
 
 export interface HookBundle {
   hooks: Hook[]
@@ -188,8 +188,8 @@ export function buildHooks(
   // One is seeded from the settlement's OWN trouble (so the board reflects the
   // town), the rest from a combined pool of job hooks + settlement troubles for
   // variety. Every settlement gets at least one. ---
-  const jobHooks = pool(tables, PLOT_HOOKS_JOB_TABLE_ID, PLOT_HOOKS_JOB)
-  const troubles = pool(tables, SETTLEMENT_PROBLEM_TABLE_ID, settlementProblemTexts)
+  const jobHooks = resolvePool(tables, PLOT_HOOKS_JOB_TABLE_ID, PLOT_HOOKS_JOB)
+  const troubles = resolvePool(tables, SETTLEMENT_PROBLEM_TABLE_ID, settlementProblemTexts)
   const jobPoolCombined = [...jobHooks, ...troubles]
   // A proprietor to name as the poster, if the settlement has one.
   const buildingParent = new Map(pois.filter((p) => p.type === 'building').map((p) => [p.id, p.parentPoiId]))
@@ -222,8 +222,8 @@ export function buildHooks(
   // never lands on a settlement's board). ---
   // Patron commissions draw from illicit hooks plus thieves'-guild jobs.
   const illicitHooks = [
-    ...pool(tables, PLOT_HOOKS_ILLICIT_TABLE_ID, PLOT_HOOKS_ILLICIT),
-    ...pool(tables, THIEVES_GUILD_QUEST_TABLE_ID, THIEVES_GUILD_QUESTS),
+    ...resolvePool(tables, PLOT_HOOKS_ILLICIT_TABLE_ID, PLOT_HOOKS_ILLICIT),
+    ...resolvePool(tables, THIEVES_GUILD_QUEST_TABLE_ID, THIEVES_GUILD_QUESTS),
   ]
   for (const faction of factions) {
     if (!faction.leaderNpcId || illicitHooks.length === 0) continue
@@ -240,6 +240,22 @@ export function buildHooks(
       'Paid in full, in secret — and a debt owed by the faction.',
     )
   }
+
+  // --- Extra public hooks: a side-quest, an unsolved mystery, and (sometimes) an
+  // urban job posted to each settlement's board. Drawn via CHILD rngs keyed per
+  // settlement so they're additive — existing hooks/notices stay byte-identical. ---
+  const sideQuestPool = resolvePool(tables, HOOKS_SIDE_QUEST_TABLE_ID, HOOKS_SIDE_QUEST)
+  const mysteryPool = resolvePool(tables, HOOKS_MYSTERY_TABLE_ID, HOOKS_MYSTERY)
+  const cityPool = resolvePool(tables, HOOKS_CITY_TABLE_ID, HOOKS_CITY)
+  pois.filter((p) => p.type === 'settlement').forEach((settlement, i) => {
+    const hr = rng.child(`extra-hooks-${i}`)
+    const posterId = proprietorBySettlement.get(settlement.id) ?? null
+    const posterName = posterId ? nameOf.get(posterId) : null
+    const title = posterName ? `Posted by ${posterName}` : 'Posted on the board'
+    if (hr.chance(0.6)) addNotice(null, settlement.id, settlement.regionId, 'job', title, hr.pick(sideQuestPool), posterId, reward)
+    if (hr.chance(0.35)) addNotice(null, settlement.id, settlement.regionId, 'job', 'An unsolved matter', hr.pick(mysteryPool), posterId, reward)
+    if (hr.chance(0.25)) addNotice(null, settlement.id, settlement.regionId, 'job', title, hr.pick(cityPool), posterId, reward)
+  })
 
   return { hooks, notices, rumors }
 }

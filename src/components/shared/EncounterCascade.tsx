@@ -30,10 +30,19 @@ interface EncounterCascadeProps {
   onSaveTable?: (entries: SavePayload) => void;
   onRoll: () => Promise<RollEncounterResult>;
   onRegenerateFromRegion?: () => Promise<void>;
+  /** Region terrain — adds a matching biome section to the master roll. */
+  terrain?: string | null;
+  /** POI type — 'settlement' adds the town-street section. */
+  poiType?: string | null;
 }
 
 /** Build a one-line summary of the persisted result for the banner. */
 export function summarizeResult(result: EncounterRollResult): string {
+  if (result.npc) {
+    return result.npc.disposition
+      ? `${result.npc.name} — ${result.npc.disposition}`
+      : result.npc.name;
+  }
   const base = result.entryText || result.categoryLabel;
   return result.reaction ? `${base} — ${result.reaction}` : base;
 }
@@ -45,11 +54,13 @@ export function EncounterCascade({
   onSaveTable,
   onRoll,
   onRegenerateFromRegion,
+  terrain,
+  poiType,
 }: EncounterCascadeProps) {
   const [mode, setMode] = useState<"roll" | "edit">("roll");
   const [pending, setPending] = useState(false);
 
-  const sections = getActiveSections(table ?? null);
+  const sections = getActiveSections(table ?? null, { terrain, poiType });
   const lastResult = table?.lastResult;
 
   const runAction = async (action: CascadeAction) => {
@@ -174,7 +185,17 @@ export function EncounterCascade({
             </div>
           )}
 
-          {/* 3. Master Table card */}
+          {/* 3. Result cards — show the rolled NPC/creature/flavor up top. */}
+          {lastResult && (
+            <EncounterResultCards
+              result={lastResult}
+              onSaveNpc={onSaveNpc}
+              onRerollNpc={() => runAction({ kind: "rerollNpc" })}
+              pending={pending}
+            />
+          )}
+
+          {/* 4. Master Table card */}
           <div className="rounded-md border overflow-hidden">
             <div className="flex items-center justify-between px-2 py-1.5 border-b bg-muted/50">
               <span className="text-xs font-semibold">
@@ -202,7 +223,8 @@ export function EncounterCascade({
                   return (
                     <tr
                       key={section.category}
-                      className={`border-b last:border-0 ${isHit ? "bg-amber-500/10" : ""}`}
+                      onClick={() => runAction({ kind: "pickMaster", category: section.category })}
+                      className={`border-b last:border-0 cursor-pointer hover:bg-muted/50 ${isHit ? "bg-amber-500/10" : ""}`}
                     >
                       <td className="p-2 font-mono text-muted-foreground w-10">
                         {i + 1}
@@ -215,8 +237,8 @@ export function EncounterCascade({
             </table>
           </div>
 
-          {/* 4. Category entries sub-table */}
-          {lastResult && hitSection && (
+          {/* 4. Category entries sub-table (hidden for NPCs — the card is the result) */}
+          {lastResult && hitSection && lastResult.category !== "npc" && (
             <div className="rounded-md border overflow-hidden">
               <div className="flex items-center justify-between px-2 py-1.5 border-b bg-muted/50">
                 <span className="text-xs font-semibold">
@@ -240,7 +262,8 @@ export function EncounterCascade({
                     return (
                       <tr
                         key={i}
-                        className={`border-b last:border-0 ${isHit ? "bg-amber-500/10" : ""}`}
+                        onClick={() => runAction({ kind: "pickEntry", entryIndex: i })}
+                        className={`border-b last:border-0 cursor-pointer hover:bg-muted/50 ${isHit ? "bg-amber-500/10" : ""}`}
                       >
                         <td className="p-2 font-mono text-muted-foreground w-10">
                           {i + 1}
@@ -290,7 +313,8 @@ export function EncounterCascade({
                     return (
                       <tr
                         key={range.disposition}
-                        className={`border-b last:border-0 ${isHit ? "bg-amber-500/10" : ""}`}
+                        onClick={() => runAction({ kind: "pickReaction", disposition: range.disposition, roll: range.min })}
+                        className={`border-b last:border-0 cursor-pointer hover:bg-muted/50 ${isHit ? "bg-amber-500/10" : ""}`}
                       >
                         <td className="p-2 font-mono text-muted-foreground w-12">
                           {label}
@@ -304,15 +328,6 @@ export function EncounterCascade({
             </div>
           )}
 
-          {/* 6. Result cards */}
-          {lastResult && (
-            <EncounterResultCards
-              result={lastResult}
-              onSaveNpc={onSaveNpc}
-              onRerollNpc={() => runAction({ kind: "rerollNpc" })}
-              pending={pending}
-            />
-          )}
         </>
       )}
     </div>

@@ -564,6 +564,8 @@ function RoomDetailPanel({
 
 interface DungeonTemplateProps {
   poi: POI;
+  /** Region terrain — adds matching biome encounters to the cascade. */
+  terrain?: string | null;
   children: POI[];
   npcs: NPC[];
   childNPCs?: NPC[];
@@ -605,6 +607,7 @@ interface DungeonTemplateProps {
 
 export function DungeonTemplate({
   poi,
+  terrain,
   children: childPois,
   npcs,
   childNPCs = [],
@@ -1456,6 +1459,8 @@ export function DungeonTemplate({
             onSaveNpc={onSaveEncounterNpc}
             onSaveTable={onSaveEncounterTable}
             onRoll={onRollEncounter}
+            poiType={poi.type}
+            terrain={terrain}
           />
         </TabsContent>
 

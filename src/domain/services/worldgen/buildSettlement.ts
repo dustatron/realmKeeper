@@ -5,18 +5,22 @@ import type { NPC } from '@domain/entities/NPC'
 import { buildPOI } from './buildPoi'
 import { buildNpc } from './buildNpc'
 import { settlementSize } from '@domain/data/worldgen/settlementSize'
-import type { ResolvedTables } from './TableProvider'
+import { resolvePool, type ResolvedTables } from './TableProvider'
 import { SHOP_TYPES_TABLE_ID, SHOP_NAMES_TABLE_ID, SHOP_TYPES } from '@domain/data/worldgen/shops.tables'
 import {
   DISTRICT_TABLE_ID, KNOWN_FOR_TABLE_ID, STRUCTURE_QUIRK_TABLE_ID, GUILD_TABLE_ID, SHOP_QUIRK_TABLE_ID, NOTABLE_FEATURE_TABLE_ID,
   DISTRICTS, KNOWN_FOR, STRUCTURE_QUIRKS, GUILDS, SHOP_QUIRKS, NOTABLE_FEATURES,
 } from '@domain/data/worldgen/settlement.tables'
+import {
+  FESTIVAL_TABLE_ID, FESTIVALS,
+  SETTLEMENT_SECRET_TABLE_ID, SETTLEMENT_SECRETS,
+} from '@domain/data/worldgen/world-flavor.tables'
+import { NPC_PROPRIETOR_QUIRK_TABLE_ID, NPC_PROPRIETOR_QUIRKS } from '@domain/data/worldgen/npc-extra.tables'
 
 // Pick from an editable table, falling back to the built-in array (same order
 // keeps seeded output stable).
 function pickFlavor(rng: SeededRandom, tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): string {
-  const texts = tables?.texts(id)
-  return rng.pick(texts && texts.length > 0 ? texts : fallback)
+  return rng.pick(resolvePool(tables, id, fallback))
 }
 
 // The proprietor's trade, by building type (for the common civic types; other
@@ -65,10 +69,16 @@ export function buildSettlementBuildings(
   const structureQuirk = pickFlavor(rng, tables, STRUCTURE_QUIRK_TABLE_ID, STRUCTURE_QUIRKS)
   const guild = rng.chance(0.5) ? pickFlavor(rng, tables, GUILD_TABLE_ID, GUILDS) : null
   const feature = pickFlavor(rng, tables, NOTABLE_FEATURE_TABLE_ID, NOTABLE_FEATURES)
+  // A festival and a GM-only secret — additive, via CHILD rngs so the building
+  // generation below (which uses the main rng) stays byte-identical.
+  const festival = rng.child('settlement-festival').pick(resolvePool(tables, FESTIVAL_TABLE_ID, FESTIVALS))
+  const secret = rng.child('settlement-secret').pick(resolvePool(tables, SETTLEMENT_SECRET_TABLE_ID, SETTLEMENT_SECRETS))
   settlement.description =
     `${settlement.description ?? ''} Known for ${knownFor}; ${structureQuirk}. Its heart is ${district}.` +
     (guild ? ` Home to ${guild}.` : '') +
-    ` Notably, ${feature}.`
+    ` Notably, ${feature}.` +
+    ` A local tradition: ${festival}` +
+    `\n\nGM secret: ${secret}`
 
   const count = Math.min(types_.length, buildingCount(settlement.subtypeLabel, rng))
   const types = rng.sample(types_, count)
@@ -91,20 +101,23 @@ export function buildSettlementBuildings(
       subtypeLabel: type,
     })
     buildings.push(building)
-    proprietors.push(
-      buildNpc(
-        {
-          worldId,
-          regionId: settlement.regionId ?? undefined,
-          poiId: building.id,
-          role: 'inhabitant',
-          occupation: BUILDING_OCCUPATIONS[type] ?? type.toLowerCase(),
-          tables,
-        },
-        systemConfig,
-        rng,
-      ),
+    const proprietor = buildNpc(
+      {
+        worldId,
+        regionId: settlement.regionId ?? undefined,
+        poiId: building.id,
+        role: 'inhabitant',
+        occupation: BUILDING_OCCUPATIONS[type] ?? type.toLowerCase(),
+        tables,
+      },
+      systemConfig,
+      rng,
     )
+    // A behind-the-counter quirk — child rng (keyed per building) so it doesn't
+    // disturb the next proprietor's seeded generation.
+    const quirkLine = rng.child(`prop-quirk-${i}`).pick(resolvePool(tables, NPC_PROPRIETOR_QUIRK_TABLE_ID, NPC_PROPRIETOR_QUIRKS))
+    proprietor.description = `${proprietor.description} ${quirkLine}`
+    proprietors.push(proprietor)
   })
   return { buildings, proprietors }
 }

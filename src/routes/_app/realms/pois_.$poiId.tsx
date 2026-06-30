@@ -691,6 +691,7 @@ function POIDetailPage() {
         return (
           <SettlementTemplate
             poi={poi}
+            terrain={region?.terrain ?? null}
             children={children}
             npcs={npcs}
             childNPCs={childNPCs}
@@ -736,6 +737,7 @@ function POIDetailPage() {
         return (
           <DungeonTemplate
             poi={poi}
+            terrain={region?.terrain ?? null}
             actionBar={poiActionBar}
             children={children}
             npcs={npcs}
@@ -777,6 +779,7 @@ function POIDetailPage() {
         return (
           <BuildingTemplate
             poi={poi}
+            terrain={region?.terrain ?? null}
             children={children}
             npcs={npcs}
             factionPresences={factionPresences}
@@ -801,6 +804,7 @@ function POIDetailPage() {
         return (
           <GenericTemplate
             poi={poi}
+            terrain={region?.terrain ?? null}
             children={children}
             npcs={npcs}
             childNPCs={childNPCs}

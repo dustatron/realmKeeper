@@ -3,15 +3,14 @@ import type { Faction, AgendaGoal } from '@domain/entities/Faction'
 import { newId } from '@shared/ulid'
 import { pickCairn, sampleCairn, cairnTexts } from './cairnPick'
 import { pickFactionName } from '~/domain/data/worldgen/names'
-import type { ResolvedTables } from './TableProvider'
+import { resolvePool, type ResolvedTables } from './TableProvider'
 import {
   FACTION_MOTIVATION_TABLE_ID, NOBLE_SECRET_TABLE_ID,
   FACTION_MOTIVATIONS, NOBLE_SECRETS,
 } from '~/domain/data/worldgen/faction.tables'
 
 function pickFlavor(rng: SeededRandom, tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): string {
-  const t = tables?.texts(id)
-  return rng.pick(t && t.length > 0 ? t : fallback)
+  return rng.pick(resolvePool(tables, id, fallback))
 }
 
 export interface BuildFactionInput {

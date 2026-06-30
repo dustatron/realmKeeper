@@ -11,16 +11,19 @@ import { pickCairn } from './cairnPick'
 import { makeSeededDice } from './seededDice'
 import { pickNpcWant } from '@domain/data/worldgen/npcWants'
 import { buildHumanoidFlavor } from './npcFactory'
-import type { ResolvedTables } from './TableProvider'
+import { resolvePool, type ResolvedTables } from './TableProvider'
+import { dispositionForRoll } from '@shared/dice'
 import {
   NPC_FAVOR_TABLE_ID, NPC_PURSUIT_TABLE_ID, NPC_FLAW_TABLE_ID, NPC_FLAWS,
   NPC_PROFESSION_TABLE_ID, NPC_ARTISAN_TABLE_ID, PROFESSIONS, ARTISAN_TRADES,
 } from '@domain/data/worldgen/npc.tables'
-
-function pool(tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): readonly string[] {
-  const t = tables?.texts(id)
-  return t && t.length > 0 ? t : fallback
-}
+import {
+  NPC_APPEARANCE_TABLE_ID, NPC_APPEARANCES,
+  NPC_MANNERISM_TABLE_ID, NPC_MANNERISMS,
+  NPC_POCKET_ITEM_TABLE_ID, NPC_POCKET_ITEMS,
+  NPC_SECRET_TABLE_ID, NPC_SECRETS,
+  NPC_VILLAIN_TRAIT_TABLE_ID, NPC_VILLAIN_TRAITS,
+} from '@domain/data/worldgen/npc-extra.tables'
 
 // A first name / surname from the (editable) Cairn name tables, falling back to
 // the static Cairn data.
@@ -32,8 +35,8 @@ function liveCairn(rng: SeededRandom, tables: ResolvedTables | undefined, id: st
 // A general profession for townsfolk who aren't tied to a specific shop. Mirrors
 // the source's profession → artisan-specialty cascade.
 function pickProfession(rng: SeededRandom, tables: ResolvedTables | undefined): string {
-  const prof = rng.pick(pool(tables, NPC_PROFESSION_TABLE_ID, PROFESSIONS))
-  if (/artisan/i.test(prof)) return rng.pick(pool(tables, NPC_ARTISAN_TABLE_ID, ARTISAN_TRADES))
+  const prof = rng.pick(resolvePool(tables, NPC_PROFESSION_TABLE_ID, PROFESSIONS))
+  if (/artisan/i.test(prof)) return rng.pick(resolvePool(tables, NPC_ARTISAN_TABLE_ID, ARTISAN_TRADES))
   return prof
 }
 
@@ -51,6 +54,8 @@ export interface BuildNpcInput {
   factionAction?: string
   /** A profession label (e.g. "blacksmith") used in place of the bare role. */
   occupation?: string
+  /** Extra races (from the realm) added to the weighted race pool. */
+  customRaces?: string[]
   /** Central table registry, so flavor/want pools can be customized. */
   tables?: ResolvedTables
 }
@@ -69,10 +74,17 @@ function pickWant(rng: SeededRandom, tables?: ResolvedTables): string {
 const RACE_POOL = ['human', 'human', 'human', 'human', 'elf', 'dwarf', 'halfling', 'half-orc', 'half-elf', 'goblin']
 const SD_CLASSES = ['Fighter', 'Priest', 'Thief', 'Wizard']
 
-// Cairn name tables are id'd by race + gender; humans use the generic name +
-// surname tables, other races have their own first-name tables (no surname).
+// Races that have their own first-name tables. Anything else (human + custom
+// realm races) draws from the generic human name + surname tables.
+const NAMED_RACES = new Set(['elf', 'dwarf', 'halfling', 'half-orc', 'half-elf', 'goblin'])
+function usesHumanNames(race: string): boolean {
+  return !NAMED_RACES.has(race)
+}
+
+// Cairn name tables are id'd by race + gender; humans (and custom races) use the
+// generic name + surname tables, the named races have their own first-name tables.
 function nameTableId(race: string, gender: 'male' | 'female'): string {
-  if (race === 'human') return `table-cairn-names-${gender}`
+  if (usesHumanNames(race)) return `table-cairn-names-${gender}`
   return `table-cairn-names-${race}-${gender}`
 }
 
@@ -89,9 +101,10 @@ export function buildNpc(
 
   // --- Identity ---
   const gender: 'male' | 'female' = rng.chance(0.5) ? 'male' : 'female'
-  const race = rng.pick(RACE_POOL)
+  const racePool = input.customRaces?.length ? [...RACE_POOL, ...input.customRaces] : RACE_POOL
+  const race = rng.pick(racePool)
   const firstName = liveCairn(rng, input.tables, nameTableId(race, gender))
-  const surname = race === 'human' ? liveCairn(rng, input.tables, 'table-cairn-surnames') : ''
+  const surname = usesHumanNames(race) ? liveCairn(rng, input.tables, 'table-cairn-surnames') : ''
   const name = [firstName, surname].filter(Boolean).join(' ') || 'Unnamed'
 
   // --- Flavor (Cairn character traits) ---
@@ -123,6 +136,44 @@ export function buildNpc(
     ? rng.pick(flawPool && flawPool.length > 0 ? flawPool : NPC_FLAWS)
     : null
 
+  // --- Extra flavor ---
+  // All drawn via CHILD RNGs so they're deterministic per-NPC but never advance
+  // the main seeded stream (keeps name/traits/stats/want byte-identical).
+  const lookHook = rng.child('npc-look').pick(resolvePool(input.tables, NPC_APPEARANCE_TABLE_ID, NPC_APPEARANCES))
+  // Appearance = what they look like (physical traits + a memorable hook).
+  const appearance = `${flavor.appearance} ${lookHook}`
+
+  const mr = rng.child('npc-mannerism')
+  const mannerism = mr.chance(0.6) ? mr.pick(resolvePool(input.tables, NPC_MANNERISM_TABLE_ID, NPC_MANNERISMS)) : null
+  const pr = rng.child('npc-pocket')
+  const pocket = pr.chance(0.5) ? pr.pick(resolvePool(input.tables, NPC_POCKET_ITEM_TABLE_ID, NPC_POCKET_ITEMS)) : null
+  const sr = rng.child('npc-secret')
+  const secret = sr.chance(0.4) ? sr.pick(resolvePool(input.tables, NPC_SECRET_TABLE_ID, NPC_SECRETS)) : null
+  const vr = rng.child('npc-villain')
+  const villain = (role === 'leader' || role === 'agent') && vr.chance(0.5)
+    ? vr.pick(resolvePool(input.tables, NPC_VILLAIN_TRAIT_TABLE_ID, NPC_VILLAIN_TRAITS))
+    : null
+
+  // Description = who they are (identity). Temperament lives in the Traits row
+  // (virtue/vice) and isn't repeated here.
+  const description = `${article} ${race} ${roleLabel}.`
+
+  // Notable = quick GM behavioral beats kept out of the looks/description: a
+  // flaw, a mannerism, a carried item, a secret. One per line so the UI can
+  // render them as separate bullet points.
+  const notable = [
+    flaw ? `${flaw}.` : null,
+    mannerism,
+    villain,
+    pocket ? `On their person: ${pocket}` : null,
+    secret ? `Secret: ${secret}` : null,
+  ].filter(Boolean).join('\n')
+
+  // Disposition toward the party — seeded (child rng) so it's set on EVERY NPC,
+  // whatever the creation path (world-gen proprietors/leaders, encounter, etc.).
+  const dispRng = rng.child('npc-disposition')
+  const disposition = dispositionForRoll(dispRng.between(1, 6) + dispRng.between(1, 6))
+
   return {
     id: newId(),
     worldId: input.worldId,
@@ -133,10 +184,12 @@ export function buildNpc(
     poiId: input.poiId ?? null,
     lifeStatus: 'alive',
     movementStatus: 'present',
-    description: `${article} ${race} ${roleLabel} — ${flavor.traits[0].toLowerCase()} but ${flavor.traits[1].toLowerCase()}. ${flavor.personality}.${flaw ? ` ${flaw}.` : ''}`,
+    description,
+    notable: notable || undefined,
+    disposition,
     traits: flavor.traits,
     motivation: flavor.motivation,
-    appearance: flavor.appearance,
+    appearance,
     voice: flavor.voice,
     // Faction NPCs carry their agenda goal; everyone else gets a want from the
     // NPC wants table (a favor to ask the party, or a personal pursuit), so

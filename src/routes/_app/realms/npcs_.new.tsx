@@ -53,6 +53,7 @@ function NPCNewPage() {
   const [name, setName] = useState('')
   const [race, setRace] = useState<string>('human')
   const [description, setDescription] = useState('')
+  const [notable, setNotable] = useState('')
   const [traits, setTraits] = useState<string[]>([])
   const [motivation, setMotivation] = useState('')
   const [appearance, setAppearance] = useState('')
@@ -158,6 +159,7 @@ function NPCNewPage() {
       setName(npc.name)
       setRace(npc.race || 'human')
       setDescription(npc.description)
+      setNotable(npc.notable ?? '')
       setTraits(npc.traits)
       setMotivation(npc.motivation)
       setAppearance(npc.appearance)
@@ -215,6 +217,7 @@ function NPCNewPage() {
         lifeStatus,
         movementStatus,
         description,
+        notable: notable || undefined,
         traits,
         motivation,
         appearance,
@@ -329,6 +332,11 @@ function NPCNewPage() {
           <div className="grid gap-1.5">
             <Label htmlFor="npc-desc">Description</Label>
             <Textarea id="npc-desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="NPC description (supports Markdown)" rows={3} />
+          </div>
+
+          <div className="grid gap-1.5">
+            <Label htmlFor="npc-notable">Notable</Label>
+            <Textarea id="npc-notable" value={notable} onChange={(e) => setNotable(e.target.value)} placeholder="Mannerism, a carried item, a secret…" rows={2} />
           </div>
 
           <div className="grid gap-1.5">

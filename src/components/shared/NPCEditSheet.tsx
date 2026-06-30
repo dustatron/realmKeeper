@@ -169,6 +169,17 @@ export function NPCEditSheet({
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="notable">Notable</Label>
+                <Textarea
+                  id="notable"
+                  value={npc.notable ?? ''}
+                  onChange={(e) => updateField('notable', e.target.value)}
+                  placeholder="Mannerism, a carried item, a secret…"
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label>Traits</Label>
                 <TagInput
                   tags={npc.traits}
