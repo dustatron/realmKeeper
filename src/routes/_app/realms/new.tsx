@@ -65,7 +65,11 @@ const DEFAULT_SYSTEM_ID = RulesSystemIds.cairn;
 // Themed doom-event names offered per enabled pack. Filtered by which packs the
 // user has on; "Random" and "None" are always available.
 const DOOM_NAMES_BY_PACK: Record<ResourcePack, string[]> = {
-  "low-fantasy": ["The Salt-Death", "The Long Hunger", "War of the Silver Mine"],
+  "low-fantasy": [
+    "The Salt-Death",
+    "The Long Hunger",
+    "War of the Silver Mine",
+  ],
   "high-fantasy": [
     "The Crystal Wakes",
     "The Wyrm Claims the Peak",
@@ -122,16 +126,18 @@ function NewRealmPage() {
   const [genSize, setGenSize] = useState<"small" | "medium" | "large">(
     "medium",
   );
-  const [genSeed, setGenSeed] = useState("");
   // null = auto: let the engine scale faction count with map size (settlements/4).
   const [genFactions, setGenFactions] = useState<number | null>(null);
   const [genPoiDensity, setGenPoiDensity] = useState<
     "sparse" | "normal" | "dense"
   >("normal");
   const [genPortals, setGenPortals] = useState(true);
-  const [genTreasureDensity, setGenTreasureDensity] = useState<LootDensity>('moderate');
-  const [genMagicDensity, setGenMagicDensity] = useState<LootDensity>('moderate');
-  const [genMonsterDensity, setGenMonsterDensity] = useState<LootDensity>('moderate');
+  const [genTreasureDensity, setGenTreasureDensity] =
+    useState<LootDensity>("moderate");
+  const [genMagicDensity, setGenMagicDensity] =
+    useState<LootDensity>("moderate");
+  const [genMonsterDensity, setGenMonsterDensity] =
+    useState<LootDensity>("moderate");
 
   // Resource-driven terrain controls.
   const [genPacks, setGenPacks] = useState<ResourcePack[]>([...DEFAULT_PACKS]);
@@ -144,9 +150,9 @@ function NewRealmPage() {
   // whenever the inputs change; user edits are overwritten on the next change of
   // packs/size/seed (the propose inputs), which is the intended behavior.
   useEffect(() => {
-    const rng = new SeededRandom(genSeed.trim() || "auto");
+    const rng = new SeededRandom(newId());
     setGenResources(autoProposeResources(genPacks, genSize, rng));
-  }, [genPacks, genSize, genSeed]);
+  }, [genPacks, genSize]);
 
   const togglePack = (pack: ResourcePack, on: boolean) => {
     setGenPacks((prev) =>
@@ -190,7 +196,7 @@ function NewRealmPage() {
             name: createName.trim(),
             systemId: createSystem,
             description: createDesc.trim(),
-            seed: genSeed.trim() || newId(),
+            seed: newId(),
             size: genSize,
             watchesPerDay: createWatchesPerDay,
             daysPerSeason: createDaysPerSeason,
@@ -380,7 +386,7 @@ function NewRealmPage() {
   );
 
   const generationSettingsSection = (
-    <div className="space-y-3 rounded-lg border p-3">
+    <div className="space-y-3 rounded-lg border p-4">
       <div className="flex items-center justify-between">
         <Label
           htmlFor="gen-toggle"
@@ -415,18 +421,6 @@ function NewRealmPage() {
               <ToggleGroupItem value="medium">Medium · 12×12</ToggleGroupItem>
               <ToggleGroupItem value="large">Large · 16×16</ToggleGroupItem>
             </ToggleGroup>
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="gen-seed" className="text-xs">
-              Seed (optional)
-            </Label>
-            <Input
-              id="gen-seed"
-              placeholder="Leave blank for a random world"
-              value={genSeed}
-              onChange={(e) => setGenSeed(e.target.value)}
-              disabled={isCreating}
-            />
           </div>
           <div className="space-y-2">
             <Label className="text-xs">Theme packs</Label>
@@ -479,14 +473,14 @@ function NewRealmPage() {
                 <Input
                   id="gen-factions"
                   type="text"
-              inputMode="numeric"
+                  inputMode="numeric"
                   min="0"
                   max="20"
                   placeholder="Auto (scales with map)"
                   value={genFactions ?? ""}
                   onChange={(e) => {
-                    const v = e.target.value.trim()
-                    setGenFactions(v === "" ? null : parseInt(v) || 0)
+                    const v = e.target.value.trim();
+                    setGenFactions(v === "" ? null : parseInt(v) || 0);
                   }}
                   disabled={isCreating}
                 />
@@ -573,7 +567,10 @@ function NewRealmPage() {
             </div>
             <div className="flex items-start justify-between gap-3">
               <div className="grid gap-0.5">
-                <Label htmlFor="gen-portals" className="flex items-center gap-2 text-xs">
+                <Label
+                  htmlFor="gen-portals"
+                  className="flex items-center gap-2 text-xs"
+                >
                   <Aperture className="size-3.5" /> Portals
                 </Label>
                 <span className="text-[11px] text-muted-foreground">
@@ -591,9 +588,22 @@ function NewRealmPage() {
               <p className="text-xs font-medium">Realm content</p>
               <div className="grid gap-2">
                 <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="gen-treasure" className="flex items-center gap-2 text-xs"><Gem className="size-3.5" /> Treasure</Label>
-                  <Select value={genTreasureDensity} onValueChange={(v) => setGenTreasureDensity(v as LootDensity)} disabled={isCreating}>
-                    <SelectTrigger id="gen-treasure" className="w-32"><SelectValue /></SelectTrigger>
+                  <Label
+                    htmlFor="gen-treasure"
+                    className="flex items-center gap-2 text-xs"
+                  >
+                    <Gem className="size-3.5" /> Treasure
+                  </Label>
+                  <Select
+                    value={genTreasureDensity}
+                    onValueChange={(v) =>
+                      setGenTreasureDensity(v as LootDensity)
+                    }
+                    disabled={isCreating}
+                  >
+                    <SelectTrigger id="gen-treasure" className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="off">Off</SelectItem>
                       <SelectItem value="sparse">Sparse</SelectItem>
@@ -603,9 +613,20 @@ function NewRealmPage() {
                   </Select>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="gen-magic-items" className="flex items-center gap-2 text-xs"><Sparkles className="size-3.5" /> Magic items</Label>
-                  <Select value={genMagicDensity} onValueChange={(v) => setGenMagicDensity(v as LootDensity)} disabled={isCreating}>
-                    <SelectTrigger id="gen-magic-items" className="w-32"><SelectValue /></SelectTrigger>
+                  <Label
+                    htmlFor="gen-magic-items"
+                    className="flex items-center gap-2 text-xs"
+                  >
+                    <Sparkles className="size-3.5" /> Magic items
+                  </Label>
+                  <Select
+                    value={genMagicDensity}
+                    onValueChange={(v) => setGenMagicDensity(v as LootDensity)}
+                    disabled={isCreating}
+                  >
+                    <SelectTrigger id="gen-magic-items" className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="off">Off</SelectItem>
                       <SelectItem value="sparse">Sparse</SelectItem>
@@ -615,9 +636,22 @@ function NewRealmPage() {
                   </Select>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="gen-monsters" className="flex items-center gap-2 text-xs"><Skull className="size-3.5" /> Monsters</Label>
-                  <Select value={genMonsterDensity} onValueChange={(v) => setGenMonsterDensity(v as LootDensity)} disabled={isCreating}>
-                    <SelectTrigger id="gen-monsters" className="w-32"><SelectValue /></SelectTrigger>
+                  <Label
+                    htmlFor="gen-monsters"
+                    className="flex items-center gap-2 text-xs"
+                  >
+                    <Skull className="size-3.5" /> Monsters
+                  </Label>
+                  <Select
+                    value={genMonsterDensity}
+                    onValueChange={(v) =>
+                      setGenMonsterDensity(v as LootDensity)
+                    }
+                    disabled={isCreating}
+                  >
+                    <SelectTrigger id="gen-monsters" className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="off">Off</SelectItem>
                       <SelectItem value="sparse">Sparse</SelectItem>
@@ -638,7 +672,7 @@ function NewRealmPage() {
     <div className="space-y-6">
       <PageHeader title="Create New Realm" />
 
-      <div className="mx-auto max-w-2xl space-y-4">
+      <div className="mx-auto max-w-4xl space-y-4">
         <div className="rounded-lg border bg-card p-4 space-y-4">
           <div className="grid gap-2">
             <Label htmlFor="realm-name">Name</Label>
@@ -687,7 +721,7 @@ function NewRealmPage() {
           </div>
         </div>
 
-        <div className="rounded-lg border bg-card p-4">
+        <div className="rounded-lg border bg-card p-0">
           {generationSettingsSection}
         </div>
 
