@@ -26,8 +26,6 @@ POI settlement/Citadel | Thornreach
 POI settlement/Commune | Windhollow
 POI settlement/Fortress | Greyreach
 POI settlement/Garrison | Greyfall
-POI settlement/Keep | Windwick
-POI settlement/Plantation | Thornhaven
 POI settlement/Prison | Oakfall
 POI settlement/Prison | Salthollow
 POI settlement/Village | Thornford
@@ -48,17 +46,15 @@ exports[`generateWorld determinism fingerprint > small seed=gold-small is stable
   features: a dry oasis with a poisoned well, Half-Buried Ark
   features: a sunken boardwalk, Stalagmite Forest
   features: a vine-swallowed step pyramid, Hanging Valley
-FACTION | Surn's Coven
-FACTION | The Mor Company
+FACTION | Chain of the Spire
+FACTION | Clan of Dun
 FACTION | The Party
-FACTION | The Raven Kin
-POI portal/Planar Gate | Mistgate
-POI portal/Planar Gate | The Pale Gate
+FACTION | The Surn Faithful
+POI portal/Planar Gate | Gate of Ash
+POI portal/Planar Gate | The Hollow Arch
 POI settlement/City | Greyreach
 POI settlement/Compound | Crowgate
-POI settlement/Convent | Saltgate
-POI settlement/Fortress | Saltreach
-POI settlement/Stronghold | Oakreach
+POI settlement/Town | Saltmill
 REGION blighted | The Thal Ashlands | Smugglers move something dangerous through the region | Exiled criminals | ashen ore
 REGION desert | Ornmark | A monster has driven hunters from the best game lands | Restless soldiers | date palm
 REGION jungle | The Lorn Deepwood | A failing mine or harvest threatens the coming winter | Displaced farmers | exotic spice

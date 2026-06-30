@@ -17,6 +17,8 @@ export interface BuildNaturalSiteInput {
   position?: { x: number; y: number } | null
   mapRef?: string | null
   tables?: ResolvedTables
+  /** Shared set of world POI names; when given, the chosen name is made unique. */
+  usedNames?: Set<string>
 }
 
 // Pure, seeded builder for a natural site — a named wild place (wood, mere,
@@ -26,7 +28,17 @@ export interface BuildNaturalSiteInput {
 export function buildNaturalSite(input: BuildNaturalSiteInput): POI {
   const { rng, regionId, hostedResource } = input
 
-  const name = rng.pick(resolvePool(input.tables, NATURAL_SITE_NAME_TABLE_ID, NATURAL_SITE_NAMES))
+  const namePool = resolvePool(input.tables, NATURAL_SITE_NAME_TABLE_ID, NATURAL_SITE_NAMES)
+  let name = rng.pick(namePool)
+  if (input.usedNames) {
+    for (let i = 0; i < 20 && input.usedNames.has(name); i++) name = rng.pick(namePool)
+    if (input.usedNames.has(name)) {
+      const base = name
+      let k = 2
+      while (input.usedNames.has(name)) name = `${base} ${k++}`
+    }
+    input.usedNames.add(name)
+  }
   const hazard: NaturalSiteHazard = rng.pick(NATURAL_SITE_HAZARDS)
 
   const description = hostedResource
