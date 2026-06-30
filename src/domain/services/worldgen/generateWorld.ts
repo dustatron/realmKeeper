@@ -676,6 +676,12 @@ export function generateWorld(
       }),
     )
     usedCells.add(`${cm.q},${cm.r}`)
+    // Stamp the natural-site feature tile (a tree doodle) onto its hex, the same
+    // way makePoi does for other POIs — so wild sites read as places, not blank
+    // terrain with a generic marker.
+    const hostCell = hexCellByCoord.get(`${cm.q},${cm.r}`)
+    const naturalTile = featureTileForPoi('natural', { subtype: null })
+    if (hostCell && naturalTile) hostCell.tile = naturalTile
   }
 
   // Step 8: factions. Each gets a distinct settlement as its headquarters (and

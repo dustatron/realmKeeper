@@ -17,8 +17,11 @@ import { executeCreatePOI } from '@application/use-cases/CreatePOI'
 import { executeCreatePath } from '@application/use-cases/CreatePath'
 import { executeUpdatePOI } from '@application/use-cases/UpdatePOI'
 import { executeUpdateRegion } from '@application/use-cases/UpdateRegion'
-import { MapViewer, type MapMode, type MapViewerHandle } from '~/components/map/MapViewer'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '@infrastructure/dexie/db'
+import { MapViewer, type MapMode, type MapViewerHandle, type MapLayerId } from '~/components/map/MapViewer'
 import { MapToolbar } from '~/components/map/MapToolbar'
+import { MapLayerControl } from '~/components/map/MapLayerControl'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
 import { Input } from '~/components/ui/input'
@@ -153,6 +156,17 @@ export function InteractiveMap({
   const isRealmMap = !gameMap.ownerPoiId
   const regions = useRegions(mapRealmId)
   const realm = useRealm(mapRealmId)
+  // Trade-graph connections for the dashed trade-route layer. worldId === realm id
+  // (same convention used by useRegions/useRealmPOIs). Scoped to 'supplies' here
+  // since that's the only kind the map draws.
+  const connections = useLiveQuery(
+    async () => {
+      if (!mapRealmId) return []
+      const all = await db.connections.where('worldId').equals(mapRealmId).toArray()
+      return all.filter((c) => c.kind === 'supplies')
+    },
+    [mapRealmId],
+  ) ?? []
   const factions = useFactions(mapRealmId)
   const factionNames = useMemo(
     () => Object.fromEntries(factions.map((f) => [f.id, f.name])),
@@ -170,6 +184,14 @@ export function InteractiveMap({
   const savedViewState = useUIStore((s) => s.mapViewStates[gameMap.id])
   const setMapViewState = useUIStore((s) => s.setMapViewState)
   const [mode, setMode] = useState<MapMode>('view')
+  // Phase-4 overlay layer visibility (rivers/trade/wealth/resources/treasure).
+  const [layers, setLayers] = useState<Record<MapLayerId, boolean>>({
+    rivers: true,
+    trade: true,
+    wealth: true,
+    resources: true,
+    treasure: true,
+  })
   const [selectedPoiForPlacement, setSelectedPoiForPlacement] = useState<POI | null>(null)
   const [poiPopup, setPoiPopup] = useState<POI | null>(null)
   const [poiSelectMode, setPoiSelectMode] = useState(!!onPoiSelect)
@@ -408,11 +430,20 @@ export function InteractiveMap({
       />
 
       <div className="flex-1 relative">
+        {/* P4 overlay-layer toggles. Only meaningful for hex realm maps (the
+            data lives on hex cells / generated POIs); hidden on town/dungeon. */}
+        {gameMap.kind === 'hex' && (
+          <div className="absolute left-2 top-2 z-10">
+            <MapLayerControl layers={layers} onChange={setLayers} />
+          </div>
+        )}
         <MapViewer
           map={gameMap}
           pois={poisOnMap}
           paths={pathsOnMap}
           regions={isRealmMap ? regions : undefined}
+          connections={connections}
+          layers={layers}
           mode={mode}
           showLabels={showLabels}
           showRegions={showRegions}

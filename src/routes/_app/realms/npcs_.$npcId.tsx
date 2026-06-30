@@ -34,6 +34,7 @@ import { CloudinaryImage } from '~/components/shared/CloudinaryImage'
 import { getAllRaces, NPC_DISPOSITIONS } from '@shared/constants'
 import { rollDisposition } from '@shared/dice'
 import { DispositionBadge } from '~/components/shared/DispositionBadge'
+import { WealthBadge } from '~/components/shared/WealthBadge'
 import type { NPC } from '@domain/entities/NPC'
 import type { SystemBlock, Attack } from '@domain/value-objects/SystemBlock'
 import type { Faction } from '@domain/entities/Faction'
@@ -817,6 +818,12 @@ function NPCDetailPage() {
                 }}
               />
             </div>
+            {npc.wealthTier && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground w-24 shrink-0">Wealth</span>
+                <WealthBadge tier={npc.wealthTier} />
+              </div>
+            )}
 
             {/* Level & Class */}
             {(sb.level !== undefined || sb.className) && (

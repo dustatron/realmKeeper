@@ -42,6 +42,7 @@ import {
   Skull,
 } from "lucide-react";
 import { NPCMiniCard } from "~/components/shared/NPCMiniCard";
+import { WealthBadge } from "~/components/shared/WealthBadge";
 import { RumorList } from "~/components/shared/RumorList";
 import { NoticeBoard } from "~/components/shared/NoticeBoard";
 import { EncounterCascade } from "~/components/shared/EncounterCascade";
@@ -867,6 +868,7 @@ export function SettlementTemplate({
               <Badge variant="secondary" className="text-xs">
                 {displaySize}
               </Badge>
+              <WealthBadge band={poi.wealthBand} />
               {poi.subtypeLabel && (
                 <Badge variant="outline" className="text-xs">
                   {poi.subtypeLabel}
