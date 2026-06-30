@@ -596,7 +596,10 @@ export function generateWorld(
   // extractable resource (an adventure-worthy vein). Child rng keeps the main
   // seeded stream (factions/interiors) byte-stable.
   const nsRng = rng.child('natural-sites')
-  const naturalCount = Math.min(5, Math.max(1, Math.round(cellMetas.length / 120)))
+  // Wild sites belong on every map — all sizes have forests and resource-rich
+  // wilds. Floor of 2 so small/medium aren't barren; scales up with map area
+  // (small ~2, medium ~4, large ~6).
+  const naturalCount = Math.min(8, Math.max(2, Math.round(cellMetas.length / 40)))
   const wildCells = cellMetas.filter(
     (cm) => cm.biome !== 'lake' && !usedCells.has(`${cm.q},${cm.r}`),
   )

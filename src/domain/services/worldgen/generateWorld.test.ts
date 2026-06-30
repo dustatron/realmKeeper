@@ -25,6 +25,14 @@ function axialLookup(gameMap: GameMap) {
 }
 
 describe('generateWorld', () => {
+  it('generates natural sites on every map size (small included)', () => {
+    for (const [cols, rows] of [[8, 8], [12, 12], [16, 16]] as const) {
+      const { pois } = generateWorld(REALM, `nat-${cols}`, { cols, rows })
+      const natural = pois.filter((p) => p.type === 'natural')
+      expect(natural.length).toBeGreaterThanOrEqual(2)
+    }
+  })
+
   it('every region has an outline boundary and a distinct color', () => {
     const { regions } = generateWorld(REALM, 'seed-a', { cols: 12, rows: 12 })
     for (const r of regions) {
