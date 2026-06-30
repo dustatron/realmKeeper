@@ -1328,7 +1328,7 @@ function RegionDetailPage() {
                         <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:w-28 sm:shrink-0">
                           {g.label}
                         </dt>
-                        <dd className="text-sm text-foreground">
+                        <dd className="text-base text-foreground">
                           {g.items.join(", ")}
                         </dd>
                       </div>
