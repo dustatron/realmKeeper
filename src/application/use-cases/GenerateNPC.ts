@@ -44,7 +44,8 @@ export async function executeGenerateNPC(
     input.systemConfig,
     rng,
   )
-  // Live NPCs get an immediate disposition; the encounter cascade still rolls its
-  // own 2d6 reaction on top when the NPC appears in an encounter.
+  // Live NPCs get a disposition up front; in an encounter the NPC's own
+  // disposition stands in for a reaction (the cascade no longer rolls a separate
+  // 2d6 reaction for NPCs — only creatures do).
   return { ...npc, disposition: rollDisposition() }
 }

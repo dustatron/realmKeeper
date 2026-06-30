@@ -1,4 +1,0 @@
-[  790050ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:3000/@vite/client:864
-[  790672ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ http://localhost:3000/realms/npcs/01KW2YWQXX3DTJ13S912ETD1A9:0
-[  791159ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=0e5b9096:20102
-[  792654ms] [LOG] %c[RealmKeeper] Dev API installed → window.__realmKeeper color: #22d3ee; font-weight: bold @ http://localhost:3000/src/infrastructure/dev/devApi.ts:348

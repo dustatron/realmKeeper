@@ -84,8 +84,8 @@ export function buildSettlementBuildings(
     `${settlement.description ?? ''} Known for ${knownFor}; ${structureQuirk}. Its heart is ${district}.` +
     (guild ? ` Home to ${guild}.` : '') +
     ` Notably, ${feature}.` +
-    ` Each year they hold ${festival}` +
-    ` GM secret: ${secret}`
+    ` A local tradition: ${festival}` +
+    `\n\nGM secret: ${secret}`
 
   const count = Math.min(types_.length, buildingCount(settlement.subtypeLabel, rng))
   const types = rng.sample(types_, count)

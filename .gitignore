@@ -14,3 +14,6 @@ routeTree.gen.ts
 package-lock.json
 dexie-cloud.json
 dexie-cloud.key
+
+# Playwright MCP dev artifacts
+.playwright-mcp/

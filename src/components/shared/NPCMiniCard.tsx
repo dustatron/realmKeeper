@@ -93,40 +93,43 @@ export function NPCMiniCard({ npc, poiName, onUpdateNPC, linkToDetail = true }: 
       className="rounded-lg border bg-card hover:bg-accent/40 transition-colors flex overflow-hidden"
       style={raceColor ? { borderLeftColor: raceColor, borderLeftWidth: "3px" } : undefined}
     >
-      {npc.imageUrl && (
-        linkToDetail ? (
-          <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="shrink-0">
+      {npc.imageUrl &&
+        (() => {
+          const portrait = (
             <CloudinaryImage
               src={npc.imageUrl}
               alt={npc.name}
               width={150}
               className="w-28 h-full object-cover"
             />
-          </Link>
-        ) : (
-          <div className="shrink-0">
-            <CloudinaryImage
-              src={npc.imageUrl}
-              alt={npc.name}
-              width={150}
-              className="w-28 h-full object-cover"
-            />
-          </div>
-        )
-      )}
+          );
+          return linkToDetail ? (
+            <Link to="/realms/npcs/$npcId" params={{ npcId: npc.id }} className="shrink-0">
+              {portrait}
+            </Link>
+          ) : (
+            <div className="shrink-0">{portrait}</div>
+          );
+        })()}
 
       <div className="flex flex-col min-w-0 flex-1">
         {/* Header zone — identity, scannable */}
         <div className="p-3 pb-2 space-y-2">
           {/* Name + life status toggle */}
           <div className="flex items-start justify-between gap-2">
-            <Link
-              to="/realms/npcs/$npcId"
-              params={{ npcId: npc.id }}
-              className="text-base font-semibold leading-tight hover:underline truncate"
-            >
-              {npc.name}
-            </Link>
+            {linkToDetail ? (
+              <Link
+                to="/realms/npcs/$npcId"
+                params={{ npcId: npc.id }}
+                className="text-base font-semibold leading-tight hover:underline truncate"
+              >
+                {npc.name}
+              </Link>
+            ) : (
+              <span className="text-base font-semibold leading-tight truncate">
+                {npc.name}
+              </span>
+            )}
             <div className="flex items-center gap-0.5 shrink-0">
               {onUpdateNPC && (
                 <button
