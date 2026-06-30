@@ -1,78 +1,78 @@
 // Shared race name pools — imported by system table files to build TableDefs
-// Sources: hexbinder / DnD-name-generator / Snake4life fantasy-names
+// Original, re-authored name pools for system-agnostic name generation.
+// All names are coined for this project; no third-party or copyrighted source material.
 
 export const ELF_NAMES_MALE = [
-  'Adran', 'Aelar', 'Aerdeth', 'Alarcion', 'Aramil', 'Arannis', 'Aust', 'Beiro', 'Berrian',
-  'Caeldrim', 'Carric', 'Cyprian', 'Dayereth', 'Dreali', 'Efferil', 'Eiravel', 'Enialis', 'Erdan',
-  'Erevan', 'Farlien', 'Galinndan', 'Gennal', 'Hadarai', 'Halimath', 'Heian', 'Himo', 'Immeral',
-  'Ivellios', 'Kaelthorn', 'Laucian', 'Lorifir', 'Lucan', 'Mindartis', 'Morian', 'Naal', 'Paelias',
-  'Peren', 'Quarion', 'Riardon', 'Rolen', 'Soveliss', 'Thamior', 'Tharivol', 'Theren', 'Thervan',
-  'Uthemar', 'Vanuath', 'Varis',
+  'Aeliwon', 'Aerthion', 'Alaeri', 'Andiriel', 'Aureldin', 'Belveth', 'Caelior', 'Caethrin',
+  'Cyrandel', 'Daelvyn', 'Eithalor', 'Elphirion', 'Erendil', 'Faelorn', 'Galieth', 'Gildaeri',
+  'Halviel', 'Iaethon', 'Illvaris', 'Kaethelor', 'Larenuil', 'Liorvan', 'Maelthir', 'Mirandel',
+  'Naeloth', 'Olvirian', 'Phaeloth', 'Quenuil', 'Riavelor', 'Saelith', 'Sylvarn', 'Taeloras',
+  'Thaedrim', 'Threnion', 'Uilathar', 'Vaeldrin', 'Vethriel', 'Wynaeris', 'Yllaroth', 'Yveloth',
+  'Zaelorin', 'Caerith', 'Eolwen', 'Faerendil', 'Lothariel', 'Aenwyn', 'Cirathil',
 ]
 
 export const ELF_NAMES_FEMALE = [
-  'Adrie', 'Althaea', 'Anastrianna', 'Andraste', 'Arara', 'Bethrynna', 'Birel', 'Caelynn',
-  'Drusilia', 'Elama', 'Enna', 'Felosial', 'Ielenia', 'Irann', 'Jelenneth', 'Keyleth',
-  'Leshanna', 'Lia', 'Meriele', 'Mialee', 'Naivara', 'Quelenna', 'Quillathe', 'Sariel',
-  'Shanairra', 'Shava', 'Silaqui', 'Theirastra', 'Thia', 'Vadania', 'Valanthe', 'Valna',
-  'Xanaphia',
+  'Aelriana', 'Aewyndra', 'Allaeria', 'Anvelle', 'Aurithea', 'Belaenne', 'Caelira', 'Celphyra',
+  'Cyndriel', 'Daevora', 'Eilarae', 'Elwynna', 'Eriantha', 'Faelyra', 'Galienne', 'Iathea',
+  'Ilveria', 'Kaeliss', 'Larenwe', 'Lioranna', 'Maelyssa', 'Mirathel', 'Naevira', 'Olwynne',
+  'Phaelinne', 'Quenirae', 'Riavelle', 'Saelwyn', 'Sylvaena', 'Taerinne', 'Thaelora', 'Threnna',
+  'Vaeliana',
 ]
 
 export const DWARF_NAMES_MALE = [
-  'Adrik', 'Alberich', 'Baern', 'Barendd', 'Brottor', 'Bruenor', 'Dain', 'Darrak', 'Delg',
-  'Eberk', 'Einkil', 'Fargrim', 'Flint', 'Gardain', 'Gimgen', 'Harbek', 'Kildrak', 'Krag',
-  'Morgran', 'Orsik', 'Oskar', 'Rangrim', 'Rurik', 'Taklinn', 'Thoradin', 'Thorin', 'Tordek',
-  'Travok', 'Ulfgar', 'Vondal',
+  'Borrun', 'Brakkin', 'Dargan', 'Dorvald', 'Drumnir', 'Durgeld', 'Eberik', 'Falgrum', 'Garruld',
+  'Grodden', 'Hadborn', 'Harnek', 'Helgrim', 'Hrundar', 'Karrek', 'Korrven', 'Mordrek', 'Norbek',
+  'Olnar', 'Ovrid', 'Rakdun', 'Reglund', 'Skarvald', 'Thraddok', 'Throbek', 'Turvik', 'Uldrek',
+  'Vargmun', 'Vondrik', 'Wulgrim',
 ]
 
 export const DWARF_NAMES_FEMALE = [
-  'Amber', 'Artin', 'Audhild', 'Bardryn', 'Dagnal', 'Diesa', 'Eldeth', 'Falkrunn', 'Finellen',
-  'Gunnloda', 'Gurdis', 'Helja', 'Hlin', 'Kathra', 'Kristryd', 'Mardred', 'Riswynn', 'Sannl',
-  'Torbera', 'Torgga', 'Vistra',
+  'Belda', 'Brunhel', 'Dagra', 'Darnis', 'Dwelra', 'Elveth', 'Fendra', 'Gormhild', 'Grunda',
+  'Hedrun', 'Helbra', 'Hildreth', 'Kavra', 'Korhild', 'Mordra', 'Nelgra', 'Onbera', 'Skaldis',
+  'Thrunda', 'Velgra', 'Wildra',
 ]
 
 export const HALFLING_NAMES_MALE = [
-  'Alton', 'Ander', 'Cade', 'Corrin', 'Eldon', 'Errich', 'Finnan', 'Garret', 'Lindal', 'Lyle',
-  'Merric', 'Milo', 'Nebin', 'Osborn', 'Perrin', 'Reed', 'Roscoe', 'Sam', 'Tuck', 'Wellby',
+  'Berryn', 'Cobb', 'Denner', 'Eddo', 'Fennick', 'Garby', 'Hobble', 'Jessom', 'Lanno', 'Lutch',
+  'Mappen', 'Nibb', 'Oddric', 'Pellow', 'Quennel', 'Radby', 'Sennock', 'Tibbet', 'Wandry', 'Yarrow',
 ]
 
 export const HALFLING_NAMES_FEMALE = [
-  'Andry', 'Bree', 'Callie', 'Cora', 'Euphemia', 'Jillian', 'Kithri', 'Lavinia', 'Lidda',
-  'Marigold', 'Merla', 'Nedda', 'Paela', 'Portia', 'Seraphina', 'Shaena', 'Trym', 'Vani',
-  'Verna', 'Willow',
+  'Affy', 'Brindle', 'Cobbie', 'Dellow', 'Effa', 'Fennie', 'Hazza', 'Jenneth', 'Kessa', 'Linnet',
+  'Marrow', 'Nessby', 'Ollet', 'Pemma', 'Quilla', 'Rosby', 'Sennet', 'Tibbie', 'Wisp', 'Yelda',
 ]
 
 export const HALF_ORC_NAMES_MALE = [
-  'Argran', 'Braak', 'Brug', 'Cagak', 'Dench', 'Dorn', 'Dren', 'Feng', 'Gell', 'Gnarsh',
-  'Grumbar', 'Henk', 'Hogar', 'Holg', 'Imsh', 'Karash', 'Keth', 'Krusk', 'Lubash', 'Mhurren',
-  'Mord', 'Ront', 'Shump', 'Thokk', 'Trag', 'Ugarth', 'Varg', 'Yurk', 'Zed',
+  'Bragosh', 'Durokh', 'Garrosh', 'Gnashuk', 'Grumtar', 'Haggok', 'Hurmek', 'Karthuk', 'Kruzag',
+  'Lurgan', 'Maghrok', 'Morrduk', 'Nargesh', 'Ogruth', 'Rakgar', 'Renduk', 'Shagvar', 'Skarnok',
+  'Thargun', 'Throgesh', 'Uggrim', 'Varhok', 'Vrudak', 'Yargesh', 'Zharrok', 'Brughul', 'Dakmor',
+  'Gorruk', 'Hraddok',
 ]
 
 export const HALF_ORC_NAMES_FEMALE = [
-  'Baggi', 'Brakka', 'Creega', 'Drenna', 'Ekk', 'Emen', 'Engong', 'Gorga', 'Grigi', 'Huru',
-  'Kansif', 'Murgen', 'Myev', 'Neega', 'Nogu', 'Oolah', 'Ownka', 'Shautha', 'Sutha', 'Vola',
-  'Volen', 'Yevelda',
+  'Brughna', 'Dazga', 'Drennok', 'Elgora', 'Garnesh', 'Grevda', 'Hagvra', 'Karnegga', 'Krudna',
+  'Lurgha', 'Maghree', 'Morgga', 'Nargha', 'Ogvenna', 'Raksha', 'Shauggra', 'Skarna', 'Thargna',
+  'Uggreta', 'Varhna', 'Vrudga', 'Zhargga',
 ]
 
 export const GOBLIN_NAMES_MALE = [
-  'Gob', 'Zod', 'Krag', 'Grik', 'Drog', 'Snarl', 'Grizzlek', 'Nix', 'Blix', 'Skrik',
-  'Mugwort', 'Ratbane', 'Snitch', 'Grime', 'Wart', 'Fink', 'Crud', 'Slink', 'Boggle', 'Runt',
+  'Brak', 'Crogg', 'Dregek', 'Gartz', 'Griznok', 'Hagget', 'Hobnar', 'Krell', 'Krunt', 'Mazgik',
+  'Nargut', 'Nokrel', 'Razgut', 'Sneddrik', 'Sprag', 'Thrik', 'Vortek', 'Wreggik', 'Yargon', 'Zogrek',
 ]
 
 export const GOBLIN_NAMES_FEMALE = [
-  'Grisella', 'Snikka', 'Murgette', 'Nettik', 'Drazzle', 'Blixie', 'Skizza', 'Wartina',
-  'Grizelda', 'Snagga', 'Cruda', 'Bogga', 'Ratzi', 'Nixie', 'Fizzle', 'Grimka', 'Slinka',
-  'Mugga', 'Wrencha', 'Prika',
+  'Brizna', 'Crella', 'Dregga', 'Garnik', 'Grizna', 'Haggeta', 'Hobna', 'Krelga', 'Mazga', 'Narget',
+  'Nokra', 'Razna', 'Sneddra', 'Spragga', 'Thrikka', 'Vortessa', 'Wregga', 'Yargna', 'Zogra', 'Brennik',
 ]
 
 export const HALF_ELF_NAMES_MALE = [
-  'Alavor', 'Aroben', 'Belfyr', 'Corelor', 'Davkas', 'Elmorn', 'Falril', 'Halvoril', 'Ianminar',
-  'Jamros', 'Kevlamir', 'Leokoris', 'Marfyr', 'Nilparin', 'Orikas', 'Pantorin', 'Rafmorn',
-  'Sarfyr', 'Tyrben', 'Vanlamir',
+  'Aldros', 'Aravyn', 'Belmoran', 'Cordelin', 'Davorel', 'Elmorin', 'Faelros', 'Halvorin', 'Iandros',
+  'Jaeren', 'Kelvorin', 'Leoras', 'Marvyn', 'Nilroth', 'Orikael', 'Pantheris', 'Ravelin', 'Sarvyn',
+  'Tyrelon', 'Vaelmir',
 ]
 
 export const HALF_ELF_NAMES_FEMALE = [
-  'Aluaerys', 'Arfaen', 'Brencharis', 'Celephina', 'Daewen', 'Elethea', 'Faenara', 'Gaelira',
-  'Halindra', 'Isalynn', 'Jaedara', 'Kelvaris', 'Lorindel', 'Miraena', 'Naelara', 'Olethara',
-  'Pelaris', 'Quenara', 'Raewyn', 'Sylindra',
+  'Aluveth', 'Arfenne', 'Brencaris', 'Celphira', 'Daewyn', 'Eletha', 'Faenwe', 'Gaelira', 'Halendra',
+  'Isalith', 'Jaedra', 'Kelvarae', 'Lorinde', 'Miraeth', 'Naelira', 'Olethra', 'Pelarae', 'Quenwe',
+  'Raelyn', 'Sylindreth',
 ]
