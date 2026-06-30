@@ -279,6 +279,7 @@ const pois = {
       lastVisitedDate: data.lastVisitedDate ?? null,
       dangerLevel: data.dangerLevel ?? null,
       currentOccupant: data.currentOccupant ?? null,
+      trade: data.trade ?? null,
       lightLevel: data.lightLevel ?? null,
       wanderingMonsters: data.wanderingMonsters ?? [],
       encounterChance: data.encounterChance ?? null,

@@ -32,6 +32,7 @@ export interface BuildPOIInput {
   poiGenOptions?: { seed: string } | null
   dangerLevel?: number | null
   currentOccupant?: string | null
+  trade?: { produces: string; needs: string[] } | null
 }
 
 export function buildPOI(input: BuildPOIInput): POI {
@@ -66,6 +67,7 @@ export function buildPOI(input: BuildPOIInput): POI {
     lastVisitedDate: null,
     dangerLevel: input.dangerLevel ?? null,
     currentOccupant: input.currentOccupant ?? null,
+    trade: input.trade ?? null,
     lightLevel: null,
     wanderingMonsters: [],
     encounterChance: null,

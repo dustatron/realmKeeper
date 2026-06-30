@@ -2,9 +2,13 @@ import { createWeightedTable, type WeightedTable } from '~/lib/dungeon/SeededRan
 import type { PoiType } from '@shared/constants'
 import type { DungeonTheme } from '~/lib/dungeon/types'
 
-export type PoiKind = 'settlement' | 'dungeon' | 'ruin' | 'landmark'
+export type PoiKind = 'settlement' | 'dungeon' | 'ruin' | 'landmark' | 'natural_site'
 
-export const POI_KIND_TABLE: WeightedTable<PoiKind> = createWeightedTable<PoiKind>({
+// Per-cell POI roll. Natural sites are intentionally excluded: they generate via
+// their own worldgen step (buildNaturalSite), not the per-cell roll.
+export type RollablePoiKind = Exclude<PoiKind, 'natural_site'>
+
+export const POI_KIND_TABLE: WeightedTable<RollablePoiKind> = createWeightedTable<RollablePoiKind>({
   settlement: 4,
   dungeon: 3,
   ruin: 2,
@@ -21,6 +25,8 @@ export function poiKindToType(kind: PoiKind): PoiType {
       return 'ruin'
     case 'landmark':
       return 'landmark'
+    case 'natural_site':
+      return 'natural'
   }
 }
 

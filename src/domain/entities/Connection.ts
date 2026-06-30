@@ -5,6 +5,7 @@ export type ConnectionKind =
   | 'rival' | 'enemy' | 'ally'
   | 'debtor' | 'creditor' | 'thief' | 'victim'
   | 'captive_in' | 'hides' | 'wants'
+  | 'supplies'
 
 export type ConnectionStatus =
   | 'active' | 'missing' | 'estranged' | 'dead' | 'resolved'
