@@ -6,7 +6,10 @@ import {
   REGION_PALETTE,
   hexClusterOutline,
 } from '~/lib/hexmap/hexLayout'
-import { BIOMES, type Biome } from '~/domain/data/worldgen/biomes'
+import { type Biome } from '~/domain/data/worldgen/biomes'
+import { buildElevationField } from '~/lib/hexmap/elevation'
+import { traceRivers } from '~/lib/hexmap/rivers'
+import { assignRegionResources } from './resourceBiome'
 import { terrainTileForBiome, featureTileForPoi } from '~/lib/hexmap/tileMapping'
 import { pickName } from '~/domain/data/worldgen/names'
 import {
@@ -54,8 +57,6 @@ const DENSITY: Record<PoiDensity, number> = {
   dense: 0.25,
 }
 
-const LAND_BIOMES: Biome[] = BIOMES.filter((b) => b !== 'lake')
-
 export function generateWorld(
   realmId: string,
   seed: string,
@@ -73,6 +74,8 @@ export function generateWorld(
     /** Central table registry snapshot (built-ins + user custom tables). */
     tables?: ResolvedTables
     realmContent?: RealmContentSprinkleOptions
+    /** Chosen raw-resource names (the spine of terrain). Empty → low-fantasy baseline. */
+    resources?: string[]
   }
 ): {
   gameMap: GameMap
@@ -100,10 +103,15 @@ export function generateWorld(
   // sampling without replacement so two centers never share a cell, which would
   // leave the later (tie-losing) center's region owning zero cells.
   const seedCount = Math.max(3, Math.round(Math.sqrt(cells.length) / 2))
-  const centers = rng.sample(cells, seedCount).map((cell) => ({
+  // Resources are the source of truth for terrain: each region center's biome is
+  // derived from a defining resource drawn from the chosen pool (weighted for
+  // biome variety). Falls back to the low-fantasy baseline when no pool is given.
+  const regionResources = assignRegionResources(seedCount, opts.resources ?? [], rng.child('region-resources'))
+  const centers = rng.sample(cells, seedCount).map((cell, i) => ({
     q: cell.q,
     r: cell.r,
-    biome: rng.pick(LAND_BIOMES),
+    biome: regionResources[i].biome,
+    definingResource: regionResources[i].definingResource,
   }))
 
   // Step 3: one Region per center (with names unique within the world)
@@ -135,10 +143,13 @@ export function generateWorld(
       name,
       description: flavor.description,
       terrain: center.biome,
+      definingResource: center.definingResource,
       features: flavor.features,
       dangers: flavor.dangers,
       settlements: [],
-      resources: flavor.resources,
+      // Real resources are the source of truth (scattered deposits join in P2);
+      // replaces the old generic biome-flavor resource list.
+      resources: [center.definingResource],
       people: flavor.people,
       problem: flavor.problem,
       boundary: null, // set in step 4c from the region's hex cluster
@@ -238,6 +249,17 @@ export function generateWorld(
     region.boundary = ring.length >= 3 ? ring : null
   }
 
+  // Step 4d: elevation + rivers. A deterministic elevation field drives river
+  // courses (downhill to lakes/edge) and chokepoints (fords/passes/bridges).
+  // Stored on cells for trade (P2) and map rendering (P4); rivers drain into the
+  // lakes carved above. Child rngs keep this isolated from the main stream.
+  const waterCells = new Set(
+    cellMetas.filter((cm) => cm.biome === 'lake').map((cm) => `${cm.q},${cm.r}`),
+  )
+  const elevation = buildElevationField(cells, rng.child('elevation'))
+  const { riverCells, chokepoints } = traceRivers(elevation, cells, rng.child('rivers'), { waterCells })
+  const chokepointByCoord = new Map(chokepoints.map((c) => [`${c.q},${c.r}`, c.kind]))
+
   // Step 5: build GameMap. Each cell carries its terrain tile (by biome); cells
   // that host a POI get their tile overwritten with that POI's feature tile in
   // step 6. Lookup map lets step 6 find a cell's HexCell by coordinates.
@@ -247,6 +269,9 @@ export function generateWorld(
     biome: cm.biome,
     corners: cm.corners,
     tile: terrainTileForBiome(cm.biome) ?? undefined,
+    elevation: elevation.get(`${cm.q},${cm.r}`),
+    river: riverCells.has(`${cm.q},${cm.r}`) || undefined,
+    chokepoint: chokepointByCoord.get(`${cm.q},${cm.r}`) ?? undefined,
   }))
   const hexCellByCoord = new Map<string, HexCell>()
   for (const hc of hexCells) hexCellByCoord.set(`${hc.q},${hc.r}`, hc)

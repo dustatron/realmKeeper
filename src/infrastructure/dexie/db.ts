@@ -25,6 +25,7 @@ import type { Connection } from '@domain/entities/Connection'
 import type { Hook } from '@domain/entities/Hook'
 import { withHookIdDefault, withGameMapKindDefault } from './migrations/v36-defaults'
 import { withTownDefaults } from './migrations/v37-town-defaults'
+import { withDefiningResourceDefault } from './migrations/v42-resource-defaults'
 import { seedDatabase } from './seed'
 import { newId } from '@shared/ulid'
 
@@ -697,6 +698,17 @@ db.version(41).stores(storesV39).upgrade(async (tx) => {
         dangerLevel: null,
         currentOccupant: null,
       })
+    }
+  }
+})
+
+// v42: Add Region.definingResource (worldgen). No index change needed — backfill null.
+// GameMap cell fields (elevation/river/chokepoint) are optional and need no backfill.
+db.version(42).stores(storesV39).upgrade(async (tx) => {
+  const regions = await tx.table('regions').toArray()
+  for (const r of regions) {
+    if (r.definingResource === undefined) {
+      await tx.table('regions').put(withDefiningResourceDefault(r))
     }
   }
 })

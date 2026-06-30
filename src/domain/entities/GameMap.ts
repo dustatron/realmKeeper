@@ -13,6 +13,13 @@ export interface HexCell {
    * fall back to the biome's terrain tile at render time.
    */
   tile?: string
+  /**
+   * Worldgen terrain attributes. Optional and additive: older generated maps
+   * lack them entirely. No backfill is performed — absence is treated as "unset".
+   */
+  elevation?: number
+  river?: boolean
+  chokepoint?: 'ford' | 'pass' | 'bridge' | null
 }
 
 export interface GameMap {

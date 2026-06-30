@@ -63,6 +63,14 @@ export interface GenerateWorldInput {
   worldTreasureDensity?: LootDensity
   worldMagicDensity?: LootDensity
   worldMonsterDensity?: LootDensity
+  /** Chosen raw-resource names — the spine of terrain generation. */
+  resources?: string[]
+  /** Enabled theme packs (used by the form to propose resources; forward-compat). */
+  packs?: string[]
+  /** Forward-compat for later phases; accepted now, consumed in P2/P5/P6. */
+  unclaimedDeposits?: boolean
+  leyLines?: boolean
+  doom?: string
 }
 
 export async function executeGenerateWorld(
@@ -115,6 +123,7 @@ export async function executeGenerateWorld(
       factionCount: input.factionCount,
       systemConfig,
       tables,
+      resources: input.resources,
       loomingThreat: input.loomingThreat ?? true,
       portals: input.portals ?? true,
       realmContent: {

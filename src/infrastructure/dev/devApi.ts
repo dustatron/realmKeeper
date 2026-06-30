@@ -352,6 +352,7 @@ const regions = {
       dangers: data.dangers ?? [],
       settlements: data.settlements ?? [],
       resources: data.resources ?? [],
+      definingResource: data.definingResource ?? null,
       people: data.people ?? [],
       problem: data.problem ?? '',
       boundary: data.boundary ?? null,
