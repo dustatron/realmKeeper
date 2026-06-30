@@ -1107,13 +1107,13 @@ export function MapViewer({
         type: 'symbol',
         source: treasureSourceId,
         layout: {
-          'text-field': '◆',
-          'text-size': 16,
+          'text-field': '💰',
+          'text-size': 18,
           'text-allow-overlap': true,
           'text-ignore-placement': true,
         },
-        // The map font renders emoji monochrome, so tint the glyph gold with a
-        // dark halo — reads as a gold coin/gem rather than a black blob.
+        // The map font renders the emoji as a monochrome glyph (hence it showed
+        // black) — tint it gold with a dark halo so it reads as treasure.
         paint: {
           'text-color': '#f5c518',
           'text-halo-color': '#5c4308',
