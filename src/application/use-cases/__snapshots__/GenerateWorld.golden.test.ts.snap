@@ -1,69 +1,66 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`generateWorld determinism fingerprint > medium seed=gold-medium is stable 1`] = `
-"  dangers: abandoned collapsed mine
-  dangers: baited entrance colossal hive
+"  dangers: at crossroads forgotten graveyard
+  dangers: baited entrance primitive bridge
   dangers: entry forbidden hollow obelisk
-  dangers: hidden exit sunken grotto
-  dangers: signs posted crashed ship
-  dangers: something sleeps crashed ship, restless soldiers
-  features: a crossroads shrine, False Oasis
-  features: a frozen-over hot spring, Land Scar
-  features: a grove the locals refuse to enter, Inverted Lighthouse
-  features: a lone burial mound, Golden Bridge
-  features: a shepherd's ring of stones, Circular Maze
-  features: a shepherd's ring of stones, Enormous Footprint
-FACTION | Concern of the Fang
-FACTION | Lodge of the Lantern
-FACTION | The Bryn Kin
-FACTION | The Key Host
+  dangers: piles of bones enormous stump
+  dangers: previously occupied forgotten graveyard
+  dangers: underwater collapsed mine
+  features: a caravan picked clean by the sands, Leviathan Bones
+  features: a field of ash where nothing grows, Bone Mountain
+  features: a glacier-cracked cairn, Reverse Waterfall
+  features: a lone burial mound, Heart Tree
+  features: a river idol slick with offerings, Titan's Table
+  features: an eagle-haunted high pass, Inactive Automaton
+FACTION | The Black Conclave
+FACTION | The Chain Wanderers
+FACTION | The Key League
+FACTION | The Maur Communion
 FACTION | The Party
-FACTION | Ulth's Commons
-POI portal/Planar Gate | Echo Arch
-POI portal/Planar Gate | The Hollow Arch
+FACTION | The Wend Line
+POI portal/Planar Gate | Gate of Ash
+POI portal/Planar Gate | The Standing Gate
 POI portal/Planar Gate | The Wayward Arch
-POI settlement/Academy | Oakmoor
+POI settlement/Citadel | Thornreach
 POI settlement/Commune | Windhollow
 POI settlement/Fortress | Greyreach
-POI settlement/Fortress | Windhollow
 POI settlement/Garrison | Greyfall
-POI settlement/Keep | Greygate
-POI settlement/Keep | Thorngate
 POI settlement/Keep | Windwick
+POI settlement/Plantation | Thornhaven
+POI settlement/Prison | Oakfall
 POI settlement/Prison | Salthollow
 POI settlement/Village | Thornford
-REGION forest | The Endless Downs | Someone powerful has vanished, and their holdings are up for grabs | Foraging nomads | Livestock
-REGION frozen | Fenngard | The dead will not rest in one corner of the region | Displaced farmers | Vessels
-REGION grasslands | The Garr Hollow | The dead will not rest in one corner of the region | Isolated monks | Skilled Labor,Food
-REGION grasslands | The Mor Frontier | A prophecy has the population either fleeing or fortifying | Merchant caravans | Gemstones,Wood
-REGION hills | Ardhdale | A prophecy has the population either fleeing or fortifying | Restless soldiers | Vessels
-REGION hills | Lost Orn | Smugglers move something dangerous through the region | Fearful villagers | Medicine"
+REGION blighted | Shrouded Vael | A border dispute is sliding toward open conflict | Merchant caravans | cursed salt
+REGION desert | Downs of Drane | A bridge or pass collapsed, cutting off a community | Foraging nomads | date palm
+REGION frozen | The Hidden Wilds | Smugglers move something dangerous through the region | Isolated monks | whale-oil
+REGION grasslands | Forgotten Esk | A long-buried grievance has erupted into vendetta | Fearful villagers | wool
+REGION jungle | The Forsaken Hinterlands | A relic was stolen and rival parties race to recover it | Migratory herders | plant dye
+REGION mountains | Vale of Orn | A failing mine or harvest threatens the coming winter | Peaceful settlers | silver"
 `;
 
 exports[`generateWorld determinism fingerprint > small seed=gold-small is stable 1`] = `
-"  dangers: baited entrance enormous stump
-  dangers: signs posted hidden burrow
-  dangers: symbiotic entity primitive bridge
-  dangers: underwater crashed ship
-  features: a field of ash where nothing grows, Inactive Automaton
-  features: a glacier-cracked cairn, Active Volcano
-  features: a lone burial mound, Great Stone Face
-  features: a vine-swallowed step pyramid, Massive Dung Ball
-FACTION | Stalkers of the Thorn
-FACTION | The Orn Cooperative
+"  dangers: at crossroads rusted construct, exiled criminals
+  dangers: bioluminescence rotted mill, restless soldiers
+  dangers: constant screaming enormous stump
+  dangers: scattered traps abandoned tower
+  features: a circle of blackened standing stones, Dome of Darkness
+  features: a dry oasis with a poisoned well, Half-Buried Ark
+  features: a sunken boardwalk, Stalagmite Forest
+  features: a vine-swallowed step pyramid, Hanging Valley
+FACTION | Surn's Coven
+FACTION | The Mor Company
 FACTION | The Party
-FACTION | The Sable Circle
+FACTION | The Raven Kin
 POI portal/Planar Gate | Mistgate
-POI portal/Planar Gate | The Riven Door
-POI settlement/City | Blackfall
+POI portal/Planar Gate | The Pale Gate
+POI settlement/City | Greyreach
 POI settlement/Compound | Crowgate
-POI settlement/Garrison | Oakford
-POI settlement/Prison | Ashbury
-POI settlement/Town | Saltmill
-POI settlement/Villa | Windmoor
-POI settlement/Village | Oakhaven
-REGION blighted | Caelmark | Two settlements feud over the only reliable water source | Foraging nomads | Horses
-REGION frozen | Low Dun | A predator beast has learned to hunt people | Peaceful settlers | Skilled Labor
-REGION grasslands | Wilds of Tarn | Strange weather is ruining the season and frightening folk | Secretive druids | Tools
-REGION jungle | Tarngard | A predator beast has learned to hunt people | Fearful villagers | Stone"
+POI settlement/Convent | Saltgate
+POI settlement/Fortress | Saltreach
+POI settlement/Stronghold | Oakreach
+REGION blighted | The Thal Ashlands | Smugglers move something dangerous through the region | Exiled criminals | ashen ore
+REGION desert | Ornmark | A monster has driven hunters from the best game lands | Restless soldiers | date palm
+REGION jungle | The Lorn Deepwood | A failing mine or harvest threatens the coming winter | Displaced farmers | exotic spice
+REGION marsh | Heath of Tarn | Strange weather is ruining the season and frightening folk | Hardy hunters | peat"
 `;

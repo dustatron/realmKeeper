@@ -1,6 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { LootDensity } from "@domain/services/worldgen/lootDensity";
+import type { ResourcePack } from "@domain/data/worldgen/resources.catalog";
+import {
+  RESOURCE_PACKS,
+  DEFAULT_PACKS,
+  PACK_LABELS,
+  autoProposeResources,
+} from "@domain/data/worldgen/resourcePacks";
+import { SeededRandom } from "~/lib/dungeon/SeededRandom";
+import { ResourceMultiselect } from "~/ui/components/realm/ResourceMultiselect";
+import { BiomePreview } from "~/ui/components/realm/BiomePreview";
 import { PageHeader } from "~/components/shared/PageHeader";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -15,6 +25,7 @@ import {
 import { Textarea } from "~/components/ui/textarea";
 import { Switch } from "~/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
+import { Toggle } from "~/components/ui/toggle";
 import {
   Collapsible,
   CollapsibleContent,
@@ -50,6 +61,19 @@ export type RulesSystemIdType =
   (typeof RulesSystemIds)[keyof typeof RulesSystemIds];
 
 const DEFAULT_SYSTEM_ID = RulesSystemIds.cairn;
+
+// Themed doom-event names offered per enabled pack. Filtered by which packs the
+// user has on; "Random" and "None" are always available.
+const DOOM_NAMES_BY_PACK: Record<ResourcePack, string[]> = {
+  "low-fantasy": ["The Salt-Death", "The Long Hunger", "War of the Silver Mine"],
+  "high-fantasy": [
+    "The Crystal Wakes",
+    "The Wyrm Claims the Peak",
+    "The Blight Spreads",
+  ],
+  "sci-fi": ["The Machine Below Stirs", "Mutagen Bloom"],
+  doomed: ["The Tide of Ash", "The Cursed Lode", "The Dead Walk the Roads"],
+};
 
 // Shadowdark runs on a 4-watch day; everything else uses the global default.
 function defaultWatchesForSystem(systemId: string): number {
@@ -104,11 +128,56 @@ function NewRealmPage() {
   const [genPoiDensity, setGenPoiDensity] = useState<
     "sparse" | "normal" | "dense"
   >("normal");
-  const [genLoomingThreat, setGenLoomingThreat] = useState(true);
   const [genPortals, setGenPortals] = useState(true);
   const [genTreasureDensity, setGenTreasureDensity] = useState<LootDensity>('moderate');
   const [genMagicDensity, setGenMagicDensity] = useState<LootDensity>('moderate');
   const [genMonsterDensity, setGenMonsterDensity] = useState<LootDensity>('moderate');
+
+  // Resource-driven terrain controls.
+  const [genPacks, setGenPacks] = useState<ResourcePack[]>([...DEFAULT_PACKS]);
+  const [genResources, setGenResources] = useState<string[]>([]);
+  const [genUnclaimed, setGenUnclaimed] = useState(genSize === "large");
+  const [genLeyLines, setGenLeyLines] = useState(true);
+  const [genDoom, setGenDoom] = useState<string>("random");
+
+  // Auto-propose resources from packs/size/seed, then let the user edit. Re-runs
+  // whenever the inputs change; user edits are overwritten on the next change of
+  // packs/size/seed (the propose inputs), which is the intended behavior.
+  useEffect(() => {
+    const rng = new SeededRandom(genSeed.trim() || "auto");
+    setGenResources(autoProposeResources(genPacks, genSize, rng));
+  }, [genPacks, genSize, genSeed]);
+
+  const togglePack = (pack: ResourcePack, on: boolean) => {
+    setGenPacks((prev) =>
+      on ? [...prev, pack] : prev.filter((p) => p !== pack),
+    );
+  };
+
+  // Doom options visible to the user: Random/None plus themed names from enabled
+  // packs. Stable order (RESOURCE_PACKS), de-duped across overlapping packs.
+  const doomOptions = (() => {
+    const enabled = new Set(genPacks);
+    const names: string[] = [];
+    for (const pack of RESOURCE_PACKS) {
+      if (!enabled.has(pack)) continue;
+      for (const name of DOOM_NAMES_BY_PACK[pack]) {
+        if (!names.includes(name)) names.push(name);
+      }
+    }
+    return names;
+  })();
+
+  // If a themed doom was picked then its pack is disabled, fall back to Random.
+  useEffect(() => {
+    if (
+      genDoom !== "random" &&
+      genDoom !== "none" &&
+      !doomOptions.includes(genDoom)
+    ) {
+      setGenDoom("random");
+    }
+  }, [genDoom, doomOptions]);
 
   const handleCreateRealm = async () => {
     if (!createName.trim() || !createSystem) return;
@@ -130,7 +199,12 @@ function NewRealmPage() {
             factionTurnTrigger: createFactionTurnTrigger,
             poiDensity: genPoiDensity,
             factionCount: genFactions ?? undefined,
-            loomingThreat: genLoomingThreat,
+            resources: genResources,
+            packs: genPacks,
+            unclaimedDeposits: genUnclaimed,
+            leyLines: genLeyLines,
+            doom: genDoom,
+            loomingThreat: genDoom !== "none",
             portals: genPortals,
             worldTreasureDensity: genTreasureDensity,
             worldMagicDensity: genMagicDensity,
@@ -354,6 +428,42 @@ function NewRealmPage() {
               disabled={isCreating}
             />
           </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Theme packs</Label>
+            <p className="text-[11px] text-muted-foreground">
+              Each pack widens the resource pool a world can draw from.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {RESOURCE_PACKS.map((pack) => (
+                <Toggle
+                  key={pack}
+                  size="sm"
+                  variant="outline"
+                  pressed={genPacks.includes(pack)}
+                  onPressedChange={(on) => togglePack(pack, on)}
+                  disabled={isCreating}
+                >
+                  {PACK_LABELS[pack]}
+                </Toggle>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Resources</Label>
+            <p className="text-[11px] text-muted-foreground">
+              Raw resources determine the map's biomes. Auto-proposed from your
+              packs, size, and seed — edit freely.
+            </p>
+            <ResourceMultiselect
+              value={genResources}
+              onChange={setGenResources}
+              packs={genPacks}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Biome preview</Label>
+            <BiomePreview resources={genResources} />
+          </div>
           <div className="space-y-3">
             <p className="text-xs font-medium">Advanced</p>
             <p className="text-xs text-muted-foreground">
@@ -403,19 +513,61 @@ function NewRealmPage() {
                 </Select>
               </div>
             </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="gen-doom" className="text-xs">
+                Doom event
+              </Label>
+              <span className="text-[11px] text-muted-foreground">
+                A realm-wide threat that builds toward a climax over time.
+              </span>
+              <Select
+                value={genDoom}
+                onValueChange={setGenDoom}
+                disabled={isCreating}
+              >
+                <SelectTrigger id="gen-doom">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="random">Random</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
+                  {doomOptions.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-start justify-between gap-3">
               <div className="grid gap-0.5">
-                <Label htmlFor="gen-threat" className="text-xs">
-                  Doom event
+                <Label htmlFor="gen-unclaimed" className="text-xs">
+                  Unclaimed deposits
                 </Label>
                 <span className="text-[11px] text-muted-foreground">
-                  A realm-wide threat that builds toward a climax over time.
+                  Unclaimed resource veins become adventure sites.
                 </span>
               </div>
               <Switch
-                id="gen-threat"
-                checked={genLoomingThreat}
-                onCheckedChange={setGenLoomingThreat}
+                id="gen-unclaimed"
+                checked={genUnclaimed}
+                onCheckedChange={setGenUnclaimed}
+                disabled={isCreating}
+              />
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="grid gap-0.5">
+                <Label htmlFor="gen-ley-lines" className="text-xs">
+                  Ley lines
+                </Label>
+                <span className="text-[11px] text-muted-foreground">
+                  Magical ley lines linking power sites.
+                </span>
+              </div>
+              <Switch
+                id="gen-ley-lines"
+                checked={genLeyLines}
+                onCheckedChange={setGenLeyLines}
                 disabled={isCreating}
               />
             </div>

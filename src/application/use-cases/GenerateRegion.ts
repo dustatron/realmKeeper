@@ -219,6 +219,7 @@ export async function executeGenerateRegion(
     dangers,
     settlements,
     resources,
+    definingResource: null,
     people,
     problem: '',
     boundary: null,
