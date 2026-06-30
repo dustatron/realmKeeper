@@ -2,13 +2,13 @@ import { describe, it, expect } from 'vitest'
 import { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { cairnTableDefs } from '@domain/data/cairn-tables'
 import { settlementProblemTexts } from '@domain/data/worldgen/settlementProblems'
-import type { PoiKind } from '@domain/data/worldgen/poiKinds'
+import type { RollablePoiKind } from '@domain/data/worldgen/poiKinds'
 import { buildPoiFlavor } from './poiFlavor'
 
 const textsOf = (id: string) =>
   cairnTableDefs.find((t) => t.id === id)!.entries.map((e) => e.text)
 
-const KINDS: PoiKind[] = ['settlement', 'dungeon', 'ruin', 'landmark']
+const KINDS: RollablePoiKind[] = ['settlement', 'dungeon', 'ruin', 'landmark']
 
 describe('buildPoiFlavor', () => {
   it('fills structured flavor that names the POI for every kind', () => {

@@ -26,6 +26,7 @@ import type { Hook } from '@domain/entities/Hook'
 import { withHookIdDefault, withGameMapKindDefault } from './migrations/v36-defaults'
 import { withTownDefaults } from './migrations/v37-town-defaults'
 import { withDefiningResourceDefault } from './migrations/v42-resource-defaults'
+import { withTradeDefault } from './migrations/v43-trade-defaults'
 import { seedDatabase } from './seed'
 import { newId } from '@shared/ulid'
 
@@ -713,6 +714,16 @@ db.version(42).stores(storesV39).upgrade(async (tx) => {
   }
 })
 
+// v43: Add POI.trade (worldgen economy). No index change needed — backfill null.
+db.version(43).stores(storesV39).upgrade(async (tx) => {
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.trade === undefined) {
+      await tx.table('pois').put(withTradeDefault(poi))
+    }
+  }
+})
+
 // Normalize Realms on read — ensures starred arrays have defaults
 db.worlds.hook('reading', (realm) => {
   if (!realm) return realm
@@ -762,6 +773,7 @@ db.pois.hook('reading', (poi) => {
     lastVisitedDate: null,
     dangerLevel: null,
     currentOccupant: null,
+    trade: null,
   }
   for (const [key, val] of Object.entries(defaults)) {
     if (rec[key] === undefined) {

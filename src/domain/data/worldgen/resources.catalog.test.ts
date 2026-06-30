@@ -55,6 +55,26 @@ describe('resource catalog', () => {
     }
   })
 
+  it('every resource has a valid weightClass', () => {
+    for (const r of RESOURCE_CATALOG) {
+      expect(['bulk', 'luxury']).toContain(r.weightClass)
+    }
+  })
+
+  it("every finished good's inputs all resolve via resourceByName", () => {
+    for (const r of RESOURCE_CATALOG.filter((r) => r.tier === 'finished')) {
+      for (const input of r.inputs ?? []) {
+        expect(resourceByName(input), `${r.name} input "${input}"`).toBeDefined()
+      }
+    }
+  })
+
+  it('only finished goods declare inputs', () => {
+    for (const r of RESOURCE_CATALOG.filter((r) => r.tier === 'raw')) {
+      expect(r.inputs).toBeUndefined()
+    }
+  })
+
   it('resourceByName resolves known names and rejects unknown', () => {
     expect(resourceByName('iron ore')?.biome).toBe('mountains')
     expect(resourceByName('not-a-real-resource')).toBeUndefined()

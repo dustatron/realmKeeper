@@ -7,9 +7,9 @@ beforeAll(async () => {
   await db.open()
 })
 
-describe('db schema v42', () => {
-  it('opens at version 42', () => {
-    expect(db.verno).toBe(42)
+describe('db schema v43', () => {
+  it('opens at version 43', () => {
+    expect(db.verno).toBe(43)
   })
 
   it('round-trips a Connection and queries by both endpoints', async () => {

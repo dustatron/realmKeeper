@@ -149,6 +149,7 @@ export async function executeGenerateDungeon(
       lastVisitedDate: null,
       dangerLevel: null,
       currentOccupant: null,
+      trade: null,
       lightLevel: null,
       wanderingMonsters: [],
       encounterChance: null,

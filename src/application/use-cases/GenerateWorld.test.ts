@@ -173,7 +173,10 @@ describe('executeGenerateWorld', () => {
     const npcIds = new Set(npcs.map((n) => n.id))
     const connections = await db.connections.where('worldId').equals(realmId).toArray()
     expect(connections.length).toBeGreaterThan(0)
-    for (const c of connections) {
+    // Trade adds POI↔POI 'supplies' edges; this test covers the NPC edges only.
+    const npcConnections = connections.filter((c) => c.fromType === 'npc')
+    expect(npcConnections.length).toBeGreaterThan(0)
+    for (const c of npcConnections) {
       expect(npcIds.has(c.fromId)).toBe(true)
       expect(npcIds.has(c.toId)).toBe(true)
     }

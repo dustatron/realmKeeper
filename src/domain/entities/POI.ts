@@ -49,6 +49,8 @@ export interface POI {
   lastVisitedDate: WorldDate | null
   /** GM threat rating 1 (safe) – 5 (deadly). null = unrated. */
   dangerLevel: number | null
+  /** Economic role: the good this settlement produces and the goods it needs. null = no trade role. */
+  trade: { produces: string; needs: string[] } | null
   /** Who/what currently holds this place right now (living-world state). */
   currentOccupant: string | null
   lightLevel: 'bright' | 'dim' | 'dark' | null

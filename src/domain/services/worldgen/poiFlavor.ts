@@ -1,5 +1,5 @@
 import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
-import type { PoiKind } from '@domain/data/worldgen/poiKinds'
+import type { PoiKind, RollablePoiKind } from '@domain/data/worldgen/poiKinds'
 import { biomeLabel } from '@domain/data/worldgen/biomes'
 import { pickSettlementProblem } from '@domain/data/worldgen/settlementProblems'
 import { pickCairn } from './cairnPick'
@@ -37,7 +37,7 @@ function poiDressing(kind: PoiKind, rng: SeededRandom, tables?: ResolvedTables):
 // Each POI kind maps to a Cairn type + feature table pair. Cairn has no "ruin"
 // table, so ruins borrow the Lair tables (crumbling forts, ruined towns, …) and
 // landmarks borrow the Curiosity tables.
-const KIND_TABLES: Record<PoiKind, { type: string; feature: string }> = {
+const KIND_TABLES: Record<RollablePoiKind, { type: string; feature: string }> = {
   settlement: { type: 'table-cairn-settlement', feature: 'table-cairn-settlement-feature' },
   dungeon: { type: 'table-cairn-dungeon', feature: 'table-cairn-dungeon-feature' },
   ruin: { type: 'table-cairn-lair', feature: 'table-cairn-lair-feature' },
@@ -84,7 +84,7 @@ const SETTLEMENT_SENSORY = [
 // graffiti unruly copse"). Keeping the feature as a tag leaves a clean,
 // grammatical description and read-aloud. Deterministic given the same inputs.
 export function buildPoiFlavor(
-  kind: PoiKind,
+  kind: RollablePoiKind,
   name: string,
   biome: string,
   rng: SeededRandom,

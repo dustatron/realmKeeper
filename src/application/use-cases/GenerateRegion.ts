@@ -73,6 +73,7 @@ function makePoi(regionId: string, name: string, type: PoiType, description: str
     lastVisitedDate: null,
     dangerLevel: null,
     currentOccupant: null,
+    trade: null,
     lightLevel: null,
     wanderingMonsters: [],
     encounterChance: null,
