@@ -50,6 +50,13 @@ describe('generateWorld', () => {
     expect(new Set(names).size).toBe(names.length)
   })
 
+  it('overworld POIs have world-unique names', () => {
+    const { pois } = generateWorld(REALM, 'uniq-names', { cols: 16, rows: 16, poiDensity: 'dense' })
+    const overworld = pois.filter((p) => p.parentPoiId == null)
+    const names = overworld.map((p) => p.name)
+    expect(new Set(names).size).toBe(names.length)
+  })
+
   it('every region gets at least the per-region POI minimum (capped by its land cells)', () => {
     const { regions, pois } = generateWorld(REALM, 'seed-a', { cols: 12, rows: 12, poiDensity: 'sparse' })
     const countByRegion = new Map<string, number>()

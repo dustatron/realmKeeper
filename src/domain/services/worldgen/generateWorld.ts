@@ -307,11 +307,31 @@ export function generateWorld(
   // with the density knob.
   const MIN_POIS_PER_REGION = 4
 
+  // Overworld POI names must be unique across the world (interior building names
+  // may still repeat between settlements). Retry the generator a few times, then
+  // fall back to a numeral suffix.
+  const usedPoiNames = new Set<string>()
+  const uniquePoiName = (gen: () => string): string => {
+    for (let i = 0; i < 20; i++) {
+      const candidate = gen()
+      if (!usedPoiNames.has(candidate)) {
+        usedPoiNames.add(candidate)
+        return candidate
+      }
+    }
+    const base = gen()
+    let name = base
+    let k = 2
+    while (usedPoiNames.has(name)) name = `${base} ${k++}`
+    usedPoiNames.add(name)
+    return name
+  }
+
   const makePoi = (cell: CellMeta): POI => {
     const kind = rng.pickWeighted(POI_KIND_TABLE)
     const type = poiKindToType(kind)
     const nameKind = kind === 'landmark' ? 'landmark' : kind
-    const name = pickName(nameKind, rng, { tables: opts.tables })
+    const name = uniquePoiName(() => pickName(nameKind, rng, { tables: opts.tables }))
     // Every POI gets structured flavor: the Cairn type as a subtype label, its
     // feature as a tag, plus a clean description and read-aloud.
     const flavor = buildPoiFlavor(kind, name, cell.biome, rng, opts.tables)
@@ -524,7 +544,7 @@ export function generateWorld(
     const chosenCells = rng.sample(portalRegionCells, Math.min(portalTarget, portalRegionCells.length))
     const portalNames = rng.sample(PORTAL_NAMES, Math.min(chosenCells.length, PORTAL_NAMES.length))
     chosenCells.forEach((cell, i) => {
-      const name = portalNames[i] ?? `Gate ${i + 1}`
+      const name = uniquePoiName(() => portalNames[i] ?? `Gate ${i + 1}`)
       const portal = buildPOI({
         regionId: cell.regionId,
         name,
@@ -615,6 +635,7 @@ export function generateWorld(
         position: { x: cm.cx, y: cm.cy },
         mapRef: gameMap.id,
         tables: opts.tables,
+        usedNames: usedPoiNames,
       }),
     )
     usedCells.add(`${cm.q},${cm.r}`)
