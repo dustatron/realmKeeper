@@ -109,10 +109,10 @@ describe('generateWorld', () => {
     }
   })
 
-  it('carves at least one lake', () => {
+  it('carves multiple lakes so water is a common feature', () => {
     const { gameMap } = generateWorld(REALM, 'seed-a', { cols: 12, rows: 12 })
     const lakeCells = gameMap.hexCells!.filter((c) => c.biome === 'lake')
-    expect(lakeCells.length).toBeGreaterThan(0)
+    expect(lakeCells.length).toBeGreaterThanOrEqual(3)
   })
 
   it('every dungeon stub uses a valid DungeonTheme', () => {

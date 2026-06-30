@@ -13,19 +13,19 @@ exports[`generateWorld determinism fingerprint > medium seed=gold-medium is stab
   features: a lone burial mound, Heart Tree
   features: a river idol slick with offerings, Titan's Table
   features: an eagle-haunted high pass, Inactive Automaton
-FACTION | The Black Conclave
-FACTION | The Chain Wanderers
-FACTION | The Key League
-FACTION | The Maur Communion
+FACTION | Brotherhood of the Thorn
+FACTION | The Chain Grange
+FACTION | The Emerald Communion
 FACTION | The Party
-FACTION | The Wend Line
+FACTION | Ulth's Consortium
+FACTION | Wend's Company
 POI portal/Planar Gate | Gate of Ash
-POI portal/Planar Gate | The Standing Gate
 POI portal/Planar Gate | The Wayward Arch
-POI settlement/Citadel | Thornreach
-POI settlement/Commune | Windhollow
-POI settlement/Fortress | Greyreach
+POI portal/Planar Gate | Threshold Stone
+POI settlement/Garrison | Fernmill
 POI settlement/Garrison | Greyfall
+POI settlement/Hamlet | Saltgate
+POI settlement/Outpost | Fernhaven
 POI settlement/Prison | Oakfall
 POI settlement/Prison | Salthollow
 POI settlement/Village | Thornford
@@ -46,14 +46,16 @@ exports[`generateWorld determinism fingerprint > small seed=gold-small is stable
   features: a dry oasis with a poisoned well, Half-Buried Ark
   features: a sunken boardwalk, Stalagmite Forest
   features: a vine-swallowed step pyramid, Hanging Valley
+FACTION | Banner of the Crown
 FACTION | Chain of the Spire
-FACTION | Clan of Dun
+FACTION | The Broken Faithful
 FACTION | The Party
-FACTION | The Surn Faithful
 POI portal/Planar Gate | Gate of Ash
-POI portal/Planar Gate | The Hollow Arch
-POI settlement/City | Greyreach
-POI settlement/Compound | Crowgate
+POI portal/Planar Gate | Threshold Stone
+POI settlement/Compound | Salthollow
+POI settlement/Compound | Stonehollow
+POI settlement/Compound | Thornmill
+POI settlement/Prison | Thornhaven
 POI settlement/Town | Saltmill
 REGION blighted | The Thal Ashlands | Smugglers move something dangerous through the region | Exiled criminals | ashen ore
 REGION desert | Ornmark | A monster has driven hunters from the best game lands | Restless soldiers | date palm
