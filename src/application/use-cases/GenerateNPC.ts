@@ -1,7 +1,6 @@
 import type { SystemConfig } from '@domain/entities/SystemConfig'
 import type { NPC } from '@domain/entities/NPC'
 import type { ITableRepository } from '@application/ports/ITableRepository'
-import { rollDisposition } from '@shared/dice'
 import { newId } from '@shared/ulid'
 import { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { buildNpc } from '@domain/services/worldgen/buildNpc'
@@ -33,7 +32,9 @@ export async function executeGenerateNPC(
 ): Promise<NPC> {
   const tables = await deps.tableRepo.resolveAll()
   const rng = new SeededRandom(newId())
-  const npc = buildNpc(
+  // buildNpc sets a (seeded) disposition itself; in an encounter that disposition
+  // stands in for a reaction (the cascade rolls a separate 2d6 only for creatures).
+  return buildNpc(
     {
       worldId: input.worldId,
       factionId: input.factionId,
@@ -44,8 +45,4 @@ export async function executeGenerateNPC(
     input.systemConfig,
     rng,
   )
-  // Live NPCs get a disposition up front; in an encounter the NPC's own
-  // disposition stands in for a reaction (the cascade no longer rolls a separate
-  // 2d6 reaction for NPCs — only creatures do).
-  return { ...npc, disposition: rollDisposition() }
 }

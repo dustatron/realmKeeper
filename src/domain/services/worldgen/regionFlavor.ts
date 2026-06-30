@@ -1,7 +1,7 @@
 import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { pickBiomeFeature, biomeLabel, type Biome } from '@domain/data/worldgen/biomes'
 import { pickCairn, sampleCairn } from './cairnPick'
-import type { ResolvedTables } from './TableProvider'
+import { resolvePool, type ResolvedTables } from './TableProvider'
 import {
   DEITY_TABLE_ID, DEITIES,
   CULTURE_QUIRK_TABLE_ID, CULTURE_QUIRKS,
@@ -179,16 +179,12 @@ export function buildRegionFlavor(biome: Biome, rng: SeededRandom, tables?: Reso
 
   // Additive worldbuilding flavor (religion, custom, the occasional wonder or
   // sickness). All from CHILD rngs so downstream seeded output stays stable.
-  const poolOf = (id: string, fb: readonly string[]) => {
-    const t = tables?.texts(id)
-    return t && t.length > 0 ? t : fb
-  }
-  const deity = rng.child('region-deity').pick(poolOf(DEITY_TABLE_ID, DEITIES))
-  const culture = rng.child('region-culture').pick(poolOf(CULTURE_QUIRK_TABLE_ID, CULTURE_QUIRKS))
+  const deity = rng.child('region-deity').pick(resolvePool(tables, DEITY_TABLE_ID, DEITIES))
+  const culture = rng.child('region-culture').pick(resolvePool(tables, CULTURE_QUIRK_TABLE_ID, CULTURE_QUIRKS))
   const lr = rng.child('region-landscape')
-  const landscape = lr.chance(0.4) ? lr.pick(poolOf(MAGICAL_LANDSCAPE_TABLE_ID, MAGICAL_LANDSCAPES)) : null
+  const landscape = lr.chance(0.4) ? lr.pick(resolvePool(tables, MAGICAL_LANDSCAPE_TABLE_ID, MAGICAL_LANDSCAPES)) : null
   const dr = rng.child('region-disease')
-  const disease = dr.chance(0.2) ? dr.pick(poolOf(DISEASE_TABLE_ID, DISEASES)) : null
+  const disease = dr.chance(0.2) ? dr.pick(resolvePool(tables, DISEASE_TABLE_ID, DISEASES)) : null
 
   const description =
     `A region of ${biomeLabel(biome)}, marked by ${landmark.toLowerCase()}. ` +

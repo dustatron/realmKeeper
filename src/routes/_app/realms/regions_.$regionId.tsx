@@ -121,6 +121,7 @@ import {
   POI_TYPES,
   POI_EVENT_TYPES,
   SEASONS,
+  TERRAIN_OPTIONS,
   type PoiType,
   type POIEventType,
   type Season,
@@ -135,19 +136,6 @@ export const Route = createFileRoute("/_app/realms/regions_/$regionId")({
     ...(search.edit === "true" || search.edit === true ? { edit: true } : {}),
   }),
 });
-
-const TERRAIN_OPTIONS = [
-  "plains",
-  "forest",
-  "hills",
-  "mountain",
-  "swamp",
-  "desert",
-  "coast",
-  "road",
-  "tundra",
-  "other",
-] as const;
 
 const POI_TYPE_ICONS: Record<
   PoiType,

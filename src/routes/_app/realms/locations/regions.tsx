@@ -25,15 +25,11 @@ import { Badge } from '~/components/ui/badge'
 import { Map, Plus, Dices, Trash2, Pencil, RefreshCw, Save, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Region } from '@domain/entities/Region'
 import type { POI } from '@domain/entities/POI'
+import { TERRAIN_OPTIONS } from '@shared/constants'
 
 export const Route = createFileRoute('/_app/realms/locations/regions')({
   component: RegionsPage,
 })
-
-const TERRAIN_OPTIONS = [
-  'plains', 'forest', 'hills', 'mountain', 'swamp',
-  'desert', 'coast', 'road', 'tundra', 'other',
-] as const
 
 const AUTO_COLORS = [
   '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4',

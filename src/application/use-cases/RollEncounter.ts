@@ -3,7 +3,7 @@ import type { EncounterTable } from '@domain/entities/EncounterTable'
 import type { EncounterCategory } from '@shared/constants'
 import { rollDice } from '@shared/dice'
 import { DEFAULT_ENCOUNTER_ENTRIES } from '@domain/data/default-encounter-tables'
-import { ENCOUNTER_CATEGORIES } from '@shared/constants'
+import { ENCOUNTER_CATEGORIES, type Terrain } from '@shared/constants'
 import { FOREST_ENCOUNTERS, SETTLEMENT_ENCOUNTERS } from '@domain/data/worldgen/encounters.tables'
 import { TRAVEL_ENCOUNTERS } from '@domain/data/worldgen/travel.tables'
 import {
@@ -27,8 +27,13 @@ const CATEGORY_LABELS: Record<EncounterCategory, string> = {
 /** Synthetic category id for the context-driven terrain/locale encounter section. */
 export const TERRAIN_FLAVOR_CATEGORY = 'terrain-flavor'
 
-/** Region terrain → flat encounter list (+ label) for the cascade's locale section. */
-const TERRAIN_ENCOUNTERS: Record<string, { label: string; entries: readonly string[] }> = {
+/**
+ * Region terrain → flat encounter list (+ label) for the cascade's locale section.
+ * Exhaustive over Terrain (null = no biome list) so adding a new terrain to
+ * TERRAIN_OPTIONS fails the build here until it's mapped — no terrain can
+ * silently end up with zero encounters.
+ */
+const TERRAIN_ENCOUNTERS: Record<Terrain, { label: string; entries: readonly string[] } | null> = {
   forest: { label: 'Forest', entries: FOREST_ENCOUNTERS },
   road: { label: 'Roadside', entries: TRAVEL_ENCOUNTERS },
   swamp: { label: 'Swamp', entries: SWAMP_ENCOUNTERS },
@@ -38,6 +43,7 @@ const TERRAIN_ENCOUNTERS: Record<string, { label: string; entries: readonly stri
   hills: { label: 'Hills', entries: MOUNTAIN_ENCOUNTERS },
   plains: { label: 'Plains', entries: PLAINS_ENCOUNTERS },
   tundra: { label: 'Tundra', entries: TUNDRA_ENCOUNTERS },
+  other: null,
 }
 
 export interface EncounterSectionContext {
@@ -60,7 +66,8 @@ export function getTerrainEncounterSection(
   if (context.poiType === 'settlement') {
     return { category: TERRAIN_FLAVOR_CATEGORY, label: 'Town Street', entries: [...SETTLEMENT_ENCOUNTERS], isCustom: true }
   }
-  const terrain = context.terrain ? TERRAIN_ENCOUNTERS[context.terrain] : undefined
+  // Cast is safe: an unknown terrain string indexes to undefined and falls through.
+  const terrain = context.terrain ? TERRAIN_ENCOUNTERS[context.terrain as Terrain] : undefined
   if (!terrain) return null
   return { category: TERRAIN_FLAVOR_CATEGORY, label: terrain.label, entries: [...terrain.entries], isCustom: true }
 }

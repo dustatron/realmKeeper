@@ -3,7 +3,7 @@ import type { PoiKind } from '@domain/data/worldgen/poiKinds'
 import { biomeLabel } from '@domain/data/worldgen/biomes'
 import { pickSettlementProblem } from '@domain/data/worldgen/settlementProblems'
 import { pickCairn } from './cairnPick'
-import type { ResolvedTables } from './TableProvider'
+import { resolvePool, type ResolvedTables } from './TableProvider'
 import {
   DUNGEON_GRAFFITI_TABLE_ID, DUNGEON_GRAFFITI,
   STATUE_TABLE_ID, STATUES,
@@ -14,17 +14,12 @@ import {
   DEITY_TABLE_ID, DEITIES,
 } from '@domain/data/worldgen/world-flavor.tables'
 
-function poolOf(tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): readonly string[] {
-  const texts = tables?.texts(id)
-  return texts && texts.length > 0 ? texts : fallback
-}
-
 // A kind-appropriate dressing detail (graffiti, statue, epitaph, fountain, or a
 // patron deity). Drawn from a CHILD rng so it never advances the main seeded
 // stream — the type/feature/trouble/mood picks stay byte-identical.
 function poiDressing(kind: PoiKind, rng: SeededRandom, tables?: ResolvedTables): string {
   const dr = rng.child('poi-dressing')
-  const pick = (id: string, fb: readonly string[]) => dr.pick(poolOf(tables, id, fb))
+  const pick = (id: string, fb: readonly string[]) => dr.pick(resolvePool(tables, id, fb))
   switch (kind) {
     case 'dungeon':
       return ` ${pick(DUNGEON_GRAFFITI_TABLE_ID, DUNGEON_GRAFFITI)} ${pick(STATUE_TABLE_ID, STATUES)}`

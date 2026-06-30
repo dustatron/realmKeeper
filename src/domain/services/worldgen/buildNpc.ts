@@ -11,7 +11,8 @@ import { pickCairn } from './cairnPick'
 import { makeSeededDice } from './seededDice'
 import { pickNpcWant } from '@domain/data/worldgen/npcWants'
 import { buildHumanoidFlavor } from './npcFactory'
-import type { ResolvedTables } from './TableProvider'
+import { resolvePool, type ResolvedTables } from './TableProvider'
+import { dispositionForRoll } from '@shared/dice'
 import {
   NPC_FAVOR_TABLE_ID, NPC_PURSUIT_TABLE_ID, NPC_FLAW_TABLE_ID, NPC_FLAWS,
   NPC_PROFESSION_TABLE_ID, NPC_ARTISAN_TABLE_ID, PROFESSIONS, ARTISAN_TRADES,
@@ -24,11 +25,6 @@ import {
   NPC_VILLAIN_TRAIT_TABLE_ID, NPC_VILLAIN_TRAITS,
 } from '@domain/data/worldgen/npc-extra.tables'
 
-function pool(tables: ResolvedTables | undefined, id: string, fallback: readonly string[]): readonly string[] {
-  const t = tables?.texts(id)
-  return t && t.length > 0 ? t : fallback
-}
-
 // A first name / surname from the (editable) Cairn name tables, falling back to
 // the static Cairn data.
 function liveCairn(rng: SeededRandom, tables: ResolvedTables | undefined, id: string): string {
@@ -39,8 +35,8 @@ function liveCairn(rng: SeededRandom, tables: ResolvedTables | undefined, id: st
 // A general profession for townsfolk who aren't tied to a specific shop. Mirrors
 // the source's profession → artisan-specialty cascade.
 function pickProfession(rng: SeededRandom, tables: ResolvedTables | undefined): string {
-  const prof = rng.pick(pool(tables, NPC_PROFESSION_TABLE_ID, PROFESSIONS))
-  if (/artisan/i.test(prof)) return rng.pick(pool(tables, NPC_ARTISAN_TABLE_ID, ARTISAN_TRADES))
+  const prof = rng.pick(resolvePool(tables, NPC_PROFESSION_TABLE_ID, PROFESSIONS))
+  if (/artisan/i.test(prof)) return rng.pick(resolvePool(tables, NPC_ARTISAN_TABLE_ID, ARTISAN_TRADES))
   return prof
 }
 
@@ -143,19 +139,19 @@ export function buildNpc(
   // --- Extra flavor ---
   // All drawn via CHILD RNGs so they're deterministic per-NPC but never advance
   // the main seeded stream (keeps name/traits/stats/want byte-identical).
-  const lookHook = rng.child('npc-look').pick(pool(input.tables, NPC_APPEARANCE_TABLE_ID, NPC_APPEARANCES))
+  const lookHook = rng.child('npc-look').pick(resolvePool(input.tables, NPC_APPEARANCE_TABLE_ID, NPC_APPEARANCES))
   // Appearance = what they look like (physical traits + a memorable hook).
   const appearance = `${flavor.appearance} ${lookHook}`
 
   const mr = rng.child('npc-mannerism')
-  const mannerism = mr.chance(0.6) ? mr.pick(pool(input.tables, NPC_MANNERISM_TABLE_ID, NPC_MANNERISMS)) : null
+  const mannerism = mr.chance(0.6) ? mr.pick(resolvePool(input.tables, NPC_MANNERISM_TABLE_ID, NPC_MANNERISMS)) : null
   const pr = rng.child('npc-pocket')
-  const pocket = pr.chance(0.5) ? pr.pick(pool(input.tables, NPC_POCKET_ITEM_TABLE_ID, NPC_POCKET_ITEMS)) : null
+  const pocket = pr.chance(0.5) ? pr.pick(resolvePool(input.tables, NPC_POCKET_ITEM_TABLE_ID, NPC_POCKET_ITEMS)) : null
   const sr = rng.child('npc-secret')
-  const secret = sr.chance(0.4) ? sr.pick(pool(input.tables, NPC_SECRET_TABLE_ID, NPC_SECRETS)) : null
+  const secret = sr.chance(0.4) ? sr.pick(resolvePool(input.tables, NPC_SECRET_TABLE_ID, NPC_SECRETS)) : null
   const vr = rng.child('npc-villain')
   const villain = (role === 'leader' || role === 'agent') && vr.chance(0.5)
-    ? vr.pick(pool(input.tables, NPC_VILLAIN_TRAIT_TABLE_ID, NPC_VILLAIN_TRAITS))
+    ? vr.pick(resolvePool(input.tables, NPC_VILLAIN_TRAIT_TABLE_ID, NPC_VILLAIN_TRAITS))
     : null
 
   // Description = who they are (identity). Temperament lives in the Traits row
@@ -173,6 +169,11 @@ export function buildNpc(
     secret ? `Secret: ${secret}` : null,
   ].filter(Boolean).join('\n')
 
+  // Disposition toward the party — seeded (child rng) so it's set on EVERY NPC,
+  // whatever the creation path (world-gen proprietors/leaders, encounter, etc.).
+  const dispRng = rng.child('npc-disposition')
+  const disposition = dispositionForRoll(dispRng.between(1, 6) + dispRng.between(1, 6))
+
   return {
     id: newId(),
     worldId: input.worldId,
@@ -185,6 +186,7 @@ export function buildNpc(
     movementStatus: 'present',
     description,
     notable: notable || undefined,
+    disposition,
     traits: flavor.traits,
     motivation: flavor.motivation,
     appearance,
