@@ -1,8 +1,22 @@
 # Resource-Driven World Generation — Design Spec
 
-> **Status:** Design (not yet scheduled). Per-phase implementation plans get written as each phase starts.
 > **Author:** Design conversation, 2026-06-30.
 > **Supersedes/extends:** `2026-06-24-procedural-world-generation-design.md` (the existing 5-phase worldgen). This builds on the shipped pipeline in `src/domain/services/worldgen/`.
+
+## Progress (as of 2026-06-30)
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| **1 — Terrain foundation** | ✅ **merged** | resource catalog + packs, `resourcesToBiomes`, elevation, rivers geometry, `Region.definingResource`, create-realm resource UI. Plan: `plans/2026-06-30-resource-worldgen-phase1-terrain.md` |
+| **2 — Economic core** | ✅ **merged** | `POI.trade`, trade graph (`buildTradeConnections`, `'supplies'`), `natural_site` PoiKind + `buildNaturalSite`, unmet-need troubles, v43 migration. Plan: `...phase2-economy.md` |
+| **3 — Wealth + story** | ✅ **merged** | `wealth.ts` (band/tier/faction), `seedStories`, `regionFronts`, `POI.wealthBand`/`NPC.wealthTier`/`Region.front`, v44 migration. Plan: `...phase3-wealth.md` |
+| **4 — Map UX & layers** | 🔵 **in review (PR #66)** | render rivers/chokepoints/trade/treasure/resources + wealth tint, layer toggle control, wealth badges, region/settlement data lists. Plan: `...phase4-map-ux.md`. **Deferred:** discovery fog. |
+| **5 — Arcane / ley-lines** | ⬜ not started | ley network through magical deposits + portals/standing-stones; blight cosmology. Create-realm ley toggle already ships (P1). |
+| **6 — Doom v2** | ⬜ not started | promote one-shot `buildDoom` → `Doom` entity + clock + detail page + stage events + supply-chain coupling + session digest + create-realm doom selector. One doom per realm for v1. |
+
+**Content & Tables track:** race-names legal fix ✅ merged. Still pending (parallel, independent): agnosticism re-authors for `treasure-tables`, `trap-tables`, `dungeon-event-tables`, `settlementProblems`, `travel.tables`, `wandering-monster-activities`; quality-cliff lifts (`npc.tables` motivations, `settlement.tables` known-for). See "Content & Tables track" section below.
+
+**Current state to resume from:** `main` has P1–P3 + several map/UX bugfixes merged; Dexie at **v44**. Phase 4 is PR #66 (branch `feature/resource-worldgen-p4-map-ux`). Next: merge #66, then Phase 6 (recommended) or Phase 5. Build/test via `node_modules/.bin/vitest run` + `tsc --noEmit` (pnpm wrapper broken in this env). Worldgen changes only affect newly generated realms (local-first).
 
 ## Goal
 
