@@ -45,6 +45,7 @@ type Container = {
   encounterTableRepo: Parameters<typeof executeCreateEncounterTable>[1]['encounterTableRepo']
   npcRepo: Parameters<typeof executeUpdateNPC>[1]['npcRepo']
   tableRepo: Parameters<typeof executeGenerateNPC>[1]['tableRepo']
+  realmRepo: Parameters<typeof executeGenerateNPC>[1]['realmRepo']
 }
 
 export function usePOIActions(poi: POI | null | undefined, region: Region | null | undefined, encounterTable: EncounterTable | null | undefined, container: Container, systemConfig: SystemConfig | null | undefined) {
@@ -153,6 +154,7 @@ export function usePOIActions(poi: POI | null | undefined, region: Region | null
     const deps: CascadeUseCaseDeps = {
       encounterTableRepo: container.encounterTableRepo,
       tableRepo: container.tableRepo,
+      realmRepo: container.realmRepo,
     }
     return executeEncounterCascade(action, ctx, deps)
   }

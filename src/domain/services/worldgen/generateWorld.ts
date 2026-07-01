@@ -112,7 +112,7 @@ export function generateWorld(
   const { cols, rows, hexSize = 40, poiDensity = 'normal' } = opts
   const rng = new SeededRandom(seed)
   // Expanded-names option: a shared per-world set so NPC names never repeat.
-  const expandedNames = opts.expandedNames ?? false
+  const expandedNames = opts.expandedNames ?? true
   const usedNpcNames = new Set<string>()
 
   // Step 1: layout grid

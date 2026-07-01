@@ -114,6 +114,7 @@ export async function executeGenerateWorld(
         daysPerWeek: input.daysPerWeek,
         moonCycleLength: input.moonCycleLength,
         factionTurnTrigger: input.factionTurnTrigger,
+        expandedNames: input.expandedNames,
       },
       deps
     )
@@ -129,7 +130,7 @@ export async function executeGenerateWorld(
       unclaimedDeposits: input.unclaimedDeposits,
       loomingThreat: input.loomingThreat ?? true,
       doom: input.doom,
-      expandedNames: input.expandedNames ?? false,
+      expandedNames: input.expandedNames ?? true,
       portals: input.portals ?? true,
       realmContent: {
         treasureDensity: input.worldTreasureDensity ?? 'moderate',

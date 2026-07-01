@@ -14,6 +14,9 @@ export interface Realm {
   watchesPerDay: number
   moonCycleLength: number
   factionTurnTrigger: 'day' | 'week' | 'manual'
+  /** Draw NPC names from the large expanded pool (vs. the system name tables).
+   * On by default; may be undefined on realms created before this field existed. */
+  expandedNames?: boolean
   completedThroughDay: number
   customRaces: string[]
   raceColors: Record<string, string>

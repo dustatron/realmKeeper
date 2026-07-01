@@ -1,5 +1,6 @@
 import type { IEncounterTableRepository } from '@application/ports/IEncounterTableRepository'
 import type { ITableRepository } from '@application/ports/ITableRepository'
+import type { IRealmRepository } from '@application/ports/IRealmRepository'
 import type { EncounterTable } from '@domain/entities/EncounterTable'
 import type { EncounterRollResult } from '@domain/value-objects/EncounterRollResult'
 import type { SystemConfig } from '@domain/entities/SystemConfig'
@@ -38,6 +39,7 @@ export interface CascadeContext {
 export interface CascadeUseCaseDeps {
   encounterTableRepo: IEncounterTableRepository
   tableRepo: ITableRepository
+  realmRepo: IRealmRepository
 }
 
 export type CascadeAction =
@@ -70,7 +72,7 @@ export function buildCascadeEffects(
           systemConfig: ctx.systemConfig,
           regionId: ctx.regionId ?? undefined,
         },
-        { tableRepo: deps.tableRepo },
+        { tableRepo: deps.tableRepo, realmRepo: deps.realmRepo },
       ),
     matchMonster: (text) => matchCompendiumMonster(text, ctx.systemConfig.id),
     matchLocation: ctx.regionPois ? (text) => matchRegionLocation(text, ctx.regionPois!) : undefined,

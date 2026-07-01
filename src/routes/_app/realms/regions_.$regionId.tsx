@@ -883,7 +883,7 @@ function RegionDetailPage() {
     try {
       const npc = await executeGenerateNPC(
         { worldId: realm.id, systemConfig, regionId: region.id },
-        { tableRepo: container.tableRepo },
+        { tableRepo: container.tableRepo, realmRepo: container.realmRepo },
       );
       await executeCreateNPC(npc, { npcRepo: container.npcRepo });
       navigate({ to: "/realms/npcs/$npcId", params: { npcId: npc.id } });
@@ -1021,6 +1021,7 @@ function RegionDetailPage() {
     const deps: CascadeUseCaseDeps = {
       encounterTableRepo: container.encounterTableRepo,
       tableRepo: container.tableRepo,
+      realmRepo: container.realmRepo,
     };
     return executeEncounterCascade(action, ctx, deps);
   };

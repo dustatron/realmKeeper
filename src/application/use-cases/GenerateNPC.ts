@@ -1,6 +1,7 @@
 import type { SystemConfig } from '@domain/entities/SystemConfig'
 import type { NPC } from '@domain/entities/NPC'
 import type { ITableRepository } from '@application/ports/ITableRepository'
+import type { IRealmRepository } from '@application/ports/IRealmRepository'
 import { newId } from '@shared/ulid'
 import { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { buildNpc } from '@domain/services/worldgen/buildNpc'
@@ -15,6 +16,7 @@ export interface GenerateNPCInput {
 
 export interface GenerateNPCDeps {
   tableRepo: ITableRepository
+  realmRepo: IRealmRepository
 }
 
 /**
@@ -32,6 +34,10 @@ export async function executeGenerateNPC(
 ): Promise<NPC> {
   const tables = await deps.tableRepo.resolveAll()
   const rng = new SeededRandom(newId())
+  // Honor the realm's expanded-names setting (on by default, incl. realms created
+  // before the field existed) so on-demand NPCs match the world's name pool.
+  const realm = await deps.realmRepo.getById(input.worldId)
+  const expandedNames = realm?.expandedNames ?? true
   // buildNpc sets a (seeded) disposition itself; in an encounter that disposition
   // stands in for a reaction (the cascade rolls a separate 2d6 only for creatures).
   return buildNpc(
@@ -41,6 +47,7 @@ export async function executeGenerateNPC(
       regionId: input.regionId,
       customRaces: input.customRaces,
       tables,
+      expandedNames,
     },
     input.systemConfig,
     rng,
