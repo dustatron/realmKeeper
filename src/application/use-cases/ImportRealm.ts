@@ -13,8 +13,10 @@ import type { IPOIEventRepository } from '@application/ports/IPOIEventRepository
 import type { IGameMapRepository } from '@application/ports/IGameMapRepository'
 import type { IConnectionRepository } from '@application/ports/IConnectionRepository'
 import type { IHookRepository } from '@application/ports/IHookRepository'
+import type { IDoomRepository } from '@application/ports/IDoomRepository'
 import type { Connection } from '@domain/entities/Connection'
 import type { Hook } from '@domain/entities/Hook'
+import type { Doom } from '@domain/entities/Doom'
 import type { RealmExport, GameMapExport } from './ExportRealm'
 import { newId } from '@shared/ulid'
 import { DEFAULT_MOON_CYCLE_LENGTH } from '@shared/constants'
@@ -35,6 +37,7 @@ export interface ImportRealmDeps {
   gameMapRepo: IGameMapRepository
   connectionRepo: IConnectionRepository
   hookRepo: IHookRepository
+  doomRepo: IDoomRepository
 }
 
 type LegacyExport = Omit<
@@ -288,6 +291,18 @@ export async function executeImportRealm(
       fromId: remap(c.fromId),
       toId: remap(c.toId),
       hookId: c.hookId ? remap(c.hookId) : null,
+    })
+  }
+
+  // Dooms (v45+)
+  const dooms: Doom[] = (data as { dooms?: Doom[] }).dooms ?? []
+  for (const d of dooms) {
+    await deps.doomRepo.create({
+      ...d,
+      id: remap(d.id),
+      worldId,
+      doomFactionId: d.doomFactionId ? remap(d.doomFactionId) : null,
+      hookId: d.hookId ? remap(d.hookId) : null,
     })
   }
 

@@ -23,6 +23,7 @@ import type { EntityNote } from '@domain/entities/EntityNote'
 import type { CustomCompendiumEntry } from '@domain/entities/CustomCompendiumEntry'
 import type { Connection } from '@domain/entities/Connection'
 import type { Hook } from '@domain/entities/Hook'
+import type { Doom } from '@domain/entities/Doom'
 import { withHookIdDefault, withGameMapKindDefault } from './migrations/v36-defaults'
 import { withTownDefaults } from './migrations/v37-town-defaults'
 import { withDefiningResourceDefault } from './migrations/v42-resource-defaults'
@@ -62,6 +63,7 @@ type AppDB = Omit<Dexie, 'realms'> & {
   customCompendiumEntries: EntityTable<CustomCompendiumEntry, 'id'>
   connections: EntityTable<Connection, 'id'>
   hooks: EntityTable<Hook, 'id'>
+  dooms: EntityTable<Doom, 'id'>
 }
 
 const db = new Dexie('RealmKeeperDB', {
@@ -726,6 +728,8 @@ db.version(43).stores(storesV39).upgrade(async (tx) => {
   }
 })
 
+const storesV46 = { ...storesV39, dooms: 'id, worldId, status' }
+
 // v44: Wealth + story fields. Backfill POI.wealthBand, NPC.wealthTier, Region.front
 // to null. No index change needed.
 db.version(44).stores(storesV39).upgrade(async (tx) => {
@@ -751,9 +755,6 @@ db.version(44).stores(storesV39).upgrade(async (tx) => {
 
 // v45: Backfill POI.settlementFlavor from legacy stitched settlement descriptions;
 // move the GM secret into gmNotes. No index change needed.
-// ⚠️ MERGE COORDINATION: the Phase 6 doom branch also introduces a v45 (the `dooms`
-// table). Whichever branch merges second MUST renumber this to the next free
-// version and re-verify the upgrade chain.
 db.version(45).stores(storesV39).upgrade(async (tx) => {
   const pois = await tx.table('pois').toArray()
   for (const poi of pois) {
@@ -762,6 +763,9 @@ db.version(45).stores(storesV39).upgrade(async (tx) => {
     }
   }
 })
+
+// v46: Add dooms table (Phase 6). New table only — no data backfill required.
+db.version(46).stores(storesV46)
 
 // Normalize Realms on read — ensures starred arrays have defaults
 db.worlds.hook('reading', (realm) => {

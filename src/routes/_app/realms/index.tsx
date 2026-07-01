@@ -170,6 +170,7 @@ function RealmsPage() {
         gameMapRepo: container.gameMapRepo,
         connectionRepo: container.connectionRepo,
         hookRepo: container.hookRepo,
+        doomRepo: container.doomRepo,
       });
 
       if (!data) return;
@@ -216,6 +217,7 @@ function RealmsPage() {
         gameMapRepo: container.gameMapRepo,
         connectionRepo: container.connectionRepo,
         hookRepo: container.hookRepo,
+        doomRepo: container.doomRepo,
       });
 
       setActiveRealmId(newRealmId);
