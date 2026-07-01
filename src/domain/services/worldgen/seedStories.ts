@@ -11,6 +11,7 @@ export type WealthBand = 'destitute' | 'poor' | 'modest' | 'prosperous' | 'rich'
 // live entities, so it stays a pure pass with no Dexie dependency.
 export interface StorySettlement {
   id: string
+  name: string
   regionId: string
   wealthBand: WealthBand | null
   produces: string | null
@@ -112,7 +113,7 @@ export function seedStories(input: SeedStoriesInput): StoryBundle {
     const tone = toneFor(sett.wealthBand)
     const pool = hooksForTone(tone)
     const template = rng.pick(pool)
-    const town = sett.id // abstract snapshot: the caller resolves real names
+    const town = sett.name
     const good = sett.produces ?? 'trade'
     const hookId = newId()
 
