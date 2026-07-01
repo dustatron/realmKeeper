@@ -1,9 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@infrastructure/dexie/db'
 
+// Returns `undefined` while the query is loading, `null` when the doom does not
+// exist (so callers can tell "loading" apart from "not found"), else the Doom.
 export function useDoom(id: string | null) {
   return useLiveQuery(
-    () => (id ? db.dooms.get(id) : undefined),
+    () => (id ? db.dooms.get(id).then((d) => d ?? null) : null),
     [id],
   )
 }

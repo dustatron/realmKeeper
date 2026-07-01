@@ -42,7 +42,7 @@ export interface ImportRealmDeps {
 
 type LegacyExport = Omit<
   RealmExport,
-  'version' | 'factionPresences' | 'poiEvents' | 'gameMaps' | 'connections' | 'hooks'
+  'version' | 'factionPresences' | 'poiEvents' | 'gameMaps' | 'connections' | 'hooks' | 'dooms'
 >
 
 // Accept v1–v4 exports for backward compat. connections/hooks (v4) and

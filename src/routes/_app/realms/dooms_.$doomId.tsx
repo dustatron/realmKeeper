@@ -43,6 +43,15 @@ function DoomDetailPage() {
     [doomId, doom?.worldId],
   ) ?? []
 
+  const faction = useLiveQuery(
+    () => (doom?.doomFactionId ? db.factions.get(doom.doomFactionId) : undefined),
+    [doom?.doomFactionId],
+  )
+  const hook = useLiveQuery(
+    () => (doom?.hookId ? db.hooks.get(doom.hookId) : undefined),
+    [doom?.hookId],
+  )
+
   if (doom === undefined) {
     return <div className="py-8 text-center text-muted-foreground">Loading...</div>
   }
@@ -135,18 +144,19 @@ function DoomDetailPage() {
                   className="inline-flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1 hover:bg-accent transition-colors"
                 >
                   <span className="text-muted-foreground">Faction</span>
-                  <span className="font-medium text-foreground">{doom.doomFactionId}</span>
+                  <span className="font-medium text-foreground">
+                    {faction?.name ?? 'the doom faction'}
+                  </span>
                 </Link>
               )}
               {doom.hookId && (
-                <Link
-                  to="/realms/factions"
-                  className="inline-flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1 hover:bg-accent transition-colors"
-                >
+                <span className="inline-flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1">
                   <Zap className="size-3.5 text-muted-foreground" />
                   <span className="text-muted-foreground">Avert Hook</span>
-                  <span className="font-medium text-foreground">{doom.hookId}</span>
-                </Link>
+                  <span className="font-medium text-foreground">
+                    {hook?.title ?? 'the avert quest'}
+                  </span>
+                </span>
               )}
             </div>
           </CardContent>

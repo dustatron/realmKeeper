@@ -83,11 +83,12 @@ export function rollDoomTick(
       case 'resource': {
         if (tradePois.length === 0) break
         const poi = rng.pick(tradePois)
-        const theme = doom.keyedResource ?? doom.keyedBiome ?? 'doom'
+        const theme = doom.keyedResource ?? doom.keyedBiome
+        const cause = theme ? `The blight of ${theme}` : 'The blight'
         effects.push({
           kind: 'spawn_problem',
           targetId: poi.id,
-          description: `A ${theme}-blight problem emerges at ${poi.name}.`,
+          description: `${cause} takes hold at ${poi.name}.`,
         })
         break
       }
