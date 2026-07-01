@@ -13,6 +13,16 @@ import type { GeneratedDungeon, DungeonGenOptions } from '~/lib/dungeon/types'
 import type { RuinSite } from '@domain/entities/RuinSite'
 import type { LandmarkLore } from '@domain/entities/LandmarkLore'
 
+/** Structured settlement flavor — rendered as a scannable data list instead of a
+ * run-on prose block. Populated at generation (or backfilled from legacy prose by
+ * the v46 migration). null = not a settlement / ungenerated. */
+export interface SettlementFlavor {
+  knownFor: string
+  character: string
+  notable: string
+  tradition: string
+}
+
 export interface POI {
   id: string
   regionId: string
@@ -53,6 +63,8 @@ export interface POI {
   trade: { produces: string; needs: string[] } | null
   /** Settlement wealth band, snapshotted at generation from the trade graph. null = not a settlement / ungenerated. */
   wealthBand: 'destitute' | 'poor' | 'modest' | 'prosperous' | 'rich' | null
+  /** Structured settlement flavor for the overview data list. null = not a settlement / ungenerated. */
+  settlementFlavor: SettlementFlavor | null
   /** Who/what currently holds this place right now (living-world state). */
   currentOccupant: string | null
   lightLevel: 'bright' | 'dim' | 'dark' | null

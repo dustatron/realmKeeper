@@ -889,6 +889,7 @@ export function generateWorld(
   const story = seedStories({
     settlements: settlementNodes.map((n) => ({
       id: n.poi.id,
+      name: n.poi.name,
       regionId: n.poi.regionId,
       wealthBand: n.poi.wealthBand,
       produces: n.poi.trade?.produces ?? null,

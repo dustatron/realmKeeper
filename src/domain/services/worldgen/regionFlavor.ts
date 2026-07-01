@@ -3,8 +3,6 @@ import { pickBiomeFeature, biomeLabel, type Biome } from '@domain/data/worldgen/
 import { pickCairn, sampleCairn } from './cairnPick'
 import { resolvePool, type ResolvedTables } from './TableProvider'
 import {
-  DEITY_TABLE_ID, DEITIES,
-  CULTURE_QUIRK_TABLE_ID, CULTURE_QUIRKS,
   MAGICAL_LANDSCAPE_TABLE_ID, MAGICAL_LANDSCAPES,
 } from '@domain/data/worldgen/world-flavor.tables'
 import { DISEASE_TABLE_ID, DISEASES } from '@domain/data/worldgen/conditions.tables'
@@ -177,10 +175,9 @@ export function buildRegionFlavor(biome: Biome, rng: SeededRandom, tables?: Reso
     rumorPool && rumorPool.length > 0 ? rumorPool : REGION_RUMORS,
   )
 
-  // Additive worldbuilding flavor (religion, custom, the occasional wonder or
-  // sickness). All from CHILD rngs so downstream seeded output stays stable.
-  const deity = rng.child('region-deity').pick(resolvePool(tables, DEITY_TABLE_ID, DEITIES))
-  const culture = rng.child('region-culture').pick(resolvePool(tables, CULTURE_QUIRK_TABLE_ID, CULTURE_QUIRKS))
+  // Additive worldbuilding flavor (the occasional wonder or sickness). From CHILD
+  // rngs so downstream seeded output stays stable. (The religion/custom lines were
+  // dropped as low-value flavor.)
   const lr = rng.child('region-landscape')
   const landscape = lr.chance(0.4) ? lr.pick(resolvePool(tables, MAGICAL_LANDSCAPE_TABLE_ID, MAGICAL_LANDSCAPES)) : null
   const dr = rng.child('region-disease')
@@ -189,8 +186,7 @@ export function buildRegionFlavor(biome: Biome, rng: SeededRandom, tables?: Reso
   const description =
     `A region of ${biomeLabel(biome)}, marked by ${landmark.toLowerCase()}. ` +
     `Home to ${people[0].toLowerCase()}, prized for its ${resourcePhrase.toLowerCase()}. ` +
-    `Travelers speak of ${dangers[0]}. Folk say ${rumor}. ` +
-    `The faithful here honor ${deity} ${culture}` +
+    `Travelers speak of ${dangers[0]}. Folk say ${rumor}.` +
     `${landscape ? ` ${landscape}` : ''}` +
     `${disease ? ` A sickness lingers in these parts — ${lcFirst(disease)}` : ''}`
 

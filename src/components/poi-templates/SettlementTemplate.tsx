@@ -78,6 +78,10 @@ import {
 import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
 import type { CascadeAction } from "@application/use-cases/RollEncounterCascade";
 import type { EncounterRollResult } from "@domain/value-objects/EncounterRollResult";
+import {
+  deriveSettlementGmNotes,
+  type GmNoteContext,
+} from "./deriveSettlementGmNotes";
 
 type SettlementTab =
   | "locations"
@@ -785,6 +789,7 @@ export function SettlementTemplate({
   }, [selectedChildId]);
 
   const [overviewOpen, setOverviewOpen] = useState(true);
+  const [loreOpen, setLoreOpen] = useState(false);
   const [localTab, setLocalTab] = useState<SettlementTab>("locations");
   const selectedTab = isSettlementTab(activeTab) ? activeTab : localTab;
 
@@ -837,11 +842,75 @@ export function SettlementTemplate({
     monsterCountFor(poi) +
     childPois.reduce((sum, child) => sum + monsterCountFor(child), 0);
 
-  const detailLine = cleanText(poi.description);
+  // Strip the legacy "The townsfolk honor <deity>…" patron line from the shown
+  // description. Newer realms don't generate it; older realms may still have it
+  // baked into poi.description (the v45 migration ran before it was removed), so
+  // strip it at render so it never appears in the overview.
+  const detailLine = cleanText(
+    (poi.description ?? "").replace(/\s*The townsfolk honor .*/s, ""),
+  );
+  const flavor = poi.settlementFlavor;
+  const flavorRows = [
+    { label: "Known for", value: flavor?.knownFor ?? null, cap: false },
+    { label: "Character", value: flavor?.character ?? null, cap: false },
+    { label: "Notable", value: flavor?.notable ?? null, cap: false },
+    { label: "Tradition", value: flavor?.tradition ?? null, cap: false },
+    { label: "Produces", value: poi.trade?.produces ?? null, cap: true },
+    {
+      label: "Needs",
+      value:
+        poi.trade?.needs && poi.trade.needs.length > 0
+          ? poi.trade.needs.join(", ")
+          : null,
+      cap: true,
+    },
+  ].filter(
+    (row): row is { label: string; value: string; cap: boolean } =>
+      Boolean(row.value),
+  );
   const localProblem = cleanText(poi.trouble);
   const sizeLabel = settlementSize(poi.subtypeLabel);
   const displaySize = sizeLabel.charAt(0).toUpperCase() + sizeLabel.slice(1);
   const npcWants = allNPCs.filter(({ npc }) => cleanText(npc.want)).slice(0, 3);
+
+  const gmNoteContext = useMemo((): GmNoteContext => {
+    return {
+      produces: poi.trade?.produces ?? null,
+      needs: poi.trade?.needs ?? [],
+      wealthBand: poi.wealthBand ?? null,
+      trouble: localProblem,
+      tags: poi.tags,
+      factions: hqFactions.map((fac) => {
+        const leader = fac.leaderNpcId
+          ? npcById.get(fac.leaderNpcId)
+          : undefined;
+        const currentMove =
+          fac.agendaGoals.find((g) => g.timeframe === "immediate")
+            ?.description ?? null;
+        return {
+          name: fac.name,
+          type: fac.type ?? null,
+          leaderName: leader?.name ?? null,
+          currentMove: currentMove ?? null,
+          leaderWant: leader?.want ? cleanText(leader.want) : null,
+        };
+      }),
+      routes: paths
+        .map((p) => {
+          const isFrom = p.fromPoiId === poi.id;
+          return { name: (isFrom ? p.toName : p.fromName) ?? "" };
+        })
+        .filter((r) => r.name !== ""),
+      topTreasure: treasureManifest[0]?.item.name ?? null,
+      knownFor: poi.settlementFlavor?.knownFor ?? null,
+      notable: poi.settlementFlavor?.notable ?? null,
+    };
+  }, [poi, hqFactions, npcById, paths, treasureManifest, localProblem]);
+
+  const derivedGmNotes = useMemo(
+    () => deriveSettlementGmNotes(gmNoteContext),
+    [gmNoteContext],
+  );
 
   const handleToggleManifestTreasure = (location: POI, itemId: string) => {
     if (!onUpdateTreasure) return;
@@ -887,24 +956,86 @@ export function SettlementTemplate({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="grid gap-1 px-3 pb-3 xl:grid-cols-[minmax(0,2fr)_minmax(260px,0.85fr)]">
-            <div className="min-w-0 space-y-2">
-              {detailLine ? (
+            <div className="min-w-0 space-y-3">
+              {/* 1. Identity strip */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {poi.wealthBand && <WealthBadge band={poi.wealthBand} />}
+                <Badge variant="secondary" className="text-xs">
+                  {displaySize}
+                </Badge>
+                {poi.subtypeLabel && (
+                  <Badge variant="outline" className="text-xs">
+                    {poi.subtypeLabel}
+                  </Badge>
+                )}
+                {poi.mood && (
+                  <Badge variant="secondary" className="text-xs">
+                    🎭 {poi.mood}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Arrival — the town at a glance: description + sights & sounds */}
+              {detailLine && (
                 <p className="text-base leading-relaxed text-muted-foreground">
                   {detailLine}
                 </p>
-              ) : (
+              )}
+              {cleanText(poi.sensory) && (
                 <p className="text-base text-muted-foreground">
-                  No detail line recorded.
+                  <span className="font-semibold text-foreground">
+                    Sights &amp; sounds:
+                  </span>{" "}
+                  {cleanText(poi.sensory)}
                 </p>
               )}
 
+              {/* 2. SITUATION */}
               <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 space-y-1">
                     <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
                       <ShieldAlert className="size-3.5" />
-                      Looming Problem
+                      Situation
                     </p>
+                    {hqFactions.map((fac) => {
+                      const goal = fac.agendaGoals.find(
+                        (g) => g.timeframe === "immediate",
+                      );
+                      if (!goal) return null;
+                      const leader = fac.leaderNpcId
+                        ? npcById.get(fac.leaderNpcId)
+                        : undefined;
+                      return (
+                        <p key={fac.id} className="text-base leading-relaxed">
+                          <Link
+                            to="/realms/factions/$factionId"
+                            params={{ factionId: fac.id }}
+                            className="font-medium hover:underline"
+                          >
+                            {fac.name}
+                          </Link>
+                          {leader && (
+                            <>
+                              {" "}
+                              <span className="text-muted-foreground">
+                                (
+                                <Link
+                                  to="/realms/npcs/$npcId"
+                                  params={{ npcId: leader.id }}
+                                  className="hover:underline"
+                                >
+                                  {leader.name}
+                                </Link>
+                                )
+                              </span>
+                            </>
+                          )}
+                          {": "}
+                          {goal.description}
+                        </p>
+                      );
+                    })}
                     <p className="text-base leading-relaxed">
                       {localProblem ?? "No problem recorded."}
                     </p>
@@ -925,186 +1056,16 @@ export function SettlementTemplate({
                     </Button>
                   )}
                 </div>
-              </div>
-
-              <div className="grid gap-2 md:grid-cols-2">
-                <div className="min-w-0 rounded-md bg-muted/30 px-3 py-2">
-                  <div className="mb-1 flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-muted-foreground">
-                    <Landmark className="size-3.5" />
-                    Location
-                  </div>
-                  <div className="truncate text-base font-medium">
-                    <Link
-                      to="/realms/pois/$poiId"
-                      params={{ poiId: poi.id }}
-                      className="hover:underline"
-                    >
-                      {poi.name}
-                    </Link>
-                  </div>
-                  <dl className="mt-1.5 space-y-1">
-                    <div className="flex items-baseline gap-2">
-                      <dt className="w-24 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
-                        Prosperity
-                      </dt>
-                      <dd>
-                        {poi.wealthBand ? (
-                          <WealthBadge band={poi.wealthBand} />
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </dd>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <dt className="w-24 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
-                        Size
-                      </dt>
-                      <dd className="text-base">
-                        {[
-                          settlementTypeDetail(poi, displaySize),
-                          childPois.length > 0
-                            ? pluralize(childPois.length, "key location")
-                            : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </dd>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <dt className="w-24 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
-                        Produces
-                      </dt>
-                      <dd className="text-base capitalize">
-                        {poi.trade?.produces ?? (
-                          <span className="normal-case text-muted-foreground">
-                            nothing of note
-                          </span>
-                        )}
-                      </dd>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <dt className="w-24 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
-                        Needs
-                      </dt>
-                      <dd className="text-base capitalize">
-                        {poi.trade?.needs && poi.trade.needs.length > 0 ? (
-                          poi.trade.needs.join(", ")
-                        ) : (
-                          <span className="normal-case text-muted-foreground">
-                            nothing pressing
-                          </span>
-                        )}
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
-                <OverviewFact
-                  icon={Sparkles}
-                  label="Atmosphere"
-                  value={cleanText(poi.mood) ?? "No mood recorded"}
-                  detail={cleanText(poi.sensory)}
-                />
-              </div>
-              {npcWants.length > 0 && (
-                <div className="space-y-2 rounded-md bg-muted/20 px-3 py-2">
-                  <p className="text-xs font-extrabold uppercase tracking-wide text-muted-foreground ">
-                    Local Wants
-                  </p>
-                  <div className="grid gap-2 md:grid-cols-3">
-                    {npcWants.map(({ npc, poiName }) => (
-                      <div
-                        key={npc.id}
-                        className="min-w-0 border-t pt-2 first:border-t-0 first:pt-0 md:border-t-0 md:pt-0 md:border-l md:pl-3 md:first:border-l-0 md:first:pl-0"
-                      >
-                        <p className="truncate text-base font-medium">
-                          <Link
-                            to="/realms/npcs/$npcId"
-                            params={{ npcId: npc.id }}
-                            className="hover:underline"
-                          >
-                            {npc.name}
-                          </Link>
-                        </p>
-                        <p className="line-clamp-2 text-muted-foreground">
-                          {npc.want}
-                        </p>
-                        {npc.poiId && (
-                          <p className="mt-1 text-muted-foreground">
-                            <Link
-                              to="/realms/pois/$poiId"
-                              params={{ poiId: npc.poiId }}
-                              className="hover:underline"
-                            >
-                              {poiName ?? poi.name}
-                            </Link>
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {(hqFactions.length > 0 || presenceRows.length > 0) && (
-                <div className="space-y-2 rounded-md bg-muted/20 px-3 py-2">
-                  <p className="text-xs font-extrabold uppercase tracking-wide text-muted-foreground">
-                    Factions
-                  </p>
-                  <div className="space-y-2">
-                    {hqFactions.map((fac) => {
-                      const leader = fac.leaderNpcId
-                        ? npcById.get(fac.leaderNpcId)
-                        : undefined;
-                      const goal = fac.agendaGoals.find(
-                        (g) => g.timeframe === "immediate",
-                      );
-                      return (
-                        <div key={fac.id} className="text-base">
-                          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                            <span className="shrink-0">🏛</span>
-                            <Link
-                              to="/realms/factions/$factionId"
-                              params={{ factionId: fac.id }}
-                              className="font-medium hover:underline"
-                            >
-                              {fac.name}
-                            </Link>
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] border-amber-500/60 text-amber-400"
-                            >
-                              HQ
-                            </Badge>
-                            {fac.type && (
-                              <span className="text-xs text-muted-foreground">
-                                {fac.type}
-                              </span>
-                            )}
-                            {leader && (
-                              <span className="text-xs text-muted-foreground">
-                                · led by{" "}
-                                <Link
-                                  to="/realms/npcs/$npcId"
-                                  params={{ npcId: leader.id }}
-                                  className="hover:underline"
-                                >
-                                  {leader.name}
-                                </Link>
-                              </span>
-                            )}
-                          </div>
-                          {goal && (
-                            <p className="pl-5 text-xs text-muted-foreground">
-                              Now: {goal.description}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
+                {/* Non-HQ faction presences */}
+                {presenceRows.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-amber-500/20 pt-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-amber-700/70 dark:text-amber-300/70">
+                      Also present:
+                    </span>
                     {presenceRows.map(({ presence, faction }) => (
-                      <div
+                      <span
                         key={presence.id}
-                        className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-base"
+                        className="flex items-center gap-1 text-base"
                       >
                         <Link
                           to="/realms/factions/$factionId"
@@ -1124,10 +1085,157 @@ export function SettlementTemplate({
                             {presence.notes}
                           </span>
                         )}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 3. HOOKS */}
+              {npcWants.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-extrabold uppercase tracking-wide text-muted-foreground">
+                    Hooks
+                  </p>
+                  <div className="space-y-1">
+                    {npcWants.map(({ npc }) => (
+                      <div
+                        key={npc.id}
+                        className="flex flex-wrap items-baseline gap-x-2 text-base"
+                      >
+                        <Link
+                          to="/realms/npcs/$npcId"
+                          params={{ npcId: npc.id }}
+                          className="font-medium hover:underline"
+                        >
+                          {npc.name}
+                        </Link>
+                        <span className="text-muted-foreground">
+                          — {npc.want}
+                        </span>
                       </div>
                     ))}
                   </div>
                 </div>
+              )}
+
+              {/* 4. GM NOTES — derived connective notes only (the raw
+                  poi.gmNotes secret line is intentionally not surfaced here) */}
+              {derivedGmNotes.length > 0 && (
+                <div className="space-y-2">
+                  <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-muted-foreground">
+                    <ShieldAlert className="size-3.5" />
+                    GM Notes
+                  </p>
+                  <div className="space-y-1">
+                    {derivedGmNotes.map((note, i) => (
+                      <p key={i} className="text-base">
+                        <span className="font-semibold">{note.title}:</span>{" "}
+                        <span className="text-muted-foreground">
+                          {note.body}
+                        </span>
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 5. Economy + Treasure one-liners */}
+              {(Boolean(poi.wealthBand) ||
+                Boolean(poi.trade?.produces) ||
+                (poi.trade?.needs?.length ?? 0) > 0 ||
+                treasureManifest.length > 0) && (
+                <div className="space-y-0.5 text-base">
+                  {(Boolean(poi.wealthBand) ||
+                    Boolean(poi.trade?.produces) ||
+                    (poi.trade?.needs?.length ?? 0) > 0) && (
+                    <p className="text-muted-foreground">
+                      <span className="font-semibold text-foreground">
+                        Economy:
+                      </span>{" "}
+                      {[
+                        poi.wealthBand
+                          ? poi.wealthBand.charAt(0).toUpperCase() +
+                            poi.wealthBand.slice(1)
+                          : null,
+                        poi.trade?.produces
+                          ? `Produces ${poi.trade.produces}`
+                          : null,
+                        poi.trade?.needs?.length
+                          ? `Needs ${poi.trade.needs.join(", ")}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
+                  {treasureManifest.length > 0 && (
+                    <p className="text-muted-foreground">
+                      <span className="font-semibold text-foreground">
+                        Treasure:
+                      </span>{" "}
+                      {treasureManifest[0].item.name} ({uncollectedTreasure}/
+                      {treasureManifest.length} open)
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* 6. Color & Lore (collapsed) */}
+              {(flavor?.knownFor ??
+                flavor?.character ??
+                flavor?.notable ??
+                flavor?.tradition ??
+                cleanText(poi.mood)) != null && (
+                <Collapsible open={loreOpen} onOpenChange={setLoreOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground">
+                      <ChevronRight
+                        className={`size-3.5 transition-transform ${loreOpen ? "rotate-90" : ""}`}
+                      />
+                      Color &amp; Lore
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <dl className="mt-2 divide-y divide-border/60">
+                      {[
+                        {
+                          label: "Known for",
+                          value: flavor?.knownFor ?? null,
+                        },
+                        {
+                          label: "Character",
+                          value: flavor?.character ?? null,
+                        },
+                        { label: "Notable", value: flavor?.notable ?? null },
+                        {
+                          label: "Tradition",
+                          value: flavor?.tradition ?? null,
+                        },
+                        { label: "Atmosphere", value: cleanText(poi.mood) },
+                      ]
+                        .filter(
+                          (
+                            row,
+                          ): row is { label: string; value: string } =>
+                            Boolean(row.value),
+                        )
+                        .map((row) => (
+                          <div
+                            key={row.label}
+                            className="flex flex-col gap-1 py-2.5 first:pt-0 last:pb-0 sm:flex-row sm:items-baseline sm:gap-4"
+                          >
+                            <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:w-28 sm:shrink-0">
+                              {row.label}
+                            </dt>
+                            <dd className="text-base text-foreground">
+                              {row.value}
+                            </dd>
+                          </div>
+                        ))}
+                    </dl>
+                  </CollapsibleContent>
+                </Collapsible>
               )}
             </div>
 

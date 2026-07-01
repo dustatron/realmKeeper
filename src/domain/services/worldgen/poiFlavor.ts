@@ -11,7 +11,6 @@ import {
 } from '@domain/data/worldgen/dressing-extra.tables'
 import {
   MAGICAL_FOUNTAIN_TABLE_ID, MAGICAL_FOUNTAINS,
-  DEITY_TABLE_ID, DEITIES,
 } from '@domain/data/worldgen/world-flavor.tables'
 
 // A kind-appropriate dressing detail (graffiti, statue, epitaph, fountain, or a
@@ -27,8 +26,8 @@ function poiDressing(kind: PoiKind, rng: SeededRandom, tables?: ResolvedTables):
       return ` A worn inscription reads: ${pick(EPITAPH_TABLE_ID, EPITAPHS)} ${pick(STATUE_TABLE_ID, STATUES)}`
     case 'landmark':
       return ` ${pick(STATUE_TABLE_ID, STATUES)}${dr.chance(0.5) ? ` ${pick(MAGICAL_FOUNTAIN_TABLE_ID, MAGICAL_FOUNTAINS)}` : ''}`
-    case 'settlement':
-      return ` The townsfolk honor ${pick(DEITY_TABLE_ID, DEITIES)}`
+    // Settlements: no prose dressing — the patron/deity line was dropped (flavor
+    // now lives in the settlementFlavor data list, not a run-on description).
     default:
       return ''
   }

@@ -282,6 +282,7 @@ const pois = {
       currentOccupant: data.currentOccupant ?? null,
       trade: data.trade ?? null,
       wealthBand: data.wealthBand ?? null,
+      settlementFlavor: data.settlementFlavor ?? null,
       lightLevel: data.lightLevel ?? null,
       wanderingMonsters: data.wanderingMonsters ?? [],
       encounterChance: data.encounterChance ?? null,

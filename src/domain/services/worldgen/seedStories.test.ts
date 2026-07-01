@@ -7,15 +7,24 @@ const sett = (
   regionId: string,
   wealthBand: StorySettlement['wealthBand'],
   produces: string | null = null,
-): StorySettlement => ({ id, regionId, wealthBand, produces, needs: [], trouble: 'troubled' })
+  name = `${id}-name`,
+): StorySettlement => ({
+  id,
+  name,
+  regionId,
+  wealthBand,
+  produces,
+  needs: [],
+  trouble: 'troubled',
+})
 
 const region = (id: string, definingResource: string | null): StoryRegion => ({ id, definingResource })
 
 const baseInput = (rng: SeededRandom): SeedStoriesInput => ({
   settlements: [
-    sett('rich1', 'rA', 'rich', 'gemstones'),
-    sett('poor1', 'rB', 'poor', 'peat'),
-    sett('modest1', 'rA', 'modest', 'grain'),
+    sett('rich1', 'rA', 'rich', 'gemstones', 'Goldspire'),
+    sett('poor1', 'rB', 'poor', 'peat', 'Ashfen'),
+    sett('modest1', 'rA', 'modest', 'grain', 'Millbrook'),
   ],
   regions: [region('rA', 'gemstones'), region('rB', 'peat')],
   worldId: 'w1',
@@ -23,6 +32,18 @@ const baseInput = (rng: SeededRandom): SeedStoriesInput => ({
 })
 
 describe('seedStories', () => {
+  it('interpolates the settlement name into hook/notice text, never its id', () => {
+    const { hooks, notices } = seedStories(baseInput(new SeededRandom('s')))
+    const texts = [
+      ...hooks.map((h) => `${h.title} ${h.secret.detail}`),
+      ...notices.map((n) => n.description),
+    ]
+    for (const t of texts) {
+      expect(t).not.toMatch(/rich1|poor1|modest1/)
+    }
+    expect(texts.some((t) => /Goldspire|Ashfen|Millbrook/.test(t))).toBe(true)
+  })
+
   it('rich settlements yield acquisitive-tone hooks', () => {
     const { notices } = seedStories(baseInput(new SeededRandom('s')))
     const richNotice = notices.find((n) => n.poiId === 'rich1' && n.tags.includes('wealth'))

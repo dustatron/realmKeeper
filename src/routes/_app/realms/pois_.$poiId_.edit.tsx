@@ -26,6 +26,7 @@ import { pickSettlementProblem } from '@domain/data/worldgen/settlementProblems'
 import { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import { POI_TYPES, type PoiType } from '@shared/constants'
 import type { Service } from '@domain/value-objects/Service'
+import type { SettlementFlavor } from '@domain/entities/POI'
 
 export const Route = createFileRoute('/_app/realms/pois_/$poiId_/edit')({
   component: POIEditPage,
@@ -59,6 +60,7 @@ function POIEditPage() {
     imageUrl: string | null
     roomWidth: number | null
     roomLength: number | null
+    settlementFlavor: SettlementFlavor | null
   } | null>(null)
 
   // Initialize form from POI on first load
@@ -82,6 +84,11 @@ function POIEditPage() {
       imageUrl: poi.imageUrl,
       roomWidth: poi.roomWidth ?? null,
       roomLength: poi.roomLength ?? null,
+      settlementFlavor:
+        poi.settlementFlavor ??
+        (poi.type === 'settlement'
+          ? { knownFor: '', character: '', notable: '', tradition: '' }
+          : null),
     }
     setForm(initial)
   }
@@ -108,6 +115,7 @@ function POIEditPage() {
         imageUrl: form.imageUrl,
         roomWidth: form.roomWidth,
         roomLength: form.roomLength,
+        settlementFlavor: form.settlementFlavor,
       },
       { poiRepo: container.poiRepo }
     )
@@ -340,6 +348,39 @@ function POIEditPage() {
             placeholder="Sights, sounds, smells..."
           />
         </div>
+        {form.settlementFlavor && (
+          <div className="space-y-3 rounded-md border border-border/60 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Settlement Flavor
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              {(
+                [
+                  { key: 'knownFor', label: 'Known for', placeholder: 'a cursed well no one will cap' },
+                  { key: 'character', label: 'Character', placeholder: 'rebuilt atop its own ashes' },
+                  { key: 'notable', label: 'Notable', placeholder: 'built atop a great bridge' },
+                  { key: 'tradition', label: 'Tradition', placeholder: 'the Quiet Procession' },
+                ] as const
+              ).map(({ key, label, placeholder }) => (
+                <div key={key} className="space-y-1.5">
+                  <Label htmlFor={`edit-flavor-${key}`}>{label}</Label>
+                  <Input
+                    id={`edit-flavor-${key}`}
+                    value={form.settlementFlavor?.[key] ?? ''}
+                    onChange={(e) =>
+                      setForm((f) =>
+                        f && f.settlementFlavor
+                          ? { ...f, settlementFlavor: { ...f.settlementFlavor, [key]: e.target.value } }
+                          : f,
+                      )
+                    }
+                    placeholder={placeholder}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="space-y-1.5">
           <Label>Services</Label>
           <ServicesList

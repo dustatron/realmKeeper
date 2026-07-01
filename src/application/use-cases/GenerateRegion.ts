@@ -75,6 +75,7 @@ function makePoi(regionId: string, name: string, type: PoiType, description: str
     currentOccupant: null,
     trade: null,
     wealthBand: null,
+    settlementFlavor: null,
     lightLevel: null,
     wanderingMonsters: [],
     encounterChance: null,
