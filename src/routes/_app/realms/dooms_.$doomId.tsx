@@ -7,11 +7,26 @@ import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { ArrowLeft, CheckCircle2, Circle, Skull, Zap } from 'lucide-react'
 import { ProgressClock } from '~/components/shared/ProgressClock'
+import { useActiveRealm } from '~/ui/hooks/useActiveRealm'
 import { db } from '@infrastructure/dexie/db'
 
 export const Route = createFileRoute('/_app/realms/dooms_/$doomId')({
   component: DoomDetailPage,
 })
+
+// Convert between a world-date and an absolute day index so we can predict when
+// each grim portent falls (the clock fills proportionally between startDate and
+// reckoningDate).
+const SEASONS = ['spring', 'summer', 'fall', 'winter'] as const
+function absDays(d: { year: number; season: string; day: number }, dps: number): number {
+  return (d.year - 1) * 4 * dps + SEASONS.indexOf(d.season as (typeof SEASONS)[number]) * dps + (d.day - 1)
+}
+function dateFromAbs(abs: number, dps: number): { year: number; season: string; day: number } {
+  const perYear = 4 * dps
+  const year = Math.floor(abs / perYear) + 1
+  const rem = ((abs % perYear) + perYear) % perYear
+  return { year, season: SEASONS[Math.floor(rem / dps)], day: (rem % dps) + 1 }
+}
 
 const STATUS_COLORS: Record<string, string> = {
   looming: 'bg-red-700',
@@ -51,6 +66,7 @@ function DoomDetailPage() {
     () => (doom?.hookId ? db.hooks.get(doom.hookId) : undefined),
     [doom?.hookId],
   )
+  const realm = useActiveRealm()
 
   if (doom === undefined) {
     return <div className="py-8 text-center text-muted-foreground">Loading...</div>
@@ -61,7 +77,22 @@ function DoomDetailPage() {
   }
 
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
-  const reckoningLabel = `${cap(doom.reckoningDate.season)} ${doom.reckoningDate.day}, Year ${doom.reckoningDate.year}`
+  const fmtDate = (d: { year: number; season: string; day: number }) =>
+    `${cap(d.season)} ${d.day}, Year ${d.year}`
+  const reckoningLabel = fmtDate(doom.reckoningDate)
+
+  // Predict the world-date each grim portent falls on (proportional clock).
+  const dps = realm?.daysPerSeason ?? 30
+  const startAbs = absDays(doom.startDate, dps)
+  const spanDays = absDays(doom.reckoningDate, dps) - startAbs
+  const portentDate = (threshold: number) =>
+    dateFromAbs(startAbs + Math.round((threshold / doom.segments) * spanDays), dps)
+  const nowAbs = realm
+    ? absDays(
+        { year: realm.currentYear, season: realm.currentSeason, day: realm.currentDay },
+        dps,
+      )
+    : startAbs
 
   return (
     <div className="space-y-4">
@@ -162,31 +193,57 @@ function DoomDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Stages */}
+        {/* Timeline — grim portents at their predicted dates, then the reckoning */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Grim Portents</CardTitle>
+            <CardTitle className="text-base">Timeline</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {doom.stages.length === 0 ? (
               <p className="text-sm text-muted-foreground">No portents.</p>
             ) : (
-              doom.stages.map((stage, idx) => (
-                <div key={idx} className="flex items-start gap-2 py-1">
-                  {stage.fired ? (
-                    <CheckCircle2 className="size-4 text-red-500 shrink-0 mt-0.5" />
-                  ) : (
-                    <Circle className="size-4 text-muted-foreground shrink-0 mt-0.5" />
-                  )}
-                  <div className="flex-1">
-                    <span className={`text-sm ${stage.fired ? 'line-through text-muted-foreground' : ''}`}>
-                      {stage.portent}
-                    </span>
-                    <span className="ml-2 text-xs text-muted-foreground">(tick {stage.threshold})</span>
+              doom.stages.map((stage, idx) => {
+                const date = portentDate(stage.threshold)
+                const upcoming = !stage.fired && absDays(date, dps) >= nowAbs
+                return (
+                  <div key={idx} className="flex items-start gap-2 py-1">
+                    {stage.fired ? (
+                      <CheckCircle2 className="size-4 text-red-500 shrink-0 mt-0.5" />
+                    ) : (
+                      <Circle className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      <div
+                        className={`text-sm ${stage.fired ? 'line-through text-muted-foreground' : ''}`}
+                      >
+                        {stage.portent}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {fmtDate(date)}
+                        {stage.fired
+                          ? ' · fired'
+                          : upcoming
+                            ? ' · upcoming'
+                            : ' · due'}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))
+                )
+              })
             )}
+            {/* The reckoning itself */}
+            <div className="flex items-start gap-2 border-t border-border/60 pt-2">
+              <Skull
+                className={`size-4 shrink-0 mt-0.5 ${doom.status === 'reckoned' ? 'text-red-500' : 'text-warning'}`}
+              />
+              <div className="flex-1">
+                <div className="text-sm font-medium">The Reckoning</div>
+                <div className="text-xs text-muted-foreground">
+                  {reckoningLabel}
+                  {doom.status === 'reckoned' ? ' · come to pass' : ' · foretold'}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
