@@ -167,6 +167,24 @@ function poiMaxThreat(monsterRefs: POI["monsterRefs"]): number {
   return max;
 }
 
+// The generated region description is a run-on paragraph of stitched clauses.
+// Render it as bullet points (one per sentence) so it's scannable at the table.
+// If the stored description already has list markup (a GM hand-edited it into a
+// list), leave it alone.
+function descriptionHasList(html: string): boolean {
+  return /<(ul|ol|li)\b/i.test(html);
+}
+function descriptionToBullets(html: string): string[] {
+  const text = html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return [];
+  const sentences = text.match(/[^.!?]+[.!?]+(["'”’)\]]*)/g);
+  return (sentences ?? [text]).map((s) => s.trim()).filter(Boolean);
+}
+
 function RegionDetailPage() {
   const { regionId } = Route.useParams();
   const navigate = useNavigate();
@@ -1283,10 +1301,18 @@ function RegionDetailPage() {
           })()}
 
           {region.description ? (
-            <div
-              className="tiptap prose prose-sm dark:prose-invert max-w-none mb-4"
-              dangerouslySetInnerHTML={{ __html: region.description }}
-            />
+            descriptionHasList(region.description) ? (
+              <div
+                className="tiptap prose prose-sm dark:prose-invert max-w-none mb-4"
+                dangerouslySetInnerHTML={{ __html: region.description }}
+              />
+            ) : (
+              <ul className="mb-4 list-disc space-y-1 pl-5 text-base text-muted-foreground">
+                {descriptionToBullets(region.description).map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ul>
+            )
           ) : (
             <p className="text-sm text-muted-foreground mb-4">No description.</p>
           )}
