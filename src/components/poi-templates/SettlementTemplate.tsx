@@ -134,7 +134,7 @@ function LocationDetailContent({
           <div className="text-xs font-medium text-amber-500 mb-1">
             📖 Read Aloud
           </div>
-          <p className="text-sm italic text-foreground/80 leading-relaxed">
+          <p className=" italic text-foreground/80 leading-relaxed">
             {location.readAloud}
           </p>
         </div>
@@ -142,16 +142,14 @@ function LocationDetailContent({
 
       {/* Description */}
       {location.description && (
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className="text-muted-foreground leading-relaxed">
           {location.description}
         </p>
       )}
 
       {/* Sensory */}
       {location.sensory && (
-        <p className="text-sm italic text-muted-foreground">
-          👃 {location.sensory}
-        </p>
+        <p className="italic text-muted-foreground">👃 {location.sensory}</p>
       )}
 
       {/* Mood + Tags */}
@@ -203,7 +201,7 @@ function LocationDetailContent({
           {location.traps.map((trap) => (
             <div
               key={trap.id}
-              className="flex items-start gap-2 text-sm rounded border border-amber-500/20 bg-amber-500/5 px-2 py-1.5"
+              className="flex items-start gap-2 rounded border border-amber-500/20 bg-amber-500/5 px-2 py-1.5"
             >
               <span
                 className={
@@ -249,7 +247,7 @@ function LocationDetailContent({
             return (
               <div
                 key={item.id}
-                className="flex items-center gap-2 text-sm rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5"
+                className="flex items-center gap-2 rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5"
               >
                 {item.isMagic && item.compendiumId ? (
                   <Link
@@ -313,7 +311,7 @@ function LocationDetailPanel({
         <Link
           to="/realms/pois/$poiId"
           params={{ poiId: location.id }}
-          className="truncate text-sm font-semibold hover:underline"
+          className="truncate font-semibold hover:underline"
         >
           {location.name}
         </Link>
@@ -460,7 +458,7 @@ function OverviewFact({
         <Icon className="size-3.5" />
         {label}
       </div>
-      <div className="truncate text-sm font-medium">{value}</div>
+      <div className="truncate text-base font-medium">{value}</div>
       {detail && (
         <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
           {detail}
@@ -545,7 +543,7 @@ function OverviewRoutes({
                       <Link
                         to="/realms/pois/$poiId"
                         params={{ poiId: destId }}
-                        className="min-w-0 truncate text-sm font-medium hover:underline"
+                        className="min-w-0 truncate text-base font-medium hover:underline"
                       >
                         {dest}
                       </Link>
@@ -570,7 +568,7 @@ function OverviewRoutes({
           </TableBody>
         </Table>
       ) : (
-        <p className="text-sm text-muted-foreground">No routes recorded.</p>
+        <p className="text-base text-muted-foreground">No routes recorded.</p>
       )}
       {treasureManifest.length > 0 && (
         <div className="mt-auto space-y-2 border-t border-border/60 pt-3">
@@ -757,8 +755,14 @@ export function SettlementTemplate({
     const hqIds = new Set(hqFactions.map((f) => f.id));
     return factionPresences
       .filter((fp) => !hqIds.has(fp.factionId))
-      .map((fp) => ({ presence: fp, faction: factions.find((f) => f.id === fp.factionId) }))
-      .filter((r): r is { presence: FactionPresence; faction: Faction } => !!r.faction);
+      .map((fp) => ({
+        presence: fp,
+        faction: factions.find((f) => f.id === fp.factionId),
+      }))
+      .filter(
+        (r): r is { presence: FactionPresence; faction: Faction } =>
+          !!r.faction,
+      );
   }, [factionPresences, factions, hqFactions]);
   const npcById = useMemo(
     () => new Map([...npcs, ...childNPCs].map((n) => [n.id, n])),
@@ -853,7 +857,7 @@ export function SettlementTemplate({
     <Collapsible open={overviewOpen} onOpenChange={setOverviewOpen}>
       <div className="rounded-lg border bg-card text-card-foreground shadow-card">
         <CollapsibleTrigger asChild>
-          <button className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted/50">
+          <button className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-base font-medium transition-colors hover:bg-muted/50">
             <span className="flex shrink-0 items-center gap-2">
               <ChevronRight
                 className={`size-4 text-muted-foreground transition-transform ${overviewOpen ? "rotate-90" : ""}`}
@@ -868,7 +872,6 @@ export function SettlementTemplate({
               <Badge variant="secondary" className="text-xs">
                 {displaySize}
               </Badge>
-              <WealthBadge band={poi.wealthBand} />
               {poi.subtypeLabel && (
                 <Badge variant="outline" className="text-xs">
                   {poi.subtypeLabel}
@@ -884,13 +887,13 @@ export function SettlementTemplate({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="grid gap-1 px-3 pb-3 xl:grid-cols-[minmax(0,2fr)_minmax(260px,0.85fr)]">
-            <div className="min-w-0 space-y-2 font-bold">
+            <div className="min-w-0 space-y-2">
               {detailLine ? (
-                <p className="text-sm leading-relaxed text-muted-foreground">
+                <p className="text-base leading-relaxed text-muted-foreground">
                   {detailLine}
                 </p>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-base text-muted-foreground">
                   No detail line recorded.
                 </p>
               )}
@@ -902,7 +905,7 @@ export function SettlementTemplate({
                       <ShieldAlert className="size-3.5" />
                       Looming Problem
                     </p>
-                    <p className="text-sm leading-relaxed">
+                    <p className="text-base leading-relaxed">
                       {localProblem ?? "No problem recorded."}
                     </p>
                   </div>
@@ -925,10 +928,12 @@ export function SettlementTemplate({
               </div>
 
               <div className="grid gap-2 md:grid-cols-2">
-                <OverviewFact
-                  icon={Landmark}
-                  label="Location"
-                  value={
+                <div className="min-w-0 rounded-md bg-muted/30 px-3 py-2">
+                  <div className="mb-1 flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-muted-foreground">
+                    <Landmark className="size-3.5" />
+                    Location
+                  </div>
+                  <div className="truncate text-base font-medium">
                     <Link
                       to="/realms/pois/$poiId"
                       params={{ poiId: poi.id }}
@@ -936,19 +941,63 @@ export function SettlementTemplate({
                     >
                       {poi.name}
                     </Link>
-                  }
-                  detail={[
-                    settlementTypeDetail(poi, displaySize),
-                    childPois.length > 0
-                      ? pluralize(childPois.length, "key location")
-                      : null,
-                    allServices.length > 0
-                      ? pluralize(allServices.length, "service")
-                      : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" - ")}
-                />
+                  </div>
+                  <dl className="mt-1.5 space-y-1">
+                    <div className="flex items-baseline gap-2">
+                      <dt className="w-24 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
+                        Prosperity
+                      </dt>
+                      <dd>
+                        {poi.wealthBand ? (
+                          <WealthBadge band={poi.wealthBand} />
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </dd>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <dt className="w-24 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
+                        Size
+                      </dt>
+                      <dd className="text-base">
+                        {[
+                          settlementTypeDetail(poi, displaySize),
+                          childPois.length > 0
+                            ? pluralize(childPois.length, "key location")
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </dd>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <dt className="w-24 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
+                        Produces
+                      </dt>
+                      <dd className="text-base capitalize">
+                        {poi.trade?.produces ?? (
+                          <span className="normal-case text-muted-foreground">
+                            nothing of note
+                          </span>
+                        )}
+                      </dd>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <dt className="w-24 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
+                        Needs
+                      </dt>
+                      <dd className="text-base capitalize">
+                        {poi.trade?.needs && poi.trade.needs.length > 0 ? (
+                          poi.trade.needs.join(", ")
+                        ) : (
+                          <span className="normal-case text-muted-foreground">
+                            nothing pressing
+                          </span>
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
                 <OverviewFact
                   icon={Sparkles}
                   label="Atmosphere"
@@ -967,7 +1016,7 @@ export function SettlementTemplate({
                         key={npc.id}
                         className="min-w-0 border-t pt-2 first:border-t-0 first:pt-0 md:border-t-0 md:pt-0 md:border-l md:pl-3 md:first:border-l-0 md:first:pl-0"
                       >
-                        <p className="truncate text-sm font-medium">
+                        <p className="truncate text-base font-medium">
                           <Link
                             to="/realms/npcs/$npcId"
                             params={{ npcId: npc.id }}
@@ -976,11 +1025,11 @@ export function SettlementTemplate({
                             {npc.name}
                           </Link>
                         </p>
-                        <p className="line-clamp-2 text-xs text-muted-foreground">
+                        <p className="line-clamp-2 text-muted-foreground">
                           {npc.want}
                         </p>
                         {npc.poiId && (
-                          <p className="mt-1 text-[11px] text-muted-foreground">
+                          <p className="mt-1 text-muted-foreground">
                             <Link
                               to="/realms/pois/$poiId"
                               params={{ poiId: npc.poiId }}
@@ -1003,10 +1052,14 @@ export function SettlementTemplate({
                   </p>
                   <div className="space-y-2">
                     {hqFactions.map((fac) => {
-                      const leader = fac.leaderNpcId ? npcById.get(fac.leaderNpcId) : undefined;
-                      const goal = fac.agendaGoals.find((g) => g.timeframe === "immediate");
+                      const leader = fac.leaderNpcId
+                        ? npcById.get(fac.leaderNpcId)
+                        : undefined;
+                      const goal = fac.agendaGoals.find(
+                        (g) => g.timeframe === "immediate",
+                      );
                       return (
-                        <div key={fac.id} className="text-sm">
+                        <div key={fac.id} className="text-base">
                           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                             <span className="shrink-0">🏛</span>
                             <Link
@@ -1016,8 +1069,17 @@ export function SettlementTemplate({
                             >
                               {fac.name}
                             </Link>
-                            <Badge variant="outline" className="text-[10px] border-amber-500/60 text-amber-400">HQ</Badge>
-                            {fac.type && <span className="text-xs text-muted-foreground">{fac.type}</span>}
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] border-amber-500/60 text-amber-400"
+                            >
+                              HQ
+                            </Badge>
+                            {fac.type && (
+                              <span className="text-xs text-muted-foreground">
+                                {fac.type}
+                              </span>
+                            )}
                             {leader && (
                               <span className="text-xs text-muted-foreground">
                                 · led by{" "}
@@ -1040,7 +1102,10 @@ export function SettlementTemplate({
                       );
                     })}
                     {presenceRows.map(({ presence, faction }) => (
-                      <div key={presence.id} className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm">
+                      <div
+                        key={presence.id}
+                        className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-base"
+                      >
                         <Link
                           to="/realms/factions/$factionId"
                           params={{ factionId: faction.id }}
@@ -1048,11 +1113,16 @@ export function SettlementTemplate({
                         >
                           {faction.name}
                         </Link>
-                        <Badge variant="outline" className={`text-[10px] ${PRESENCE_TYPE_COLORS[presence.type] ?? ""}`}>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] ${PRESENCE_TYPE_COLORS[presence.type] ?? ""}`}
+                        >
                           {presence.type}
                         </Badge>
                         {presence.notes && (
-                          <span className="text-xs text-muted-foreground">{presence.notes}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {presence.notes}
+                          </span>
                         )}
                       </div>
                     ))}
@@ -1121,9 +1191,7 @@ export function SettlementTemplate({
         <TabsContent value="locations" className="space-y-4 pt-3">
           {overviewSection}
           {/* Map spans full width above master-detail, only when one exists */}
-          {mapError && (
-            <p className="text-sm text-destructive">{mapError}</p>
-          )}
+          {mapError && <p className="text-destructive">{mapError}</p>}
           {mapSection && <div>{mapSection}</div>}
 
           <div
@@ -1133,7 +1201,7 @@ export function SettlementTemplate({
             <div className="space-y-3">
               {/* Location list header */}
               <div className="flex justify-between">
-                <h4 className="text-sm font-semibold">Key Locations</h4>
+                <h4 className="font-semibold">Key Locations</h4>
                 <div className="flex justify-end space-x-2">
                   <div className="hidden md:flex justify-end">
                     <Button
@@ -1198,7 +1266,7 @@ export function SettlementTemplate({
                           <ChevronRight
                             className={`size-3.5 shrink-0 text-muted-foreground transition-transform ${isSelected ? "rotate-90" : ""}`}
                           />
-                          <span className="text-sm font-medium truncate">
+                          <span className="font-medium truncate">
                             {child.name}
                           </span>
                           {/* Compact indicators */}
@@ -1290,9 +1358,7 @@ export function SettlementTemplate({
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  No locations yet.
-                </p>
+                <p className="text-muted-foreground">No locations yet.</p>
               )}
             </div>
 
@@ -1308,7 +1374,7 @@ export function SettlementTemplate({
                     onUpdateTreasure={onUpdateTreasure}
                   />
                 ) : childPois.length > 0 ? (
-                  <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  <div className="rounded-md border border-dashed p-6 text-center text-muted-foreground">
                     Select a location to see details
                   </div>
                 ) : null}
@@ -1319,7 +1385,7 @@ export function SettlementTemplate({
           {/* Aggregate Services */}
           {allServices.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold mb-2">Available Services</h4>
+              <h4 className="font-semibold mb-2">Available Services</h4>
               <ServicesList services={allServices} />
             </div>
           )}
@@ -1329,7 +1395,7 @@ export function SettlementTemplate({
         <TabsContent value="denizens" className="space-y-4 pt-3">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-semibold flex items-center gap-2">
+              <h4 className="font-semibold flex items-center gap-2">
                 <Users className="size-4" />
                 NPCs ({allNPCs.length})
               </h4>
@@ -1358,7 +1424,7 @@ export function SettlementTemplate({
                 })}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No NPCs present.</p>
+              <p className="text-muted-foreground">No NPCs present.</p>
             )}
           </div>
         </TabsContent>
@@ -1400,7 +1466,7 @@ export function SettlementTemplate({
         {/* Events tab */}
         <TabsContent value="events" className="pt-3">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold">Events</h4>
+            <h4 className="font-semibold">Events</h4>
             <Button size="sm" variant="outline" onClick={onCreateEvent}>
               <Plus className="mr-1.5 size-3.5" />
               Add Event
@@ -1415,7 +1481,7 @@ export function SettlementTemplate({
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{event.name}</span>
+                      <span className="font-medium">{event.name}</span>
                       <Badge variant="outline" className="text-xs">
                         {event.type}
                       </Badge>
@@ -1458,9 +1524,7 @@ export function SettlementTemplate({
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              No events scheduled.
-            </p>
+            <p className="text-muted-foreground">No events scheduled.</p>
           )}
         </TabsContent>
 
