@@ -8,6 +8,7 @@ import {
   Expand,
   Shrink,
   Tag,
+  Gem,
   Hexagon,
   Layers,
   MousePointerClick,
@@ -19,9 +20,11 @@ interface MapToolbarProps {
   mode: MapMode
   showLabels: boolean
   showRegions: boolean
+  showResources?: boolean
   hideRegionControls?: boolean
   onModeChange: (mode: MapMode) => void
   onToggleLabels: () => void
+  onToggleResources?: () => void
   onToggleRegions: () => void
   onUpload: () => void
   onZoomToFit: () => void
@@ -38,9 +41,11 @@ export function MapToolbar({
   mode,
   showLabels,
   showRegions,
+  showResources,
   hideRegionControls,
   onModeChange,
   onToggleLabels,
+  onToggleResources,
   onToggleRegions,
   onUpload,
   onZoomToFit,
@@ -104,6 +109,18 @@ export function MapToolbar({
       >
         <Tag className="size-4" />
       </Button>
+
+      {onToggleResources && (
+        <Button
+          variant={showResources ? 'secondary' : 'outline'}
+          size="sm"
+          className="shrink-0"
+          onClick={onToggleResources}
+          title={showResources ? 'Hide resources' : 'Show resources'}
+        >
+          <Gem className="size-4" />
+        </Button>
+      )}
 
       {!hideRegionControls && (
         <Button

@@ -5,6 +5,7 @@ import { Input } from "~/components/ui/input";
 import { MapPin, Skull, Heart, Minus, Plus, Shield, Tag, Target, Star } from "lucide-react";
 import { CloudinaryImage } from "~/components/shared/CloudinaryImage";
 import { DispositionBadge } from "~/components/shared/DispositionBadge";
+import { WealthBadge } from "~/components/shared/WealthBadge";
 import { useFaction } from "~/ui/hooks/useFactions";
 import { useRaceColor } from "~/ui/hooks/useRaceColor";
 import type { NPC } from "@domain/entities/NPC";
@@ -182,6 +183,7 @@ export function NPCMiniCard({ npc, poiName, onUpdateNPC, linkToDetail = true }: 
               </Badge>
             )}
             <DispositionBadge npc={npc} onUpdateNPC={onUpdateNPC} />
+            <WealthBadge tier={npc.wealthTier} />
             {npc.movementStatus !== "present" && (
               <Badge variant="outline" className="text-[10px]">
                 {npc.movementStatus}

@@ -269,7 +269,15 @@ export function generateWorld(
     cellMetas.filter((cm) => cm.biome === 'lake').map((cm) => `${cm.q},${cm.r}`),
   )
   const elevation = buildElevationField(cells, rng.child('elevation'))
-  const { riverCells, chokepoints } = traceRivers(elevation, cells, rng.child('rivers'), { waterCells })
+  // Rivers come off mountain terrain — feed mountain cells as explicit sources so
+  // highlands reliably feed streams downhill to the lakes/edge.
+  const mountainSources = cellMetas
+    .filter((cm) => cm.biome === 'mountains')
+    .map((cm) => ({ q: cm.q, r: cm.r }))
+  const { riverCells, chokepoints } = traceRivers(elevation, cells, rng.child('rivers'), {
+    waterCells,
+    sources: mountainSources,
+  })
   const chokepointByCoord = new Map(chokepoints.map((c) => [`${c.q},${c.r}`, c.kind]))
 
   // Step 5: build GameMap. Each cell carries its terrain tile (by biome); cells
@@ -676,6 +684,12 @@ export function generateWorld(
       }),
     )
     usedCells.add(`${cm.q},${cm.r}`)
+    // Stamp the natural-site feature tile (a tree doodle) onto its hex, the same
+    // way makePoi does for other POIs — so wild sites read as places, not blank
+    // terrain with a generic marker.
+    const hostCell = hexCellByCoord.get(`${cm.q},${cm.r}`)
+    const naturalTile = featureTileForPoi('natural', { subtype: null })
+    if (hostCell && naturalTile) hostCell.tile = naturalTile
   }
 
   // Step 8: factions. Each gets a distinct settlement as its headquarters (and

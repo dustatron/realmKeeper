@@ -9,7 +9,16 @@ import { colorForTerrain } from './terrainColors'
 import type { POI } from '@domain/entities/POI'
 import type { Path } from '@domain/entities/Path'
 import type { Region } from '@domain/entities/Region'
+import type { Connection } from '@domain/entities/Connection'
 import type { PoiType, PoiStatus } from '@shared/constants'
+import {
+  buildRiverGeoJSON,
+  buildChokepointGeoJSON,
+  buildTradeRouteGeoJSON,
+  buildTreasureGeoJSON,
+  buildResourceIconGeoJSON,
+  wealthBandColor,
+} from '~/lib/map/mapLayers'
 import { Button } from '~/components/ui/button'
 import {
   Building2,
@@ -17,7 +26,7 @@ import {
   DoorOpen,
   Castle,
   Skull,
-  TreePine,
+  Trees,
   Flag,
   LayoutGrid,
   Map as MapIcon,
@@ -34,6 +43,17 @@ import { createRoot } from 'react-dom/client'
 
 export type MapMode = 'view' | 'place-poi' | 'draw-path' | 'draw-region'
 
+/** The toggleable Phase-4 overlay layers (terrain/regions/roads/markers are always on). */
+export type MapLayerId = 'rivers' | 'trade' | 'wealth' | 'resources' | 'treasure'
+
+const ALL_LAYERS_ON: Record<MapLayerId, boolean> = {
+  rivers: true,
+  trade: true,
+  wealth: true,
+  resources: true,
+  treasure: true,
+}
+
 
 export interface MapViewerHandle {
   zoomToFit: () => void
@@ -44,6 +64,10 @@ interface MapViewerProps {
   pois: POI[]
   paths: Path[]
   regions?: Region[]
+  /** Trade-graph connections (used for the trade-route layer). */
+  connections?: Connection[]
+  /** Visibility of the Phase-4 overlay layers. Omitted layers default to ON. */
+  layers?: Partial<Record<MapLayerId, boolean>>
   mode: MapMode
   selectedPoiId?: string | null
   /** External highlight from sidebar card selection */
@@ -67,7 +91,8 @@ const POI_TYPE_ICONS: Record<PoiType, React.ComponentType<{ className?: string }
   interior: DoorOpen,
   fortification: Castle,
   dungeon: Skull,
-  natural: TreePine,
+  // Natural sites get a distinct grove icon to read apart from a single pine.
+  natural: Trees,
   landmark: Flag,
   district: LayoutGrid,
   zone: MapIcon,
@@ -87,6 +112,7 @@ function MarkerIcon({
   isHighlighted,
   status,
   dangerLevel,
+  wealthColor,
 }: {
   type: PoiType
   name: string
@@ -96,6 +122,8 @@ function MarkerIcon({
   isHighlighted?: boolean
   status?: PoiStatus
   dangerLevel?: number | null
+  /** When set (wealth layer on), tints the marker ring by wealth band. */
+  wealthColor?: string | null
 }) {
   const Icon = POI_TYPE_ICONS[type] || MapPin
   const explored = status === 'explored'
@@ -104,6 +132,8 @@ function MarkerIcon({
   // and always adds a colored ring + corner badge so the state reads at a glance.
   const stateColor = cleared ? '#64748b' : explored ? '#10b981' : null
   const markerColor = isHighlighted ? '#facc15' : (color ?? stateColor)
+  // Highlight/exploration rings take precedence; a wealth ring is applied via
+  // inline style below only when none of those own the ring.
   const ringClass = isHighlighted
     ? 'border-amber-200 ring-2 ring-amber-400'
     : cleared
@@ -111,6 +141,7 @@ function MarkerIcon({
       : explored
         ? 'border-background ring-2 ring-emerald-400'
         : 'border-background'
+  const useWealthRing = !!wealthColor && !isHighlighted && !cleared && !explored
   const dangerous = dangerLevel != null && dangerLevel >= 4
   return (
     <div className="group relative flex flex-col items-center cursor-pointer" role="button" style={{ touchAction: 'manipulation' }}>
@@ -118,7 +149,11 @@ function MarkerIcon({
         className={`relative flex items-center justify-center size-9 rounded-full shadow-md border-2 hover:scale-110 transition-transform ${
           markerColor ? '' : 'bg-primary text-primary-foreground'
         } ${ringClass} ${cleared ? 'opacity-70' : ''} ${isHighlighted ? 'scale-110' : ''}`}
-        style={markerColor ? { backgroundColor: markerColor, color: isHighlighted ? '#111827' : '#fff' } : undefined}
+        style={{
+          ...(markerColor ? { backgroundColor: markerColor, color: isHighlighted ? '#111827' : '#fff' } : {}),
+          // Subtle wealth ring: a colored box-shadow halo that doesn't disturb layout.
+          ...(useWealthRing ? { boxShadow: `0 0 0 2px ${wealthColor}` } : {}),
+        }}
       >
         <Icon className="size-4" />
         {hasOwnMaps && (
@@ -157,6 +192,8 @@ export function MapViewer({
   pois,
   paths,
   regions,
+  connections,
+  layers,
   mode,
   selectedPoiId,
   highlightPoiId,
@@ -176,7 +213,7 @@ export function MapViewer({
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map())
   const markerRootsRef = useRef<Map<string, ReturnType<typeof createRoot>>>(new Map())
-  const markerDataRef = useRef<Map<string, { type: string; name: string; color: string | null; showLabel: boolean; isHighlighted: boolean; status: PoiStatus; dangerLevel: number | null }>>(new Map())
+  const markerDataRef = useRef<Map<string, { type: string; name: string; color: string | null; showLabel: boolean; isHighlighted: boolean; status: PoiStatus; dangerLevel: number | null; wealthColor: string | null }>>(new Map())
   const imageUrlRef = useRef<string | null>(null)
   const onPoiClickRef = useRef(onPoiClick)
   onPoiClickRef.current = onPoiClick
@@ -195,6 +232,15 @@ export function MapViewer({
   const mapReady = loadedMapKey === mapLoadKey
   const [drawingVertices, setDrawingVertices] = useState<{ x: number; y: number }[]>([])
   const activeHighlightId = selectedPoiId ?? highlightPoiId
+
+  // Resolve the layer-visibility map: explicit prop entries win, everything
+  // else defaults ON. Memoized so the marker/layer effects only re-run when a
+  // toggle actually changes.
+  const resolvedLayers = useMemo<Record<MapLayerId, boolean>>(
+    () => ({ ...ALL_LAYERS_ON, ...layers }),
+    [layers],
+  )
+  const { rivers: showRivers, trade: showTrade, wealth: showWealth, resources: showResources, treasure: showTreasure } = resolvedLayers
 
   // Convert pixel coords to lng/lat near the equator where Mercator distortion is negligible.
   // Using a tiny range (1°) keeps the image undistorted regardless of aspect ratio.
@@ -443,16 +489,19 @@ export function MapViewer({
       const [lng, lat] = pxToLngLat(poi.position.x, poi.position.y)
       const existing = markersRef.current.get(poi.id)
 
+      // Wealth tint only when the wealth layer is on; null = no ring.
+      const wealthColor = showWealth && poi.wealthBand ? wealthBandColor(poi.wealthBand) : null
+
       if (existing) {
         existing.setLngLat([lng, lat])
         existing.setDraggable(mode === 'place-poi')
         const isHighlighted = poi.id === activeHighlightId
         // Re-render if marker content or selected state changed.
         const prev = markerDataRef.current.get(poi.id)
-        if (prev && (prev.type !== poi.type || prev.name !== poi.name || prev.color !== (poi.markerColor ?? null) || prev.showLabel !== !!showLabels || prev.isHighlighted !== isHighlighted || prev.status !== poi.status || prev.dangerLevel !== (poi.dangerLevel ?? null))) {
+        if (prev && (prev.type !== poi.type || prev.name !== poi.name || prev.color !== (poi.markerColor ?? null) || prev.showLabel !== !!showLabels || prev.isHighlighted !== isHighlighted || prev.status !== poi.status || prev.dangerLevel !== (poi.dangerLevel ?? null) || prev.wealthColor !== wealthColor)) {
           const root = markerRootsRef.current.get(poi.id)
-          root?.render(<MarkerIcon type={poi.type} name={poi.name} color={poi.markerColor} showLabel={showLabels} isHighlighted={isHighlighted} status={poi.status} dangerLevel={poi.dangerLevel} />)
-          markerDataRef.current.set(poi.id, { type: poi.type, name: poi.name, color: poi.markerColor ?? null, showLabel: !!showLabels, isHighlighted, status: poi.status, dangerLevel: poi.dangerLevel ?? null })
+          root?.render(<MarkerIcon type={poi.type} name={poi.name} color={poi.markerColor} showLabel={showLabels} isHighlighted={isHighlighted} status={poi.status} dangerLevel={poi.dangerLevel} wealthColor={wealthColor} />)
+          markerDataRef.current.set(poi.id, { type: poi.type, name: poi.name, color: poi.markerColor ?? null, showLabel: !!showLabels, isHighlighted, status: poi.status, dangerLevel: poi.dangerLevel ?? null, wealthColor })
         }
         return
       }
@@ -462,9 +511,9 @@ export function MapViewer({
       el.className = 'map-marker-container'
       const root = createRoot(el)
       const isHighlighted = poi.id === activeHighlightId
-      root.render(<MarkerIcon type={poi.type} name={poi.name} color={poi.markerColor} showLabel={showLabels} isHighlighted={isHighlighted} status={poi.status} dangerLevel={poi.dangerLevel} />)
+      root.render(<MarkerIcon type={poi.type} name={poi.name} color={poi.markerColor} showLabel={showLabels} isHighlighted={isHighlighted} status={poi.status} dangerLevel={poi.dangerLevel} wealthColor={wealthColor} />)
       markerRootsRef.current.set(poi.id, root)
-      markerDataRef.current.set(poi.id, { type: poi.type, name: poi.name, color: poi.markerColor ?? null, showLabel: !!showLabels, isHighlighted, status: poi.status, dangerLevel: poi.dangerLevel ?? null })
+      markerDataRef.current.set(poi.id, { type: poi.type, name: poi.name, color: poi.markerColor ?? null, showLabel: !!showLabels, isHighlighted, status: poi.status, dangerLevel: poi.dangerLevel ?? null, wealthColor })
 
       const marker = new maplibregl.Marker({
         element: el,
@@ -501,7 +550,7 @@ export function MapViewer({
 
       markersRef.current.set(poi.id, marker)
     })
-  }, [activeHighlightId, pois, mapReady, mode, showLabels, pxToLngLat, lngLatToPx])
+  }, [activeHighlightId, pois, mapReady, mode, showLabels, showWealth, pxToLngLat, lngLatToPx])
 
   // Render path lines + watch labels
   useEffect(() => {
@@ -565,7 +614,7 @@ export function MapViewer({
         source: lineSourceId,
         paint: {
           // Portals read as a distinct planar link (violet), roads as dark.
-          'line-color': ['case', ['==', ['get', 'type'], 'portal'], '#a855f7', '#1e293b'],
+          'line-color': ['case', ['==', ['get', 'type'], 'portal'], '#a855f7', '#6b5334'],
           'line-width': 6,
           'line-dasharray': [2, 1],
           'line-opacity': 0.9,
@@ -915,6 +964,179 @@ export function MapViewer({
     // away. Re-runs while the same map persists are handled idempotently by the
     // getSource→setData branch above.
   }, [map.kind, map.hexCells, map.hexSize, mapReady, pxToLngLat, scale])
+
+  // ── Phase-4 resource/worldgen overlay layers ──────────────────────────
+  // Rivers + chokepoints, trade routes, resource badges, treasure markers.
+  // Mirrors the hex/path effects: build GeoJSON via the pure mapLayers builders,
+  // add the source/layer once, then update via setData on re-run; visibility is
+  // driven by the `layers` prop. Hex-only (the data lives on hex cells/POIs).
+  useEffect(() => {
+    const instance = mapRef.current
+    if (!instance || !mapReady) return
+    if (map.kind !== 'hex') return
+
+    const vis = (on: boolean): 'visible' | 'none' => (on ? 'visible' : 'none')
+    const poiById = new Map(pois.map((p) => [p.id, p]))
+
+    // Rivers sit just above the biome fill/tiles but below regions/roads/labels —
+    // reuse the same before-id list the tile layer uses.
+    const aboveTiles = [
+      'regions-fill',
+      'regions-outline',
+      'paths-layer',
+      'path-labels-layer',
+      'region-labels-layer',
+    ]
+    const riverBeforeId = aboveTiles.find((id) => instance.getLayer(id))
+
+    // --- Rivers (line, road-style) ---
+    // Drawn as thin blue lines between adjacent river cells so they read as
+    // flowing water WITHOUT painting over settlement/landmark tile doodles.
+    const riverSourceId = 'rivers-source'
+    const riverLayerId = 'rivers-line'
+    const riverGeojson = buildRiverGeoJSON(map.hexCells ?? [], pxToLngLat)
+    if (instance.getSource(riverSourceId)) {
+      ;(instance.getSource(riverSourceId) as maplibregl.GeoJSONSource).setData(riverGeojson)
+      if (riverBeforeId && instance.getLayer(riverLayerId)) instance.moveLayer(riverLayerId, riverBeforeId)
+    } else {
+      instance.addSource(riverSourceId, { type: 'geojson', data: riverGeojson })
+      instance.addLayer(
+        {
+          id: riverLayerId,
+          type: 'line',
+          source: riverSourceId,
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          // Thicker + soft blur reads as a flowing waterway rather than a hairline.
+          paint: { 'line-color': '#3b82f6', 'line-width': 8, 'line-opacity': 0.9, 'line-blur': 0.6 },
+        },
+        riverBeforeId,
+      )
+    }
+    if (instance.getLayer(riverLayerId)) instance.setLayoutProperty(riverLayerId, 'visibility', vis(showRivers))
+
+    // --- Chokepoints (circle, tagged by kind), shares the rivers toggle ---
+    const chokeSourceId = 'chokepoints-source'
+    const chokeLayerId = 'chokepoints-circle'
+    const chokeGeojson = buildChokepointGeoJSON(map.hexCells ?? [], pxToLngLat)
+    if (instance.getSource(chokeSourceId)) {
+      ;(instance.getSource(chokeSourceId) as maplibregl.GeoJSONSource).setData(chokeGeojson)
+    } else {
+      instance.addSource(chokeSourceId, { type: 'geojson', data: chokeGeojson })
+      instance.addLayer({
+        id: chokeLayerId,
+        type: 'circle',
+        source: chokeSourceId,
+        paint: {
+          // ford = teal, bridge = amber, pass = slate; default blue.
+          'circle-color': [
+            'match',
+            ['get', 'kind'],
+            'ford', '#0d9488',
+            'bridge', '#d97706',
+            'pass', '#475569',
+            '#2563eb',
+          ],
+          'circle-radius': 5,
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': '#ffffff',
+        },
+      })
+    }
+    if (instance.getLayer(chokeLayerId)) instance.setLayoutProperty(chokeLayerId, 'visibility', vis(showRivers))
+
+    // --- Trade routes (road-style muddy brown, lightly wavy) ---
+    const tradeSourceId = 'trade-routes-source'
+    const tradeLayerId = 'trade-routes-line'
+    const tradeGeojson = buildTradeRouteGeoJSON(connections ?? [], poiById, pxToLngLat)
+    if (instance.getSource(tradeSourceId)) {
+      ;(instance.getSource(tradeSourceId) as maplibregl.GeoJSONSource).setData(tradeGeojson)
+    } else {
+      instance.addSource(tradeSourceId, { type: 'geojson', data: tradeGeojson })
+      instance.addLayer({
+        id: tradeLayerId,
+        type: 'line',
+        source: tradeSourceId,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        // Same muddy-brown road styling, lightly wavy via the builder.
+        paint: { 'line-color': '#6b5334', 'line-width': 6, 'line-dasharray': [2, 1], 'line-opacity': 0.9 },
+      })
+    }
+    if (instance.getLayer(tradeLayerId)) instance.setLayoutProperty(tradeLayerId, 'visibility', vis(showTrade))
+
+    // --- Resource badges (symbol: produced-good label near the POI) ---
+    const resourceSourceId = 'resources-source'
+    const resourceLayerId = 'resources-symbol'
+    const resourceGeojson = buildResourceIconGeoJSON(pois, pxToLngLat)
+    if (instance.getSource(resourceSourceId)) {
+      ;(instance.getSource(resourceSourceId) as maplibregl.GeoJSONSource).setData(resourceGeojson)
+    } else {
+      instance.addSource(resourceSourceId, { type: 'geojson', data: resourceGeojson })
+      // Text label = produced good (icon images would need per-good assets we
+      // don't have yet); a small offset keeps it clear of the DOM marker.
+      instance.addLayer({
+        id: resourceLayerId,
+        type: 'symbol',
+        source: resourceSourceId,
+        layout: {
+          'text-field': ['get', 'produces'],
+          'text-size': 10,
+          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+          'text-offset': [0, 1.4],
+          'text-anchor': 'top',
+          'text-allow-overlap': false,
+        },
+        paint: {
+          'text-color': '#a16207',
+          'text-halo-color': '#ffffff',
+          'text-halo-width': 1.5,
+        },
+      })
+    }
+    if (instance.getLayer(resourceLayerId)) instance.setLayoutProperty(resourceLayerId, 'visibility', vis(showResources))
+
+    // --- Treasure markers (gold coin icon on loot-bearing POIs) ---
+    const treasureSourceId = 'treasure-source'
+    const treasureLayerId = 'treasure-symbol'
+    const treasureGeojson = buildTreasureGeoJSON(pois, pxToLngLat)
+    if (instance.getSource(treasureSourceId)) {
+      ;(instance.getSource(treasureSourceId) as maplibregl.GeoJSONSource).setData(treasureGeojson)
+    } else {
+      instance.addSource(treasureSourceId, { type: 'geojson', data: treasureGeojson })
+      instance.addLayer({
+        id: treasureLayerId,
+        type: 'symbol',
+        source: treasureSourceId,
+        layout: {
+          'text-field': '💰',
+          'text-size': 18,
+          'text-allow-overlap': true,
+          'text-ignore-placement': true,
+        },
+        // The map font renders the emoji as a monochrome glyph (hence it showed
+        // black) — tint it gold with a dark halo so it reads as treasure.
+        paint: {
+          'text-color': '#f5c518',
+          'text-halo-color': '#5c4308',
+          'text-halo-width': 1.5,
+        },
+      })
+    }
+    if (instance.getLayer(treasureLayerId)) instance.setLayoutProperty(treasureLayerId, 'visibility', vis(showTreasure))
+
+    // No teardown — matches the other layer effects; the init effect's
+    // mapInstance.remove() tears down all sources/layers on unmount/map switch.
+  }, [
+    map.kind,
+    map.hexCells,
+    pois,
+    connections,
+    mapReady,
+    pxToLngLat,
+    showRivers,
+    showTrade,
+    showResources,
+    showTreasure,
+  ])
 
   // Render draw-region preview polygon
   useEffect(() => {
