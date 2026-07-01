@@ -2,6 +2,8 @@ import { advanceClock, type ClockAdvanceUnit } from '@domain/services/ClockEngin
 import { isEventActiveOn } from '@domain/services/poiEventSchedule'
 import { rollWeather, type WeatherResult } from '@domain/services/WeatherEngine'
 import { rollAllFactionTurns, type FactionTurnSuggestion } from '@domain/services/FactionTurnEngine'
+import { rollDoomTick, type DoomTickSuggestion } from '@domain/services/doom/rollDoomTick'
+import { executeConfirmDoomTick } from './ConfirmDoomTick'
 import { executeConfirmFactionTurn } from './ConfirmFactionTurn'
 import { createClockAdvancedEvent } from '@domain/events/ClockAdvanced'
 import { createWeatherRolledEvent } from '@domain/events/WeatherRolled'
@@ -12,8 +14,12 @@ import type { IFactionRelationshipRepository } from '@application/ports/IFaction
 import type { INPCRepository } from '@application/ports/INPCRepository'
 import type { IWorldEventRepository } from '@application/ports/IWorldEventRepository'
 import type { IPOIEventRepository } from '@application/ports/IPOIEventRepository'
+import type { IConnectionRepository } from '@application/ports/IConnectionRepository'
+import type { IPOIRepository } from '@application/ports/IPOIRepository'
+import type { IDoomRepository } from '@application/ports/IDoomRepository'
 import type { IEventBus } from '@application/ports/IEventBus'
 import { advanceDay, advanceWatch, type WorldDateTime } from '@domain/value-objects/WorldDate'
+import { SeededRandom } from '~/lib/dungeon/SeededRandom'
 import type { DiceResult } from '@shared/dice'
 import { newId } from '@shared/ulid'
 
@@ -107,6 +113,10 @@ export interface AdvanceDayDeps {
   eventBus: IEventBus
   rollDice: (notation: string) => DiceResult
   poiEventRepo?: IPOIEventRepository
+  /** Doom tick (optional — absent on pre-v45 realms; skip tick when missing). */
+  doomRepo?: IDoomRepository
+  connectionRepo?: IConnectionRepository
+  poiRepo?: IPOIRepository
 }
 
 export interface AdvanceDayResult {
@@ -114,6 +124,7 @@ export interface AdvanceDayResult {
   newDateTime: WorldDateTime
   weather: WeatherResult
   factionTurns: FactionTurnSuggestion[]
+  doomTick: DoomTickSuggestion | null
 }
 
 /**
@@ -161,6 +172,33 @@ export async function executeAdvanceDay(
   let factionTurns: FactionTurnSuggestion[] = []
   if (realm.factionTurnTrigger === 'day') {
     factionTurns = await executeFactionTurns(worldId, newDateTime, deps)
+  }
+
+  // Doom tick — auto-applied when a looming doom exists. Absent on pre-v45
+  // realms (no doomRepo provided) or when no doom is looming; safe to skip.
+  let doomTick: DoomTickSuggestion | null = null
+  if (deps.doomRepo && deps.connectionRepo && deps.poiRepo && deps.poiEventRepo) {
+    const dooms = await deps.doomRepo.getByRealmId(worldId)
+    const doom = dooms.find((d) => d.status === 'looming') ?? null
+    if (doom) {
+      const connections = await deps.connectionRepo.getByWorld(worldId)
+      const pois = await deps.poiRepo.getByRealmId(worldId)
+      const doomRng = new SeededRandom(
+        `${worldId}:${newDateTime.year}:${newDateTime.season}:${newDateTime.day}`,
+      )
+      const suggestion = rollDoomTick(doom, { connections, pois }, doomRng)
+      if (suggestion) {
+        await executeConfirmDoomTick(worldId, doom, suggestion, newDateTime, {
+          doomRepo: deps.doomRepo,
+          connectionRepo: deps.connectionRepo,
+          poiRepo: deps.poiRepo,
+          poiEventRepo: deps.poiEventRepo,
+          worldEventRepo: deps.worldEventRepo,
+          eventBus: deps.eventBus,
+        })
+        doomTick = suggestion
+      }
+    }
   }
 
   // Activate/deactivate scheduled POI events by date window. A recurring
@@ -212,7 +250,7 @@ export async function executeAdvanceDay(
     )
   )
 
-  return { previousDateTime: current, newDateTime, weather, factionTurns }
+  return { previousDateTime: current, newDateTime, weather, factionTurns, doomTick }
 }
 
 /**

@@ -152,6 +152,10 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
         worldEventRepo: container.worldEventRepo,
         eventBus: container.eventBus,
         rollDice,
+        poiEventRepo: container.poiEventRepo,
+        doomRepo: container.doomRepo,
+        connectionRepo: container.connectionRepo,
+        poiRepo: container.poiRepo,
       };
       await executeAdvanceDay(worldId, advanceDeps);
     } finally {

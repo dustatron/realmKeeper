@@ -70,6 +70,9 @@ export function HeaderClock() {
     eventBus: container.eventBus,
     rollDice,
     poiEventRepo: container.poiEventRepo,
+    doomRepo: container.doomRepo,
+    connectionRepo: container.connectionRepo,
+    poiRepo: container.poiRepo,
   })
 
   const advance = async (

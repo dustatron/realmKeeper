@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useUIStore } from '~/ui/stores/uiStore'
 import { useFaction, useFactions } from '~/ui/hooks/useFactions'
+import { useRealmDoom } from '~/ui/hooks/useDooms'
 import { useNPCs, useNPCsByFaction } from '~/ui/hooks/useNPCs'
 import { useRegions } from '~/ui/hooks/useRegions'
 import { useRealmPOIs } from '~/ui/hooks/usePOIs'
@@ -25,7 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
 import { Input } from '~/components/ui/input'
-import { ArrowLeft, Trash2, Pencil, Crown, CheckCircle2, Circle, Dices, Users, Handshake, ChevronUp, ChevronDown, MapPin, Map, Link2, Footprints } from 'lucide-react'
+import { ArrowLeft, Trash2, Pencil, Crown, CheckCircle2, Circle, Dices, Users, Handshake, ChevronUp, ChevronDown, MapPin, Map, Link2, Footprints, Skull } from 'lucide-react'
 import { ProgressClock } from '~/components/shared/ProgressClock'
 import { FACTION_STATUSES, FACTION_PRESENCE_TYPES, type FactionPresenceType } from '@shared/constants'
 import { deriveStatus } from '@domain/value-objects/RelationshipScore'
@@ -58,6 +59,7 @@ function FactionDetailPage() {
   const systemConfig = useSystemConfig(realm?.systemId ?? null)
   const container = useContainer()
   const faction = useFaction(factionId)
+  const realmDoom = useRealmDoom(activeRealmId)
   const agentNpcs = useNPCsByFaction(factionId)
   const allFactions = useFactions(activeRealmId)
   const regions = useRegions(activeRealmId)
@@ -314,6 +316,17 @@ function FactionDetailPage() {
                     </Link>
                   ) : null
                 })()}
+                {realmDoom?.doomFactionId === f.id && (
+                  <Link
+                    to="/realms/dooms/$doomId"
+                    params={{ doomId: realmDoom.id }}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1 hover:bg-red-500/20 transition-colors"
+                  >
+                    <Skull className="size-3.5 text-red-500" />
+                    <span className="text-red-500 font-medium">Doom</span>
+                    <span className="font-medium text-foreground">{realmDoom.name}</span>
+                  </Link>
+                )}
               </div>
             )}
 

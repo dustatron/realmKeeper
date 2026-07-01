@@ -44,6 +44,7 @@ function makeFakePOIRepo(pois: POI[]) {
   const store: POI[] = pois.map((p) => ({ ...p }))
   return {
     getById: async (id: string) => store.find((p) => p.id === id),
+    getByRealmId: async () => [...store],
     getByRegionId: async () => [],
     getByParentPoiId: async () => [],
     getChildren: async () => [],

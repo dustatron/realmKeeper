@@ -28,6 +28,7 @@ import {
   Pencil,
   Check,
   X,
+  Skull,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { useFaction } from "~/ui/hooks/useFactions";
@@ -300,8 +301,9 @@ export function DayLogRow({
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   const primaryWeather = entry.weather[0];
   const hasFactionTurns = entry.factionTurns.length > 0;
+  const hasDoomEvents = (entry.doomEvents?.length ?? 0) > 0;
   const hasWorldEvents = entry.events.length > 0;
-  const hasActivity = hasFactionTurns || hasWorldEvents;
+  const hasActivity = hasFactionTurns || hasDoomEvents || hasWorldEvents;
 
   return (
     <>
@@ -391,6 +393,12 @@ export function DayLogRow({
                 <Badge variant="secondary" className="text-xs">
                   <Swords className="size-3 mr-1" />
                   {entry.factionTurns.length}
+                </Badge>
+              )}
+              {hasDoomEvents && (
+                <Badge variant="destructive" className="text-xs">
+                  <Skull className="size-3 mr-1" />
+                  {entry.doomEvents.length}
                 </Badge>
               )}
               {hasWorldEvents && (
@@ -487,6 +495,21 @@ export function DayLogRow({
                     title={ft.title}
                     description={ft.description}
                   />
+                ))}
+              </ul>
+            )}
+            {hasDoomEvents && (
+              <ul className="space-y-1">
+                {entry.doomEvents.map((ev) => (
+                  <li key={ev.id} className="flex items-start gap-2 text-sm">
+                    <Skull className="size-3.5 mt-0.5 shrink-0 text-red-400" />
+                    <div>
+                      <span className="font-medium text-red-400">{ev.title}</span>
+                      {ev.description && (
+                        <p className="text-xs text-muted-foreground">{ev.description}</p>
+                      )}
+                    </div>
+                  </li>
                 ))}
               </ul>
             )}

@@ -101,7 +101,7 @@ export async function executeGenerateWorld(
   // async context) and the hex map all commit together or roll back together —
   // no orphaned realm if a later write fails. Tables listed = every table the
   // enclosed writes touch.
-  await db.transaction('rw', [db.worlds, db.factions, db.factionPresences, db.factionRelationships, db.npcs, db.connections, db.hooks, db.notices, db.rumors, db.worldEvents, db.poiEvents, db.realmNotes, db.gameMaps, db.regions, db.pois, db.paths], async () => {
+  await db.transaction('rw', [db.worlds, db.factions, db.factionPresences, db.factionRelationships, db.npcs, db.connections, db.hooks, db.notices, db.rumors, db.worldEvents, db.poiEvents, db.realmNotes, db.gameMaps, db.regions, db.pois, db.paths, db.dooms], async () => {
     const realm = await executeCreateRealm(
       {
         name: input.name,
@@ -115,7 +115,7 @@ export async function executeGenerateWorld(
       },
       deps
     )
-    const { gameMap, regions, pois, paths, factions, factionPresences, factionRelationships, npcs, connections, hooks, notices, rumors, worldEvents, poiEvents } = generateWorld(realm.id, input.seed, {
+    const { gameMap, regions, pois, paths, factions, factionPresences, factionRelationships, npcs, connections, hooks, notices, rumors, worldEvents, poiEvents, doom } = generateWorld(realm.id, input.seed, {
       cols: preset.cols,
       rows: preset.rows,
       systemId: input.systemId,
@@ -126,6 +126,7 @@ export async function executeGenerateWorld(
       resources: input.resources,
       unclaimedDeposits: input.unclaimedDeposits,
       loomingThreat: input.loomingThreat ?? true,
+      doom: input.doom,
       portals: input.portals ?? true,
       realmContent: {
         treasureDensity: input.worldTreasureDensity ?? 'moderate',
@@ -155,6 +156,7 @@ export async function executeGenerateWorld(
     await db.rumors.bulkPut(rumors)
     await db.worldEvents.bulkPut(worldEvents)
     await db.poiEvents.bulkPut(poiEvents)
+    if (doom) await db.dooms.put(doom)
     realmId = realm.id
     mapId = gameMap.id
     dungeonStubs = pois.filter((p) => p.type === 'dungeon' && p.dungeonGenOptions != null)

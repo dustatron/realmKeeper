@@ -11,6 +11,43 @@ import type { WorldEvent } from '@domain/entities/WorldEvent'
 import type { POIEvent } from '@domain/entities/POIEvent'
 import type { Season } from '@shared/constants'
 
+/** Pure helper: buckets WorldEvents into the three named slots used by DayLogEntry. */
+export function bucketWorldEvents(
+  events: WorldEvent[],
+  daysPerSeason: number,
+): {
+  factionTurnMap: Map<number, WorldEvent[]>
+  doomEventMap: Map<number, WorldEvent[]>
+  eventMap: Map<number, WorldEvent[]>
+  gmNoteMap: Map<number, WorldEvent[]>
+} {
+  const factionTurnMap = new Map<number, WorldEvent[]>()
+  const doomEventMap = new Map<number, WorldEvent[]>()
+  const eventMap = new Map<number, WorldEvent[]>()
+  const gmNoteMap = new Map<number, WorldEvent[]>()
+  for (const e of events) {
+    const k = toDayKey(e.year, e.season, e.day, daysPerSeason)
+    if (e.type === 'faction_turn') {
+      const arr = factionTurnMap.get(k) ?? []
+      arr.push(e)
+      factionTurnMap.set(k, arr)
+    } else if (e.type === 'doom_stage') {
+      const arr = doomEventMap.get(k) ?? []
+      arr.push(e)
+      doomEventMap.set(k, arr)
+    } else if (e.type === 'gm_note') {
+      const arr = gmNoteMap.get(k) ?? []
+      arr.push(e)
+      gmNoteMap.set(k, arr)
+    } else if (e.type !== 'clock_advance') {
+      const arr = eventMap.get(k) ?? []
+      arr.push(e)
+      eventMap.set(k, arr)
+    }
+  }
+  return { factionTurnMap, doomEventMap, eventMap, gmNoteMap }
+}
+
 export interface DayLogEntry {
   dayKey: number
   campaignDay: number
@@ -19,6 +56,7 @@ export interface DayLogEntry {
   day: number
   weather: WeatherHistory[]
   factionTurns: WorldEvent[]
+  doomEvents: WorldEvent[]
   events: WorldEvent[]
   gmNotes: WorldEvent[]
   scheduledEvents: POIEvent[]
@@ -59,27 +97,7 @@ export function useDayLog(
       weatherMap.set(k, arr)
     }
 
-    const factionTurnMap = new Map<number, WorldEvent[]>()
-    const eventMap = new Map<number, WorldEvent[]>()
-    const gmNoteMap = new Map<number, WorldEvent[]>()
-
-    for (const e of allEvents) {
-      const k = toDayKey(e.year, e.season, e.day, dps)
-      if (e.type === 'faction_turn') {
-        const arr = factionTurnMap.get(k) ?? []
-        arr.push(e)
-        factionTurnMap.set(k, arr)
-      } else if (e.type === 'gm_note') {
-        const arr = gmNoteMap.get(k) ?? []
-        arr.push(e)
-        gmNoteMap.set(k, arr)
-      } else if (e.type !== 'clock_advance') {
-        // Filter out clock_advance noise
-        const arr = eventMap.get(k) ?? []
-        arr.push(e)
-        eventMap.set(k, arr)
-      }
-    }
+    const { factionTurnMap, doomEventMap, eventMap, gmNoteMap } = bucketWorldEvents(allEvents, dps)
 
     // Build POI event lookup: key by trigger day+season (recurring match any year)
     const poiEventMap = new Map<number, POIEvent[]>()
@@ -122,6 +140,7 @@ export function useDayLog(
         day,
         weather: weatherMap.get(dk) ?? [],
         factionTurns: factionTurnMap.get(dk) ?? [],
+        doomEvents: doomEventMap.get(dk) ?? [],
         events: eventMap.get(dk) ?? [],
         gmNotes: gmNoteMap.get(dk) ?? [],
         scheduledEvents: [...scheduled, ...recurringMatches],

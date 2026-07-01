@@ -78,8 +78,9 @@ describe('export → import round-trip of a generated world', () => {
   })
 
   it('preserves a Doom through export → import (id, status, progress, stages intact)', async () => {
+    // loomingThreat:false so worldgen adds no doom; we add exactly one manually below
     const { realmId: w1 } = await executeGenerateWorld(
-      { name: 'Origin', systemId: 'system-cairn-2e', seed: 'doom-roundtrip-1', size: 'small' },
+      { name: 'Origin', systemId: 'system-cairn-2e', seed: 'doom-roundtrip-1', size: 'small', loomingThreat: false },
       genDeps(),
     )
 
