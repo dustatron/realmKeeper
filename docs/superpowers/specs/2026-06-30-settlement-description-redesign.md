@@ -11,7 +11,7 @@ Every settlement's `description` is a fixed 6-slot clause chain welded into one 
 
 ## Goal
 
-Replace the stitched paragraph with **structured flavor facts rendered as a data list** plus **one short distilled hook** as the description. Move the GM secret to the dedicated `gmNotes` field. Make the flavor fields editable.
+Replace the stitched paragraph with **structured flavor facts rendered as a data list** plus **one short distilled hook** as the description. Replace the random one-line "GM secret" with **GM notes derived from the settlement's real situation** (needs, factions, wealth, front, doom), written into the dedicated `gmNotes` field. Make the flavor fields editable.
 
 ## Decisions (locked)
 
@@ -20,6 +20,7 @@ Replace the stitched paragraph with **structured flavor facts rendered as a data
 3. **New realms only.** No migration, no schema version bump. (Dexie persists new non-indexed properties on `pois` automatically; existing rows leave them `undefined` and render "—". Existing realms keep their current run-on descriptions untouched.)
 4. **Structure-quirk** draw is folded into the hook — not stored, not its own row.
 5. **GM Notes** overview card is **read-only**; editing happens on the settlement edit page.
+6. **GM notes are derived from the world**, not a random secret draw. The `SETTLEMENT_SECRETS` single-draw model is retired (table may be deleted or left unused). GM notes are composed from the settlement's actual state as a short bulleted list.
 
 ## Data model
 
@@ -45,9 +46,9 @@ settlementFlavor: {
 Replace the description-stitching block (lines ~83-88):
 
 - Populate `settlement.settlementFlavor = { knownFor, district, notableFeature: feature, tradition: festival, guild }` from the existing table draws.
-- Set `settlement.gmNotes = secret` (the `SETTLEMENT_SECRETS` draw; keep the existing child-rng so building generation stays byte-identical).
 - Set `settlement.description = buildSettlementHook(settlement, flavor, structureQuirk, rng)`.
 - The `structureQuirk` draw is passed to the hook generator (may be used or ignored) and is NOT stored.
+- **Stop drawing `SETTLEMENT_SECRETS` and stop writing `gmNotes` here** — GM notes are derived in a late post-pass (see below), because the signals they need (trade, wealth, fronts, doom) do not exist yet at settlement-build time. Drop the `SETTLEMENT_SECRET_TABLE_ID`/`SETTLEMENT_SECRETS` import and its child-rng. (Removing that child-rng does not disturb the main rng stream, so building generation stays byte-identical.)
 
 ### New unit — `buildSettlementHook`
 `src/domain/services/worldgen/buildSettlementHook.ts` (pure, seeded):
@@ -62,6 +63,58 @@ export function buildSettlementHook(
 - Produces ONE natural sentence distilled from 2-3 defining signals: settlement type/size, terrain/biome, trade (`settlement.trade?.produces`), and `knownFor` (optionally `structureQuirk`).
 - Varied sentence templates so it does not read as a fixed slot chain. Deterministic under a fixed seed.
 - Example target: *"A bridge-town on the trade road, uneasy over a cursed well no one will cap."*
+
+## GM notes — derived from the world (new post-pass)
+
+GM notes stop being a disconnected random secret and become a short, actionable
+prep summary composed from the settlement's real situation. Because the inputs
+are computed *after* settlements are placed (trade at `generateWorld.ts:850`,
+then wealth, then region fronts, then doom), this runs as a **late post-pass**
+over already-built settlements — not inside `buildSettlement`.
+
+### New service — `src/domain/services/worldgen/deriveSettlementGmNotes.ts` (pure, seeded)
+```ts
+export interface SettlementGmNotesContext {
+  settlement: POI
+  region: Region
+  connections: Connection[]        // realm-wide; filter kind==='supplies'
+  pois: POI[]                      // for resolving suppliers/holders by id
+  factions: Faction[]
+  factionPresences: FactionPresence[]
+  relationships: FactionRelationship[]
+  doom: Doom | null                // Phase 6 (optional; realm may have none)
+}
+export function deriveSettlementGmNotes(
+  ctx: SettlementGmNotesContext,
+  rng: SeededRandom,
+): string   // markdown bullet list; '' when nothing notable
+```
+
+Compose 2–4 bullet lines by priority, drawing only from signals that are
+actually present (skip absent ones — never pad):
+
+1. **Unmet need + who holds it** — a `trade.needs` entry with no `supplies`
+   connection into this settlement. If a nearby settlement/faction produces it,
+   name them; if that holder's faction is hostile/rival to a faction seated
+   here, flag it as leverage/tension. (Ties P2 trade + faction relationships.)
+2. **Wealth posture** — from `poi.wealthBand`: rich + low guard → raid/extortion
+   target; destitute → desperate, cheap loyalty; monopoly holder → a target.
+   (Ties P3 wealth.)
+3. **Contested resource** — the region's guaranteed contested resource (P3): who
+   contests it and what the settlement's stake is.
+4. **Regional front** — `region.front` (P3 mini-clock): the moving threat nearby
+   and how close/relevant it is.
+5. **Doom proximity** — if a `Doom` targets this settlement's region/resource or
+   spreads via a vector that passes through it (P6), one line on the omen.
+6. **Local trouble** — fold in the existing `poi.trouble` if not already implied.
+
+Deterministic under a fixed seed. System-agnostic. Output is markdown so the
+render layer can show it as a list.
+
+### Wiring — `generateWorld.ts`
+After wealth, region fronts, and doom are generated (near the end of the
+pipeline), iterate settlements and set `poi.gmNotes = deriveSettlementGmNotes(...)`.
+This replaces the removed inline secret. New realms only.
 
 ## Rendering — `src/components/poi-templates/SettlementTemplate.tsx`
 
