@@ -7,7 +7,9 @@ import type { Hook } from '@domain/entities/Hook'
 import type { Notice } from '@domain/entities/Notice'
 import type { Rumor } from '@domain/entities/Rumor'
 import type { Season } from '@shared/constants'
+import type { Doom } from '@domain/entities/Doom'
 import { newId } from '@shared/ulid'
+import { resolveDoomTheme } from '@domain/services/doom/doomThemes'
 
 export interface DoomClock {
   year: number
@@ -71,7 +73,8 @@ export function buildDoom(
   clock: DoomClock,
   worldId: string,
   rng: SeededRandom,
-): DoomBundle {
+  theme?: string,   // NEW — create-realm doom label; undefined/'' ⇒ random
+): { doom: Doom; bundle: DoomBundle } {
   const now = Date.now()
   const withLeaders = factions.filter((f) => f.leaderNpcId)
   const doomFaction = (withLeaders.length > 0 ? rng.pick(withLeaders) : factions[0])
@@ -83,6 +86,14 @@ export function buildDoom(
   // Future date, 45–120 days out.
   const date = addDays(clock, rng.between(45, 120))
 
+  // Resolve theme — undefined/'' picks random across all packs
+  const resolvedTheme = resolveDoomTheme(theme ?? '', undefined, rng)
+
+  // Name: use themed name when provided; else keep the classic faction name
+  const doomName = (theme && theme !== 'random' && theme !== '')
+    ? resolvedTheme.name
+    : `The Reckoning of the ${doomFaction.name}`
+
   const event: WorldEvent = {
     id: newId(),
     worldId,
@@ -91,7 +102,7 @@ export function buildDoom(
     day: date.day,
     watch: date.watch,
     type: 'doom',
-    title: `The Reckoning of the ${doomFaction.name}`,
+    title: doomName,
     description:
       `Unless they are stopped, the ${doomFaction.name} will ${goal.toLowerCase()} — and ${consequence}. ` +
       `The omens all point to this day.`,
@@ -140,14 +151,14 @@ export function buildDoom(
       title: `Stop the ${doomFaction.name} before the reckoning`,
       status: 'open',
       contactNpcId: contactId,
-      rewardText: 'The gratitude of the realm — and a king’s ransom, if any survive.',
+      rewardText: "The gratitude of the realm — and a king's ransom, if any survive.",
       secret: {
         kind: 'truth',
         targetType: 'poi',
         targetId: doomFaction.headquartersPoiId ?? pois[0]?.id ?? '',
         detail:
-          `“I have seen what the ${doomFaction.name} mean to do. If they are not broken at their seat of power, ` +
-          `${consequence}. I cannot stop them alone — but you might.”`,
+          `"I have seen what the ${doomFaction.name} mean to do. If they are not broken at their seat of power, ` +
+          `${consequence}. I cannot stop them alone — but you might."`,
       },
       createdAt: now,
       updatedAt: now,
@@ -191,5 +202,28 @@ export function buildDoom(
     updatedAt: now,
   }))
 
-  return { event, poiEvents, rumors, notices, hooks }
+  const bundle: DoomBundle = { event, poiEvents, rumors, notices, hooks }
+
+  // Build the Doom entity
+  const doom: Doom = {
+    id: newId(),
+    worldId,
+    name: doomName,
+    theme: theme ?? '',
+    description: event.description,
+    doomFactionId: doomFaction.id,
+    status: 'looming',
+    progress: 0,
+    segments: 6,
+    stages: resolvedTheme.stages.map((s) => ({ ...s, fired: false })),
+    vector: resolvedTheme.vector,
+    keyedResource: resolvedTheme.keyedResource,
+    keyedBiome: resolvedTheme.keyedBiome,
+    reckoningDate: { year: date.year, season: date.season, day: date.day, watch: date.watch },
+    hookId,
+    createdAt: now,
+    updatedAt: now,
+  }
+
+  return { doom, bundle }
 }

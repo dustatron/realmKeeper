@@ -86,6 +86,8 @@ export function generateWorld(
     resources?: string[]
     /** When true, some natural sites host an unclaimed, extractable resource. */
     unclaimedDeposits?: boolean
+    /** Create-realm doom label (e.g. "The Salt-Death"); undefined/'' ⇒ random. */
+    doom?: string
   }
 ): {
   gameMap: GameMap
@@ -922,12 +924,12 @@ export function generateWorld(
     ),
   )
   if (opts.loomingThreat && opts.systemConfig && opts.clock && factions.length > 0) {
-    const doom = buildDoom(factions, pois, opts.clock, realmId, rng)
-    worldEvents.push(doom.event)
-    poiEvents.push(...doom.poiEvents)
-    hooks.push(...doom.hooks)
-    notices.push(...doom.notices)
-    rumors.push(...doom.rumors)
+    const { bundle } = buildDoom(factions, pois, opts.clock, realmId, rng, opts.doom)
+    worldEvents.push(bundle.event)
+    poiEvents.push(...bundle.poiEvents)
+    hooks.push(...bundle.hooks)
+    notices.push(...bundle.notices)
+    rumors.push(...bundle.rumors)
   }
 
   if (opts.systemId && opts.realmContent) {
