@@ -220,6 +220,7 @@ export function buildDoom(
     keyedResource: resolvedTheme.keyedResource,
     keyedBiome: resolvedTheme.keyedBiome,
     reckoningDate: { year: date.year, season: date.season, day: date.day, watch: date.watch },
+    startDate: { year: clock.year, season: clock.season, day: clock.day, watch: clock.watch },
     hookId,
     createdAt: now,
     updatedAt: now,

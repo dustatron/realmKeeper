@@ -88,6 +88,11 @@ describe('buildDoom', () => {
     expect(doom.segments).toBe(6)
     expect(doom.progress).toBe(0)
     expect(doom.worldId).toBe('w1')
+    // startDate must match the input clock
+    expect(doom.startDate.year).toBe(clock.year)
+    expect(doom.startDate.season).toBe(clock.season)
+    expect(doom.startDate.day).toBe(clock.day)
+    expect(doom.startDate.watch).toBe(clock.watch)
   })
 
   it('doom.stages has ≥3 entries with ascending thresholds, all unfired', () => {

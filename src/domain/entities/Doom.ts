@@ -24,6 +24,8 @@ export interface Doom {
   keyedResource: string | null
   keyedBiome: string | null
   reckoningDate: { year: number; season: Season; day: number; watch: number }
+  /** World-date the doom's clock started (generation time). Anchors proportional clock fill. */
+  startDate: { year: number; season: Season; day: number; watch: number }
   hookId: string | null        // the avert quest hook id
   createdAt: number
   updatedAt: number

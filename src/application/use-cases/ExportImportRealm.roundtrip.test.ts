@@ -99,6 +99,7 @@ describe('export → import round-trip of a generated world', () => {
       keyedResource: null,
       keyedBiome: null,
       reckoningDate: { year: 1, season: 'fall', day: 7, watch: 2 },
+      startDate: { year: 1, season: 'spring', day: 1, watch: 1 },
       hookId: null,
       createdAt: Date.now(),
       updatedAt: Date.now(),

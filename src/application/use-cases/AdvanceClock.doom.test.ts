@@ -24,6 +24,16 @@ const realm = (over: Partial<Realm> = {}): Realm => ({
   createdAt: 0, updatedAt: 0, ...over,
 })
 
+/**
+ * Build a looming doom.
+ *
+ * Default setup (realm starts at summer day 9, daysPerSeason=30):
+ *   startDate   = summer day 9, year 1  (same as realm's current day)
+ *   reckoningDate = summer day 15, year 1  (6 days out → 1 segment per day)
+ *
+ * After advance to summer day 10:
+ *   elapsed=1, total=6 → target=round(6*1/6)=1 → progress advances 0→1.
+ */
 const loomingDoom = (worldId: string, over: Partial<Doom> = {}): Doom => ({
   id: newId(),
   worldId,
@@ -42,7 +52,8 @@ const loomingDoom = (worldId: string, over: Partial<Doom> = {}): Doom => ({
   vector: 'roads',
   keyedResource: null,
   keyedBiome: null,
-  reckoningDate: { year: 2, season: 'winter', day: 10, watch: 1 },
+  startDate: { year: 1, season: 'summer', day: 9, watch: 1 },
+  reckoningDate: { year: 1, season: 'summer', day: 15, watch: 1 },
   hookId: null,
   createdAt: 0,
   updatedAt: 0,
@@ -65,9 +76,11 @@ const deps = () => ({
 })
 
 describe('executeAdvanceDay doom tick (D2)', () => {
-  it('advances doom progress by 1 each day when a looming doom exists', async () => {
+  it('advances doom progress when reckoningDate is near (proportional fill)', async () => {
     const r = realm()
     await container.realmRepo.create(r)
+    // startDate=summer day 9, reckoningDate=summer day 15, daysPerSeason=30
+    // After advance to day 10: elapsed=1, total=6 → target=1 → progress 0→1
     const doom = loomingDoom(r.id)
     await container.doomRepo.create(doom)
 
@@ -79,6 +92,24 @@ describe('executeAdvanceDay doom tick (D2)', () => {
     expect(saved?.status).toBe('looming')
     expect(result?.doomTick).not.toBeNull()
     expect(result?.doomTick?.newProgress).toBe(1)
+  })
+
+  it('does not tick when reckoningDate is far in the future (no progress this day)', async () => {
+    const r = realm()
+    await container.realmRepo.create(r)
+    // 181-day span; advancing 1 day out of 181 → target=round(6/181)=0 → no tick
+    const doom = loomingDoom(r.id, {
+      startDate: { year: 1, season: 'summer', day: 9, watch: 1 },
+      reckoningDate: { year: 2, season: 'winter', day: 10, watch: 1 },
+    })
+    await container.doomRepo.create(doom)
+
+    const result = await executeAdvanceDay(r.id, deps())
+    expect(result).not.toBeNull()
+    expect(result?.doomTick).toBeNull()
+
+    const saved = await container.doomRepo.getById(doom.id)
+    expect(saved?.progress).toBe(0) // unchanged
   })
 
   it('does not tick when no doom exists (pre-v45 realm, no doom)', async () => {
@@ -106,8 +137,14 @@ describe('executeAdvanceDay doom tick (D2)', () => {
   it('fires a doom_stage WorldEvent when a stage threshold is crossed', async () => {
     const r = realm()
     await container.realmRepo.create(r)
-    // Set progress to 1 so stage at threshold 2 fires on next advance
-    const doom = loomingDoom(r.id, { progress: 1 })
+    // startDate=summer day 8, reckoningDate=summer day 14 → total=6 days
+    // Realm at day 9 → advances to day 10: elapsed=2 → target=round(6*2/6)=2
+    // progress=1, newProgress=max(1,2)=2 → crosses threshold 2
+    const doom = loomingDoom(r.id, {
+      progress: 1,
+      startDate: { year: 1, season: 'summer', day: 8, watch: 1 },
+      reckoningDate: { year: 1, season: 'summer', day: 14, watch: 1 },
+    })
     await container.doomRepo.create(doom)
 
     await executeAdvanceDay(r.id, deps())

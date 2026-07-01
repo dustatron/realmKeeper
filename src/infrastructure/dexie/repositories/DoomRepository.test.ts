@@ -19,6 +19,7 @@ function makeDoom(overrides: Partial<Doom> = {}): Doom {
     keyedResource: null,
     keyedBiome: null,
     reckoningDate: { year: 1, season: 'spring', day: 1, watch: 1 },
+    startDate: { year: 1, season: 'spring', day: 1, watch: 1 },
     hookId: null,
     createdAt: 1,
     updatedAt: 1,

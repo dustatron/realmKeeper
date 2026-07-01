@@ -2,6 +2,7 @@ import type { Doom, DoomStage } from '@domain/entities/Doom'
 import type { Connection } from '@domain/entities/Connection'
 import type { POI } from '@domain/entities/POI'
 import type { SeededRandom } from '~/lib/dungeon/SeededRandom'
+import type { WorldDateTime } from '@domain/value-objects/WorldDate'
 
 export type DoomEffectKind = 'cut_trade' | 'foul_water' | 'spawn_problem'
 
@@ -25,15 +26,42 @@ export interface DoomGraph {
   pois: POI[]                 // the realm's POIs
 }
 
+const SEASONS = ['spring', 'summer', 'fall', 'winter'] as const
+
+function absDays(
+  d: { year: number; season: string; day: number },
+  daysPerSeason: number,
+): number {
+  return (
+    (d.year - 1) * 4 * daysPerSeason +
+    SEASONS.indexOf(d.season as typeof SEASONS[number]) * daysPerSeason +
+    (d.day - 1)
+  )
+}
+
 export function rollDoomTick(
   doom: Doom,
   graph: DoomGraph,
+  dt: WorldDateTime,
+  daysPerSeason: number,
   rng: SeededRandom,
 ): DoomTickSuggestion | null {
   if (doom.status !== 'looming') return null
 
   const previousProgress = doom.progress
-  const newProgress = Math.min(doom.segments, doom.progress + 1)
+  const { segments } = doom
+
+  const totalDays = absDays(doom.reckoningDate, daysPerSeason) - absDays(doom.startDate, daysPerSeason)
+  const elapsedDays = absDays(dt, daysPerSeason) - absDays(doom.startDate, daysPerSeason)
+
+  const target =
+    totalDays <= 0
+      ? segments
+      : Math.min(segments, Math.max(0, Math.round((segments * elapsedDays) / totalDays)))
+
+  const newProgress = Math.min(segments, Math.max(previousProgress, target))
+
+  if (newProgress === previousProgress) return null
 
   const firedStages = doom.stages.filter(
     (s) =>
@@ -42,7 +70,7 @@ export function rollDoomTick(
       !s.fired,
   )
 
-  const reckoned = newProgress >= doom.segments
+  const reckoned = newProgress >= segments
 
   const effects: DoomEffect[] = []
 

@@ -186,7 +186,7 @@ export async function executeAdvanceDay(
       const doomRng = new SeededRandom(
         `${worldId}:${newDateTime.year}:${newDateTime.season}:${newDateTime.day}`,
       )
-      const suggestion = rollDoomTick(doom, { connections, pois }, doomRng)
+      const suggestion = rollDoomTick(doom, { connections, pois }, newDateTime, realm.daysPerSeason, doomRng)
       if (suggestion) {
         await executeConfirmDoomTick(worldId, doom, suggestion, newDateTime, {
           doomRepo: deps.doomRepo,
