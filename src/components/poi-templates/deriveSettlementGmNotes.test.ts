@@ -51,11 +51,9 @@ describe('deriveSettlementGmNotes', () => {
     expect(squeeze!.body).toContain('owns the town')
   })
 
-  it('only surfaces SQUEEZE and GROUNDING — RIOT and PAYOFF are dropped', () => {
+  it('only surfaces SQUEEZE — RIOT/PAYOFF/PRIZE are dropped', () => {
     const titles = deriveSettlementGmNotes(oakfall).map((n) => n.title)
-    expect(titles).not.toContain('THE RIOT')
-    expect(titles).not.toContain('THE PAYOFF')
-    expect(new Set(titles)).toEqual(new Set(['THE SQUEEZE', 'THE PRIZE']))
+    expect(titles).toEqual(['THE SQUEEZE'])
   })
 
   it('all oakfall note bodies are under 25 words and non-empty', () => {
@@ -84,16 +82,12 @@ describe('deriveSettlementGmNotes', () => {
     expect(notes.find((n) => n.title === 'THE SQUEEZE')).toBeUndefined()
   })
 
-  it('GROUNDING fires when topTreasure and knownFor present', () => {
+  it('treasure alone does not add a note (PRIZE dropped)', () => {
     const ctx: GmNoteContext = {
       ...emptyCtx,
       topTreasure: 'Obsidian Blade',
       knownFor: 'its swordsmiths',
     }
-    const notes = deriveSettlementGmNotes(ctx)
-    const grounding = notes.find((n) => n.title === 'THE PRIZE')
-    expect(grounding).toBeDefined()
-    expect(grounding!.body).toContain('Obsidian Blade')
-    expect(grounding!.body).toContain('noticed')
+    expect(deriveSettlementGmNotes(ctx)).toEqual([])
   })
 })

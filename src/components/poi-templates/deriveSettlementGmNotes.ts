@@ -28,10 +28,9 @@ function cap(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-/** Deterministic, pure. Returns GM notes derived from settlement data. Only the
- * two grounded, factual note types are surfaced — THE SQUEEZE (economy leverage)
- * and THE PRIZE (treasure ↔ town identity). The speculative RIOT/PAYOFF
- * types were dropped as not useful. */
+/** Deterministic, pure. Returns GM notes derived from settlement data. Only THE
+ * SQUEEZE (economy leverage) is surfaced — the speculative RIOT/PAYOFF and the
+ * formulaic PRIZE note types were dropped as not useful. */
 export function deriveSettlementGmNotes(ctx: GmNoteContext): GmNote[] {
   const notes: GmNote[] = []
 
@@ -47,15 +46,6 @@ export function deriveSettlementGmNotes(ctx: GmNoteContext): GmNote[] {
     notes.push({
       title: 'THE SQUEEZE',
       body: `${cap(ctx.wealthBand)} but needs ${needsList}. Whoever controls ${needsList}${routePart} owns the town.`,
-    })
-  }
-
-  // THE PRIZE — treasure tied to town identity
-  const craft = ctx.knownFor ?? ctx.notable
-  if (ctx.topTreasure != null && craft != null) {
-    notes.push({
-      title: 'THE PRIZE',
-      body: `${ctx.topTreasure} came from ${craft}; taking it will be noticed.`,
     })
   }
 

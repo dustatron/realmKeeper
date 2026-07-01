@@ -842,7 +842,13 @@ export function SettlementTemplate({
     monsterCountFor(poi) +
     childPois.reduce((sum, child) => sum + monsterCountFor(child), 0);
 
-  const detailLine = cleanText(poi.description);
+  // Strip the legacy "The townsfolk honor <deity>…" patron line from the shown
+  // description. Newer realms don't generate it; older realms may still have it
+  // baked into poi.description (the v45 migration ran before it was removed), so
+  // strip it at render so it never appears in the overview.
+  const detailLine = cleanText(
+    (poi.description ?? "").replace(/\s*The townsfolk honor .*/s, ""),
+  );
   const flavor = poi.settlementFlavor;
   const flavorRows = [
     { label: "Known for", value: flavor?.knownFor ?? null, cap: false },
@@ -1179,7 +1185,8 @@ export function SettlementTemplate({
               {(flavor?.knownFor ??
                 flavor?.character ??
                 flavor?.notable ??
-                flavor?.tradition) != null && (
+                flavor?.tradition ??
+                cleanText(poi.mood)) != null && (
                 <Collapsible open={loreOpen} onOpenChange={setLoreOpen}>
                   <CollapsibleTrigger asChild>
                     <button className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground">
@@ -1205,6 +1212,7 @@ export function SettlementTemplate({
                           label: "Tradition",
                           value: flavor?.tradition ?? null,
                         },
+                        { label: "Atmosphere", value: cleanText(poi.mood) },
                       ]
                         .filter(
                           (
