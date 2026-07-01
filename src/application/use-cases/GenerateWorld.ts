@@ -71,6 +71,8 @@ export interface GenerateWorldInput {
   unclaimedDeposits?: boolean
   leyLines?: boolean
   doom?: string
+  /** Draw NPC names from the large app-owned expanded pool. */
+  expandedNames?: boolean
 }
 
 export async function executeGenerateWorld(
@@ -112,6 +114,7 @@ export async function executeGenerateWorld(
         daysPerWeek: input.daysPerWeek,
         moonCycleLength: input.moonCycleLength,
         factionTurnTrigger: input.factionTurnTrigger,
+        expandedNames: input.expandedNames,
       },
       deps
     )
@@ -127,6 +130,7 @@ export async function executeGenerateWorld(
       unclaimedDeposits: input.unclaimedDeposits,
       loomingThreat: input.loomingThreat ?? true,
       doom: input.doom,
+      expandedNames: input.expandedNames ?? true,
       portals: input.portals ?? true,
       realmContent: {
         treasureDensity: input.worldTreasureDensity ?? 'moderate',

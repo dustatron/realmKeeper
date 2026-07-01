@@ -89,6 +89,8 @@ export function generateWorld(
     unclaimedDeposits?: boolean
     /** Create-realm doom label (e.g. "The Salt-Death"); undefined/'' ⇒ random. */
     doom?: string
+    /** Draw NPC names from the large app-owned expanded pool (create-realm option). */
+    expandedNames?: boolean
   }
 ): {
   gameMap: GameMap
@@ -109,6 +111,9 @@ export function generateWorld(
 } {
   const { cols, rows, hexSize = 40, poiDensity = 'normal' } = opts
   const rng = new SeededRandom(seed)
+  // Expanded-names option: a shared per-world set so NPC names never repeat.
+  const expandedNames = opts.expandedNames ?? true
+  const usedNpcNames = new Set<string>()
 
   // Step 1: layout grid
   const { cells, width, height } = layoutHexGrid(cols, rows, hexSize)
@@ -761,7 +766,7 @@ export function generateWorld(
         (pool.length > 0 ? rng.pick(pool) : faction.agendaGoals[0])?.description ?? ''
 
       const leader = buildNpc(
-        { ...link, role: 'leader', factionAction: actionFrom(longTermGoals), tables: opts.tables },
+        { ...link, role: 'leader', factionAction: actionFrom(longTermGoals), tables: opts.tables, expandedNames, usedNames: usedNpcNames },
         opts.systemConfig,
         rng,
       )
@@ -772,7 +777,7 @@ export function generateWorld(
       const agentCount = rng.between(1, 3)
       for (let i = 0; i < agentCount; i++) {
         const agent = buildNpc(
-          { ...link, role: 'agent', factionAction: actionFrom(immediateGoals), tables: opts.tables },
+          { ...link, role: 'agent', factionAction: actionFrom(immediateGoals), tables: opts.tables, expandedNames, usedNames: usedNpcNames },
           opts.systemConfig,
           rng,
         )
@@ -793,6 +798,8 @@ export function generateWorld(
         opts.systemConfig,
         rng,
         opts.tables,
+        expandedNames,
+        usedNpcNames,
       )
       pois.push(...buildings)
       // Wealth distribution: a settlement's band sets the spread of its NPCs'
@@ -803,7 +810,7 @@ export function generateWorld(
       for (const p of proprietors) p.wealthTier = npcWealthTier(band, wrng)
       npcs.push(...proprietors)
       const resident = buildNpc(
-        { worldId: realmId, regionId: node.poi.regionId, poiId: node.poi.id, role: 'inhabitant', tables: opts.tables },
+        { worldId: realmId, regionId: node.poi.regionId, poiId: node.poi.id, role: 'inhabitant', tables: opts.tables, expandedNames, usedNames: usedNpcNames },
         opts.systemConfig,
         rng,
       )

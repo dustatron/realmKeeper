@@ -144,6 +144,7 @@ function NewRealmPage() {
   const [genResources, setGenResources] = useState<string[]>([]);
   const [genUnclaimed, setGenUnclaimed] = useState(genSize === "large");
   const [genLeyLines, setGenLeyLines] = useState(true);
+  const [genExpandedNames, setGenExpandedNames] = useState(true);
   const [genDoom, setGenDoom] = useState<string>("random");
 
   // Auto-propose resources from packs/size/seed, then let the user edit. Re-runs
@@ -209,6 +210,7 @@ function NewRealmPage() {
             packs: genPacks,
             unclaimedDeposits: genUnclaimed,
             leyLines: genLeyLines,
+            expandedNames: genExpandedNames,
             doom: genDoom,
             loomingThreat: genDoom !== "none",
             portals: genPortals,
@@ -581,6 +583,23 @@ function NewRealmPage() {
                 id="gen-portals"
                 checked={genPortals}
                 onCheckedChange={setGenPortals}
+                disabled={isCreating}
+              />
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="grid gap-0.5">
+                <Label htmlFor="gen-expanded-names" className="text-xs">
+                  Expanded names
+                </Label>
+                <span className="text-[11px] text-muted-foreground">
+                  Draw NPC names from a large curated pool so the world rarely
+                  repeats a name (ordinary human names + flavored races).
+                </span>
+              </div>
+              <Switch
+                id="gen-expanded-names"
+                checked={genExpandedNames}
+                onCheckedChange={setGenExpandedNames}
                 disabled={isCreating}
               />
             </div>

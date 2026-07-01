@@ -2,6 +2,7 @@ import type { Faction, AgendaGoal, AgendaTimeframe } from '@domain/entities/Fact
 import type { NPC } from '@domain/entities/NPC'
 import type { SystemConfig } from '@domain/entities/SystemConfig'
 import type { ITableRepository } from '@application/ports/ITableRepository'
+import type { IRealmRepository } from '@application/ports/IRealmRepository'
 import { rollOnTable } from '@domain/services/RandomTableEngine'
 import { executeGenerateNPC } from '@application/use-cases/GenerateNPC'
 import { rollDice } from '@shared/dice'
@@ -89,7 +90,7 @@ function findAndRoll(
 
 export async function executeGenerateFaction(
   input: GenerateFactionInput,
-  deps: { tableRepo: ITableRepository }
+  deps: { tableRepo: ITableRepository; realmRepo: IRealmRepository }
 ): Promise<GenerateFactionResult> {
   // Fetch all tables for this system — most reliable approach
   const allTables = await deps.tableRepo.getTablesBySystemId(input.systemConfig.id)

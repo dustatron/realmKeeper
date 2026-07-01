@@ -45,6 +45,7 @@ import {
 } from "~/components/ui/select";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { Skeleton } from "~/components/ui/skeleton";
+import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import {
   Table,
@@ -123,6 +124,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
   const [settingsFactionTurnTrigger, setSettingsFactionTurnTrigger] = useState<
     "day" | "week" | "manual"
   >("day");
+  const [settingsExpandedNames, setSettingsExpandedNames] = useState(true);
   const [settingsSaved, setSettingsSaved] = useState(false);
 
   // Live updates
@@ -195,6 +197,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
       setSettingsWatchesPerDay(realm.watchesPerDay);
       setSettingsMoonCycleLength(realm.moonCycleLength);
       setSettingsFactionTurnTrigger(realm.factionTurnTrigger);
+      setSettingsExpandedNames(realm.expandedNames ?? true);
     }
   }, [realm?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -245,6 +248,7 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
       watchesPerDay: clamp(settingsWatchesPerDay, 2, 6),
       moonCycleLength: clamp(settingsMoonCycleLength, 1, 99),
       factionTurnTrigger: settingsFactionTurnTrigger,
+      expandedNames: settingsExpandedNames,
       updatedAt: Date.now(),
     });
     setSettingsSaved(true);
@@ -861,6 +865,32 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
                       <SelectItem value="manual">Manual only</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>NPC Generation</CardTitle>
+                <CardDescription>
+                  How names are drawn for newly generated NPCs.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-start justify-between gap-3 max-w-md">
+                  <div className="grid gap-0.5">
+                    <Label htmlFor="settingsExpandedNames">Expanded names</Label>
+                    <span className="text-sm text-muted-foreground">
+                      Draw NPC names from a large curated pool so the world
+                      rarely repeats a name (ordinary human names + flavored
+                      races). Off falls back to the system name tables.
+                    </span>
+                  </div>
+                  <Switch
+                    id="settingsExpandedNames"
+                    checked={settingsExpandedNames}
+                    onCheckedChange={setSettingsExpandedNames}
+                  />
                 </div>
               </CardContent>
             </Card>

@@ -14,6 +14,7 @@ export interface CreateRealmInput {
   daysPerWeek?: number
   moonCycleLength?: number
   factionTurnTrigger?: 'day' | 'week' | 'manual'
+  expandedNames?: boolean
 }
 
 export interface CreateRealmDeps {
@@ -41,6 +42,7 @@ export async function executeCreateRealm(
     watchesPerDay: input.watchesPerDay ?? DEFAULT_WATCHES_PER_DAY,
     moonCycleLength: input.moonCycleLength ?? DEFAULT_MOON_CYCLE_LENGTH,
     factionTurnTrigger: input.factionTurnTrigger ?? 'week',
+    expandedNames: input.expandedNames ?? true,
     completedThroughDay: -1,
     customRaces: [],
     raceColors: {},

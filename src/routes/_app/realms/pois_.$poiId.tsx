@@ -265,7 +265,7 @@ function POIDetailPage() {
     try {
       const generated = await executeGenerateNPC(
         { worldId: realm.id, systemConfig, regionId: poi.regionId, customRaces: realm.customRaces },
-        { tableRepo: container.tableRepo }
+        { tableRepo: container.tableRepo, realmRepo: container.realmRepo }
       )
       generated.poiId = poi.id
       generated.regionId = poi.regionId

@@ -152,7 +152,7 @@ function NPCNewPage() {
 
       const npc = await executeGenerateNPC(
         { worldId: activeRealmId, systemConfig, factionId: autoFactionId, regionId: autoRegionId, customRaces: realm?.customRaces },
-        { tableRepo: container.tableRepo }
+        { tableRepo: container.tableRepo, realmRepo: container.realmRepo }
       )
 
       // Spread generated NPC into state
