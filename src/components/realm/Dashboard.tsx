@@ -8,6 +8,8 @@ import { useRecentWeather } from "~/ui/hooks/useWeather";
 import { useRecentVisitedPOIs, useStarredPOIs, useRealmPOIs } from "~/ui/hooks/usePOIs";
 import { useStarredNPCs } from "~/ui/hooks/useNPCs";
 import { useRegions } from "~/ui/hooks/useRegions";
+import { useRealmDoom } from "~/ui/hooks/useDooms";
+import { ProgressClock } from "~/components/shared/ProgressClock";
 import { useContainer } from "~/ui/hooks/useContainer";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@infrastructure/dexie/db";
@@ -139,6 +141,8 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
     },
     [worldId],
   );
+  // The first-class Doom entity (clock/stages/status), if this realm has one.
+  const doomEntity = useRealmDoom(worldId);
   const [advancing, setAdvancing] = useState(false);
   const handleAdvanceDay = async () => {
     setAdvancing(true);
@@ -300,29 +304,76 @@ export function Dashboard({ worldId, tab, onTabChange }: DashboardProps) {
         {/* Overview Tab (world stats + doom merged in) */}
         <TabsContent value="overview">
           <div className="space-y-6">
-            {/* Looming Doom */}
-            {doom && (
-              <Card className="border-warning/40 bg-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-warning">
-                    <Skull className="size-5" />
-                    {doom.title}
-                  </CardTitle>
-                  <CardDescription className="flex items-center gap-1.5">
-                    <Calendar className="size-3.5" />
-                    Foretold for{" "}
-                    {formatWorldDateTime({
-                      year: doom.year,
-                      season: doom.season,
-                      day: doom.day,
-                      watch: doom.watch,
-                    })}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">{doom.description}</p>
-                </CardContent>
-              </Card>
+            {/* Looming Doom — link to the Doom entity detail when present, else
+                fall back to the legacy one-shot doom event (older realms). */}
+            {doomEntity ? (
+              <Link
+                to="/realms/dooms/$doomId"
+                params={{ doomId: doomEntity.id }}
+                className="block"
+              >
+                <Card className="border-warning/40 bg-card transition-colors hover:bg-accent/40">
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <CardTitle className="flex items-center gap-2 text-warning">
+                          <Skull className="size-5" />
+                          {doomEntity.name}
+                        </CardTitle>
+                        <CardDescription className="mt-1 flex items-center gap-1.5">
+                          <Calendar className="size-3.5" />
+                          {doomEntity.status === "reckoned"
+                            ? "The reckoning has come"
+                            : doomEntity.status === "averted"
+                              ? "Averted"
+                              : `Reckoning foretold for ${formatWorldDateTime({
+                                  ...doomEntity.reckoningDate,
+                                })}`}
+                        </CardDescription>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-center gap-1">
+                        <ProgressClock
+                          segments={doomEntity.segments}
+                          progress={doomEntity.progress}
+                          size={44}
+                        />
+                        <Badge variant="outline" className="text-[10px] capitalize">
+                          {doomEntity.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      {doomEntity.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            ) : (
+              doom && (
+                <Card className="border-warning/40 bg-card">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-warning">
+                      <Skull className="size-5" />
+                      {doom.title}
+                    </CardTitle>
+                    <CardDescription className="flex items-center gap-1.5">
+                      <Calendar className="size-3.5" />
+                      Foretold for{" "}
+                      {formatWorldDateTime({
+                        year: doom.year,
+                        season: doom.season,
+                        day: doom.day,
+                        watch: doom.watch,
+                      })}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">{doom.description}</p>
+                  </CardContent>
+                </Card>
+              )
             )}
 
             {/* Stats Grid */}
