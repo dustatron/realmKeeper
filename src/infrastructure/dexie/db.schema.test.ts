@@ -7,9 +7,14 @@ beforeAll(async () => {
   await db.open()
 })
 
-describe('db schema v45', () => {
-  it('opens at version 45', () => {
-    expect(db.verno).toBe(45)
+describe('db schema v46', () => {
+  it('opens at version 46', () => {
+    expect(db.verno).toBe(46)
+  })
+
+  it('has a dooms table', async () => {
+    const tableNames = db.tables.map((t) => t.name)
+    expect(tableNames).toContain('dooms')
   })
 
   it('round-trips a Connection and queries by both endpoints', async () => {

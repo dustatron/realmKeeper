@@ -7,6 +7,13 @@ export class POIRepository implements IPOIRepository {
     return db.pois.get(id)
   }
 
+  async getByRealmId(worldId: string): Promise<POI[]> {
+    const regions = await db.regions.where('worldId').equals(worldId).toArray()
+    const regionIds = regions.map((r) => r.id)
+    if (regionIds.length === 0) return []
+    return db.pois.where('regionId').anyOf(regionIds).toArray()
+  }
+
   async getByRegionId(regionId: string): Promise<POI[]> {
     return db.pois.where('regionId').equals(regionId).toArray()
   }

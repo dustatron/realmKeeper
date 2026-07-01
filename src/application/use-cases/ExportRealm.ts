@@ -13,6 +13,7 @@ import type { IPOIEventRepository } from '@application/ports/IPOIEventRepository
 import type { IGameMapRepository } from '@application/ports/IGameMapRepository'
 import type { IConnectionRepository } from '@application/ports/IConnectionRepository'
 import type { IHookRepository } from '@application/ports/IHookRepository'
+import type { IDoomRepository } from '@application/ports/IDoomRepository'
 import type { Realm } from '@domain/entities/Realm'
 import type { Region } from '@domain/entities/Region'
 import type { Faction } from '@domain/entities/Faction'
@@ -28,6 +29,7 @@ import type { POIEvent } from '@domain/entities/POIEvent'
 import type { GameMap, HexCell } from '@domain/entities/GameMap'
 import type { Connection } from '@domain/entities/Connection'
 import type { Hook } from '@domain/entities/Hook'
+import type { Doom } from '@domain/entities/Doom'
 
 export interface ExportRealmDeps {
   realmRepo: IRealmRepository
@@ -45,6 +47,7 @@ export interface ExportRealmDeps {
   gameMapRepo: IGameMapRepository
   connectionRepo: IConnectionRepository
   hookRepo: IHookRepository
+  doomRepo: IDoomRepository
 }
 
 export interface GameMapExport {
@@ -91,6 +94,7 @@ export interface RealmExport {
   gameMaps: GameMapExport[]
   connections: Connection[]
   hooks: Hook[]
+  dooms: Doom[]
 }
 
 async function imageUrlToBase64(url: string): Promise<string> {
@@ -180,6 +184,7 @@ export async function executeExportRealm(
 
   const connections = await deps.connectionRepo.getByWorld(worldId)
   const hooks = await deps.hookRepo.getByWorld(worldId)
+  const dooms = await deps.doomRepo.getByRealmId(worldId)
 
   return {
     version: 4,
@@ -199,5 +204,6 @@ export async function executeExportRealm(
     gameMaps,
     connections,
     hooks,
+    dooms,
   }
 }

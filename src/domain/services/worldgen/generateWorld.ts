@@ -55,6 +55,7 @@ import type { WorldEvent } from '@domain/entities/WorldEvent'
 import type { POIEvent } from '@domain/entities/POIEvent'
 import type { SystemConfig } from '@domain/entities/SystemConfig'
 import type { FactionPresence } from '@domain/entities/FactionPresence'
+import type { Doom } from '@domain/entities/Doom'
 import { newId } from '@shared/ulid'
 
 export type PoiDensity = 'sparse' | 'normal' | 'dense'
@@ -86,6 +87,8 @@ export function generateWorld(
     resources?: string[]
     /** When true, some natural sites host an unclaimed, extractable resource. */
     unclaimedDeposits?: boolean
+    /** Create-realm doom label (e.g. "The Salt-Death"); undefined/'' ⇒ random. */
+    doom?: string
   }
 ): {
   gameMap: GameMap
@@ -102,6 +105,7 @@ export function generateWorld(
   rumors: Rumor[]
   worldEvents: WorldEvent[]
   poiEvents: POIEvent[]
+  doom: Doom | null
 } {
   const { cols, rows, hexSize = 40, poiDensity = 'normal' } = opts
   const rng = new SeededRandom(seed)
@@ -921,13 +925,15 @@ export function generateWorld(
       rng,
     ),
   )
+  let doom: Doom | null = null
   if (opts.loomingThreat && opts.systemConfig && opts.clock && factions.length > 0) {
-    const doom = buildDoom(factions, pois, opts.clock, realmId, rng)
-    worldEvents.push(doom.event)
-    poiEvents.push(...doom.poiEvents)
-    hooks.push(...doom.hooks)
-    notices.push(...doom.notices)
-    rumors.push(...doom.rumors)
+    const { doom: d, bundle } = buildDoom(factions, pois, opts.clock, realmId, rng, opts.doom)
+    doom = d
+    worldEvents.push(bundle.event)
+    poiEvents.push(...bundle.poiEvents)
+    hooks.push(...bundle.hooks)
+    notices.push(...bundle.notices)
+    rumors.push(...bundle.rumors)
   }
 
   if (opts.systemId && opts.realmContent) {
@@ -957,5 +963,6 @@ export function generateWorld(
     rumors,
     worldEvents,
     poiEvents,
+    doom,
   }
 }

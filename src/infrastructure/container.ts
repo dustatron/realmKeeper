@@ -21,6 +21,7 @@ import { EntityNoteRepository } from '@infrastructure/dexie/repositories/EntityN
 import { CustomCompendiumRepository } from '@infrastructure/dexie/repositories/CustomCompendiumRepository'
 import { ConnectionRepository } from '@infrastructure/dexie/repositories/ConnectionRepository'
 import { HookRepository } from '@infrastructure/dexie/repositories/HookRepository'
+import { DoomRepository } from '@infrastructure/dexie/repositories/DoomRepository'
 import { EventBus } from '@infrastructure/event-bus/EventBus'
 
 export function createContainer() {
@@ -48,6 +49,7 @@ export function createContainer() {
     customCompendiumRepo: new CustomCompendiumRepository(),
     connectionRepo: new ConnectionRepository(),
     hookRepo: new HookRepository(),
+    doomRepo: new DoomRepository(),
     eventBus: new EventBus(),
   } as const
 }

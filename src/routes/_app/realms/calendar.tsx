@@ -216,6 +216,9 @@ function CalendarPage() {
     eventBus: container.eventBus,
     rollDice,
     poiEventRepo: container.poiEventRepo,
+    doomRepo: container.doomRepo,
+    connectionRepo: container.connectionRepo,
+    poiRepo: container.poiRepo,
   };
 
   const handlePrev = () =>

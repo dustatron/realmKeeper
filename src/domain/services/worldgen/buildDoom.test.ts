@@ -19,8 +19,14 @@ const pois: POI[] = [
 const clock: DoomClock = { year: 1, season: 'spring', day: 1, watch: 1, daysPerSeason: 30 }
 
 describe('buildDoom', () => {
+  it('returns { doom, bundle } shape', () => {
+    const result = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'))
+    expect(result).toHaveProperty('doom')
+    expect(result).toHaveProperty('bundle')
+  })
+
   it('creates a future-dated doom WorldEvent tied to a faction', () => {
-    const { event } = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'))
+    const { bundle: { event } } = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'))
     expect(event.worldId).toBe('w1')
     expect(event.title.length).toBeGreaterThan(0)
     // dated strictly after the realm's start (year 1, spring, day 1)
@@ -33,7 +39,7 @@ describe('buildDoom', () => {
   })
 
   it('foreshadows the doom with rumors placed at overworld POIs, linked to the doom hook', () => {
-    const { rumors, hooks } = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'))
+    const { bundle: { rumors, hooks } } = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'))
     expect(rumors.length).toBeGreaterThanOrEqual(2)
     const poiIds = new Set(pois.map((p) => p.id))
     for (const r of rumors) {
@@ -46,7 +52,7 @@ describe('buildDoom', () => {
   })
 
   it('offers a quest to avert the doom, contacted by an opposing leader', () => {
-    const { hooks, notices } = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'))
+    const { bundle: { hooks, notices } } = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'))
     expect(hooks.length).toBeGreaterThanOrEqual(1)
     const doomHook = hooks[0]
     // contact is a faction leader, target is the doom faction's HQ
@@ -55,7 +61,7 @@ describe('buildDoom', () => {
   })
 
   it('schedules the doom as a future POI event at the doom faction seat', () => {
-    const { event, poiEvents } = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'))
+    const { bundle: { event, poiEvents } } = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'))
     expect(poiEvents).toHaveLength(1)
     const pe = poiEvents[0]
     expect(['hqA', 'hqB']).toContain(pe.poiId)
@@ -70,7 +76,70 @@ describe('buildDoom', () => {
   it('is deterministic for a given seed', () => {
     const a = buildDoom(factions, pois, clock, 'w1', new SeededRandom('z'))
     const b = buildDoom(factions, pois, clock, 'w1', new SeededRandom('z'))
-    expect(`${a.event.year}-${a.event.season}-${a.event.day}`).toBe(`${b.event.year}-${b.event.season}-${b.event.day}`)
-    expect(a.event.title).toBe(b.event.title)
+    expect(`${a.bundle.event.year}-${a.bundle.event.season}-${a.bundle.event.day}`).toBe(`${b.bundle.event.year}-${b.bundle.event.season}-${b.bundle.event.day}`)
+    expect(a.bundle.event.title).toBe(b.bundle.event.title)
+  })
+
+  // ─── New Doom entity tests ───────────────────────────────────────────────────
+
+  it('doom entity has correct default shape', () => {
+    const { doom } = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'))
+    expect(doom.status).toBe('looming')
+    expect(doom.segments).toBe(6)
+    expect(doom.progress).toBe(0)
+    expect(doom.worldId).toBe('w1')
+    // startDate must match the input clock
+    expect(doom.startDate.year).toBe(clock.year)
+    expect(doom.startDate.season).toBe(clock.season)
+    expect(doom.startDate.day).toBe(clock.day)
+    expect(doom.startDate.watch).toBe(clock.watch)
+  })
+
+  it('doom.stages has ≥3 entries with ascending thresholds, all unfired', () => {
+    const { doom } = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'))
+    expect(doom.stages.length).toBeGreaterThanOrEqual(3)
+    for (let i = 1; i < doom.stages.length; i++) {
+      expect(doom.stages[i].threshold).toBeGreaterThan(doom.stages[i - 1].threshold)
+    }
+    expect(doom.stages.every((s) => s.fired === false)).toBe(true)
+  })
+
+  it('doom.doomFactionId is one of the input faction ids', () => {
+    const { doom } = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'))
+    expect(['fA', 'fB']).toContain(doom.doomFactionId)
+  })
+
+  it('doom.hookId equals the bundle hook id', () => {
+    const { doom, bundle: { hooks } } = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'))
+    expect(hooks.length).toBeGreaterThanOrEqual(1)
+    expect(doom.hookId).toBe(hooks[0].id)
+  })
+
+  it('doom.reckoningDate matches bundle event date', () => {
+    const { doom, bundle: { event } } = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'))
+    expect(doom.reckoningDate.year).toBe(event.year)
+    expect(doom.reckoningDate.season).toBe(event.season)
+    expect(doom.reckoningDate.day).toBe(event.day)
+    expect(doom.reckoningDate.watch).toBe(event.watch)
+  })
+
+  it('passing a known theme label sets doom.name and doom.vector deterministically', () => {
+    const { doom } = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'), 'The Salt-Death')
+    expect(doom.name).toBe('The Salt-Death')
+    expect(doom.vector).toBe('water')
+    expect(doom.theme).toBe('The Salt-Death')
+  })
+
+  it('passing no theme uses faction-based name', () => {
+    const { doom } = buildDoom(factions, pois, clock, 'w1', new SeededRandom('s'))
+    expect(doom.name).toMatch(/The Reckoning of the/)
+    expect(doom.theme).toBe('')
+  })
+
+  it('doom name is deterministic under a fixed seed with theme', () => {
+    const a = buildDoom(factions, pois, clock, 'w1', new SeededRandom('fixed'), 'The Wyrm Claims the Peak')
+    const b = buildDoom(factions, pois, clock, 'w1', new SeededRandom('fixed'), 'The Wyrm Claims the Peak')
+    expect(a.doom.name).toBe(b.doom.name)
+    expect(a.doom.vector).toBe(b.doom.vector)
   })
 })
