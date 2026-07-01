@@ -51,12 +51,11 @@ describe('deriveSettlementGmNotes', () => {
     expect(squeeze!.body).toContain('owns the town')
   })
 
-  it('oakfall: yields a RIOT note mentioning Larenwe and "personal"', () => {
-    const notes = deriveSettlementGmNotes(oakfall)
-    const riot = notes.find((n) => n.title === 'THE RIOT')
-    expect(riot).toBeDefined()
-    expect(riot!.body.toLowerCase()).toContain('larenwe')
-    expect(riot!.body.toLowerCase()).toContain('personal')
+  it('only surfaces SQUEEZE and GROUNDING — RIOT and PAYOFF are dropped', () => {
+    const titles = deriveSettlementGmNotes(oakfall).map((n) => n.title)
+    expect(titles).not.toContain('THE RIOT')
+    expect(titles).not.toContain('THE PAYOFF')
+    expect(new Set(titles)).toEqual(new Set(['THE SQUEEZE', 'THE GROUNDING']))
   })
 
   it('all oakfall note bodies are under 25 words and non-empty', () => {
@@ -71,16 +70,9 @@ describe('deriveSettlementGmNotes', () => {
 
   it('missing signals do not crash', () => {
     const partialCtx: GmNoteContext = {
-      produces: null,
+      ...emptyCtx,
       needs: ['Iron'],
       wealthBand: 'poor',
-      trouble: null,
-      tags: [],
-      factions: [],
-      routes: [],
-      topTreasure: null,
-      knownFor: null,
-      notable: null,
     }
     expect(() => deriveSettlementGmNotes(partialCtx)).not.toThrow()
     expect(deriveSettlementGmNotes(partialCtx)).toEqual([])
@@ -92,62 +84,11 @@ describe('deriveSettlementGmNotes', () => {
     expect(notes.find((n) => n.title === 'THE SQUEEZE')).toBeUndefined()
   })
 
-  it('RIOT fires without leaderWant', () => {
-    const ctx: GmNoteContext = {
-      ...emptyCtx,
-      factions: [
-        {
-          name: 'Steel Brotherhood',
-          type: null,
-          leaderName: 'Varren',
-          currentMove: 'blockade the market',
-          leaderWant: null,
-        },
-      ],
-    }
-    const notes = deriveSettlementGmNotes(ctx)
-    const riot = notes.find((n) => n.title === 'THE RIOT')
-    expect(riot).toBeDefined()
-    expect(riot!.body).toContain('Varren')
-  })
-
-  it('RIOT fires without leader at all', () => {
-    const ctx: GmNoteContext = {
-      ...emptyCtx,
-      factions: [
-        {
-          name: 'Steel Brotherhood',
-          type: null,
-          leaderName: null,
-          currentMove: 'blockade the market',
-          leaderWant: null,
-        },
-      ],
-    }
-    const notes = deriveSettlementGmNotes(ctx)
-    const riot = notes.find((n) => n.title === 'THE RIOT')
-    expect(riot).toBeDefined()
-    expect(riot!.body).toContain('Steel Brotherhood')
-  })
-
-  it('PAYOFF fires when trouble + tags present', () => {
-    const ctx: GmNoteContext = {
-      ...emptyCtx,
-      trouble: 'Floods every spring',
-      tags: ['River Cursed'],
-    }
-    const notes = deriveSettlementGmNotes(ctx)
-    const payoff = notes.find((n) => n.title === 'THE PAYOFF')
-    expect(payoff).toBeDefined()
-    expect(payoff!.body).toContain('river cursed')
-  })
-
   it('GROUNDING fires when topTreasure and knownFor present', () => {
     const ctx: GmNoteContext = {
       ...emptyCtx,
       topTreasure: 'Obsidian Blade',
       knownFor: 'its swordsmiths',
-      notable: null,
     }
     const notes = deriveSettlementGmNotes(ctx)
     const grounding = notes.find((n) => n.title === 'THE GROUNDING')

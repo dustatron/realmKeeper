@@ -28,11 +28,14 @@ function cap(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-/** Deterministic, pure. Returns up to 4 GM notes derived from settlement data. */
+/** Deterministic, pure. Returns GM notes derived from settlement data. Only the
+ * two grounded, factual note types are surfaced — THE SQUEEZE (economy leverage)
+ * and THE GROUNDING (treasure ↔ town identity). The speculative RIOT/PAYOFF
+ * types were dropped as not useful. */
 export function deriveSettlementGmNotes(ctx: GmNoteContext): GmNote[] {
   const notes: GmNote[] = []
 
-  // 1. THE SQUEEZE — economy leverage
+  // THE SQUEEZE — economy leverage
   if (
     ctx.needs.length > 0 &&
     ctx.wealthBand != null &&
@@ -47,38 +50,7 @@ export function deriveSettlementGmNotes(ctx: GmNoteContext): GmNote[] {
     })
   }
 
-  // 2. THE RIOT — faction move & leader motive
-  const facWithMove = ctx.factions.find((f) => f.currentMove != null)
-  if (facWithMove) {
-    const move = facWithMove.currentMove!.toLowerCase()
-    if (facWithMove.leaderName && facWithMove.leaderWant) {
-      notes.push({
-        title: 'THE RIOT',
-        body: `${facWithMove.leaderName} (${facWithMove.name}) is ${move}; wants to ${facWithMove.leaderWant}. Personal.`,
-      })
-    } else if (facWithMove.leaderName) {
-      notes.push({
-        title: 'THE RIOT',
-        body: `${facWithMove.name} is ${move}. ${facWithMove.leaderName} leads this; stakes are real.`,
-      })
-    } else {
-      notes.push({
-        title: 'THE RIOT',
-        body: `${facWithMove.name} is ${move}. Stakes are real.`,
-      })
-    }
-  }
-
-  // 3. THE PAYOFF — problem tied to lore tag
-  if (ctx.trouble != null && ctx.tags.length > 0) {
-    const tag = ctx.tags[0].toLowerCase()
-    notes.push({
-      title: 'THE PAYOFF',
-      body: `${ctx.trouble} — because ${tag}.`,
-    })
-  }
-
-  // 4. THE GROUNDING — treasure tied to town identity
+  // THE GROUNDING — treasure tied to town identity
   const craft = ctx.knownFor ?? ctx.notable
   if (ctx.topTreasure != null && craft != null) {
     notes.push({
