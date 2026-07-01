@@ -34,18 +34,20 @@ function cap(s: string): string {
 export function deriveSettlementGmNotes(ctx: GmNoteContext): GmNote[] {
   const notes: GmNote[] = []
 
-  // THE SQUEEZE — economy leverage
-  if (
-    ctx.needs.length > 0 &&
-    ctx.wealthBand != null &&
-    RICH_BANDS.has(ctx.wealthBand.toLowerCase())
-  ) {
+  // THE SQUEEZE — economy leverage. Fires for any town with unmet needs; the
+  // "<Wealth> but…" flavor only leads when the town is actually rich/prosperous.
+  if (ctx.needs.length > 0) {
     const needsList = ctx.needs.join(', ')
     const routePart =
       ctx.routes.length > 0 ? ` via ${ctx.routes[0].name}` : ''
+    const rich =
+      ctx.wealthBand != null && RICH_BANDS.has(ctx.wealthBand.toLowerCase())
+    const lead = rich
+      ? `${cap(ctx.wealthBand!)} but needs ${needsList}`
+      : `Needs ${needsList}`
     notes.push({
       title: 'THE SQUEEZE',
-      body: `${cap(ctx.wealthBand)} but needs ${needsList}. Whoever controls ${needsList}${routePart} owns the town.`,
+      body: `${lead}. Whoever controls ${needsList}${routePart} owns the town.`,
     })
   }
 

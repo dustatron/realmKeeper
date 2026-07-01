@@ -66,20 +66,18 @@ describe('deriveSettlementGmNotes', () => {
     }
   })
 
-  it('missing signals do not crash', () => {
-    const partialCtx: GmNoteContext = {
-      ...emptyCtx,
-      needs: ['Iron'],
-      wealthBand: 'poor',
-    }
-    expect(() => deriveSettlementGmNotes(partialCtx)).not.toThrow()
-    expect(deriveSettlementGmNotes(partialCtx)).toEqual([])
+  it('no needs → no SQUEEZE', () => {
+    const ctx: GmNoteContext = { ...emptyCtx, wealthBand: 'rich', needs: [] }
+    expect(deriveSettlementGmNotes(ctx)).toEqual([])
   })
 
-  it('poor wealthBand does not trigger SQUEEZE', () => {
-    const ctx: GmNoteContext = { ...emptyCtx, needs: ['Wool'], wealthBand: 'poor' }
-    const notes = deriveSettlementGmNotes(ctx)
-    expect(notes.find((n) => n.title === 'THE SQUEEZE')).toBeUndefined()
+  it('a poor town with needs still gets THE SQUEEZE (no "Rich but" lead)', () => {
+    const ctx: GmNoteContext = { ...emptyCtx, needs: ['grain', 'tools'], wealthBand: 'poor' }
+    const squeeze = deriveSettlementGmNotes(ctx).find((n) => n.title === 'THE SQUEEZE')
+    expect(squeeze).toBeDefined()
+    expect(squeeze!.body).toBe(
+      'Needs grain, tools. Whoever controls grain, tools owns the town.',
+    )
   })
 
   it('treasure alone does not add a note (PRIZE dropped)', () => {
