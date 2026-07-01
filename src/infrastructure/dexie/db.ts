@@ -28,6 +28,7 @@ import { withTownDefaults } from './migrations/v37-town-defaults'
 import { withDefiningResourceDefault } from './migrations/v42-resource-defaults'
 import { withTradeDefault } from './migrations/v43-trade-defaults'
 import { withWealthBandDefault, withWealthTierDefault, withFrontDefault } from './migrations/v44-wealth-defaults'
+import { withSettlementFlavorBackfill } from './migrations/v45-settlement-flavor'
 import { seedDatabase } from './seed'
 import { newId } from '@shared/ulid'
 
@@ -744,6 +745,20 @@ db.version(44).stores(storesV39).upgrade(async (tx) => {
   for (const r of regions) {
     if (r.front === undefined) {
       await tx.table('regions').put(withFrontDefault(r))
+    }
+  }
+})
+
+// v45: Backfill POI.settlementFlavor from legacy stitched settlement descriptions;
+// move the GM secret into gmNotes. No index change needed.
+// ⚠️ MERGE COORDINATION: the Phase 6 doom branch also introduces a v45 (the `dooms`
+// table). Whichever branch merges second MUST renumber this to the next free
+// version and re-verify the upgrade chain.
+db.version(45).stores(storesV39).upgrade(async (tx) => {
+  const pois = await tx.table('pois').toArray()
+  for (const poi of pois) {
+    if (poi.settlementFlavor === undefined) {
+      await tx.table('pois').put(withSettlementFlavorBackfill(poi))
     }
   }
 })

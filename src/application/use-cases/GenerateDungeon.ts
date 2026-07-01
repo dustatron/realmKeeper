@@ -151,6 +151,7 @@ export async function executeGenerateDungeon(
       currentOccupant: null,
       trade: null,
       wealthBand: null,
+      settlementFlavor: null,
       lightLevel: null,
       wanderingMonsters: [],
       encounterChance: null,

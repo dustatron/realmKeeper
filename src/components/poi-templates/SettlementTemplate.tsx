@@ -420,24 +420,6 @@ function cleanText(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
-// Legacy worldgen appended a GM-only secret onto the settlement description as
-// "\n\nGM secret: ...". Split it back out at render time so the secret shows in
-// the GM Notes card (not player-facing prose). Newer realms store it in
-// poi.gmNotes directly and this marker is absent.
-const GM_SECRET_MARKER = "\n\nGM secret:";
-function splitGmSecret(description: string | null | undefined): {
-  prose: string | null;
-  secret: string | null;
-} {
-  const raw = description ?? "";
-  const idx = raw.indexOf(GM_SECRET_MARKER);
-  if (idx === -1) return { prose: cleanText(raw), secret: null };
-  return {
-    prose: cleanText(raw.slice(0, idx)),
-    secret: cleanText(raw.slice(idx + GM_SECRET_MARKER.length)),
-  };
-}
-
 function settlementTypeDetail(poi: POI, displaySize: string): string {
   return poi.subtypeLabel
     ? `${displaySize} ${poi.subtypeLabel.toLowerCase()}`
@@ -868,10 +850,27 @@ export function SettlementTemplate({
     monsterCountFor(poi) +
     childPois.reduce((sum, child) => sum + monsterCountFor(child), 0);
 
-  const { prose: detailLine, secret: parsedSecret } = splitGmSecret(
-    poi.description,
+  const detailLine = cleanText(poi.description);
+  const flavor = poi.settlementFlavor;
+  const flavorRows = [
+    { label: "Known for", value: flavor?.knownFor ?? null, cap: false },
+    { label: "Character", value: flavor?.character ?? null, cap: false },
+    { label: "Notable", value: flavor?.notable ?? null, cap: false },
+    { label: "Tradition", value: flavor?.tradition ?? null, cap: false },
+    { label: "Produces", value: poi.trade?.produces ?? null, cap: true },
+    {
+      label: "Needs",
+      value:
+        poi.trade?.needs && poi.trade.needs.length > 0
+          ? poi.trade.needs.join(", ")
+          : null,
+      cap: true,
+    },
+  ].filter(
+    (row): row is { label: string; value: string; cap: boolean } =>
+      Boolean(row.value),
   );
-  const gmNotes = cleanText(poi.gmNotes) ?? parsedSecret;
+  const gmNotes = cleanText(poi.gmNotes);
   const localProblem = cleanText(poi.trouble);
   const sizeLabel = settlementSize(poi.subtypeLabel);
   const displaySize = sizeLabel.charAt(0).toUpperCase() + sizeLabel.slice(1);
@@ -930,6 +929,26 @@ export function SettlementTemplate({
                 <p className="text-base text-muted-foreground">
                   No detail line recorded.
                 </p>
+              )}
+
+              {flavorRows.length > 0 && (
+                <dl className="divide-y divide-border/60">
+                  {flavorRows.map((row) => (
+                    <div
+                      key={row.label}
+                      className="flex flex-col gap-1 py-2.5 first:pt-0 last:pb-0 sm:flex-row sm:items-baseline sm:gap-4"
+                    >
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:w-28 sm:shrink-0">
+                        {row.label}
+                      </dt>
+                      <dd
+                        className={`text-base text-foreground${row.cap ? " capitalize" : ""}`}
+                      >
+                        {row.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
               )}
 
               <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-2">
@@ -1002,32 +1021,6 @@ export function SettlementTemplate({
                         ]
                           .filter(Boolean)
                           .join(" · ")}
-                      </dd>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <dt className="w-24 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
-                        Produces
-                      </dt>
-                      <dd className="text-base capitalize">
-                        {poi.trade?.produces ?? (
-                          <span className="normal-case text-muted-foreground">
-                            nothing of note
-                          </span>
-                        )}
-                      </dd>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <dt className="w-24 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
-                        Needs
-                      </dt>
-                      <dd className="text-base capitalize">
-                        {poi.trade?.needs && poi.trade.needs.length > 0 ? (
-                          poi.trade.needs.join(", ")
-                        ) : (
-                          <span className="normal-case text-muted-foreground">
-                            nothing pressing
-                          </span>
-                        )}
                       </dd>
                     </div>
                   </dl>

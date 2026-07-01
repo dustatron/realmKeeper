@@ -1,4 +1,4 @@
-import type { POI } from '@domain/entities/POI'
+import type { POI, SettlementFlavor } from '@domain/entities/POI'
 import type { PoiType } from '@shared/constants'
 import type { Service } from '@domain/value-objects/Service'
 import type { LocationSeed } from '@domain/value-objects/LocationSeed'
@@ -34,6 +34,7 @@ export interface BuildPOIInput {
   currentOccupant?: string | null
   trade?: { produces: string; needs: string[] } | null
   wealthBand?: 'destitute' | 'poor' | 'modest' | 'prosperous' | 'rich' | null
+  settlementFlavor?: SettlementFlavor | null
 }
 
 export function buildPOI(input: BuildPOIInput): POI {
@@ -70,6 +71,7 @@ export function buildPOI(input: BuildPOIInput): POI {
     currentOccupant: input.currentOccupant ?? null,
     trade: input.trade ?? null,
     wealthBand: input.wealthBand ?? null,
+    settlementFlavor: input.settlementFlavor ?? null,
     lightLevel: null,
     wanderingMonsters: [],
     encounterChance: null,

@@ -69,23 +69,30 @@ export function buildSettlementBuildings(
   const types_ = typePool && typePool.length > 0 ? typePool : SHOP_TYPES
   const namePool = tables?.texts(SHOP_NAMES_TABLE_ID) ?? []
 
-  // Settlement-level flavor: a district, a "known for", a structure quirk, and
-  // (sometimes) a guild. Enriches the settlement's own description in place.
-  const district = pickFlavor(rng, tables, DISTRICT_TABLE_ID, DISTRICTS)
+  // Settlement-level flavor: a "known for", a structure quirk, a notable feature,
+  // and a tradition. Stored as structured data (settlementFlavor) for the overview
+  // data list. The district and guild draws are still made — so the main rng
+  // stream (and the building generation below) stays byte-identical — but they are
+  // no longer surfaced (dropped from the data set per design).
+  pickFlavor(rng, tables, DISTRICT_TABLE_ID, DISTRICTS)
   const knownFor = pickFlavor(rng, tables, KNOWN_FOR_TABLE_ID, KNOWN_FOR)
   const structureQuirk = pickFlavor(rng, tables, STRUCTURE_QUIRK_TABLE_ID, STRUCTURE_QUIRKS)
-  const guild = rng.chance(0.5) ? pickFlavor(rng, tables, GUILD_TABLE_ID, GUILDS) : null
+  if (rng.chance(0.5)) pickFlavor(rng, tables, GUILD_TABLE_ID, GUILDS)
   const feature = pickFlavor(rng, tables, NOTABLE_FEATURE_TABLE_ID, NOTABLE_FEATURES)
   // A festival and a GM-only secret — additive, via CHILD rngs so the building
   // generation below (which uses the main rng) stays byte-identical.
   const festival = rng.child('settlement-festival').pick(resolvePool(tables, FESTIVAL_TABLE_ID, FESTIVALS))
   const secret = rng.child('settlement-secret').pick(resolvePool(tables, SETTLEMENT_SECRET_TABLE_ID, SETTLEMENT_SECRETS))
-  settlement.description =
-    `${settlement.description ?? ''} Known for ${knownFor}; ${structureQuirk}. Its heart is ${district}.` +
-    (guild ? ` Home to ${guild}.` : '') +
-    ` Notably, ${feature}.` +
-    ` A local tradition: ${festival}` +
-    `\n\nGM secret: ${secret}`
+  // Flavor is stored as structured data (rendered as a data list) rather than
+  // stitched into the description prose. The base description (terrain + patron
+  // lead) stays as the readable hook; the GM-only secret moves to gmNotes.
+  settlement.settlementFlavor = {
+    knownFor,
+    character: structureQuirk,
+    notable: feature,
+    tradition: festival,
+  }
+  settlement.gmNotes = secret
 
   const count = Math.min(types_.length, buildingCount(settlement.subtypeLabel, settlement.wealthBand, rng))
   const types = rng.sample(types_, count)
