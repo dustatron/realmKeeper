@@ -12,6 +12,7 @@ import { makeSeededDice } from './seededDice'
 import { pickNpcWant } from '@domain/data/worldgen/npcWants'
 import { buildHumanoidFlavor } from './npcFactory'
 import { resolvePool, type ResolvedTables } from './TableProvider'
+import { pickExpandedName } from '@domain/data/worldgen/expanded-names'
 import { dispositionForRoll } from '@shared/dice'
 import {
   NPC_FAVOR_TABLE_ID, NPC_PURSUIT_TABLE_ID, NPC_FLAW_TABLE_ID, NPC_FLAWS,
@@ -60,6 +61,12 @@ export interface BuildNpcInput {
   tables?: ResolvedTables
   /** Personal wealth tier (assigned from the settlement's wealth band). Defaults to null. */
   wealthTier?: 'destitute' | 'poor' | 'middling' | 'wealthy' | null
+  /** Draw the NPC name from the large app-owned expanded pool instead of the
+   * system name tables (a realm-creation option). */
+  expandedNames?: boolean
+  /** Per-world set of names already used, so an expanded-names realm doesn't
+   * repeat NPC names. Mutated as names are drawn. */
+  usedNames?: Set<string>
 }
 
 // A want (the NPC's quest hook / general drive): a favor to ask or a personal
@@ -105,9 +112,14 @@ export function buildNpc(
   const gender: 'male' | 'female' = rng.chance(0.5) ? 'male' : 'female'
   const racePool = input.customRaces?.length ? [...RACE_POOL, ...input.customRaces] : RACE_POOL
   const race = rng.pick(racePool)
-  const firstName = liveCairn(rng, input.tables, nameTableId(race, gender))
-  const surname = usesHumanNames(race) ? liveCairn(rng, input.tables, 'table-cairn-surnames') : ''
-  const name = [firstName, surname].filter(Boolean).join(' ') || 'Unnamed'
+  let name: string
+  if (input.expandedNames) {
+    name = pickExpandedName(race, gender, rng, input.usedNames ?? new Set<string>())
+  } else {
+    const firstName = liveCairn(rng, input.tables, nameTableId(race, gender))
+    const surname = usesHumanNames(race) ? liveCairn(rng, input.tables, 'table-cairn-surnames') : ''
+    name = [firstName, surname].filter(Boolean).join(' ') || 'Unnamed'
+  }
 
   // --- Flavor (Cairn character traits) ---
   // Consumed in exact order (physique, skin, hair, face, speech, clothing, virtue, vice)

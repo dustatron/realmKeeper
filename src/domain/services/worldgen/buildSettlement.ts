@@ -64,6 +64,8 @@ export function buildSettlementBuildings(
   systemConfig: SystemConfig,
   rng: SeededRandom,
   tables?: ResolvedTables,
+  expandedNames = false,
+  usedNames?: Set<string>,
 ): SettlementBuild {
   const typePool = tables?.texts(SHOP_TYPES_TABLE_ID)
   const types_ = typePool && typePool.length > 0 ? typePool : SHOP_TYPES
@@ -123,6 +125,8 @@ export function buildSettlementBuildings(
         role: 'inhabitant',
         occupation: BUILDING_OCCUPATIONS[type] ?? type.toLowerCase(),
         tables,
+        expandedNames,
+        usedNames,
       },
       systemConfig,
       rng,

@@ -12,6 +12,7 @@ import {
 import {
   MAGICAL_FOUNTAIN_TABLE_ID, MAGICAL_FOUNTAINS,
 } from '@domain/data/worldgen/world-flavor.tables'
+import { BIOME_SENSORY } from '@domain/data/worldgen/biomeSensory'
 
 // A kind-appropriate dressing detail (graffiti, statue, epitaph, fountain, or a
 // patron deity). Drawn from a CHILD rng so it never advances the main seeded
@@ -67,14 +68,12 @@ const SETTLEMENT_MOODS = [
   'superstitious',
 ]
 
-const SETTLEMENT_SENSORY = [
-  'Smoke hangs low over crowded roofs while voices drop whenever strangers pass.',
-  'Mud, livestock, and hearth smoke mix with the sharp sound of hurried work.',
-  'Doors close a little too quickly, and every public argument draws a silent crowd.',
-  'The main road is busy, but conversations stop near shuttered windows.',
-  'Market smells linger over swept thresholds, fresh repairs, and nervous glances.',
-  'Rain barrels, boot prints, and whispered names mark the busiest corners.',
-]
+// Settlement "sights & sounds" now vary by biome (a desert town reads differently
+// from a mountain one), drawn from BIOME_SENSORY with a GENERIC fallback.
+function pickSettlementSensory(biome: string, rng: SeededRandom): string {
+  const pool = BIOME_SENSORY[biome] ?? BIOME_SENSORY.GENERIC
+  return rng.pick(pool.length > 0 ? pool : BIOME_SENSORY.GENERIC)
+}
 
 // Structured flavor for any generated POI, sourced from the Cairn type + feature
 // tables for its kind. The type becomes the subtype label and the feature a tag
@@ -103,6 +102,6 @@ export function buildPoiFlavor(
     readAloud: `${name} is ${art} ${lowerType} set in the ${where}.`,
     trouble: isSettlement ? pickSettlementProblem(rng, null, tables) : '',
     mood: isSettlement ? rng.pick(SETTLEMENT_MOODS) : '',
-    sensory: isSettlement ? rng.pick(SETTLEMENT_SENSORY) : '',
+    sensory: isSettlement ? pickSettlementSensory(biome, rng) : '',
   }
 }
