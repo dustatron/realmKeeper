@@ -420,6 +420,24 @@ function cleanText(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
+// Legacy worldgen appended a GM-only secret onto the settlement description as
+// "\n\nGM secret: ...". Split it back out at render time so the secret shows in
+// the GM Notes card (not player-facing prose). Newer realms store it in
+// poi.gmNotes directly and this marker is absent.
+const GM_SECRET_MARKER = "\n\nGM secret:";
+function splitGmSecret(description: string | null | undefined): {
+  prose: string | null;
+  secret: string | null;
+} {
+  const raw = description ?? "";
+  const idx = raw.indexOf(GM_SECRET_MARKER);
+  if (idx === -1) return { prose: cleanText(raw), secret: null };
+  return {
+    prose: cleanText(raw.slice(0, idx)),
+    secret: cleanText(raw.slice(idx + GM_SECRET_MARKER.length)),
+  };
+}
+
 function settlementTypeDetail(poi: POI, displaySize: string): string {
   return poi.subtypeLabel
     ? `${displaySize} ${poi.subtypeLabel.toLowerCase()}`
@@ -481,12 +499,14 @@ function OverviewRoutes({
   treasureManifest,
   uncollectedTreasure,
   onToggleTreasure,
+  gmNotes,
 }: {
   paths: ResolvedPath[];
   currentPoiId: string;
   treasureManifest: TreasureManifestEntry[];
   uncollectedTreasure: number;
   onToggleTreasure?: (location: POI, itemId: string) => void;
+  gmNotes?: string | null;
 }) {
   return (
     <div className="flex min-h-full min-w-0 flex-col gap-2 border-t border-border/60 pt-3 xl:border-l xl:border-t-0 xl:pl-3 xl:pt-0">
@@ -663,6 +683,17 @@ function OverviewRoutes({
           </Table>
         </div>
       )}
+      {gmNotes && (
+        <div className="mt-2 space-y-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+            <ShieldAlert className="size-3.5" />
+            GM Notes
+          </p>
+          <p className="whitespace-pre-line text-base leading-relaxed">
+            {gmNotes}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -837,7 +868,10 @@ export function SettlementTemplate({
     monsterCountFor(poi) +
     childPois.reduce((sum, child) => sum + monsterCountFor(child), 0);
 
-  const detailLine = cleanText(poi.description);
+  const { prose: detailLine, secret: parsedSecret } = splitGmSecret(
+    poi.description,
+  );
+  const gmNotes = cleanText(poi.gmNotes) ?? parsedSecret;
   const localProblem = cleanText(poi.trouble);
   const sizeLabel = settlementSize(poi.subtypeLabel);
   const displaySize = sizeLabel.charAt(0).toUpperCase() + sizeLabel.slice(1);
@@ -1139,6 +1173,7 @@ export function SettlementTemplate({
               onToggleTreasure={
                 onUpdateTreasure ? handleToggleManifestTreasure : undefined
               }
+              gmNotes={gmNotes}
             />
           </div>
         </CollapsibleContent>
