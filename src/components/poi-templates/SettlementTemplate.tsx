@@ -862,7 +862,6 @@ export function SettlementTemplate({
     (row): row is { label: string; value: string; cap: boolean } =>
       Boolean(row.value),
   );
-  const gmNotes = cleanText(poi.gmNotes);
   const localProblem = cleanText(poi.trouble);
   const sizeLabel = settlementSize(poi.subtypeLabel);
   const displaySize = sizeLabel.charAt(0).toUpperCase() + sizeLabel.slice(1);
@@ -1099,30 +1098,24 @@ export function SettlementTemplate({
                 </div>
               )}
 
-              {/* 4. GM NOTES */}
-              {(gmNotes != null || derivedGmNotes.length > 0) && (
+              {/* 4. GM NOTES — derived connective notes only (the raw
+                  poi.gmNotes secret line is intentionally not surfaced here) */}
+              {derivedGmNotes.length > 0 && (
                 <div className="space-y-2">
                   <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-muted-foreground">
                     <ShieldAlert className="size-3.5" />
                     GM Notes
                   </p>
-                  {gmNotes != null && (
-                    <p className="whitespace-pre-line text-base leading-relaxed text-foreground">
-                      {gmNotes}
-                    </p>
-                  )}
-                  {derivedGmNotes.length > 0 && (
-                    <div className="space-y-1">
-                      {derivedGmNotes.map((note, i) => (
-                        <p key={i} className="text-base">
-                          <span className="font-semibold">{note.title}:</span>{" "}
-                          <span className="text-muted-foreground">
-                            {note.body}
-                          </span>
-                        </p>
-                      ))}
-                    </div>
-                  )}
+                  <div className="space-y-1">
+                    {derivedGmNotes.map((note, i) => (
+                      <p key={i} className="text-base">
+                        <span className="font-semibold">{note.title}:</span>{" "}
+                        <span className="text-muted-foreground">
+                          {note.body}
+                        </span>
+                      </p>
+                    ))}
+                  </div>
                 </div>
               )}
 
