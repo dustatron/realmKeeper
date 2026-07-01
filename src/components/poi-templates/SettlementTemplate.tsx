@@ -969,6 +969,21 @@ export function SettlementTemplate({
                 )}
               </div>
 
+              {/* Arrival — the town at a glance: description + sights & sounds */}
+              {detailLine && (
+                <p className="text-base leading-relaxed text-muted-foreground">
+                  {detailLine}
+                </p>
+              )}
+              {cleanText(poi.sensory) && (
+                <p className="text-base text-muted-foreground">
+                  <span className="font-semibold text-foreground">
+                    Sights &amp; sounds:
+                  </span>{" "}
+                  {cleanText(poi.sensory)}
+                </p>
+              )}
+
               {/* 2. SITUATION */}
               <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-2">
                 <div className="flex items-start justify-between gap-2">
@@ -1164,9 +1179,7 @@ export function SettlementTemplate({
               {(flavor?.knownFor ??
                 flavor?.character ??
                 flavor?.notable ??
-                flavor?.tradition ??
-                detailLine ??
-                cleanText(poi.sensory)) != null && (
+                flavor?.tradition) != null && (
                 <Collapsible open={loreOpen} onOpenChange={setLoreOpen}>
                   <CollapsibleTrigger asChild>
                     <button className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground">
@@ -1192,8 +1205,6 @@ export function SettlementTemplate({
                           label: "Tradition",
                           value: flavor?.tradition ?? null,
                         },
-                        { label: "Description", value: detailLine },
-                        { label: "Sensory", value: cleanText(poi.sensory) },
                       ]
                         .filter(
                           (
