@@ -16,9 +16,9 @@ import type { RollEncounterResult } from "@application/use-cases/RollEncounter";
 const CATEGORY_LABELS: Record<EncounterCategory, string> = {
   creature: "Creature",
   signOmen: "Sign / Omen",
+  areaEffect: "Area Effect",
   loss: "Loss",
   npc: "NPC",
-  discovery: "Discovery",
   treasure: "Treasure",
 };
 
@@ -26,9 +26,9 @@ type SavePayload = Pick<
   EncounterTable,
   | "creature"
   | "signOmen"
+  | "areaEffect"
   | "loss"
   | "npc"
-  | "discovery"
   | "treasure"
   | "customSections"
   | "disabledCategories"
@@ -178,9 +178,9 @@ export function EncounterTableUI({
     onSave({
       creature: builtinData.creature ?? [],
       signOmen: builtinData.signOmen ?? [],
+      areaEffect: builtinData.areaEffect ?? [],
       loss: builtinData.loss ?? [],
       npc: builtinData.npc ?? [],
-      discovery: builtinData.discovery ?? [],
       treasure: builtinData.treasure ?? [],
       customSections,
       disabledCategories,

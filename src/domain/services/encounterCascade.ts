@@ -16,7 +16,33 @@ export interface CascadeEffects {
   generateNpc: () => Promise<NPC>
   matchMonster: (text: string) => { compendiumId: string; name: string } | null
   matchLocation?: (text: string) => { poiId: string; name: string } | null
+  /** creature/npc "what they're doing" secondary roll (see spec Decision A1) */
+  rollActivity?: (kind: 'creature' | 'npc') => { text: string; roll: number }
   now: () => number
+}
+
+/**
+ * Matches a trailing chain token: {creature}, {npc}, {creature|npc}, and their
+ * uncertain-state variants with a trailing ? ({creature?}, etc.).
+ */
+const CHAIN_TOKEN = /\s*\{(creature\|npc|creature|npc)(\?)?\}\s*$/i
+
+/**
+ * Split an areaEffect entry into its display text and any chain token. The token
+ * flags that the effect turns up a creature/NPC at the scene (auto-chained, spec
+ * Decision B). A trailing ? marks it as a *found* thing of uncertain state — the
+ * chain rolls d4 for dead (odd) or alive (even).
+ */
+export function parseChainToken(text: string): {
+  text: string
+  token: 'creature' | 'npc' | 'either' | null
+  uncertain: boolean
+} {
+  const m = text.match(CHAIN_TOKEN)
+  if (!m) return { text, token: null, uncertain: false }
+  const raw = m[1].toLowerCase()
+  const token = raw === 'creature' ? 'creature' : raw === 'npc' ? 'npc' : 'either'
+  return { text: text.replace(CHAIN_TOKEN, '').trim(), token, uncertain: m[2] === '?' }
 }
 
 function pickEntry(section: CascadeSection, fx: CascadeEffects): { entryText: string; entryIndex: number } {
@@ -25,9 +51,38 @@ function pickEntry(section: CascadeSection, fx: CascadeEffects): { entryText: st
   return { entryText: section.entries[entryIndex] ?? section.entries[0], entryIndex }
 }
 
+/**
+ * Roll a full follow-up encounter on the creature/npc section turned up by a token.
+ * When `uncertain`, a d4 decides dead (odd) or alive (even); a dead find is a
+ * carcass — no reaction or activity, just a condition badge.
+ */
+async function rollChained(
+  token: 'creature' | 'npc' | 'either',
+  uncertain: boolean,
+  sections: CascadeSection[],
+  fx: CascadeEffects,
+): Promise<EncounterRollResult | null> {
+  const target = token === 'either' ? (fx.rollDie(2) === 1 ? 'creature' : 'npc') : token
+  const idx = sections.findIndex((s) => s.category === target)
+  if (idx < 0) return null
+  // Chained sections never chain again (only areaEffect carries tokens).
+  const res = await buildResult(idx + 1, sections[idx], sections, fx)
+  if (!uncertain) return res
+  const alive = fx.rollDie(4) % 2 === 0 // even = alive, odd = dead
+  if (alive) return { ...res, condition: 'alive' }
+  // A carcass — strip behaviour but keep the identity (monster match stays).
+  const dead: EncounterRollResult = { ...res, condition: 'dead' }
+  delete dead.reaction
+  delete dead.reactionRoll
+  delete dead.activity
+  delete dead.activityRoll
+  return dead
+}
+
 async function buildResult(
   masterRoll: number,
   section: CascadeSection,
+  sections: CascadeSection[],
   fx: CascadeEffects,
   preservedReaction?: { roll: number; disposition: Disposition },
   forcedEntryIndex?: number,
@@ -50,20 +105,38 @@ async function buildResult(
     // carries its own disposition — no archetype entry text or separate 2d6
     // reaction. Use the NPC's name as the one-line result summary.
     const npc = await fx.generateNpc()
-    return { ...base, entryText: npc.name, npc, npcSavedId: null }
+    const activity = fx.rollActivity?.('npc')
+    return {
+      ...base,
+      entryText: npc.name,
+      npc,
+      npcSavedId: null,
+      activity: activity?.text,
+      activityRoll: activity?.roll,
+    }
   }
 
   if (section.category === 'creature') {
     const reaction = preservedReaction ?? fx.rollReaction()
+    const activity = fx.rollActivity?.('creature')
     return {
       ...base,
       reaction: reaction.disposition,
       reactionRoll: reaction.roll,
       monsterMatch: fx.matchMonster(entryText),
+      activity: activity?.text,
+      activityRoll: activity?.roll,
     }
   }
 
-  if (section.category === 'signOmen' || section.category === 'discovery') {
+  if (section.category === 'areaEffect') {
+    const { text, token, uncertain } = parseChainToken(entryText)
+    const result: EncounterRollResult = { ...base, entryText: text }
+    if (token) result.chained = await rollChained(token, uncertain, sections, fx)
+    return result
+  }
+
+  if (section.category === 'signOmen') {
     return { ...base, locationMatch: fx.matchLocation?.(entryText) ?? null }
   }
   return base
@@ -72,7 +145,7 @@ async function buildResult(
 export async function rollCascade(sections: CascadeSection[], fx: CascadeEffects): Promise<EncounterRollResult> {
   if (sections.length === 0) throw new Error('rollCascade: no active sections')
   const masterRoll = fx.rollDie(sections.length)
-  return buildResult(masterRoll, sections[masterRoll - 1], fx)
+  return buildResult(masterRoll, sections[masterRoll - 1], sections, fx)
 }
 
 export async function rerollMaster(sections: CascadeSection[], fx: CascadeEffects): Promise<EncounterRollResult> {
@@ -90,7 +163,7 @@ export async function rerollEntry(
     prev.reaction && prev.reactionRoll != null
       ? { roll: prev.reactionRoll, disposition: prev.reaction }
       : undefined
-  return buildResult(prev.masterRoll, section, fx, preserved)
+  return buildResult(prev.masterRoll, section, sections, fx, preserved)
 }
 
 export function rerollReaction(prev: EncounterRollResult, fx: CascadeEffects): EncounterRollResult {
@@ -98,6 +171,14 @@ export function rerollReaction(prev: EncounterRollResult, fx: CascadeEffects): E
   if (prev.category !== 'creature') return prev
   const reaction = fx.rollReaction()
   return { ...prev, reaction: reaction.disposition, reactionRoll: reaction.roll }
+}
+
+/** Re-roll only "what they're doing" for a creature/npc result. */
+export function rerollActivity(prev: EncounterRollResult, fx: CascadeEffects): EncounterRollResult {
+  if (prev.category !== 'creature' && prev.category !== 'npc') return prev
+  const activity = fx.rollActivity?.(prev.category)
+  if (!activity) return prev
+  return { ...prev, activity: activity.text, activityRoll: activity.roll }
 }
 
 export async function rerollNpc(prev: EncounterRollResult, fx: CascadeEffects): Promise<EncounterRollResult> {
@@ -117,7 +198,7 @@ export async function pickMaster(
 ): Promise<EncounterRollResult> {
   const idx = sections.findIndex((s) => s.category === category)
   if (idx < 0) return rollCascade(sections, fx)
-  return buildResult(idx + 1, sections[idx], fx)
+  return buildResult(idx + 1, sections[idx], sections, fx)
 }
 
 /**
@@ -136,7 +217,7 @@ export async function pickEntryAt(
     prev.reaction && prev.reactionRoll != null
       ? { roll: prev.reactionRoll, disposition: prev.reaction }
       : undefined
-  return buildResult(prev.masterRoll, section, fx, preserved, entryIndex)
+  return buildResult(prev.masterRoll, section, sections, fx, preserved, entryIndex)
 }
 
 /** Manually select a creature reaction (clicking its row). */

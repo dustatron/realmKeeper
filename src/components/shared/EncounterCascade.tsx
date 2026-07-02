@@ -15,9 +15,9 @@ type SavePayload = Pick<
   EncounterTable,
   | "creature"
   | "signOmen"
+  | "areaEffect"
   | "loss"
   | "npc"
-  | "discovery"
   | "treasure"
   | "customSections"
   | "disabledCategories"
@@ -39,12 +39,20 @@ interface EncounterCascadeProps {
 /** Build a one-line summary of the persisted result for the banner. */
 export function summarizeResult(result: EncounterRollResult): string {
   if (result.npc) {
-    return result.npc.disposition
+    const name = result.npc.disposition
       ? `${result.npc.name} — ${result.npc.disposition}`
       : result.npc.name;
+    return result.activity ? `${name}, ${result.activity}` : name;
   }
-  const base = result.entryText || result.categoryLabel;
-  return result.reaction ? `${base} — ${result.reaction}` : base;
+  let base = result.entryText || result.categoryLabel;
+  if (result.reaction) base = `${base} — ${result.reaction}`;
+  if (result.activity) base = `${base}, ${result.activity}`;
+  if (result.chained) {
+    const c = result.chained;
+    const name = c.npc?.name ?? c.entryText;
+    base = `${base} → ${c.condition ? `${name} (${c.condition})` : name}`;
+  }
+  return base;
 }
 
 export function EncounterCascade({
@@ -191,6 +199,7 @@ export function EncounterCascade({
               result={lastResult}
               onSaveNpc={onSaveNpc}
               onRerollNpc={() => runAction({ kind: "rerollNpc" })}
+              onRerollActivity={() => runAction({ kind: "rerollActivity" })}
               pending={pending}
             />
           )}

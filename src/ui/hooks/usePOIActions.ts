@@ -111,7 +111,7 @@ export function usePOIActions(poi: POI | null | undefined, region: Region | null
     )
   }
 
-  const handleSaveEncounterTable = async (entries: Pick<EncounterTable, 'creature' | 'signOmen' | 'loss' | 'npc' | 'discovery' | 'treasure' | 'customSections' | 'disabledCategories'>) => {
+  const handleSaveEncounterTable = async (entries: Pick<EncounterTable, 'creature' | 'signOmen' | 'areaEffect' | 'loss' | 'npc' | 'treasure' | 'customSections' | 'disabledCategories'>) => {
     if (!poi || !region) return
     if (encounterTable) {
       await executeUpdateEncounterTable(

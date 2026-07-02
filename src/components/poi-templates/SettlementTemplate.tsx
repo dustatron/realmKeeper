@@ -378,9 +378,9 @@ interface SettlementTemplateProps {
       EncounterTable,
       | "creature"
       | "signOmen"
+      | "areaEffect"
       | "loss"
       | "npc"
-      | "discovery"
       | "treasure"
       | "customSections"
       | "disabledCategories"

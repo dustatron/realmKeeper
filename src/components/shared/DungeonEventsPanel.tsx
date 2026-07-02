@@ -11,7 +11,7 @@ import type { RollEncounterResult } from '@application/use-cases/RollEncounter'
 interface DungeonEventsPanelProps {
   encounterTable?: EncounterTable | null
   onRollEncounter?: () => Promise<RollEncounterResult>
-  onSaveEncounterTable?: (entries: Pick<EncounterTable, 'creature' | 'signOmen' | 'loss' | 'npc' | 'discovery' | 'treasure' | 'customSections' | 'disabledCategories'>) => void
+  onSaveEncounterTable?: (entries: Pick<EncounterTable, 'creature' | 'signOmen' | 'areaEffect' | 'loss' | 'npc' | 'treasure' | 'customSections' | 'disabledCategories'>) => void
 }
 
 const eventTable = dungeonEventTableDefs.find((t) => t.id === 'table-dungeon-event')!

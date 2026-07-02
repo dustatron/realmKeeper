@@ -16,11 +16,6 @@ describe('cascade locationMatch', () => {
     const r = await rollCascade(sections, fx('signOmen'))
     expect(r.locationMatch).toEqual({ poiId: 'p1', name: 'Broken Tower' })
   })
-  it('attaches locationMatch for a discovery roll', async () => {
-    const sections: CascadeSection[] = [{ category: 'discovery', label: 'Discovery', entries: ['The Broken Tower'], isCustom: false }]
-    const r = await rollCascade(sections, fx('discovery'))
-    expect(r.locationMatch?.poiId).toBe('p1')
-  })
   it('does not attach for creature/loss', async () => {
     const sections: CascadeSection[] = [{ category: 'loss', label: 'Loss', entries: ['Broken Tower mentioned'], isCustom: false }]
     const r = await rollCascade(sections, fx('loss'))

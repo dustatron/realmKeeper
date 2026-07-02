@@ -7,9 +7,9 @@ beforeAll(async () => {
   await db.open()
 })
 
-describe('db schema v46', () => {
-  it('opens at version 46', () => {
-    expect(db.verno).toBe(46)
+describe('db schema v47', () => {
+  it('opens at version 47', () => {
+    expect(db.verno).toBe(47)
   })
 
   it('has a dooms table', async () => {

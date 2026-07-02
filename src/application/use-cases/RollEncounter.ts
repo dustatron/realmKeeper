@@ -18,9 +18,9 @@ import {
 const CATEGORY_LABELS: Record<EncounterCategory, string> = {
   creature: 'Creature',
   signOmen: 'Sign / Omen',
+  areaEffect: 'Area Effect',
   loss: 'Loss',
   npc: 'NPC',
-  discovery: 'Discovery',
   treasure: 'Treasure',
 }
 

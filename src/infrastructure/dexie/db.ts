@@ -30,6 +30,7 @@ import { withDefiningResourceDefault } from './migrations/v42-resource-defaults'
 import { withTradeDefault } from './migrations/v43-trade-defaults'
 import { withWealthBandDefault, withWealthTierDefault, withFrontDefault } from './migrations/v44-wealth-defaults'
 import { withSettlementFlavorBackfill } from './migrations/v45-settlement-flavor'
+import { migrateEncounterCategories } from './migrations/v47-encounter-categories'
 import { seedDatabase } from './seed'
 import { newId } from '@shared/ulid'
 
@@ -766,6 +767,18 @@ db.version(45).stores(storesV39).upgrade(async (tx) => {
 
 // v46: Add dooms table (Phase 6). New table only — no data backfill required.
 db.version(46).stores(storesV46)
+
+// v47: Encounter category redesign. Move old `loss` (environmental events) into
+// the new `areaEffect` field, reseed `loss` with resource-attrition defaults, and
+// archive the dropped `discovery` category into a custom section. No index change.
+db.version(47).stores(storesV46).upgrade(async (tx) => {
+  const tables = await tx.table('encounterTables').toArray()
+  for (const t of tables) {
+    if (t.areaEffect === undefined) {
+      await tx.table('encounterTables').put(migrateEncounterCategories(t))
+    }
+  }
+})
 
 // Normalize Realms on read — ensures starred arrays have defaults
 db.worlds.hook('reading', (realm) => {

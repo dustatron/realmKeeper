@@ -203,9 +203,9 @@ export type NoticeType = (typeof NOTICE_TYPES)[number];
 export const ENCOUNTER_CATEGORIES = [
   "creature",
   "signOmen",
+  "areaEffect",
   "loss",
   "npc",
-  "discovery",
   "treasure",
 ] as const;
 export type EncounterCategory = (typeof ENCOUNTER_CATEGORIES)[number];

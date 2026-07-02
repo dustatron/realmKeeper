@@ -14,9 +14,11 @@ export interface EncounterTable {
   worldId: string
   creature: string[]
   signOmen: string[]
+  /** Weather, terrain danger, traps, magical phenomena. Entries may carry a
+   * chaining token suffix ({creature} / {npc} / {creature|npc}). */
+  areaEffect: string[]
   loss: string[]
   npc: string[]
-  discovery: string[]
   treasure: string[]
   customSections: CustomEncounterSection[]
   disabledCategories: EncounterCategory[]
