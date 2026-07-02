@@ -29,6 +29,19 @@ function ReactionTag({ disposition }: { disposition: Disposition }) {
   );
 }
 
+/** Dead-or-alive tag for a chained {creature?}/{npc?} find. */
+function ConditionTag({ condition }: { condition: "dead" | "alive" }) {
+  const cls =
+    condition === "dead"
+      ? "bg-gray-500/15 text-gray-400 border-gray-500/30"
+      : "bg-red-500/15 text-red-500 border-red-500/30";
+  return (
+    <Badge variant="outline" className={`text-xs px-1.5 py-0 capitalize ${cls}`}>
+      {condition === "dead" ? "dead" : "alive"}
+    </Badge>
+  );
+}
+
 /** "What they're doing right now" line with its own re-roll (creature/npc). */
 function ActivityLine({
   activity,
@@ -101,6 +114,7 @@ export function EncounterResultCards({
           <Badge variant="outline" className="text-xs">
             Creature
           </Badge>
+          {result.condition && <ConditionTag condition={result.condition} />}
           {result.reaction && <ReactionTag disposition={result.reaction} />}
         </div>
         <p className="text-sm font-medium">{result.entryText}</p>
@@ -137,7 +151,7 @@ export function EncounterResultCards({
       )}
       {result.chained && (
         <div className="mt-2 border-l-2 border-amber-500/40 pl-3">
-          <p className="text-xs text-muted-foreground mb-1">…and it flushes out:</p>
+          <p className="text-xs text-muted-foreground mb-1">…also here:</p>
           <EncounterResultCards
             result={result.chained}
             onRerollNpc={() => {}}
@@ -182,6 +196,11 @@ function NpcResultCard({
   // One shared NPC card (NPCMiniCard); it isn't saved yet, so don't link it.
   return (
     <div className="space-y-2">
+      {result.condition && (
+        <div>
+          <ConditionTag condition={result.condition} />
+        </div>
+      )}
       <NPCMiniCard npc={npc} linkToDetail={false} />
       {result.activity && (
         <ActivityLine

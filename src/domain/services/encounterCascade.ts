@@ -21,22 +21,28 @@ export interface CascadeEffects {
   now: () => number
 }
 
-/** Matches a trailing chain token: {creature}, {npc}, or {creature|npc}. */
-const CHAIN_TOKEN = /\s*\{(creature\|npc|creature|npc)\}\s*$/i
+/**
+ * Matches a trailing chain token: {creature}, {npc}, {creature|npc}, and their
+ * uncertain-state variants with a trailing ? ({creature?}, etc.).
+ */
+const CHAIN_TOKEN = /\s*\{(creature\|npc|creature|npc)(\?)?\}\s*$/i
 
 /**
  * Split an areaEffect entry into its display text and any chain token. The token
- * flags that the effect flushes out a creature/NPC (auto-chained, spec Decision B).
+ * flags that the effect turns up a creature/NPC at the scene (auto-chained, spec
+ * Decision B). A trailing ? marks it as a *found* thing of uncertain state — the
+ * chain rolls d4 for dead (odd) or alive (even).
  */
 export function parseChainToken(text: string): {
   text: string
   token: 'creature' | 'npc' | 'either' | null
+  uncertain: boolean
 } {
   const m = text.match(CHAIN_TOKEN)
-  if (!m) return { text, token: null }
+  if (!m) return { text, token: null, uncertain: false }
   const raw = m[1].toLowerCase()
   const token = raw === 'creature' ? 'creature' : raw === 'npc' ? 'npc' : 'either'
-  return { text: text.replace(CHAIN_TOKEN, '').trim(), token }
+  return { text: text.replace(CHAIN_TOKEN, '').trim(), token, uncertain: m[2] === '?' }
 }
 
 function pickEntry(section: CascadeSection, fx: CascadeEffects): { entryText: string; entryIndex: number } {
@@ -45,9 +51,14 @@ function pickEntry(section: CascadeSection, fx: CascadeEffects): { entryText: st
   return { entryText: section.entries[entryIndex] ?? section.entries[0], entryIndex }
 }
 
-/** Roll a full follow-up encounter on the creature/npc section flushed out by a token. */
+/**
+ * Roll a full follow-up encounter on the creature/npc section turned up by a token.
+ * When `uncertain`, a d4 decides dead (odd) or alive (even); a dead find is a
+ * carcass — no reaction or activity, just a condition badge.
+ */
 async function rollChained(
   token: 'creature' | 'npc' | 'either',
+  uncertain: boolean,
   sections: CascadeSection[],
   fx: CascadeEffects,
 ): Promise<EncounterRollResult | null> {
@@ -55,7 +66,17 @@ async function rollChained(
   const idx = sections.findIndex((s) => s.category === target)
   if (idx < 0) return null
   // Chained sections never chain again (only areaEffect carries tokens).
-  return buildResult(idx + 1, sections[idx], sections, fx)
+  const res = await buildResult(idx + 1, sections[idx], sections, fx)
+  if (!uncertain) return res
+  const alive = fx.rollDie(4) % 2 === 0 // even = alive, odd = dead
+  if (alive) return { ...res, condition: 'alive' }
+  // A carcass — strip behaviour but keep the identity (monster match stays).
+  const dead: EncounterRollResult = { ...res, condition: 'dead' }
+  delete dead.reaction
+  delete dead.reactionRoll
+  delete dead.activity
+  delete dead.activityRoll
+  return dead
 }
 
 async function buildResult(
@@ -109,9 +130,9 @@ async function buildResult(
   }
 
   if (section.category === 'areaEffect') {
-    const { text, token } = parseChainToken(entryText)
+    const { text, token, uncertain } = parseChainToken(entryText)
     const result: EncounterRollResult = { ...base, entryText: text }
-    if (token) result.chained = await rollChained(token, sections, fx)
+    if (token) result.chained = await rollChained(token, uncertain, sections, fx)
     return result
   }
 

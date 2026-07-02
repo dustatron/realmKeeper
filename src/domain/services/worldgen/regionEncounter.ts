@@ -59,38 +59,40 @@ const AMBIENT_OMENS: Record<'easy' | 'tough' | 'perilous', string[]> = {
     'Whispering with no source, in no language',
   ],
 }
-// Environmental events — weather, terrain danger, traps, phenomena. A trailing
-// token ({creature} / {npc} / {creature|npc}) auto-chains a follow-up roll.
+// Weather, phenomena, and traps — terrain-neutral and tiered by danger (this
+// fires without knowing terrain; terrain-specific hazards live in biome tables).
+// A trailing token turns up a creature/NPC at the scene; a trailing ? makes it a
+// found thing of uncertain state (dead-or-alive): {creature}, {creature?}, etc.
 const AREA_EFFECT_BY_TIER: Record<'easy' | 'tough' | 'perilous', string[]> = {
   easy: [
     'A sudden downpour drops visibility',
     'A fallen tree blocks the trail',
-    'Boggy ground swallows every step',
     'Biting insects swarm the party',
     'Fog rolls in and the temperature drops',
     'A startled animal bolts across the path {creature}',
-    'A rickety bridge sways underfoot',
-    'A patch of trail has washed out',
+    'A brief, drenching squall passes through',
+    'The trail forks, both paths unmarked',
+    'Failing light forces an early camp',
   ],
   tough: [
-    'A bridge is washed out entirely',
-    'A rockslide crashes down the slope {creature}',
-    'Quicksand yawns across the only path',
-    'A river runs high and fast at the ford',
-    'A thunderstorm builds; lightning splits a tree',
-    'An old snare, sprung — and its setter {creature|npc}',
-    'A dead beast, half-eaten and warm {creature}',
     'A cold night with no dry wood to be found',
+    'A thunderstorm builds; lightning splits a nearby tree',
+    'A sprung snare, and something caught in it {creature?}',
+    'Wildlife bursts from cover, fleeing something unseen {creature}',
+    'A fresh kill, still warm — its killer may be close {creature}',
+    'A dense, disorienting fog that muffles all sound',
+    'A washed-out stretch of trail forces a long detour',
+    'Sleet and driving wind sap the party\'s strength',
   ],
   perilous: [
-    'The ground gives way to a sinkhole',
-    'A flash flood roars down the draw',
     'A blizzard closes in without warning',
-    'A ledge crumbles underfoot',
     'A poisonous mist settles in the hollow',
-    'An avalanche buries the trail behind {creature}',
-    'A pit trap, ancient and deep {creature|npc}',
-    'Unnatural silence — every creature has fled {creature}',
+    'An old pit trap, deep and lethal {creature|npc?}',
+    'An unnatural hush — every creature has fled {creature}',
+    'A firestorm of dry lightning races across the land',
+    'A carcass, freshly torn open, and its killer near {creature}',
+    'Choking ash falls from a sky gone dark',
+    'A killing cold that steals fingers and toes',
   ],
 }
 // Resource attrition — what the party loses to the journey.

@@ -47,7 +47,11 @@ export function summarizeResult(result: EncounterRollResult): string {
   let base = result.entryText || result.categoryLabel;
   if (result.reaction) base = `${base} — ${result.reaction}`;
   if (result.activity) base = `${base}, ${result.activity}`;
-  if (result.chained) base = `${base} → ${result.chained.npc?.name ?? result.chained.entryText}`;
+  if (result.chained) {
+    const c = result.chained;
+    const name = c.npc?.name ?? c.entryText;
+    base = `${base} → ${c.condition ? `${name} (${c.condition})` : name}`;
+  }
   return base;
 }
 

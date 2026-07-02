@@ -22,7 +22,9 @@ export interface EncounterRollResult {
   monsterMatch?: { compendiumId: string; name: string } | null
   /** signOmen only: matched region POI */
   locationMatch?: { poiId: string; name: string } | null
-  /** areaEffect only: creature/npc flushed out by a {creature}/{npc} token */
+  /** areaEffect only: creature/npc turned up by a {creature}/{npc} token */
   chained?: EncounterRollResult | null
+  /** set on a chained {creature?}/{npc?} find: is it a live threat or a carcass */
+  condition?: 'dead' | 'alive'
   rolledAt: number
 }

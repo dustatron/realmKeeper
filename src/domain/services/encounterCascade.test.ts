@@ -74,12 +74,18 @@ describe('rollCascade', () => {
 
 describe('parseChainToken', () => {
   it('extracts creature / npc / either tokens and strips them', () => {
-    expect(parseChainToken('Rockfall {creature}')).toEqual({ text: 'Rockfall', token: 'creature' })
-    expect(parseChainToken('A trap {npc}')).toEqual({ text: 'A trap', token: 'npc' })
-    expect(parseChainToken('A snare {creature|npc}')).toEqual({ text: 'A snare', token: 'either' })
+    expect(parseChainToken('Rockfall {creature}')).toEqual({ text: 'Rockfall', token: 'creature', uncertain: false })
+    expect(parseChainToken('A trap {npc}')).toEqual({ text: 'A trap', token: 'npc', uncertain: false })
+    expect(parseChainToken('A snare {creature|npc}')).toEqual({ text: 'A snare', token: 'either', uncertain: false })
+  })
+  it('flags the uncertain-state variant with a trailing ?', () => {
+    expect(parseChainToken('A sprung trap, something caught {creature?}'))
+      .toEqual({ text: 'A sprung trap, something caught', token: 'creature', uncertain: true })
+    expect(parseChainToken('A pit trap {creature|npc?}'))
+      .toEqual({ text: 'A pit trap', token: 'either', uncertain: true })
   })
   it('returns null token for plain entries', () => {
-    expect(parseChainToken('Sudden downpour')).toEqual({ text: 'Sudden downpour', token: null })
+    expect(parseChainToken('Sudden downpour')).toEqual({ text: 'Sudden downpour', token: null, uncertain: false })
   })
 })
 
@@ -106,6 +112,36 @@ describe('area effect chaining', () => {
     const r = await rollCascade(noCreature, fx({ rollDie: () => 1 }))
     expect(r.category).toBe('areaEffect')
     expect(r.chained).toBeNull()
+  })
+
+  const uncertain: CascadeSection[] = [
+    { category: 'creature', label: 'Creature', entries: ['Goblin'], isCustom: false },
+    { category: 'areaEffect', label: 'Area Effect', entries: ['A sprung trap {creature?}'], isCustom: false },
+  ]
+
+  it('marks an uncertain {creature?} find dead on an odd d4, stripping behaviour', async () => {
+    // master → areaEffect (section 2); d4 → odd (1) → dead
+    const land = await rollCascade(uncertain, fx({ rollDie: (s) => (s === uncertain.length ? 2 : 1) }))
+    expect(land.chained?.condition).toBe('dead')
+    expect(land.chained?.reaction).toBeUndefined()
+    expect(land.chained?.activity).toBeUndefined()
+    expect(land.chained?.entryText).toBe('Goblin')
+  })
+
+  it('marks an uncertain {creature?} find alive on an even d4, keeping reaction/activity', async () => {
+    // master → areaEffect (2); entry → 1; d4 → even (2) → alive
+    let calls = 0
+    const rollDie = (s: number) => {
+      calls++
+      if (s === uncertain.length) return 2 // master → areaEffect
+      if (s === 4) return 2 // d4 → even → alive
+      return 1
+    }
+    const land = await rollCascade(uncertain, fx({ rollDie }))
+    expect(land.chained?.condition).toBe('alive')
+    expect(land.chained?.reaction).toBe('curious')
+    expect(land.chained?.activity).toBe('creature-doing')
+    expect(calls).toBeGreaterThan(0)
   })
 })
 

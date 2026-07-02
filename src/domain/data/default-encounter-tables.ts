@@ -15,18 +15,21 @@ export const DEFAULT_ENCOUNTER_ENTRIES = {
     'Fresh tracks in the mud',
     'Faint smell of smoke',
   ],
-  // Weather, terrain danger, traps, magical phenomena. A trailing token
-  // ({creature} / {npc} / {creature|npc}) auto-chains a follow-up roll.
+  // Weather, phenomena, traps — terrain-neutral (this default table fires without
+  // knowing the terrain; terrain-specific hazards live in the biome tables). A
+  // trailing token turns up a creature/NPC at the scene: {creature} / {npc} /
+  // {creature|npc}, or an uncertain-state "found" thing with a trailing ?
+  // ({creature?} rolls dead-or-alive).
   areaEffect: [
-    'Sudden downpour — visibility drops to a stone\'s throw',
-    'Rockfall ahead; something startled it loose {creature}',
-    'Cold fog settles in, and the temperature drops with it',
-    'A thunderstorm builds — sheet lightning, then a strike that starts a fire',
-    'An old trap, long forgotten — and the thing that set it {creature|npc}',
-    'A dead animal, half-eaten and still warm {creature}',
-    'The ground gives way to a sinkhole',
-    'Flash flood roars down the draw',
-    'An unnatural silence; every creature has fled {creature}',
+    'A sudden downpour drops visibility to a stone\'s throw',
+    'Cold fog rolls in; the temperature drops',
+    'A thunderstorm builds; lightning splits a nearby tree and sets it ablaze',
+    'Biting insects swarm the camp all night',
+    'A sprung trap, and something is caught in it {creature?}',
+    'A fresh kill, still warm — its killer may be close {creature}',
+    'Wildlife bursts from cover, fleeing something unseen {creature}',
+    'An unnatural hush falls; every creature has fled {creature}',
+    'Failing light forces an early, uneasy camp',
   ],
   // Resource attrition — the cost of travel. No environmental events (those are
   // areaEffect); this is what the party loses.
