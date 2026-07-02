@@ -13,6 +13,7 @@ import {
   rerollMaster,
   rerollEntry,
   rerollReaction,
+  rerollActivity,
   rerollNpc,
   pickMaster,
   pickEntryAt,
@@ -20,6 +21,7 @@ import {
   type CascadeEffects,
   type CascadeSection,
 } from '@domain/services/encounterCascade'
+import { CREATURE_ACTIVITIES, NPC_ACTIVITIES } from '@domain/data/default-encounter-tables'
 import type { Disposition } from '@shared/constants'
 import { matchRegionLocation } from '@domain/services/matchRegionLocation'
 
@@ -48,6 +50,7 @@ export type CascadeAction =
   | { kind: 'rerollMaster' }
   | { kind: 'rerollEntry' }
   | { kind: 'rerollReaction' }
+  | { kind: 'rerollActivity' }
   | { kind: 'rerollNpc' }
   | { kind: 'pickMaster'; category: string }
   | { kind: 'pickEntry'; entryIndex: number }
@@ -76,6 +79,11 @@ export function buildCascadeEffects(
       ),
     matchMonster: (text) => matchCompendiumMonster(text, ctx.systemConfig.id),
     matchLocation: ctx.regionPois ? (text) => matchRegionLocation(text, ctx.regionPois!) : undefined,
+    rollActivity: (kind) => {
+      const list = kind === 'creature' ? CREATURE_ACTIVITIES : NPC_ACTIVITIES
+      const roll = rollDice(`1d${list.length}`).total
+      return { text: list[roll - 1], roll }
+    },
     now: () => Date.now(),
   }
 }
@@ -108,6 +116,9 @@ export async function executeEncounterCascade(
       break
     case 'rerollReaction':
       result = prev ? rerollReaction(prev, fx) : await rollCascade(sections, fx)
+      break
+    case 'rerollActivity':
+      result = prev ? rerollActivity(prev, fx) : await rollCascade(sections, fx)
       break
     case 'rerollNpc':
       result = prev ? await rerollNpc(prev, fx) : await rollCascade(sections, fx)

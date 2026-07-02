@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  rollCascade, rerollEntry, rerollReaction, rerollNpc,
-  pickMaster, pickEntryAt, pickReaction,
+  rollCascade, rerollEntry, rerollReaction, rerollActivity, rerollNpc,
+  pickMaster, pickEntryAt, pickReaction, parseChainToken,
   type CascadeSection, type CascadeEffects,
 } from './encounterCascade'
 import type { NPC } from '@domain/entities/NPC'
@@ -9,7 +9,7 @@ import type { NPC } from '@domain/entities/NPC'
 const sections: CascadeSection[] = [
   { category: 'creature', label: 'Creature', entries: ['Goblin', 'Wolf'], isCustom: false },
   { category: 'npc', label: 'NPC', entries: ['A merchant'], isCustom: false },
-  { category: 'discovery', label: 'Discovery', entries: ['A locked chest'], isCustom: false },
+  { category: 'treasure', label: 'Treasure', entries: ['A locked chest'], isCustom: false },
 ]
 
 const fakeNpc = { id: 'npc-1', name: 'Test NPC' } as unknown as NPC
@@ -20,6 +20,7 @@ function fx(over: Partial<CascadeEffects> = {}): CascadeEffects {
     rollReaction: () => ({ roll: 7, disposition: 'curious' }),
     generateNpc: async () => fakeNpc,
     matchMonster: () => ({ compendiumId: 'mon-1', name: 'Goblin' }),
+    rollActivity: (kind) => ({ text: `${kind}-doing`, roll: 1 }),
     now: () => 123,
     ...over,
   }
@@ -57,10 +58,67 @@ describe('rollCascade', () => {
 
   it('leaves other categories as plain text (no reaction/npc/monster)', async () => {
     const r = await rollCascade(sections, fx({ rollDie: (s) => (s === sections.length ? 3 : 1) }))
-    expect(r.category).toBe('discovery')
+    expect(r.category).toBe('treasure')
     expect(r.reaction).toBeUndefined()
     expect(r.npc).toBeUndefined()
     expect(r.monsterMatch).toBeUndefined()
+  })
+
+  it('rolls a "what they are doing" activity for creatures and npcs', async () => {
+    const cr = await rollCascade(sections, fx({ rollDie: () => 1 }))
+    expect(cr.activity).toBe('creature-doing')
+    const np = await rollCascade(sections, fx({ rollDie: (s) => (s === sections.length ? 2 : 1) }))
+    expect(np.activity).toBe('npc-doing')
+  })
+})
+
+describe('parseChainToken', () => {
+  it('extracts creature / npc / either tokens and strips them', () => {
+    expect(parseChainToken('Rockfall {creature}')).toEqual({ text: 'Rockfall', token: 'creature' })
+    expect(parseChainToken('A trap {npc}')).toEqual({ text: 'A trap', token: 'npc' })
+    expect(parseChainToken('A snare {creature|npc}')).toEqual({ text: 'A snare', token: 'either' })
+  })
+  it('returns null token for plain entries', () => {
+    expect(parseChainToken('Sudden downpour')).toEqual({ text: 'Sudden downpour', token: null })
+  })
+})
+
+describe('area effect chaining', () => {
+  const withArea: CascadeSection[] = [
+    { category: 'creature', label: 'Creature', entries: ['Goblin'], isCustom: false },
+    { category: 'npc', label: 'NPC', entries: ['A merchant'], isCustom: false },
+    { category: 'areaEffect', label: 'Area Effect', entries: ['Rockfall {creature}'], isCustom: false },
+  ]
+
+  it('auto-rolls the flushed-out creature and strips the token from display', async () => {
+    // land on areaEffect (index 3 → section 2)
+    const r = await rollCascade(withArea, fx({ rollDie: (s) => (s === withArea.length ? 3 : 1) }))
+    expect(r.category).toBe('areaEffect')
+    expect(r.entryText).toBe('Rockfall')                        // token stripped
+    expect(r.chained?.category).toBe('creature')
+    expect(r.chained?.entryText).toBe('Goblin')
+  })
+
+  it('leaves chained null when the target section is absent', async () => {
+    const noCreature: CascadeSection[] = [
+      { category: 'areaEffect', label: 'Area Effect', entries: ['Rockfall {creature}'], isCustom: false },
+    ]
+    const r = await rollCascade(noCreature, fx({ rollDie: () => 1 }))
+    expect(r.category).toBe('areaEffect')
+    expect(r.chained).toBeNull()
+  })
+})
+
+describe('rerollActivity', () => {
+  it('re-rolls only the activity for a creature', async () => {
+    const prev = await rollCascade(sections, fx({ rollDie: () => 1 }))
+    const r = rerollActivity(prev, fx({ rollActivity: () => ({ text: 'new-activity', roll: 3 }) }))
+    expect(r.activity).toBe('new-activity')
+    expect(r.entryText).toBe(prev.entryText)
+  })
+  it('is a no-op for non-agent categories', async () => {
+    const prev = await rollCascade(sections, fx({ rollDie: (s) => (s === sections.length ? 3 : 1) }))
+    expect(rerollActivity(prev, fx())).toBe(prev)
   })
 })
 
@@ -96,9 +154,9 @@ describe('reroll slices', () => {
 
 describe('manual row selection', () => {
   it('pickMaster lands on the chosen category and rolls within it', async () => {
-    const r = await pickMaster('discovery', sections, fx({ rollDie: () => 1 }))
-    expect(r.category).toBe('discovery')
-    expect(r.masterRoll).toBe(3) // discovery is the 3rd section
+    const r = await pickMaster('treasure', sections, fx({ rollDie: () => 1 }))
+    expect(r.category).toBe('treasure')
+    expect(r.masterRoll).toBe(3) // treasure is the 3rd section
     expect(r.entryText).toBe('A locked chest')
   })
 

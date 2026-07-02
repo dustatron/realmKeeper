@@ -29,27 +29,63 @@ function ReactionTag({ disposition }: { disposition: Disposition }) {
   );
 }
 
+/** "What they're doing right now" line with its own re-roll (creature/npc). */
+function ActivityLine({
+  activity,
+  onRerollActivity,
+  pending,
+}: {
+  activity: string;
+  onRerollActivity?: () => void;
+  pending?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+      <span className="italic">{activity}</span>
+      {onRerollActivity && (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-5 px-1 text-xs"
+          onClick={onRerollActivity}
+          disabled={pending}
+          title="Re-roll activity"
+        >
+          <Dices className="size-3" />
+        </Button>
+      )}
+    </div>
+  );
+}
+
 interface EncounterResultCardsProps {
   result: EncounterRollResult;
   onSaveNpc?: () => Promise<void>;
   onRerollNpc: () => void;
+  onRerollActivity?: () => void;
   pending?: boolean;
+  /** Rendered as the follow-up flushed out by an area effect — no save/reroll. */
+  isChained?: boolean;
 }
 
 export function EncounterResultCards({
   result,
   onSaveNpc,
   onRerollNpc,
+  onRerollActivity,
   pending = false,
+  isChained = false,
 }: EncounterResultCardsProps) {
   // --- NPC result ---
   if (result.npc) {
     return (
       <NpcResultCard
         result={result}
-        onSaveNpc={onSaveNpc}
+        onSaveNpc={isChained ? undefined : onSaveNpc}
         onRerollNpc={onRerollNpc}
+        onRerollActivity={isChained ? undefined : onRerollActivity}
         pending={pending}
+        hideActions={isChained}
       />
     );
   }
@@ -68,12 +104,19 @@ export function EncounterResultCards({
           {result.reaction && <ReactionTag disposition={result.reaction} />}
         </div>
         <p className="text-sm font-medium">{result.entryText}</p>
+        {result.activity && (
+          <ActivityLine
+            activity={result.activity}
+            onRerollActivity={isChained ? undefined : onRerollActivity}
+            pending={pending}
+          />
+        )}
         {monster && <MonsterStatBlock monster={monster} />}
       </div>
     );
   }
 
-  // --- Other (flavor text) ---
+  // --- Other (flavor text: signOmen, areaEffect, loss, treasure, custom) ---
   return (
     <div className="rounded-md border bg-card/50 p-3 space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
@@ -92,6 +135,17 @@ export function EncounterResultCards({
           🔎 {result.locationMatch.name}
         </Link>
       )}
+      {result.chained && (
+        <div className="mt-2 border-l-2 border-amber-500/40 pl-3">
+          <p className="text-xs text-muted-foreground mb-1">…and it flushes out:</p>
+          <EncounterResultCards
+            result={result.chained}
+            onRerollNpc={() => {}}
+            pending={pending}
+            isChained
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -100,12 +154,16 @@ function NpcResultCard({
   result,
   onSaveNpc,
   onRerollNpc,
+  onRerollActivity,
   pending,
+  hideActions,
 }: {
   result: EncounterRollResult;
   onSaveNpc?: () => Promise<void>;
   onRerollNpc: () => void;
+  onRerollActivity?: () => void;
   pending: boolean;
+  hideActions?: boolean;
 }) {
   const npc = result.npc!;
   const [saving, setSaving] = useState(false);
@@ -125,34 +183,43 @@ function NpcResultCard({
   return (
     <div className="space-y-2">
       <NPCMiniCard npc={npc} linkToDetail={false} />
-      <div className="flex items-center gap-2">
-        {onSaveNpc && (
+      {result.activity && (
+        <ActivityLine
+          activity={result.activity}
+          onRerollActivity={onRerollActivity}
+          pending={pending}
+        />
+      )}
+      {!hideActions && (
+        <div className="flex items-center gap-2">
+          {onSaveNpc && (
+            <Button
+              size="sm"
+              variant={saved ? "outline" : "default"}
+              onClick={handleSave}
+              disabled={saved || saving || pending}
+            >
+              {saved ? (
+                "Saved ✓"
+              ) : (
+                <>
+                  <Save className="mr-1.5 size-3.5" />
+                  {saving ? "Saving…" : "Save as NPC"}
+                </>
+              )}
+            </Button>
+          )}
           <Button
             size="sm"
-            variant={saved ? "outline" : "default"}
-            onClick={handleSave}
-            disabled={saved || saving || pending}
+            variant="outline"
+            onClick={onRerollNpc}
+            disabled={pending}
           >
-            {saved ? (
-              "Saved ✓"
-            ) : (
-              <>
-                <Save className="mr-1.5 size-3.5" />
-                {saving ? "Saving…" : "Save as NPC"}
-              </>
-            )}
+            <Dices className="mr-1.5 size-3.5" />
+            Re-roll NPC
           </Button>
-        )}
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onRerollNpc}
-          disabled={pending}
-        >
-          <Dices className="mr-1.5 size-3.5" />
-          Re-roll NPC
-        </Button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

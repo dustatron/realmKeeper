@@ -67,7 +67,7 @@ interface GenericTemplateProps {
   onSaveEncounterTable?: (
     entries: Pick<
       EncounterTable,
-      | "creature" | "signOmen" | "loss" | "npc" | "discovery" | "treasure"
+      | "creature" | "signOmen" | "areaEffect" | "loss" | "npc" | "treasure"
       | "customSections" | "disabledCategories"
     >,
   ) => void;

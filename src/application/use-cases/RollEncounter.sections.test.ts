@@ -4,8 +4,8 @@ import type { EncounterTable } from '@domain/entities/EncounterTable'
 
 const table: EncounterTable = {
   id: 't1', ownerPoiId: 'p1', ownerRegionId: null, worldId: 'w1',
-  creature: ['Goblin'], signOmen: [], loss: [], npc: ['A merchant'],
-  discovery: [], treasure: [], customSections: [{ id: 'cs1', name: 'Weird', entries: ['Glitch'] }],
+  creature: ['Goblin'], signOmen: [], areaEffect: [], loss: [], npc: ['A merchant'],
+  treasure: [], customSections: [{ id: 'cs1', name: 'Weird', entries: ['Glitch'] }],
   disabledCategories: ['treasure'], lastResult: null, createdAt: 0, updatedAt: 0,
 }
 

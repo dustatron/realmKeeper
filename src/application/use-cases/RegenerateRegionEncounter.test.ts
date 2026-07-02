@@ -25,7 +25,7 @@ describe('executeRegenerateRegionEncounter', () => {
 
     expect(t.ownerRegionId).toBe('r1')
     expect(t.creature.length).toBeGreaterThan(0)
-    expect(t.discovery.some((d) => d.includes('The Black Vault'))).toBe(true)
+    expect(t.signOmen.some((d) => d.includes('The Black Vault'))).toBe(true)
     expect(t.lastResult).toBeNull()
 
     // persisted

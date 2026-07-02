@@ -6,8 +6,8 @@ import { pickTierMonster } from '~/lib/worldgen/compendium-utils'
 import { getCompendiumById } from '@domain/data/compendium'
 
 export interface RegionEncounterContent {
-  creature: string[]; signOmen: string[]; loss: string[]
-  npc: string[]; discovery: string[]; treasure: string[]
+  creature: string[]; signOmen: string[]; areaEffect: string[]
+  loss: string[]; npc: string[]; treasure: string[]
 }
 
 const OMEN_TEMPLATES = [
@@ -59,68 +59,97 @@ const AMBIENT_OMENS: Record<'easy' | 'tough' | 'perilous', string[]> = {
     'Whispering with no source, in no language',
   ],
 }
-const LOSS_BY_TIER: Record<'easy' | 'tough' | 'perilous', string[]> = {
+// Environmental events — weather, terrain danger, traps, phenomena. A trailing
+// token ({creature} / {npc} / {creature|npc}) auto-chains a follow-up roll.
+const AREA_EFFECT_BY_TIER: Record<'easy' | 'tough' | 'perilous', string[]> = {
   easy: [
-    'A sudden downpour slows travel',
-    'The trail forks unmarked',
-    'A pack strap snaps',
-    'A wrong turn costs half a day',
-    'Boots soaked through at a ford',
-    'A waterskin springs a leak',
-    'Biting insects plague the camp',
-    'The map proves out of date',
+    'A sudden downpour drops visibility',
+    'A fallen tree blocks the trail',
+    'Boggy ground swallows every step',
+    'Biting insects swarm the party',
+    'Fog rolls in and the temperature drops',
+    'A startled animal bolts across the path {creature}',
+    'A rickety bridge sways underfoot',
+    'A patch of trail has washed out',
   ],
   tough: [
-    'A bridge is washed out',
-    'Quicksand swallows a pack',
-    'A rockslide blocks the way',
-    'A sprained ankle on loose scree',
-    'Rations spoil in the damp',
-    'A river crossing sweeps off supplies',
-    'A cold night, no dry wood',
-    'A horse goes lame',
+    'A bridge is washed out entirely',
+    'A rockslide crashes down the slope {creature}',
+    'Quicksand yawns across the only path',
+    'A river runs high and fast at the ford',
+    'A thunderstorm builds; lightning splits a tree',
+    'An old snare, sprung — and its setter {creature|npc}',
+    'A dead beast, half-eaten and warm {creature}',
+    'A cold night with no dry wood to be found',
   ],
   perilous: [
     'The ground gives way to a sinkhole',
-    'A flash flood scatters the party',
-    'A blizzard closes in',
+    'A flash flood roars down the draw',
+    'A blizzard closes in without warning',
     'A ledge crumbles underfoot',
     'A poisonous mist settles in the hollow',
-    'An avalanche buries the trail behind',
-    'The cold steals fingers and toes',
-    'A guide vanishes in the night',
+    'An avalanche buries the trail behind {creature}',
+    'A pit trap, ancient and deep {creature|npc}',
+    'Unnatural silence — every creature has fled {creature}',
+  ],
+}
+// Resource attrition — what the party loses to the journey.
+const LOSS_BY_TIER: Record<'easy' | 'tough' | 'perilous', string[]> = {
+  easy: [
+    'A pack strap snaps; something is dropped',
+    'A wrong turn costs half a day',
+    'A waterskin springs a leak',
+    'The map proves out of date',
+    'Boots soaked through at a ford; gain fatigue',
+    'A day\'s rations go to mold',
+  ],
+  tough: [
+    'Rations spoil in the damp — lose a day\'s food',
+    'A tool or weapon breaks under strain',
+    'A river crossing sweeps off supplies',
+    'A horse or beast goes lame',
+    'The party is lost — burn a watch backtracking',
+    'The last of the oil and torches gutter out',
+  ],
+  perilous: [
+    'A whole pack is lost to the current',
+    'A vital tool shatters when it\'s needed most',
+    'A mount is lost outright',
+    'Days of supplies ruined; the party goes hungry',
+    'Hopelessly lost — lose a full day',
+    'The cold steals fingers and toes; lasting injury',
   ],
 }
 const TREASURE_BY_TIER: Record<'easy' | 'tough' | 'perilous', string[]> = {
   easy: [
     'A pouch of coins (2d6 sp)',
-    "A traveler's dropped ring",
-    'A cache of dried food + 1d6 gp',
-    'A bundle of trade goods',
-    'A silver locket with a faded portrait',
+    'A cache of dried food, three days\' worth',
+    'A sturdy backpack, barely used',
     'A well-made tool, lost on the road',
-    'A flask of decent brandy',
+    'A serviceable shortbow and half a quiver',
+    'A padded gambeson, only lightly worn',
+    'A flask of lamp oil and a tinderbox',
     'A handful of mixed coins (3d6 sp)',
   ],
   tough: [
     'A strongbox (3d6 gp)',
     'A gem worth 50 gp',
     'A fine weapon, lightly used',
-    'A merchant\'s lost ledger and purse (2d6 gp)',
-    'A roll of fine cloth (40 gp)',
-    'A signet ring of some house',
+    'A shield, dented but sound',
+    'A suit of leather armor in good repair',
+    'A healing draught and a coil of good rope',
     'A vial of rare ink or reagent',
-    'A map fragment + a small gem',
+    'A cut gem and a full set of iron rations',
   ],
   perilous: [
     'A hoard fragment (5d10 gp)',
-    'A jeweled relic (250 gp)',
-    'An ornate art object',
-    'A reliquary, sealed and heavy (300 gp)',
     'A cache of cut gems (4d6 × 10 gp)',
+    'An ornate art object',
     'A masterwork weapon, ancient make',
-    'A crown or circlet, tarnished but fine',
+    'A breastplate, tarnished but whole',
     'A chest, locked, dragged from somewhere',
+    'A crown or circlet, tarnished but fine',
+    'A quiver of fine arrows and a strong bow',
   ],
 }
 const NPC_PROMPTS = [
@@ -161,13 +190,12 @@ export function buildRegionEncounterContent(input: {
   // Guarantee >=6 even when the tier band / compendium is tiny:
   while (creature.length < 6) creature.push(`Wandering beast ${creature.length + 1}`)
 
-  // discovery: the region's real notable sites
+  // the region's real notable sites — still used to point signOmen entries
   const sites = dedup(
     pois
       .filter((p) => ['dungeon', 'ruin', 'landmark'].includes(p.type) || (p.treasure ?? []).some((t) => t.notable || t.isMagic))
       .map((p) => p.name),
   )
-  const discovery = sites.length > 0 ? [...sites] : ['An unmarked cave', 'A weathered shrine', 'A buried ruin']
 
   // signOmen: location-pointing (for a few sites) + ambient
   const signOmen: string[] = []
@@ -176,7 +204,8 @@ export function buildRegionEncounterContent(input: {
   }
   signOmen.push(...AMBIENT_OMENS[tier])
 
-  // loss / treasure by tier
+  // areaEffect / loss / treasure by tier
+  const areaEffect = [...AREA_EFFECT_BY_TIER[tier]]
   const loss = [...LOSS_BY_TIER[tier]]
   const treasure = [...TREASURE_BY_TIER[tier]]
 
@@ -184,5 +213,5 @@ export function buildRegionEncounterContent(input: {
   const npc = [...NPC_PROMPTS]
   for (const f of (factions ?? []).slice(0, 2)) npc.push(`An agent of the ${f.name}`)
 
-  return { creature, signOmen, loss, npc, discovery, treasure }
+  return { creature, signOmen, areaEffect, loss, npc, treasure }
 }

@@ -9,9 +9,9 @@ export interface CreateEncounterTableInput {
   worldId: string
   creature?: string[]
   signOmen?: string[]
+  areaEffect?: string[]
   loss?: string[]
   npc?: string[]
-  discovery?: string[]
   treasure?: string[]
   customSections?: CustomEncounterSection[]
   disabledCategories?: EncounterCategory[]
@@ -29,9 +29,9 @@ export async function executeCreateEncounterTable(
     worldId: input.worldId,
     creature: input.creature ?? [],
     signOmen: input.signOmen ?? [],
+    areaEffect: input.areaEffect ?? [],
     loss: input.loss ?? [],
     npc: input.npc ?? [],
-    discovery: input.discovery ?? [],
     treasure: input.treasure ?? [],
     customSections: input.customSections ?? [],
     disabledCategories: input.disabledCategories ?? [],
