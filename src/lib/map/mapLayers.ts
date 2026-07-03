@@ -1,6 +1,7 @@
 import type { HexCell } from '@domain/entities/GameMap'
 import type { POI } from '@domain/entities/POI'
 import type { Connection } from '@domain/entities/Connection'
+import type { Path } from '@domain/entities/Path'
 import { hexNeighbors } from '~/lib/hexmap/hex'
 
 /**
@@ -74,18 +75,26 @@ function wavyVaried(p: Pt, q: Pt): Pt[] {
 }
 
 /**
- * Rivers drawn as wavy LINES that run through the GAPS BETWEEN hexes — each
- * river cell links the midpoints of the edges it shares with river neighbours
- * (so the water sits on the borders, not through cell centres), with endpoints
- * dipping toward the cell centre. Lines never paint over settlement/landmark
- * tile doodles (unlike a hex fill).
+ * Rivers drawn as wavy LINES that run through the GAPS BETWEEN hexes — the water
+ * sits on the borders, not through cell centres, and never paints over
+ * settlement/landmark tile doodles (unlike a hex fill).
+ *
+ * FLOW-ACCURATE when cells carry `riverTo` (the downstream successor): each cell
+ * connects only along real flow edges — one line in from each upstream tributary,
+ * one line out to the downstream cell, meeting at the centre. Tributaries merge
+ * into trunks and confluences read as Y-junctions, so a dense drainage network no
+ * longer collapses into a lattice of every-adjacent-pair joins.
+ *
+ * LEGACY FALLBACK: older generated maps flag `river` but lack `riverTo`. For
+ * those we fall back to geometric adjacency (link every river neighbour) so their
+ * rivers still render.
  */
 export function buildRiverGeoJSON(
   hexCells: HexCell[],
   toLngLat: PxToLngLat,
 ): GeoJSON.FeatureCollection {
   const riverCells = hexCells.filter((cell) => cell.river === true)
-  const byCoord = new Map(riverCells.map((c) => [`${c.q},${c.r}`, c]))
+  const byCoord = new Map(hexCells.map((c) => [`${c.q},${c.r}`, c]))
   const features: GeoJSON.Feature[] = []
   const addLine = (pts: Pt[]) => {
     if (pts.length < 2) return
@@ -96,26 +105,70 @@ export function buildRiverGeoJSON(
     })
   }
 
+  const hasFlow = riverCells.some((c) => c.riverTo != null)
+
+  if (!hasFlow) {
+    // ── Legacy geometric adjacency (maps generated before `riverTo`). ──────────
+    for (const cell of riverCells) {
+      const center = cellCentroid(cell)
+      const mids: Pt[] = []
+      for (const n of hexNeighbors({ q: cell.q, r: cell.r })) {
+        const nb = byCoord.get(`${n.q},${n.r}`)
+        if (!nb || nb.river !== true) continue
+        const m = sharedEdgeMidpoint(cell, nb)
+        if (m) mids.push(m)
+      }
+      if (mids.length === 0) continue
+      if (mids.length === 1) {
+        addLine(wavyVaried(mids[0], center))
+      } else if (mids.length === 2) {
+        addLine([...wavyVaried(mids[0], center), ...wavyVaried(center, mids[1]).slice(1)])
+      } else {
+        for (const m of mids) addLine(wavyVaried(m, center))
+      }
+    }
+    return { type: 'FeatureCollection', features }
+  }
+
+  // ── Flow-accurate: connect only along real upstream→downstream edges. ────────
+  // Reverse index: cell key → the cells that flow INTO it.
+  const upstream = new Map<string, HexCell[]>()
+  for (const cell of riverCells) {
+    if (!cell.riverTo) continue
+    const dk = `${cell.riverTo.q},${cell.riverTo.r}`
+    const arr = upstream.get(dk)
+    if (arr) arr.push(cell)
+    else upstream.set(dk, [cell])
+  }
+
   for (const cell of riverCells) {
     const center = cellCentroid(cell)
-    // Midpoints of edges shared with river neighbours.
-    const mids: Pt[] = []
-    for (const n of hexNeighbors({ q: cell.q, r: cell.r })) {
-      const nb = byCoord.get(`${n.q},${n.r}`)
-      if (!nb) continue
-      const m = sharedEdgeMidpoint(cell, nb)
-      if (m) mids.push(m)
+
+    // Border midpoints of the tributaries flowing into this cell.
+    const inMids: Pt[] = []
+    for (const up of upstream.get(`${cell.q},${cell.r}`) ?? []) {
+      const m = sharedEdgeMidpoint(cell, up)
+      if (m) inMids.push(m)
     }
-    if (mids.length === 0) continue
-    if (mids.length === 1) {
-      // River endpoint: run from the border midpoint to the cell centre.
-      addLine(wavyVaried(mids[0], center))
-    } else if (mids.length === 2) {
-      // Through-flow: border → border across the cell.
-      addLine([...wavyVaried(mids[0], center), ...wavyVaried(center, mids[1]).slice(1)])
+
+    // Border midpoint of the edge this cell drains out through.
+    let outMid: Pt | null = null
+    if (cell.riverTo) {
+      const down = byCoord.get(`${cell.riverTo.q},${cell.riverTo.r}`)
+      if (down) outMid = sharedEdgeMidpoint(cell, down)
+    }
+
+    if (outMid && inMids.length === 0) {
+      // Source: centre → outgoing border.
+      addLine(wavyVaried(center, outMid))
+    } else if (outMid) {
+      // Through-flow / confluence: the main tributary runs border → centre →
+      // outgoing border; any extra tributaries dip in to meet at the centre.
+      addLine([...wavyVaried(inMids[0], center), ...wavyVaried(center, outMid).slice(1)])
+      for (let i = 1; i < inMids.length; i++) addLine(wavyVaried(inMids[i], center))
     } else {
-      // Confluence: each border midpoint meets at the centre.
-      for (const m of mids) addLine(wavyVaried(m, center))
+      // Terminus (map edge / lake): tributaries meet at the centre.
+      for (const m of inMids) addLine(wavyVaried(m, center))
     }
   }
   return { type: 'FeatureCollection', features }
@@ -146,13 +199,76 @@ export function buildChokepointGeoJSON(
 }
 
 /**
- * Line features connecting the two POIs of each `'supplies'` connection.
- * Skips a connection if an endpoint id isn't in `poiById` or lacks a position.
+ * Shortest road path (by travel watches) between two POIs over the road graph.
+ * Returns the ordered POI-id chain (inclusive of both ends), or null if the two
+ * aren't road-connected. Dijkstra — the graphs here are small (tens of nodes).
+ */
+function roadPath(src: string, dst: string, paths: Path[]): string[] | null {
+  if (src === dst) return [src]
+  const adj = new Map<string, { to: string; w: number }[]>()
+  const link = (a: string, b: string, w: number) => {
+    const arr = adj.get(a)
+    if (arr) arr.push({ to: b, w })
+    else adj.set(a, [{ to: b, w }])
+  }
+  for (const p of paths) {
+    const w = Math.max(1, p.baseTravelWatches)
+    link(p.fromPoiId, p.toPoiId, w)
+    link(p.toPoiId, p.fromPoiId, w)
+  }
+  if (!adj.has(src) || !adj.has(dst)) return null
+
+  const dist = new Map<string, number>([[src, 0]])
+  const prev = new Map<string, string>()
+  const visited = new Set<string>()
+  // Small-graph Dijkstra: linear scan for the nearest unvisited node.
+  while (true) {
+    let cur: string | null = null
+    let best = Infinity
+    for (const [node, d] of dist) {
+      if (!visited.has(node) && d < best) {
+        best = d
+        cur = node
+      }
+    }
+    if (cur === null) break
+    if (cur === dst) break
+    visited.add(cur)
+    for (const { to, w } of adj.get(cur) ?? []) {
+      if (visited.has(to)) continue
+      const nd = best + w
+      if (nd < (dist.get(to) ?? Infinity)) {
+        dist.set(to, nd)
+        prev.set(to, cur)
+      }
+    }
+  }
+  if (!dist.has(dst)) return null
+  const chain: string[] = [dst]
+  let node = dst
+  while (node !== src) {
+    const p = prev.get(node)
+    if (p === undefined) return null
+    chain.push(p)
+    node = p
+  }
+  chain.reverse()
+  return chain
+}
+
+/**
+ * Line features for each `'supplies'` trade connection, drawn ALONG the road
+ * network: the route follows the shortest road chain from supplier to consumer
+ * (goods travel the roads, not a straight cross-map diagonal), so it overlays
+ * the road layer exactly and reads as a highlighted goods-carrying route. Falls
+ * back to a straight line only when the pair isn't road-connected (e.g. river-
+ * only links). Skips a connection if an endpoint id/position is missing.
  */
 export function buildTradeRouteGeoJSON(
   connections: Connection[],
   poiById: Map<string, POI>,
   toLngLat: PxToLngLat,
+  paths: Path[] = [],
 ): GeoJSON.FeatureCollection {
   const features = connections
     .filter((conn) => conn.kind === 'supplies')
@@ -160,23 +276,24 @@ export function buildTradeRouteGeoJSON(
       const from = poiById.get(conn.fromId)
       const to = poiById.get(conn.toId)
       if (!from?.position || !to?.position) return []
-      // Lightly wavy — less than the rivers — so trade routes read like roads
-      // with a touch of organic curve.
-      const pts = wavy(
-        { x: from.position.x, y: from.position.y },
-        { x: to.position.x, y: to.position.y },
-        8,
-        2,
-        0.03,
-      )
+
+      // Prefer the road chain so trade hugs the actual roads; straight fallback.
+      const chain = roadPath(conn.fromId, conn.toId, paths)
+      let coords: [number, number][]
+      if (chain && chain.length >= 2) {
+        const waypoints = chain
+          .map((id) => poiById.get(id)?.position)
+          .filter((p): p is NonNullable<typeof p> => p != null)
+        coords = waypoints.map((p) => toLngLat(p.x, p.y))
+      } else {
+        coords = [toLngLat(from.position.x, from.position.y), toLngLat(to.position.x, to.position.y)]
+      }
+      if (coords.length < 2) return []
       return [
         {
           type: 'Feature' as const,
           properties: {},
-          geometry: {
-            type: 'LineString' as const,
-            coordinates: pts.map((p) => toLngLat(p.x, p.y)),
-          },
+          geometry: { type: 'LineString' as const, coordinates: coords },
         },
       ]
     })

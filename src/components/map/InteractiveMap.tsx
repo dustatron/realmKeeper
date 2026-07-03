@@ -184,10 +184,12 @@ export function InteractiveMap({
   const savedViewState = useUIStore((s) => s.mapViewStates[gameMap.id])
   const setMapViewState = useUIStore((s) => s.setMapViewState)
   const [mode, setMode] = useState<MapMode>('view')
-  // Phase-4 overlay layer visibility (rivers/trade/wealth/resources/treasure).
+  // Overlay layer visibility (rivers/trade/roads/portals/wealth/resources/treasure).
   const [layers, setLayers] = useState<Record<MapLayerId, boolean>>({
     rivers: true,
-    trade: true,
+    trade: false, // economic overlay — off by default; roads are the base
+    roads: true,
+    portals: true,
     wealth: true,
     resources: true,
     treasure: true,

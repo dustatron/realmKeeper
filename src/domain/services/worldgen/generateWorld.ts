@@ -277,17 +277,33 @@ export function generateWorld(
   const waterCells = new Set(
     cellMetas.filter((cm) => cm.biome === 'lake').map((cm) => `${cm.q},${cm.r}`),
   )
-  const elevation = buildElevationField(cells, rng.child('elevation'))
-  // Rivers come off mountain terrain — feed mountain cells as explicit sources so
-  // highlands reliably feed streams downhill to the lakes/edge.
-  const mountainSources = cellMetas
-    .filter((cm) => cm.biome === 'mountains')
-    .map((cm) => ({ q: cm.q, r: cm.r }))
-  const { riverCells, chokepoints } = traceRivers(elevation, cells, rng.child('rivers'), {
-    waterCells,
-    sources: mountainSources,
-  })
+  // Bias elevation by biome (mountains high, water/marsh low) so rivers reliably
+  // rise on the highlands and flow downhill — without this the field is random
+  // noise decoupled from terrain. traceRivers then seeds from the elevation
+  // highlands (which, thanks to the bias, ARE the mountains when present), rather
+  // than from mountain-biome cells that might sit in an elevation pit.
+  const biomeByCoord = new Map(cellMetas.map((cm) => [`${cm.q},${cm.r}`, cm.biome]))
+  const elevation = buildElevationField(cells, rng.child('elevation'), { biomes: biomeByCoord })
+  const { riverCells, paths: riverPaths, chokepoints } = traceRivers(
+    elevation,
+    cells,
+    rng.child('rivers'),
+    {
+      waterCells,
+    },
+  )
   const chokepointByCoord = new Map(chokepoints.map((c) => [`${c.q},${c.r}`, c.kind]))
+  // Downstream lookup: each river cell → the next cell in its course. Built from
+  // the ordered paths so map rendering can follow real flow (tributaries merge
+  // into trunks) instead of joining every adjacent river pair into a lattice.
+  // Cells shared by merging paths resolve to the same downhill successor, so
+  // last-writer-wins is safe here.
+  const riverToByCoord = new Map<string, { q: number; r: number }>()
+  for (const path of riverPaths) {
+    for (let i = 0; i < path.length - 1; i++) {
+      riverToByCoord.set(`${path[i].q},${path[i].r}`, { q: path[i + 1].q, r: path[i + 1].r })
+    }
+  }
 
   // Step 5: build GameMap. Each cell carries its terrain tile (by biome); cells
   // that host a POI get their tile overwritten with that POI's feature tile in
@@ -300,6 +316,7 @@ export function generateWorld(
     tile: terrainTileForBiome(cm.biome) ?? undefined,
     elevation: elevation.get(`${cm.q},${cm.r}`),
     river: riverCells.has(`${cm.q},${cm.r}`) || undefined,
+    riverTo: riverToByCoord.get(`${cm.q},${cm.r}`) ?? undefined,
     chokepoint: chokepointByCoord.get(`${cm.q},${cm.r}`) ?? undefined,
   }))
   const hexCellByCoord = new Map<string, HexCell>()
