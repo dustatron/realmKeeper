@@ -9,14 +9,19 @@ import { hexNeighbors, type Axial } from '~/lib/hexmap/hex'
 //
 // Algorithm:
 //   1. Pick highland SOURCES — the highest-elevation cells, sampled with the rng.
-//   2. From each source, flow downhill: at each step move to the lowest in-bounds
-//      neighbour whose elevation is STRICTLY LESS than the current cell's. The
-//      path is therefore strictly DECREASING in elevation (never increasing, and
-//      never flat — a flat step would risk a loop). Stop when:
-//        • the next cell is water (a lake / coast cell in `waterCells`), OR
-//        • the current cell is on the MAP EDGE (a cell with a missing neighbour),
-//          OR
-//        • no strictly-lower neighbour exists (a local pit — terminates there).
+//      EDGE cells are excluded (a source on the boundary terminates before its
+//      first step, yielding a 1-hex stub); rivers flow TO the edge, not from it.
+//   2. From each source, flow downhill with two refinements:
+//        • MEANDER: among the strictly-lower neighbours, pick by lowest elevation
+//          plus a small seeded jitter, so nearby sources diverge and wander rather
+//          than tracing identical steepest-descent lines.
+//        • OVERFLOW: at a local pit (no strictly-lower neighbour) the river spills
+//          over the lowest surrounding lip to keep draining across flat midlands
+//          and shallow saddles — bounded to a few consecutive uphill steps so it
+//          crosses a saddle but never climbs a mountainside. Exceeding the bound
+//          ends the river in that basin (an endorheic terminus).
+//      Stop when: the next cell is water (a lake/coast cell in `waterCells`), the
+//      current cell is on the MAP EDGE, or an unresolved pit is reached.
 //   3. Collect every cell touched by any river into `riverCells`.
 //   4. Derive CHOKEPOINTS: river/river crossings (ford or bridge) and low gaps
 //      between higher ground that a river threads through (pass).
@@ -103,6 +108,15 @@ export function traceRivers(
     (c) => cellSet.has(key(c)) && !water.has(key(c)) && elev(c) !== undefined,
   )
 
+  // A river must FLOW TO the edge, not START on it: a source sitting on the map
+  // boundary terminates (isEdge) before taking a single step, yielding a 1-hex
+  // stub that renders as nothing. So exclude edge cells from source eligibility —
+  // unless that would leave no candidates at all (tiny maps), where we keep them.
+  const dropEdges = <T extends Axial>(list: T[]): T[] => {
+    const inland = list.filter((c) => !isEdge(c))
+    return inland.length > 0 ? inland : list
+  }
+
   // Otherwise: candidate sources = highest-elevation land cells above the floor.
   const sorted = cells
     .filter((c) => !water.has(key(c)) && elev(c) !== undefined)
@@ -115,7 +129,7 @@ export function traceRivers(
     .map((s) => s.c)
 
   const usingExplicit = explicit.length > 0
-  const eligible = usingExplicit ? explicit : elevationEligible
+  const eligible = dropEdges(usingExplicit ? explicit : elevationEligible)
 
   if (eligible.length === 0) {
     return { riverCells, paths, chokepoints }
@@ -131,13 +145,21 @@ export function traceRivers(
   const riverCount = Math.max(1, Math.min(eligible.length, opts.riverCount ?? defaultCount))
   const sources = rng.sample(eligible, riverCount)
 
+  // Overflow lets a river spill out of a local pit over the lowest surrounding
+  // lip instead of dying there — real drainage crosses shallow saddles and flat
+  // midlands rather than stopping at every dimple in the terrain. Bounded so a
+  // river can cross a saddle a few hexes wide but never climb a mountainside: after
+  // this many consecutive uphill spill steps with no downhill relief, the river
+  // ends in that basin (an endorheic terminus).
+  const MAX_OVERFLOW_STEPS = 4
+
   for (const source of sources) {
     const path: Axial[] = []
     const visited = new Set<string>()
     let current: Axial = { q: source.q, r: source.r }
+    let overflow = 0
 
-    // Guard against pathological cycles (cannot happen with strictly-decreasing
-    // steps, but the bound keeps us safe regardless).
+    // Guard bounds total path length (visited-set already prevents revisits).
     for (let guard = 0; guard <= cells.length; guard++) {
       const k = key(current)
       if (visited.has(k)) break
@@ -150,13 +172,7 @@ export function traceRivers(
       const here = elev(current)
       if (here === undefined) break
 
-      // Gather all strictly-lower in-bounds neighbours (real downhill exits), then
-      // MEANDER: pick among them by lowest score with a small seeded jitter, so
-      // the course wanders and two nearby sources diverge instead of tracing the
-      // same steepest-descent line. The jitter only reorders near-ties — every
-      // candidate is still strictly lower than `here`, so the path stays
-      // monotonically decreasing (no loops, no uphill climbs). A river always
-      // prefers stepping onto water when a watery exit is available.
+      // Gather all strictly-lower in-bounds neighbours (real downhill exits).
       const downhill: { cell: Axial; e: number; water: boolean }[] = []
       for (const n of hexNeighbors(current)) {
         const nk = key(n)
@@ -166,23 +182,43 @@ export function traceRivers(
         if (ne < here) downhill.push({ cell: n, e: ne, water: water.has(nk) })
       }
 
-      if (downhill.length === 0) break // local pit — no downhill exit
-
-      const waterExits = downhill.filter((d) => d.water)
-      const pool = waterExits.length > 0 ? waterExits : downhill
-      // MEANDER_JITTER perturbs the elevation-based ranking; ~8% of the [0,1]
-      // range is enough to shuffle genuinely-close neighbours without ever
-      // favouring an obviously-higher one.
-      const MEANDER_JITTER = 0.08
       let next: Axial | null = null
-      let bestScore = Infinity
-      for (const d of pool) {
-        const score = d.e + rng.next() * MEANDER_JITTER
-        if (score < bestScore) {
-          bestScore = score
-          next = d.cell
+      if (downhill.length > 0) {
+        // Downhill available. MEANDER: pick among the strictly-lower neighbours by
+        // lowest score with a small seeded jitter, so the course wanders and two
+        // nearby sources diverge instead of tracing the same steepest-descent line.
+        // Prefer stepping onto water when a watery exit is available.
+        overflow = 0
+        const waterExits = downhill.filter((d) => d.water)
+        const pool = waterExits.length > 0 ? waterExits : downhill
+        // MEANDER_JITTER (~8% of the [0,1] range) shuffles genuinely-close
+        // neighbours without ever favouring an obviously-higher one.
+        const MEANDER_JITTER = 0.08
+        let bestScore = Infinity
+        for (const d of pool) {
+          const score = d.e + rng.next() * MEANDER_JITTER
+          if (score < bestScore) {
+            bestScore = score
+            next = d.cell
+          }
+        }
+      } else {
+        // Local pit — OVERFLOW over the lowest unvisited lip to keep draining.
+        if (overflow >= MAX_OVERFLOW_STEPS) break // endorheic basin — river ends
+        overflow++
+        let lowestE = Infinity
+        for (const n of hexNeighbors(current)) {
+          const nk = key(n)
+          if (!cellSet.has(nk) || visited.has(nk)) continue
+          const ne = field.get(nk)
+          if (ne === undefined) continue
+          if (ne < lowestE) {
+            lowestE = ne
+            next = n
+          }
         }
       }
+
       if (!next) break
       if (water.has(key(next))) {
         path.push(next)

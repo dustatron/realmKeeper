@@ -28,7 +28,39 @@ export interface ElevationOptions {
    * (~sqrt(cells)/2, clamped to [3, 12]). More points → busier terrain.
    */
   controlPoints?: number
+  /**
+   * Per-cell biome, keyed `${q},${r}`. When provided, the field is BIASED so
+   * elevation follows terrain — mountains high, water/marsh low — instead of
+   * being random noise decoupled from biome. This is what lets rivers (rivers.ts)
+   * reliably originate on mountains and flow downhill to lowlands: without it, a
+   * mountain-biome cell often lands in an elevation pit and its river is a 1-hex
+   * stub. Cells absent from the map, or biomes absent from BIOME_BASE_HEIGHT, use
+   * the neutral midland base.
+   */
+  biomes?: ReadonlyMap<string, Biome>
 }
+
+// Target height per biome (0 = basin, 1 = peak). Ordered so highlands out-rank
+// lowlands; the smooth noise below adds intra-biome variation for flow gradients.
+const BIOME_BASE_HEIGHT: Record<Biome, number> = {
+  mountains: 1.0,
+  hills: 0.72,
+  frozen: 0.6,
+  forest: 0.5,
+  jungle: 0.46,
+  blighted: 0.44,
+  grasslands: 0.42,
+  desert: 0.4,
+  marsh: 0.18,
+  lake: 0.0,
+}
+const NEUTRAL_BASE_HEIGHT = 0.45
+
+// How strongly biome pulls elevation vs the smooth noise. Kept moderate: the
+// smooth noise must stay the dominant gradient (rivers need slope to flow, and a
+// uniform-biome map would otherwise flatten into a rainless plateau), while biome
+// still lifts mountains above lowlands so highlands read as source country.
+const BIOME_WEIGHT = 0.4
 
 const cellKey = (c: Axial): string => `${c.q},${c.r}`
 
@@ -60,6 +92,7 @@ export function buildElevationField(
   // cell IS an anchor (distance 0) — it then dominates the blend, as intended.
   const POWER = 2
   const EPS = 0.5
+  const biomes = opts.biomes
   const raw: { key: string; value: number }[] = []
   let min = Infinity
   let max = -Infinity
@@ -72,10 +105,19 @@ export function buildElevationField(
       weightSum += w
       valueSum += w * a.height
     }
-    const value = valueSum / weightSum
+    const smooth = valueSum / weightSum
+    const key = cellKey(cell)
+    // Bias toward the biome's base height when biomes are supplied, so terrain
+    // and elevation agree; otherwise the smooth noise stands alone.
+    let value = smooth
+    if (biomes) {
+      const biome = biomes.get(key)
+      const base = biome ? BIOME_BASE_HEIGHT[biome] ?? NEUTRAL_BASE_HEIGHT : NEUTRAL_BASE_HEIGHT
+      value = smooth * (1 - BIOME_WEIGHT) + base * BIOME_WEIGHT
+    }
     if (value < min) min = value
     if (value > max) max = value
-    raw.push({ key: cellKey(cell), value })
+    raw.push({ key, value })
   }
 
   // Normalise to [0,1] so the field always spans the full range regardless of how

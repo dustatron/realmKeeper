@@ -277,19 +277,19 @@ export function generateWorld(
   const waterCells = new Set(
     cellMetas.filter((cm) => cm.biome === 'lake').map((cm) => `${cm.q},${cm.r}`),
   )
-  const elevation = buildElevationField(cells, rng.child('elevation'))
-  // Rivers come off mountain terrain — feed mountain cells as explicit sources so
-  // highlands reliably feed streams downhill to the lakes/edge.
-  const mountainSources = cellMetas
-    .filter((cm) => cm.biome === 'mountains')
-    .map((cm) => ({ q: cm.q, r: cm.r }))
+  // Bias elevation by biome (mountains high, water/marsh low) so rivers reliably
+  // rise on the highlands and flow downhill — without this the field is random
+  // noise decoupled from terrain. traceRivers then seeds from the elevation
+  // highlands (which, thanks to the bias, ARE the mountains when present), rather
+  // than from mountain-biome cells that might sit in an elevation pit.
+  const biomeByCoord = new Map(cellMetas.map((cm) => [`${cm.q},${cm.r}`, cm.biome]))
+  const elevation = buildElevationField(cells, rng.child('elevation'), { biomes: biomeByCoord })
   const { riverCells, paths: riverPaths, chokepoints } = traceRivers(
     elevation,
     cells,
     rng.child('rivers'),
     {
       waterCells,
-      sources: mountainSources,
     },
   )
   const chokepointByCoord = new Map(chokepoints.map((c) => [`${c.q},${c.r}`, c.kind]))
