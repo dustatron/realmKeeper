@@ -19,6 +19,14 @@ export interface HexCell {
    */
   elevation?: number
   river?: boolean
+  /**
+   * The next cell DOWNSTREAM in this cell's river course (source → terminus), or
+   * null at a terminus (map edge / lake). Drives flow-accurate river rendering:
+   * water is drawn only along real flow edges, so tributaries merge into trunks
+   * instead of every adjacent river pair joining into a lattice. Absent on cells
+   * with no river and on older generated maps.
+   */
+  riverTo?: { q: number; r: number } | null
   chokepoint?: 'ford' | 'pass' | 'bridge' | null
 }
 

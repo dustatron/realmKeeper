@@ -43,12 +43,24 @@ import { createRoot } from 'react-dom/client'
 
 export type MapMode = 'view' | 'place-poi' | 'draw-path' | 'draw-region'
 
-/** The toggleable Phase-4 overlay layers (terrain/regions/roads/markers are always on). */
-export type MapLayerId = 'rivers' | 'trade' | 'wealth' | 'resources' | 'treasure'
+/** The toggleable overlay layers (terrain/regions/markers are always on). */
+export type MapLayerId =
+  | 'rivers'
+  | 'trade'
+  | 'roads'
+  | 'portals'
+  | 'wealth'
+  | 'resources'
+  | 'treasure'
 
-const ALL_LAYERS_ON: Record<MapLayerId, boolean> = {
+// Default visibility per layer. Trade is an optional economic overlay on top of
+// the roads (it rides the same road network), so it starts OFF — roads are the
+// base; flip trade on to see who supplies whom.
+const DEFAULT_LAYER_VISIBILITY: Record<MapLayerId, boolean> = {
   rivers: true,
-  trade: true,
+  trade: false,
+  roads: true,
+  portals: true,
   wealth: true,
   resources: true,
   treasure: true,
@@ -237,10 +249,10 @@ export function MapViewer({
   // else defaults ON. Memoized so the marker/layer effects only re-run when a
   // toggle actually changes.
   const resolvedLayers = useMemo<Record<MapLayerId, boolean>>(
-    () => ({ ...ALL_LAYERS_ON, ...layers }),
+    () => ({ ...DEFAULT_LAYER_VISIBILITY, ...layers }),
     [layers],
   )
-  const { rivers: showRivers, trade: showTrade, wealth: showWealth, resources: showResources, treasure: showTreasure } = resolvedLayers
+  const { rivers: showRivers, trade: showTrade, roads: showRoads, portals: showPortals, wealth: showWealth, resources: showResources, treasure: showTreasure } = resolvedLayers
 
   // Convert pixel coords to lng/lat near the equator where Mercator distortion is negligible.
   // Using a tiny range (1°) keeps the image undistorted regardless of aspect ratio.
@@ -558,7 +570,6 @@ export function MapViewer({
     if (!instance || !mapReady) return
 
     const lineSourceId = 'paths-source'
-    const lineLayerId = 'paths-layer'
     const labelSourceId = 'path-labels-source'
     const labelLayerId = 'path-labels-layer'
 
@@ -603,23 +614,45 @@ export function MapViewer({
 
     const labelGeojson = { type: 'FeatureCollection' as const, features: labelFeatures }
 
-    // Lines
+    // Lines — split into two toggleable layers off one source: portals (violet,
+    // a distinct planar link) vs everything else (roads/trails/etc., dark). Same
+    // source data; a maplibre `filter` routes each feature to the right layer.
+    const roadsLayerId = 'paths-roads-layer'
+    const portalsLayerId = 'paths-portals-layer'
     if (instance.getSource(lineSourceId)) {
       ;(instance.getSource(lineSourceId) as maplibregl.GeoJSONSource).setData(lineGeojson as GeoJSON.FeatureCollection)
     } else {
       instance.addSource(lineSourceId, { type: 'geojson', data: lineGeojson as GeoJSON.FeatureCollection })
       instance.addLayer({
-        id: lineLayerId,
+        id: roadsLayerId,
         type: 'line',
         source: lineSourceId,
+        filter: ['!=', ['get', 'type'], 'portal'],
         paint: {
-          // Portals read as a distinct planar link (violet), roads as dark.
-          'line-color': ['case', ['==', ['get', 'type'], 'portal'], '#a855f7', '#6b5334'],
+          'line-color': '#6b5334',
           'line-width': 6,
           'line-dasharray': [2, 1],
           'line-opacity': 0.9,
         },
       })
+      instance.addLayer({
+        id: portalsLayerId,
+        type: 'line',
+        source: lineSourceId,
+        filter: ['==', ['get', 'type'], 'portal'],
+        paint: {
+          'line-color': '#a855f7',
+          'line-width': 6,
+          'line-dasharray': [2, 1],
+          'line-opacity': 0.9,
+        },
+      })
+    }
+    if (instance.getLayer(roadsLayerId)) {
+      instance.setLayoutProperty(roadsLayerId, 'visibility', showRoads ? 'visible' : 'none')
+    }
+    if (instance.getLayer(portalsLayerId)) {
+      instance.setLayoutProperty(portalsLayerId, 'visibility', showPortals ? 'visible' : 'none')
     }
 
     // Labels
@@ -650,7 +683,7 @@ export function MapViewer({
     if (instance.getLayer(labelLayerId)) {
       instance.setLayoutProperty(labelLayerId, 'visibility', showLabels ? 'visible' : 'none')
     }
-  }, [paths, pois, mapReady, showLabels, pxToLngLat])
+  }, [paths, pois, mapReady, showLabels, showRoads, showPortals, pxToLngLat])
 
   // Render region boundary polygons
   useEffect(() => {
@@ -1047,7 +1080,7 @@ export function MapViewer({
     // --- Trade routes (road-style muddy brown, lightly wavy) ---
     const tradeSourceId = 'trade-routes-source'
     const tradeLayerId = 'trade-routes-line'
-    const tradeGeojson = buildTradeRouteGeoJSON(connections ?? [], poiById, pxToLngLat)
+    const tradeGeojson = buildTradeRouteGeoJSON(connections ?? [], poiById, pxToLngLat, paths)
     if (instance.getSource(tradeSourceId)) {
       ;(instance.getSource(tradeSourceId) as maplibregl.GeoJSONSource).setData(tradeGeojson)
     } else {
@@ -1057,8 +1090,11 @@ export function MapViewer({
         type: 'line',
         source: tradeSourceId,
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        // Same muddy-brown road styling, lightly wavy via the builder.
-        paint: { 'line-color': '#6b5334', 'line-width': 6, 'line-dasharray': [2, 1], 'line-opacity': 0.9 },
+        // The route follows the roads (builder pathfinds over the road graph), so
+        // draw it as a solid AMBER ribbon narrower than the dashed brown road — a
+        // goods-carrying highlight that rides the network rather than a separate
+        // cross-map diagonal.
+        paint: { 'line-color': '#f59e0b', 'line-width': 3, 'line-opacity': 0.85 },
       })
     }
     if (instance.getLayer(tradeLayerId)) instance.setLayoutProperty(tradeLayerId, 'visibility', vis(showTrade))
@@ -1130,6 +1166,7 @@ export function MapViewer({
     map.hexCells,
     pois,
     connections,
+    paths,
     mapReady,
     pxToLngLat,
     showRivers,

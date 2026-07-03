@@ -7,6 +7,8 @@ import {
 import {
   Waves,
   TrendingUp,
+  Route,
+  DoorOpen,
   Coins,
   Boxes,
   Gem,
@@ -25,6 +27,8 @@ interface LayerMeta {
 const LAYER_META: LayerMeta[] = [
   { id: 'rivers', label: 'Rivers & crossings', icon: Waves },
   { id: 'trade', label: 'Trade routes', icon: TrendingUp },
+  { id: 'roads', label: 'Roads & paths', icon: Route },
+  { id: 'portals', label: 'Portals', icon: DoorOpen },
   { id: 'wealth', label: 'Settlement wealth', icon: Coins },
   { id: 'resources', label: 'Resources', icon: Boxes },
   { id: 'treasure', label: 'Treasure', icon: Gem },

@@ -121,10 +121,12 @@ export function traceRivers(
     return { riverCells, paths, chokepoints }
   }
 
-  // With explicit (mountain) sources, let about half of them spawn a river so
-  // mountainous terrain reads as river country; otherwise ~1 per 40 cells.
+  // With explicit (mountain) sources, let ~40% of them spawn a river so
+  // mountainous terrain reads as river country without saturating it; otherwise
+  // ~1 per 40 cells. (Distinct courses merge downhill into trunks, so a fraction
+  // of the mountains still yields a full drainage network — not a straw for each.)
   const defaultCount = usingExplicit
-    ? Math.max(1, Math.round(eligible.length / 2))
+    ? Math.max(1, Math.round(eligible.length * 0.4))
     : Math.max(1, Math.round(cells.length / 40))
   const riverCount = Math.max(1, Math.min(eligible.length, opts.riverCount ?? defaultCount))
   const sources = rng.sample(eligible, riverCount)
@@ -148,22 +150,40 @@ export function traceRivers(
       const here = elev(current)
       if (here === undefined) break
 
-      // Lowest strictly-lower in-bounds neighbour. If that neighbour is water,
-      // we step onto it (terminus) and stop.
-      let next: Axial | null = null
-      let nextE = here
+      // Gather all strictly-lower in-bounds neighbours (real downhill exits), then
+      // MEANDER: pick among them by lowest score with a small seeded jitter, so
+      // the course wanders and two nearby sources diverge instead of tracing the
+      // same steepest-descent line. The jitter only reorders near-ties — every
+      // candidate is still strictly lower than `here`, so the path stays
+      // monotonically decreasing (no loops, no uphill climbs). A river always
+      // prefers stepping onto water when a watery exit is available.
+      const downhill: { cell: Axial; e: number; water: boolean }[] = []
       for (const n of hexNeighbors(current)) {
         const nk = key(n)
         if (!cellSet.has(nk)) continue
         const ne = field.get(nk)
         if (ne === undefined) continue
-        if (ne < nextE) {
-          nextE = ne
-          next = n
-        }
+        if (ne < here) downhill.push({ cell: n, e: ne, water: water.has(nk) })
       }
 
-      if (!next) break // local pit — no downhill exit
+      if (downhill.length === 0) break // local pit — no downhill exit
+
+      const waterExits = downhill.filter((d) => d.water)
+      const pool = waterExits.length > 0 ? waterExits : downhill
+      // MEANDER_JITTER perturbs the elevation-based ranking; ~8% of the [0,1]
+      // range is enough to shuffle genuinely-close neighbours without ever
+      // favouring an obviously-higher one.
+      const MEANDER_JITTER = 0.08
+      let next: Axial | null = null
+      let bestScore = Infinity
+      for (const d of pool) {
+        const score = d.e + rng.next() * MEANDER_JITTER
+        if (score < bestScore) {
+          bestScore = score
+          next = d.cell
+        }
+      }
+      if (!next) break
       if (water.has(key(next))) {
         path.push(next)
         break
